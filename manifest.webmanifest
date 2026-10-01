@@ -1,0 +1,15 @@
+{
+  "name": "Lode, assistente di studio",
+  "short_name": "Lode",
+  "description": "Media, piano per gli appelli, focus, ripasso e interrogazione. Open source, i dati restano tuoi.",
+  "lang": "it",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0A0A0A",
+  "theme_color": "#0A0A0A",
+  "icons": [
+    { "src": "icone/icona.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icone/icona-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

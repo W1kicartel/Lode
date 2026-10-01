@@ -1,0 +1,164 @@
+// La pagina sotto la barra: il quadro della carriera a colpo d'occhio. Media, base di laurea, CFU, ore della settimana,
+// i prossimi appelli con il piano, il libretto e i mazzi del ripasso. Tutto il resto si fa dalla barra in alto.
+import { D, VUOTO, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esempio, esc, esporta, fatti, giorniTra, media, minuti, num, obiettivo, oggi, ore, piano, prossimi, salva, serie, settimana, sostituisci, traQuanto } from './dati.js';
+import { azioni, TASTI } from './lode.js';
+import { conta, tween } from './motore.js';
+import * as AI from './ai.js';
+import * as F from './focus.js';
+
+const $ = (s, r = document) => r.querySelector(s);
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const GEMMA = '<svg viewBox="-50 -50 100 100" aria-hidden="true"><path d="M0,-44 Q4,-44 7,-41 L41,-7 Q44,-4 44,0 Q44,4 41,7 L7,41 Q4,44 0,44 Q-4,44 -7,41 L-41,7 Q-44,4 -44,0 Q-44,-4 -41,-7 L-7,-41 Q-4,-44 0,-44 Z" fill="currentColor"/></svg>';
+
+export function toast(t) { const el = $('.toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 2400); }
+function saluto() { const n = String(D.profilo.nome || '').trim().split(/\s+/)[0], o = new Date().getHours(); const s = o < 5 ? 'Ancora sveglio' : o < 13 ? 'Buongiorno' : o < 18 ? 'Buon pomeriggio' : 'Buonasera'; return n ? `${s}, ${n}.` : `${s}.`; }
+
+let primaVolta = true;
+export function disegna() {
+  const m = media(), cf = cfuFatti(), tot = D.profilo.cfuTotali, sett = settimana(), minS = sett.reduce((s, g) => s + g.min, 0), maxS = Math.max(60, ...sett.map(g => g.min));
+  const p = prossimi(), senza = daFare().filter(e => !e.data), c = daRipassare().length, sr = serie();
+  const sotto = [p[0] ? `${p[0].nome} ${traQuanto(p[0].data)}` : null, c ? `${c} ${c === 1 ? 'carta' : 'carte'} da ripassare` : null, sr ? `${sr} ${sr === 1 ? 'giorno' : 'giorni'} di fila` : null].filter(Boolean).join(' · ') || (D.esami.length ? 'Niente in sospeso oggi.' : 'Il tuo libretto, il piano di studio e il ripasso. Tutto qui, tutto tuo.');
+  const main = $('main');
+  main.innerHTML = `
+  <header class="testata"><div class="marchio">${GEMMA}Lode<small>${esc(D.profilo.corso || 'assistente di studio')}</small></div>
+    <nav><button class="btn piano small" data-a="esporta">Esporta</button><button class="btn small" data-a="impostazioni">Impostazioni</button></nav></header>
+  <div class="saluto ${primaVolta ? 'entra' : ''}"><h1>${esc(saluto())}</h1><p>${esc(sotto)}</p>
+    <div class="suggerimento">Passa sopra la barra in alto, premi <kbd>/</kbd> per scrivere o tieni premuto <kbd>${TASTI}</kbd> per parlare.</div></div>
+
+  <div class="stats ${primaVolta ? 'entra' : ''}">
+    <div class="stat"><span class="lbl">Media ponderata</span><b class="v" data-c="${m.ponderata ?? ''}" data-dec="2">${m.ponderata ? '0' : '—'}</b><span class="d">${m.n ? `aritmetica ${num(m.aritmetica, 2)} · ${m.n} ${m.n === 1 ? 'voto' : 'voti'}` : 'segna il primo voto dalla barra'}</span></div>
+    <div class="stat"><span class="lbl">Base di laurea</span><b class="v"><span data-c="${m.base ?? ''}" data-dec="1">${m.base ? '0' : '—'}</span><small>/110</small></b><span class="d">media × 110 / 30</span></div>
+    <div class="stat"><span class="lbl">Crediti</span><b class="v"><span data-c="${cf}" data-dec="0">0</span><small>/${tot}</small></b><div class="barra"><i style="transform:scaleX(0)" data-x="${Math.min(1, cf / tot)}"></i></div><span class="d">${Math.max(0, tot - cf)} CFU alla laurea</span></div>
+    <div class="stat"><span class="lbl">Questa settimana</span><b class="v" style="font-size:28px">${minS ? ore(minS) : '0 min'}</b>
+      <div class="sett" aria-label="Minuti di studio negli ultimi 7 giorni">${sett.map(g => `<span class="${g.oggi ? 'oggi' : ''}" title="${dataLunga(g.g)}: ${ore(g.min)}"><i style="height:${Math.max(2, Math.round(g.min / maxS * 32))}px;transform:scaleY(0)"></i><em>${'DLMMGVS'[new Date(g.g + 'T12:00').getDay()]}</em></span>`).join('')}</div></div>
+  </div>
+
+  <section><div class="capo"><h2>Prossimi esami</h2><div class="az"><button class="btn small" data-a="nuovoEsame">Nuovo esame</button></div></div>
+    <div class="griglia ${primaVolta ? 'entra' : ''}">${p.map(cartaEsame).join('')}${senza.map(cartaEsame).join('')}
+      ${!p.length && !senza.length ? `<div class="esame nuovo"><p>Scrivi nella barra in alto:</p><p><code>esame analisi 2 il 15 gennaio 9 cfu</code></p><p style="margin-top:10px">oppure <button class="btn small" data-a="esempio">prova con i dati di esempio</button></p></div>` : ''}</div></section>
+
+  <div class="due">
+    <section><div class="capo"><h2>Libretto</h2><div class="az"><button class="btn small" data-a="nuovoVoto">Segna un voto</button></div></div>
+      <div class="blocco">${libretto()}</div></section>
+    <section><div class="capo"><h2>Ripasso</h2><div class="az"><button class="btn small piano" data-a="file">Da file</button><button class="btn small" data-a="ripassa"${c ? '' : ' disabled'}>Ripassa ${c || ''}</button></div></div>
+      <div class="blocco mazzi">${mazzi()}</div></section>
+  </div>
+
+  <footer class="piede"><span>Lode è open source (MIT). I tuoi dati restano in questo browser: nessun account, nessun server.</span>
+    <span><button data-a="importa">Importa un backup</button> · <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a></span></footer>`;
+  anima(main); primaVolta = false;
+}
+function cartaEsame(e) {
+  const pi = piano(e), g = e.data ? giorniTra(oggi(), e.data) : null, nc = D.carte.filter(c => c.esameId === e.id).length, nd = daRipassare(e.id).length;
+  return `<article class="esame${g != null && g <= 7 ? ' vicino' : ''}">
+    <div class="r1"><div><h3>${esc(e.nome)}</h3><div class="quando">${e.data ? cap(dataLunga(e.data)) : 'Data da decidere'} · ${e.cfu} CFU</div></div>
+      ${g != null ? `<div class="g">${g === 0 ? 'oggi' : g}${g ? `<small>${g === 1 ? 'GIORNO' : 'GIORNI'}</small>` : ''}</div>` : ''}</div>
+    <div class="avanza"><div class="riga"><span>${pi.fatte < .05 ? '0' : num(pi.fatte, pi.fatte < 10 ? 1 : 0)} di ${pi.tot} h studiate</span><span>${e.data ? (pi.oggi >= .1 ? `<b>${num(pi.oggi)} h</b> oggi` : 'oggi in pari') : ''}</span></div><div class="q"><i style="transform:scaleX(0)" data-x="${pi.quota}"></i></div></div>
+    <div class="az"><button class="btn small primary" data-a="focus" data-e="${e.id}">Focus</button><button class="btn small" data-a="ripassaE" data-e="${e.id}"${nc ? '' : ' disabled'}>Ripassa${nd ? ' ' + nd : ''}</button><button class="btn small" data-a="interroga" data-e="${e.id}">Interrogami</button></div>
+    <button class="modifica" data-a="modifica" data-e="${e.id}">Modifica · Segna voto</button>
+  </article>`;
+}
+function libretto() {
+  const lista = fatti().sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+  if (!lista.length) return `<p style="margin:0;padding:18px 16px;color:var(--muted);font-size:14px">Nessun esame dato. Scrivi nella barra <kbd>ho preso 28 in fisica</kbd>.</p>`;
+  const m = media();
+  return `<table><thead><tr><th>Esame</th><th class="num">CFU</th><th class="num">Voto</th><th class="num">Data</th><th></th></tr></thead><tbody>
+    ${lista.map(e => `<tr><td>${esc(e.nome)}</td><td class="num">${e.cfu}</td><td class="num"><span class="voto">${e.idoneita ? '<span class="tenue">idoneo</span>' : e.voto + (e.lode ? 'L' : '')}</span></td><td class="num tenue">${e.data ? dataBreve(e.data) : ''}</td><td class="num"><button class="x" data-a="modifica" data-e="${e.id}" aria-label="Modifica ${esc(e.nome)}">⋯</button></td></tr>`).join('')}
+  </tbody></table><div class="tbl-piede"><span>${lista.length} esami · ${cfuFatti()} CFU</span><span>media <b>${m.ponderata ? num(m.ponderata, 2) : '—'}</b> · base <b>${m.base ? num(m.base, 1) : '—'}</b></span></div>`;
+}
+function mazzi() {
+  const gruppi = new Map(); D.carte.forEach(c => { const k = c.esameId || ''; gruppi.set(k, (gruppi.get(k) || 0) + 1); });
+  if (!gruppi.size) return `<p style="margin:0;padding:18px 16px;color:var(--muted);font-size:14px">Ancora nessuna carta. Scrivi <kbd>carta: domanda = risposta</kbd> o trascina un PDF sulla finestra.</p>`;
+  return [...gruppi].sort((a, b) => b[1] - a[1]).map(([k, n]) => { const d = daRipassare(k || undefined).filter(c => (c.esameId || '') === k).length; return `<div class="mazzo"><div><b>${esc(k ? esame(k)?.nome || 'Esame tolto' : 'Senza esame')}</b><span>${n} ${n === 1 ? 'carta' : 'carte'}</span></div><span class="n${d ? '' : ' zero'}" title="da ripassare oggi">${d}</span><button class="btn small" data-a="ripassaE" data-e="${k}"${d ? '' : ' disabled'}>Ripassa</button></div>`; }).join('');
+}
+function anima(r) {
+  r.querySelectorAll('[data-c]').forEach((el, i) => { const v = parseFloat(el.dataset.c); if (isNaN(v)) return; conta(el, v, x => num(x, +el.dataset.dec), { ritardo: 120 + i * 60 }); });
+  r.querySelectorAll('[data-x]').forEach((el, i) => tween(900, e => { el.style.transform = `scaleX(${(+el.dataset.x * e).toFixed(4)})`; }, { ritardo: 200 + i * 40 }));
+  r.querySelectorAll('.sett i').forEach((el, i) => tween(620, e => { el.style.transform = `scaleY(${e.toFixed(3)})`; }, { ritardo: 200 + i * 55 }));
+}
+
+/* ---------- finestre ---------- */
+function finestra(html, alSalva) {
+  const d = document.createElement('dialog'); d.innerHTML = `<form class="finestra" method="dialog">${html}</form>`; document.body.append(d);
+  d.addEventListener('close', () => d.remove());
+  d.querySelector('form').addEventListener('submit', ev => { const b = ev.submitter; if (b?.value === 'annulla') return; ev.preventDefault(); if (alSalva(new FormData(ev.target), b?.value, d) !== false) d.close(); });
+  d.showModal(); return d;
+}
+function finestraEsame(id) {
+  const e = id ? esame(id) : null;
+  finestra(`<h2>${e ? esc(e.nome) : 'Nuovo esame'}</h2><p>${e ? 'Correggi i dati o segna il voto.' : 'Puoi anche scriverlo nella barra: «esame fisica 2 il 20 febbraio 6 cfu».'}</p>
+    <div class="campi"><label class="tutta">Nome<input name="nome" required value="${esc(e?.nome || '')}" placeholder="Analisi 2"></label>
+      <label>CFU<input name="cfu" type="number" min="1" max="30" value="${e?.cfu || 6}"></label>
+      <label>${e?.fatto ? 'Data' : 'Data dell\'appello'}<input name="data" type="date" value="${e?.data || ''}"></label>
+      <label>Voto <small>vuoto se non l'hai ancora dato</small><select name="voto"><option value="">—</option>${Array.from({ length: 13 }, (_, i) => 18 + i).map(v => `<option${e?.voto === v ? ' selected' : ''}>${v}</option>`).join('')}<option value="L"${e?.lode ? ' selected' : ''}>30 e lode</option><option value="I"${e?.idoneita ? ' selected' : ''}>Idoneità</option></select></label>
+      <label>Ore di studio previste <small>per il piano</small><input name="ore" type="number" min="1" max="500" value="${e ? obiettivo(e) : ''}" placeholder="10 × CFU"></label></div>
+    <div class="piedi">${e ? '<button class="btn piano" value="elimina">Elimina</button>' : ''}<div class="dx"><button class="btn piano" value="annulla" formnovalidate>Annulla</button><button class="btn primary" value="salva">Salva</button></div></div>`,
+  (f, azione) => {
+    if (azione === 'elimina') { if (!confirm(`Eliminare ${e.nome}? Le sue ore e le carte restano, senza esame.`)) return false; D.esami = D.esami.filter(x => x.id !== e.id); salva(); toast('Esame eliminato'); return; }
+    const v = f.get('voto'), x = e || aggiungiEsame({ nome: f.get('nome'), cfu: +f.get('cfu') });
+    Object.assign(x, { nome: String(f.get('nome')).trim(), cfu: +f.get('cfu') || 6, data: f.get('data') || null, oreObiettivo: f.get('ore') ? +f.get('ore') : null,
+      voto: v === 'L' ? 30 : v && v !== 'I' ? +v : null, lode: v === 'L', idoneita: v === 'I', fatto: !!v });
+    if (x.fatto && !x.data) x.data = oggi();
+    salva(); toast(e ? 'Salvato' : 'Esame aggiunto');
+  });
+}
+function finestraImpostazioni() {
+  const d = finestra(`<h2>Impostazioni</h2><p>Tutto resta in questo browser. La chiave AI non lascia mai il tuo computer, se non verso Anthropic.</p>
+    <div class="campi"><label>Il tuo nome<input name="nome" value="${esc(D.profilo.nome)}" placeholder="Giulia"></label>
+      <label>Corso di laurea<input name="corso" value="${esc(D.profilo.corso)}" placeholder="Ingegneria informatica"></label>
+      <label>CFU della laurea<select name="cfuTotali">${[180, 120, 300, 360].map(v => `<option${D.profilo.cfuTotali === v ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
+      <label>La lode vale<select name="lode">${[30, 31, 32, 33].map(v => `<option${D.profilo.lode === v ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
+      <label>Focus (minuti)<input name="focus" type="number" min="5" max="180" value="${D.imp.focus}"></label>
+      <label>Pausa (minuti)<input name="pausa" type="number" min="1" max="60" value="${D.imp.pausa}"></label>
+      <label class="spunta tutta"><input type="checkbox" name="suoni"${D.imp.suoni ? ' checked' : ''}>Rintocco alla fine del focus</label>
+      <label class="spunta tutta"><input type="checkbox" name="chiaro"${D.imp.aspetto === 'chiaro' ? ' checked' : ''}>Aspetto chiaro</label></div>
+    <hr>
+    <div class="campi"><label class="tutta">Chiave Claude <small>facoltativa: spiegazioni, carte dai PDF, interrogazione. Si crea su console.anthropic.com</small><input name="chiave" type="password" autocomplete="off" value="${esc(D.imp.chiave)}" placeholder="sk-ant-…"></label>
+      <label class="spunta tutta"><input type="checkbox" name="voceAlta"${D.imp.voceAlta ? ' checked' : ''}>Leggi le risposte ad alta voce</label></div>
+    <p class="stato-ai" style="margin:10px 0 0">${D.imp.chiave ? 'AI <b>attiva</b>.' : 'Senza chiave Lode funziona lo stesso: comandi, timer, libretto e ripasso sono tutti locali.'}</p>
+    <div class="piedi"><button class="btn piano" value="azzera">Cancella tutto</button><div class="dx"><button class="btn piano" value="annulla" formnovalidate>Annulla</button><button class="btn primary" value="salva">Salva</button></div></div>`,
+  (f, azione, dlg) => {
+    if (azione === 'azzera') { if (!confirm('Cancellare tutti i dati di Lode da questo browser? Prima conviene esportarli.')) return false; sostituisci(VUOTO()); toast('Dati cancellati'); return; }
+    Object.assign(D.profilo, { nome: String(f.get('nome')).trim(), corso: String(f.get('corso')).trim(), cfuTotali: +f.get('cfuTotali'), lode: +f.get('lode') });
+    const chiave = String(f.get('chiave')).trim();
+    Object.assign(D.imp, { focus: Math.max(5, +f.get('focus') || 25), pausa: Math.max(1, +f.get('pausa') || 5), suoni: !!f.get('suoni'), voceAlta: !!f.get('voceAlta'), aspetto: f.get('chiaro') ? 'chiaro' : 'scuro', chiave });
+    salva(); applicaAspetto(); toast('Impostazioni salvate');
+    if (chiave) AI.provaChiave(chiave).then(() => toast('Chiave Claude attiva')).catch(e => toast(e.status === 401 ? 'La chiave non è valida' : 'Non riesco a verificare la chiave adesso'));
+  });
+  d.querySelector('[name=nome]').focus();
+}
+export function applicaAspetto() { document.documentElement.dataset.aspetto = D.imp.aspetto === 'chiaro' ? 'chiaro' : 'scuro'; }
+
+function scarica() {
+  const b = new Blob([JSON.stringify(esporta(), null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `lode-${oggi()}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  toast('Backup scaricato');
+}
+function importa() {
+  const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json';
+  i.addEventListener('change', async () => {
+    try { const d = JSON.parse(await i.files[0].text()); if (d?.v !== 1 || !Array.isArray(d.esami)) throw 0; if (!confirm('Sostituire i dati attuali con questo backup?')) return; sostituisci(d); toast('Backup importato'); }
+    catch { toast('Questo file non è un backup di Lode'); }
+  }); i.click();
+}
+
+export function collega() {
+  document.addEventListener('click', e => {
+    const b = e.target.closest('main [data-a]'); if (!b || b.disabled) return;
+    const id = b.dataset.e || null;
+    ({
+      impostazioni: finestraImpostazioni, esporta: scarica, importa, nuovoEsame: () => finestraEsame(null), modifica: () => finestraEsame(id),
+      nuovoVoto: () => azioni.scrivi('ho preso '), esempio: () => dispatchEvent(new CustomEvent('lode:esempio')),
+      focus: () => azioni.focus(id), ripassaE: () => azioni.ripassa(id || null), ripassa: () => azioni.ripassa(null), interroga: () => azioni.interroga(id), file: () => azioni.file(),
+    })[b.dataset.a]?.();
+  });
+  addEventListener('lode:esempio', () => {
+    if (D.esami.length && !confirm('Caricare i dati di esempio al posto dei tuoi?')) return;
+    sostituisci(esempio()); azioni.home(); toast('Dati di esempio caricati: passa sopra la barra in alto');
+  });
+  let attesa = 0;
+  addEventListener('lode:dati', () => { cancelAnimationFrame(attesa); attesa = requestAnimationFrame(disegna); });
+  addEventListener('lode:focus', e => { if (e.detail.evento === 'fine' || e.detail.evento === 'fermo') disegna(); });
+  // a mezzanotte cambia il giorno: i conteggi si aggiornano
+  setInterval(() => { if (disegna._giorno !== oggi()) { disegna._giorno = oggi(); disegna(); } }, 60e3); disegna._giorno = oggi();
+}
