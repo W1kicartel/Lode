@@ -43,8 +43,7 @@ ${cfu ? `cfu: ${cfu}\n` : ''}${appello ? `appello: ${appello}\n` : ''}tags: [cor
 ---
 # ${pulito(corso)}
 
-Le lezioni di questo corso compaiono qui sotto, nei **collegamenti in entrata** (backlink).
-Lode raccoglie da ogni lezione le ★ da esame e le definizioni.
+%% Scrivi pure qui sopra o sotto: il riquadro di Lode (lezioni, ★, appello) si aggiorna da solo e il resto non lo tocca. %%
 `;
 }
 

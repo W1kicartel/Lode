@@ -6,6 +6,7 @@ import { existsSync, readFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as V from './vault.mjs';
+import * as I from './installa.mjs';
 
 const QUI = dirname(fileURLToPath(import.meta.url));
 const WEB = existsSync(join(QUI, 'web', 'index.html')) ? join(QUI, 'web') : join(QUI, '..');
@@ -97,12 +98,60 @@ ipcMain.handle('vault:scrivi', (_, { file, testo }) => {
   if (file === 'Orario.md') guardiano?.segnaOrario(testo);
   V.scriviSicuro(V.dentro(vault(), file), testo); return true;
 });
+// le pagine che Lode tiene aggiornate (Home, Esami, Glossario, corsi, navigazione delle lezioni): solo dentro i suoi segni
+ipcMain.handle('vault:blocco', (_, x) => {
+  if (!/^(Home|Esami|Glossario)\.md$|^Corsi\/[^/]+\.md$|^Lezioni\/[^/]+\/[^/]+\.md$/.test(x.file)) throw new Error('file non permesso');
+  return V.blocco(vault(), x);
+});
+ipcMain.handle('vault:note', () => V.note(vault()));
+/* ---------- installazioni (Obsidian, cervello locale), sempre chieste dallo studente ---------- */
+const progresso = (cosa, x) => manda('installa:progresso', { cosa, ...x });
+async function stato() {
+  const o = V.obsidian(vault()), ol = await I.statoOllama(), m = I.modelloConsigliato();
+  const scelto = conf.modello && ol.modelli.some(x => x === conf.modello || x === conf.modello + ':latest') ? conf.modello : ol.modelli.find(x => x.startsWith('gemma3')) || null;
+  return { obsidian: { installato: I.obsidianInstallato() || o.installato, registrato: !!o.registrato }, ollama: ol, consigliato: m, modello: scelto, piattaforma: process.platform };
+}
+let inCorso = {};
+ipcMain.handle('installa:stato', () => stato());
+ipcMain.handle('installa:obsidian', async () => {
+  if (inCorso.obsidian) return { esito: 'in_corso' }; inCorso.obsidian = true;
+  try {
+    if (!I.obsidianInstallato()) await I.installaObsidian({ vault: vault(), confObsidian: V.obsidian(vault()).conf, avanza: x => progresso('obsidian', x) });
+    else V.registra(vault());
+    const l = V.linkObsidian(vault(), 'Home.md');
+    await I.apriObsidian(l.url);
+    progresso('obsidian', { fase: 'fatto', p: 1, testo: 'Obsidian è pronto sul tuo vault' });
+    manda('vault:info', info());
+    return { esito: 'ok' };
+  } catch (e) { progresso('obsidian', { fase: 'errore', testo: e.message }); return { esito: 'errore', errore: e.message }; }
+  finally { inCorso.obsidian = false; }
+});
+ipcMain.handle('installa:cervello', async () => {
+  if (inCorso.cervello) return { esito: 'in_corso' }; inCorso.cervello = true;
+  try {
+    const m = I.modelloConsigliato();
+    if (!(await I.statoOllama()).installato) await I.installaOllama({ avanza: x => progresso('cervello', x) });
+    await I.scaricaModello(m.nome, x => progresso('cervello', x));
+    conf.modello = m.nome; salvaConf();
+    progresso('cervello', { fase: 'fatto', p: 1, testo: `${m.etichetta} è pronto` });
+    return { esito: 'ok', modello: m.nome };
+  } catch (e) { progresso('cervello', { fase: 'errore', testo: e.message }); return { esito: 'errore', errore: e.message }; }
+  finally { inCorso.cervello = false; }
+});
+// la chat col modello locale passa da qui (niente problemi di origine fra la barra e Ollama)
+const chat = new Map();
+ipcMain.handle('locale:chat', async (e, { id, messaggi, formato, modello }) => {
+  const c = new AbortController(); chat.set(id, c);
+  try { return await I.chatLocale({ modello: modello || conf.modello, messaggi, formato, segnale: c.signal, pezzo: t => e.sender.send('locale:pezzo', { id, t }) }); }
+  finally { chat.delete(id); }
+});
+ipcMain.handle('locale:stop', (_, { id }) => { chat.get(id)?.abort(); return true; });
 ipcMain.handle('vault:memoria', (_, { testo }) => { V.memoria(vault(), testo); return true; });
 ipcMain.handle('vault:apri', async (_, { file, nuovo }) => {
   const p = V.dentro(vault(), file);
   if (!existsSync(p) && nuovo) V.scriviSicuro(p, nuovo);
   const l = V.linkObsidian(vault(), file);
-  if (l.url) await shell.openExternal(l.url); else await shell.openPath(p);
+  if (l.url) await I.apriObsidian(l.url); else await shell.openPath(p);
   return { esito: l.esito, percorso: vault() };
 });
 ipcMain.handle('vault:scegli', () => scegliVault());
@@ -135,7 +184,7 @@ function creaTray() {
     { label: `Apri Lode (${MAC ? '⌥ Spazio' : 'Ctrl+Shift+Spazio'})`, click: () => { barra.show(); barra.focus(); barra.setIgnoreMouseEvents(false); barra.webContents.send('scorciatoia', 'apri'); } },
     { label: 'Il quadro: libretto, esami, ripasso', click: apriQuadro },
     { type: 'separator' },
-    { label: 'Apri il vault in Obsidian', click: async () => { const l = V.linkObsidian(vault(), 'Benvenuto.md'); if (l.url) shell.openExternal(l.url); else shell.openPath(vault()); } },
+    { label: 'Apri il vault in Obsidian', click: async () => { const l = V.linkObsidian(vault(), 'Home.md'); if (l.url) I.apriObsidian(l.url); else shell.openPath(vault()); } },
     { label: 'Mostra il vault nella cartella', click: () => shell.openPath(vault()) },
     { label: 'Usa un altro vault…', click: scegliVault },
     { type: 'separator' },

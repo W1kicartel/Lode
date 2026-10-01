@@ -63,6 +63,45 @@ tags: [lezione]
 ## Domande per il prof
 
 `;
+const MODELLO_ESAME = `---
+tipo: esame
+corso: "[[]]"
+appello: {{date:YYYY-MM-DD}}
+tags: [esame]
+---
+# {{title}}
+
+## Programma
+
+
+## Domande che fanno sempre
+%% Quelle che senti dai colleghi o trovi nei vecchi appelli. Lode le usa per interrogarti. %%
+
+
+## Esercizi tipo
+
+
+## Cosa mi manca
+
+`;
+const MODELLO_RIPASSO = `---
+tipo: ripasso
+corso: "[[]]"
+data: {{date:YYYY-MM-DD}}
+tags: [ripasso]
+---
+# Ripasso · {{title}}
+
+## In tre righe
+
+
+## Definizioni
+%% - **Termine**: definizione. Finiscono nei giochi di Lode. %%
+
+
+## Collegamenti
+%% Le lezioni e i concetti legati: [[...]] %%
+`;
 const MEMORIA = `---
 tipo: memoria
 ---
@@ -89,6 +128,11 @@ export function crea(vault, orario = []) {
   seManca(join(vault, 'Orario.md'), M.orarioMd(orario));
   seManca(join(vault, 'Lode', 'Memoria.md'), MEMORIA);
   seManca(join(vault, 'Modelli', 'Lezione.md'), MODELLO);
+  seManca(join(vault, 'Modelli', 'Esame.md'), MODELLO_ESAME);
+  seManca(join(vault, 'Modelli', 'Ripasso.md'), MODELLO_RIPASSO);
+  for (const [f, t] of [['Home.md', 'Home'], ['Esami.md', 'Esami'], ['Glossario.md', 'Glossario']]) seManca(join(vault, f), `# ${t}\n\n%% lode:pagina %%\n%% /lode:pagina %%\n`);
+  // il vault l'ha creato Lode? allora possiamo preparare anche la disposizione di Obsidian
+  let nostro = false; try { nostro = readFileSync(join(vault, 'Benvenuto.md'), 'utf8').includes("l'ha preparato **Lode**"); } catch { }
   // la configurazione di Obsidian solo se il vault è nuovo: in un vault esistente non tocchiamo niente
   const ob = join(vault, '.obsidian');
   if (!existsSync(ob)) {
@@ -98,10 +142,47 @@ export function crea(vault, orario = []) {
     seManca(join(ob, 'core-plugins.json'), JSON.stringify({ 'file-explorer': true, 'global-search': true, switcher: true, graph: true, backlink: true, 'outgoing-link': true, 'tag-pane': true, 'page-preview': true, templates: true, 'note-composer': true, 'command-palette': true, outline: true, 'word-count': true, 'file-recovery': true, bookmarks: true, 'daily-notes': false }, null, 2));
     seManca(join(ob, 'snippets', 'lode.css'), TEMA);
   }
+  if (nostro) {
+    // Obsidian si apre sulla Home, con le cartelle e i segnalibri a sinistra, i collegamenti in entrata e l'indice a destra
+    seManca(join(ob, 'workspace.json'), JSON.stringify(DISPOSIZIONE, null, 2));
+    const t = Date.now();
+    seManca(join(ob, 'bookmarks.json'), JSON.stringify({ items: [['Home.md', 'Home'], ['Orario.md', 'Orario'], ['Esami.md', 'Esami'], ['Glossario.md', 'Glossario'], ['Lode/Memoria.md', 'Cosa sa Lode di me']].map(([path, title]) => ({ type: 'file', ctime: t, path, title })) }, null, 2));
+  }
+}
+const DISPOSIZIONE = {
+  main: { id: 'lode-main', type: 'split', direction: 'vertical', children: [{ id: 'lode-tabs', type: 'tabs', children: [{ id: 'lode-home', type: 'leaf', state: { type: 'markdown', state: { file: 'Home.md', mode: 'preview', source: false } } }] }] },
+  left: { id: 'lode-left', type: 'split', direction: 'horizontal', width: 260, children: [{ id: 'lode-left-tabs', type: 'tabs', children: [
+    { id: 'lode-files', type: 'leaf', state: { type: 'file-explorer', state: { sortOrder: 'alphabetical' } } },
+    { id: 'lode-bm', type: 'leaf', state: { type: 'bookmarks', state: {} } },
+    { id: 'lode-search', type: 'leaf', state: { type: 'search', state: { query: '' } } }] }] },
+  right: { id: 'lode-right', type: 'split', direction: 'horizontal', width: 280, children: [{ id: 'lode-right-tabs', type: 'tabs', children: [
+    { id: 'lode-back', type: 'leaf', state: { type: 'backlink', state: { file: 'Home.md', collapseAll: false, extraContext: false, sortOrder: 'alphabetical', showSearch: false, searchQuery: '', backlinkCollapsed: false, unlinkedCollapsed: true } } },
+    { id: 'lode-outline', type: 'leaf', state: { type: 'outline', state: { file: 'Home.md' } } }] }] },
+  active: 'lode-home', lastOpenFiles: ['Home.md'],
+};
+
+/* ---------- blocchi di Lode dentro le note: tutto ciò che sta fuori dai segni resta dello studente ---------- */
+const segni = id => [`%% lode:${id} %%`, `%% /lode:${id} %%`];
+export function blocco(vault, { file, id, testo, nuovo, dove = 'fine' }) {
+  const p = dentro(vault, file);
+  if (!existsSync(p)) { if (!nuovo) return false; scriviSicuro(p, nuovo); }
+  const prima = readFileSync(p, 'utf8'), [a, b] = segni(id), blocco = `${a}\n${testo.trim()}\n${b}`;
+  let dopo;
+  const i = prima.indexOf(a), j = prima.indexOf(b);
+  if (i >= 0 && j > i) dopo = prima.slice(0, i) + blocco + prima.slice(j + b.length);
+  else if (dove === 'titolo') { const m = prima.match(/^# .*$/m); dopo = m ? prima.slice(0, m.index + m[0].length) + '\n' + blocco + prima.slice(m.index + m[0].length) : blocco + '\n' + prima; }
+  else dopo = prima.replace(/\s*$/, '\n\n') + blocco + '\n';
+  if (dopo === prima) return false;
+  scriviSicuro(p, dopo); return true;
+}
+// tutte le note, per la ricerca rapida dalla barra
+export function note(vault) {
+  return mdSotto(vault).map(f => relative(vault, f).split(sep).join('/')).filter(f => !f.startsWith('Modelli/')).map(f => ({ file: f, titolo: f.split('/').pop().replace(/\.md$/, ''), cartella: f.includes('/') ? f.split('/')[0] : '' }));
 }
 
 /* ---------- Obsidian: è installato? il vault è nella sua lista? ---------- */
 function cartellaObsidian() {
+  if (process.env.LODE_OBSIDIAN_DIR) return process.env.LODE_OBSIDIAN_DIR;   // solo per le prove
   if (process.platform === 'darwin') return join(homedir(), 'Library', 'Application Support', 'obsidian');
   if (process.platform === 'win32') return join(process.env.APPDATA || join(homedir(), 'AppData', 'Roaming'), 'obsidian');
   return join(process.env.XDG_CONFIG_HOME || join(homedir(), '.config'), 'obsidian');
@@ -128,7 +209,7 @@ export function registra(vault) {
 }
 export function linkObsidian(vault, file) {
   const o = obsidian(vault), nome = vault.split(sep).pop();
-  if (o.registrato) return { url: `obsidian://open?vault=${encodeURIComponent(nome)}&file=${encodeURIComponent(String(file).replace(/\.md$/, ''))}`, esito: 'ok' };
+  if (o.registrato) return { url: `obsidian://open?vault=${encodeURIComponent(o.registrato)}&file=${encodeURIComponent(String(file).replace(/\.md$/, ''))}`, esito: 'ok' };
   if (o.installato) return { url: `obsidian://open?path=${encodeURIComponent(dentro(vault, file))}`, esito: 'da_aprire' };
   return { url: null, esito: 'manca' };
 }

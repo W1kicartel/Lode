@@ -73,6 +73,10 @@ export function interpreta(frase) {
     const r = pulisci(m[1] || ''); return { tipo: 'gioco', corso: r || null };
   }
   if (/^(?:apri )?(?:gli |i miei )?(?:appunti|obsidian|vault|la nota|nota)( di oggi| della lezione)?$/.test(t)) return { tipo: 'appunti' };
+  if (/^(?:chiudi|riordina|sistema|finisci)(?: la)? lezione\b|^estrai(?: le)? definizioni/.test(t)) { const r = pulisci(t.replace(/^.*?(lezione|definizioni)\s*/, '')); return { tipo: 'chiudiLezione', corso: r || null }; }
+  if (/^(?:prepara|configura|installa|setup)\b/.test(t)) return { tipo: 'prepara', cosa: /obsidian/.test(t) ? 'obsidian' : /modello|cervello|ollama|gemma|ai/.test(t) ? 'cervello' : null };
+  if ((m = t.match(/^(?:apri|vai a|vai su|vai alla?|portami a|mostrami|nota|pagina)\s+(.+)$/)) && !/^(?:il |la )?(?:focus|timer)/.test(m[1])) return { tipo: 'naviga', q: pulisci(m[1]) };
+  if (/^(?:note|pagine|home|indice)$/.test(t)) return { tipo: 'naviga', q: t === 'home' ? 'home' : '' };
 
   // carta: fronte = retro
   if ((m = grezzo.match(/^(?:nuova\s+)?(?:carta|flashcard|domanda)\s*(?:di\s+([^:]+?))?\s*:\s*(.+?)\s*(?:=|->|→|\|)\s*(.+)$/i)))
@@ -162,6 +166,8 @@ export const ESEMPI = [
   ['★ il teorema di Green lo chiede sempre', 'in aula: segna cosa è da esame'],
   ['def: gradiente = vettore delle derivate parziali', 'in aula: una definizione nella nota'],
   ['gioca', 'due minuti sulle definizioni dell\'ultima lezione'],
+  ['chiudi lezione', 'definizioni e ★ estratte dagli appunti (AI)'],
+  ['apri glossario', 'salta a una pagina del vault'],
   ['interrogami su basi di dati', 'simula l\'orale (con l\'AI)'],
 ];
 export { D };

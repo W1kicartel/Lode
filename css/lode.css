@@ -413,3 +413,30 @@ html.barra .ld{top:8px}
 /* sopra le altre app il vetro non può sfocare quello che c'è dietro: più pieno, per restare leggibile */
 html.barra .ld{--ld-vetro:rgba(16,16,16,.95)}
 html.barra .ld-drop{background:transparent}
+
+/* ---------- prepara Lode ---------- */
+.ld-prepara .ld-lbl{display:block;margin-bottom:6px}
+.ld-prep{display:grid;grid-template-columns:3px minmax(0,1fr) auto;column-gap:14px;align-items:center;min-height:58px;padding:6px 0;border-top:1px solid var(--ld-riga)}
+.ld-prep .ld-seg{width:3px;height:30px;border-radius:1.5px;background:transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.6)}
+.ld-prep.ok .ld-seg{background:var(--ink);box-shadow:none}
+.ld-prep .t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ld-prep .t b{font-size:14px;font-weight:600}
+.ld-prep .t .d{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ld-prep .ld-prog{display:none;margin:5px 0 0}
+.ld-prep.va .ld-prog{display:block}
+.ld-prep.va .btn{opacity:.4;pointer-events:none}
+.ld-spunta{font:500 11px var(--mono);letter-spacing:.06em;color:var(--muted);padding-right:4px}
+.ld-prepara .ld-nota{margin-top:10px}
+
+/* ---------- vai a… ---------- */
+.ld-note .ld-lbl{display:block}
+.ld-rapide{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:10px}
+.ld-rapide .ld-chip.larga{height:50px;flex:none;min-width:0}
+.ld-rapide .ld-chip b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.ld-cerca-note{width:100%;margin-top:12px}
+.ld-risultati{display:flex;flex-direction:column;margin-top:6px}
+.ld-nota-r{all:unset;box-sizing:border-box;cursor:pointer;display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 8px;border-radius:8px;transition:background-color .2s}
+.ld-nota-r b{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ld-nota-r span{font:500 11px var(--mono);color:var(--ld-tenue);white-space:nowrap}
+.ld-nota-r:hover,.ld-nota-r.su{background:rgba(255,255,255,.06)}
+.ld-nota-r:focus-visible{outline:2px solid var(--ink)}
