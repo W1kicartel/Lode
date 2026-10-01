@@ -1,0 +1,2 @@
+Geist e Geist Mono (Geist-Variable.woff2, GeistMono-Variable.woff2) sono distribuiti con licenza SIL Open Font License 1.1 (https://openfontlicense.org).
+Copyright (c) 2023 Vercel, in collaborazione con basement.studio. Fonte: pacchetto npm «geist» 1.7.2 (https://github.com/vercel/geist-font).
