@@ -31,6 +31,9 @@ const morb = t => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
 const molla = t => (t <= 0 ? 0 : t >= 1 ? 1 : 1 - Math.exp(-6.5 * t) * Math.cos(10.5 * t));
 
 function ancora() {
+  // mentre si trascina un file, la gemma sta al centro della zona e lo guarda arrivare
+  const z = document.querySelector('.ld.drop .ld-zona-in svg');
+  if (z) { const r = z.getBoundingClientRect(); if (r.width) return { x: r.left + r.width / 2, y: r.top + r.height / 2, s: 1.6 }; }
   const a = document.querySelector(S.dove === 'pannello' ? '.ld[data-aperto="1"] .ld-testa .r1 .ld-rombo' : '.ld-pill .ld-rombo');
   if (!a) return null;
   const r = a.getBoundingClientRect(); if (!r.width && !r.height) return null;

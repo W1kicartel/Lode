@@ -464,3 +464,59 @@ button.ld-trascrivi:focus-visible{outline:2px solid var(--ink)}
 .ld-trascrivi.on .ld-rec,.ld-live.rec{background:var(--ink);box-shadow:none}
 @media (prefers-reduced-motion:no-preference){.ld-trascrivi.on .ld-rec,.ld-live.rec{animation:ld-respira 1.6s var(--morbido) infinite}}
 .ld-anteprima{max-height:240px;overflow-y:auto;padding:10px 12px;border-radius:9px;background:rgba(255,255,255,.03);font-size:13px;line-height:1.5;color:rgba(245,245,245,.88);scrollbar-width:thin}
+
+/* ---------- la zona dove lasciare i file: la pillola si allarga ---------- */
+.ld-zona{position:absolute;inset:0;z-index:8;display:grid;place-items:center;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .25s var(--morbido),visibility 0s .25s}
+.ld.drop .ld-zona{opacity:1;visibility:visible;transition:opacity .25s var(--morbido)}
+.ld.drop .ld-pill{opacity:0!important}
+.ld[data-aperto="1"].drop .ld-zona{background:rgba(12,12,12,.9);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.ld-zona .bordo{position:absolute;inset:9px;border-radius:17px;pointer-events:none;
+  background:linear-gradient(90deg,var(--ink) 50%,transparent 0) repeat-x top/14px 1.5px,linear-gradient(90deg,var(--ink) 50%,transparent 0) repeat-x bottom/14px 1.5px,linear-gradient(0deg,var(--ink) 50%,transparent 0) repeat-y left/1.5px 14px,linear-gradient(0deg,var(--ink) 50%,transparent 0) repeat-y right/1.5px 14px;opacity:.35;transition:opacity .3s,inset .4s var(--morbido)}
+@media (prefers-reduced-motion:no-preference){.ld.drop .ld-zona .bordo{animation:ld-formiche 1s linear infinite}}
+@keyframes ld-formiche{to{background-position:14px 0,-14px 100%,0 -14px,100% 14px}}
+.ld.sopra .ld-zona .bordo{opacity:.8;inset:6px}
+.ld-zona-in{display:flex;flex-direction:column;align-items:center;gap:4px;max-width:380px;padding:0 20px;text-align:center}
+.ld-zona-in svg{width:24px;height:24px;margin-bottom:4px;transition:transform .4s var(--morbido)}
+.ld.sopra .ld-zona-in svg{transform:translateY(3px)}
+.ld-zona-in b{font-size:17px;font-weight:600;letter-spacing:-.02em}
+.ld-zona-in span{font-size:12px;line-height:1.45;color:var(--muted)}
+
+/* ---------- cosa ne faccio? ---------- */
+.ld-file-op .capo{display:flex;align-items:center;gap:12px;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--ld-riga)}
+.ld-file-op .capo svg{width:22px;height:22px;stroke:var(--muted);flex:none}
+.ld-file-op .capo .t{display:flex;flex-direction:column;min-width:0}
+.ld-file-op .capo b{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ld-file-op .capo .t span{font-size:12px;color:var(--muted)}
+.ld-opzioni{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.ld-op{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:3px;padding:12px 13px;border-radius:11px;box-shadow:inset 0 0 0 1px var(--ld-filo);background:rgba(255,255,255,.03);transition:background-color .25s,box-shadow .25s,opacity .3s,transform .35s var(--morbido)}
+.ld-op b{font-size:13.5px;font-weight:600}
+.ld-op span{font-size:12px;line-height:1.4;color:var(--muted)}
+.ld-op:hover{background:rgba(255,255,255,.07)}
+.ld-op.primo{background:var(--ink);box-shadow:none}
+.ld-op.primo b{color:#000}.ld-op.primo span{color:rgba(0,0,0,.62)}
+.ld-op.primo:hover{background:#e4e4e4}
+.ld-op[disabled]{opacity:.38;cursor:default}
+.ld-op.scelta{opacity:1;box-shadow:inset 0 0 0 1.5px var(--ink)}
+.ld-op:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.ld-op:active:not([disabled]){transform:scale(.98)}
+.ld-per{margin-top:12px}
+.ld-per .ld-lbl{flex:none}
+.ld-per input[type=date]{flex:none;width:150px;color-scheme:dark}
+
+/* ---------- ripeti ---------- */
+.ld-ripeti-riga{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:10px;width:100%;margin-top:8px;padding:9px 12px;border-radius:11px;box-shadow:inset 0 0 0 1px var(--ld-filo);font-size:12.5px;color:var(--muted)}
+.ld-ripeti-riga span{flex:1;min-width:0}
+.ld-ripeti-riga b{color:var(--ink);font-weight:600}
+button.ld-ripeti-riga{cursor:pointer;transition:background-color .25s}
+button.ld-ripeti-riga:hover{background:rgba(255,255,255,.06)}
+.ld-ripeti-riga .btn kbd{font:500 10px var(--mono);background:none;box-shadow:none;padding:0;opacity:.6}
+.ld-orecchio{flex:none;display:inline-block;width:12px;height:12px;border-radius:50%;box-shadow:inset 0 0 0 1.5px currentColor;position:relative}
+.ld-orecchio::after{content:"";position:absolute;inset:3.5px;border-radius:50%;background:currentColor}
+.ld-pill .ld-orecchio{align-self:center;width:10px;height:10px;color:var(--muted);margin-left:2px}
+.ld-pill .ld-orecchio::after{inset:3px}
+.ld-ripeti .ld-detto-prof{margin:10px 0 0;font-size:15.5px;line-height:1.5;color:rgba(245,245,245,.94)}
+.ld-ripeti .az{display:flex;gap:8px;margin-top:12px}
+.ld-ripeti .az .btn{flex:1;justify-content:center}
+@media (max-width:620px){.ld-opzioni{grid-template-columns:1fr}}
+.ld.drop .ld-zona-in svg{visibility:hidden}
+.ld.drop .ld-pill .ld-rombo,.ld.drop .ld-testa .r1 .ld-rombo{visibility:hidden}

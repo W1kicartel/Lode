@@ -13,6 +13,11 @@ import * as V from './vault.js';
 import { partita, giusta } from './giochi.js';
 import { GIORNI_BREVI } from './markdown.js';
 import * as TR from './trascrizione.js';
+import * as O from './orecchio.js';
+import * as FILE from './file.js';
+import * as SB from './sbobina.js';
+import { parlatoInFormule } from './formule.js';
+import { pulito } from './markdown.js';
 const BRIDGE = DESKTOP ? window.lodeDesktop : null;
 
 const segnala = (evento, x = {}) => dispatchEvent(new CustomEvent('lode', { detail: { evento, ...x } }));
@@ -33,6 +38,8 @@ const IC = {
   esami: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16"/><path d="M9 3v4"/><path d="M15 3v4"/><path d="M8 14h3"/>',
   orale: '<path d="M4 5h16v11H9l-5 4z"/><path d="M9 10h.01M12 10h.01M15 10h.01"/>',
   file: '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M12 11v6M9 14h6"/>',
+  foto: '<rect x="3" y="5" width="18" height="15" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-5-8 9"/>',
+  audio: '<path d="M9 18V6l10-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/>',
   gioco: '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><path d="M15 17h4M17 15v4"/>',
   orario: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   appunti: '<path d="M12 3l7 4v10l-7 4-7-4V7z"/><path d="M12 3v18"/><path d="M5 7l7 4 7-4"/>',
@@ -43,7 +50,7 @@ const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
 /* ---------- stato ---------- */
 let A, shell, pill, corpo, testa, campo, home, filo, allegatiBox, tacche = [], forma, velo, GEN = 0;
-const nuovoStato = () => ({ cattura: null, gioco: null, aperto: false, fisso: false, modo: 'riposo', turno: null, attesa: null, home: true, avviso: null, chiudiTra: null, apriTra: null, storia: [], allegati: [], orale: null, controller: null, ripasso: null, risposta: null, ultimoUso: 0 });
+const nuovoStato = () => ({ zona: false, cattura: null, gioco: null, aperto: false, fisso: false, modo: 'riposo', turno: null, attesa: null, home: true, avviso: null, chiudiTra: null, apriTra: null, storia: [], allegati: [], orale: null, controller: null, ripasso: null, risposta: null, ultimoUso: 0 });
 
 function saluto() {
   const n = String(D.profilo.nome || '').trim().split(/\s+/)[0], o = new Date().getHours();
@@ -77,7 +84,9 @@ function costruisci() {
   dentro.append(campo, allegatiBox, home, filo);
   const piede = h('footer', 'ld-piede', `<span class="ld-piede-sx">Tieni premuto per parlare <kbd>${TASTI}</kbd></span><span>${IC.lucchetto}I dati restano su questo computer</span>`);
   corpo.append(testa, dentro, piede);
-  shell.append(pill, corpo);
+  const zona = h('div', 'ld-zona', `<i class="bordo"></i><div class="ld-zona-in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><b>Lascia qui il file</b><span>${FILE.ACCETTATI}</span></div>`);
+  zona.setAttribute('aria-hidden', 'true');
+  shell.append(pill, corpo, zona);
   document.body.append(shell);
   velo = h('div', 'ld-drop', '<i class="bordo"></i><div class="ld-drop-in"><b>Lascia qui il file</b><span>PDF, slide, appunti, foto della lavagna: Lode ne fa carte del ripasso</span></div>');
   velo.setAttribute('aria-hidden', 'true'); document.body.append(velo);
@@ -127,8 +136,12 @@ function bloccoAula(lo) {
   return `<section class="ld-aula"><div class="capo"><span class="ld-lbl"><i class="ld-live"></i>In aula · ${esc(lo.corso)}</span><span>${lo.aula ? 'aula ' + esc(lo.aula) + ' · ' : ''}finisce tra ${lo.mancano} min</span></div>
     <div class="ld-cattura">${[['stella', '★ Da esame', 'S'], ['definizione', 'Definizione', 'D'], ['domanda', 'Domanda', 'Q']].map(([k, t, l]) => `<button type="button" class="btn" data-ld-cattura="${k}"><span>${t}</span><kbd>${MAC ? '⌃⌥' : 'Ctrl Alt '}${l}</kbd></button>`).join('')}
       ${V.attivo ? '<button type="button" class="btn primary" data-ld-appunti>Appunti</button>' : ''}</div>
-    ${V.attivo ? bloccoTrascrizione() : ''}
+    ${V.attivo ? bloccoTrascrizione() + bloccoRipeti() : ''}
     ${st ? `<p class="ld-nota">${st} ${st === 1 ? 'cosa segnata' : 'cose segnate'} da esame oggi.</p>` : ''}</section>`;
+}
+function bloccoRipeti() {
+  if (O.attivo()) return `<div class="ld-ripeti-riga"><i class="ld-orecchio"></i><span>Ripeti attivo · tengo gli ultimi 60 secondi</span><button type="button" class="btn small primary" data-ld-ripeti="si">Ripeti <kbd>${MAC ? '⌃⌥P' : 'Ctrl Alt P'}</kbd></button><button type="button" class="btn small ld-piano" data-ld-ripeti="spegni">Spegni</button></div>`;
+  return `<button type="button" class="ld-ripeti-riga spento" data-ld-ripeti="accendi"><i class="ld-orecchio"></i><span><b>Ripeti 60 s</b> · ti sei perso una frase? Lode te la ripete. Niente viene salvato.</span></button>`;
 }
 function bloccoTrascrizione() {
   const t = TR.stato();
@@ -183,7 +196,7 @@ function aggiornaPillola(avviso) {
   const p = prossimi()[0], c = daRipassare().length;
   let testo, pieno = false;
   if (tr) { testo = `<i class="ld-live rec"></i><b>${esc(tr.lezione.corso)}</b><span class="ld-tenue">${tr.inPausa ? 'trascrizione in pausa' : 'trascrivo'} · ${tr.parole.toLocaleString('it-IT')} parole</span>`; pieno = true; }
-  else if (lo) { const st = stelleOggi(lo.corso); testo = `<i class="ld-live"></i><b>${esc(lo.corso)}</b><span class="ld-tenue">fine tra ${lo.mancano} min</span>${st ? `<span class="ld-punto"></span><span class="ld-tenue">★${st}</span>` : ''}`; pieno = true; }
+  else if (lo) { const st = stelleOggi(lo.corso); testo = `<i class="ld-live"></i><b>${esc(lo.corso)}</b><span class="ld-tenue">fine tra ${lo.mancano} min</span>${st ? `<span class="ld-punto"></span><span class="ld-tenue">★${st}</span>` : ''}${O.attivo() ? '<i class="ld-orecchio" title="Ripeti attivo: gli ultimi 60 secondi in memoria"></i>' : ''}`; pieno = true; }
   else if (pl && pl.tra <= 20) { testo = `<b>${esc(pl.corso)}</b><span class="ld-tenue">${pl.aula ? 'aula ' + esc(pl.aula) + ' · ' : ''}tra ${pl.tra} min</span>`; pieno = true; }
   else if (sg) testo = `<b>2 minuti</b><span class="ld-tenue">${esc(sg.testo)}</span>`;
   else if (p) { const g = giorniTra(oggi(), p.data); testo = `<b>${esc(p.nome)}</b><span class="ld-tenue">${g === 0 ? 'oggi' : g === 1 ? 'domani' : `tra ${g} g`}</span>${c ? `<span class="ld-punto"></span><span class="ld-tenue">${c} carte</span>` : ''}`; pieno = g <= 7; }
@@ -203,7 +216,12 @@ function aggiornaPillola(avviso) {
 const larghezza = () => F.stato() ? 248 : 336;
 // la conchiglia: tre molle smorzate criticamente (niente rimbalzi) che seguono larghezza, altezza e raggio
 let formaViva = false;
-function applica() { shell.style.width = forma.w.x.toFixed(2) + 'px'; shell.style.height = forma.h.x.toFixed(2) + 'px'; shell.style.borderRadius = forma.r.x.toFixed(2) + 'px'; }
+let ultimaZona = 0;
+function applica() {
+  shell.style.width = forma.w.x.toFixed(2) + 'px'; shell.style.height = forma.h.x.toFixed(2) + 'px'; shell.style.borderRadius = forma.r.x.toFixed(2) + 'px';
+  const t = performance.now();
+  if (BRIDGE && t - ultimaZona > 120) { ultimaZona = t; const r = shell.getBoundingClientRect(); BRIDGE.zona({ x: r.left, y: r.top, w: r.width, h: r.height, aperto: A?.aperto || A?.zona }); }
+}
 function molla() {
   if (formaViva) return; formaViva = true; let prec = performance.now();
   ogni(t => {
@@ -618,19 +636,18 @@ async function salvaCattura(tipo, testo, { termine, corso } = {}) {
 async function avviaTrascrizione(opz = {}) {
   if (!V.attivo) return rispostaFissa('La trascrizione delle lezioni è nell\'**app desktop** di Lode: scrive direttamente nella nota Obsidian della lezione.');
   if (TR.attiva()) return mostraFatto({ testo: 'Sto già trascrivendo.', nota: `${TR.stato().parole} parole finora.` });
-  const l = V.lezioneDaAnnotare();
-  if (!D.imp.trascrizioneOk) {
-    const card = schedaConferma({ titolo: `Trascrivere la lezione${l.corso !== 'Appunti sparsi' ? ' di ' + l.corso : ''}?`, fuoco: false,
-      righe: [['Dove', l.corso === 'Appunti sparsi' ? 'nota «Appunti sparsi» di oggi' : `nota della lezione, sezione «Trascrizione»`], ['Audio', 'non viene salvato: resta solo il testo'], ['Formule', 'quelle dette a voce diventano LaTeX']],
-      nota: 'Registrare una lezione dipende dal regolamento del tuo ateneo e dal docente: chiedi prima. Lode lavora tutto sul computer, niente va su internet.' });
-    card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = 'Te lo chiedo solo la prima volta.';
-    const r = await attendiDecisione(card, async () => { D.imp.trascrizioneOk = true; salva(); await mostraFatto({ testo: 'D\'accordo.' }, card); return { ok: true }; });
-    if (!r?.ok) return;
-  }
+  const l = opz.lezione || V.lezioneDaAnnotare();
+  if (!opz.daFile && !(await consensoAula())) return;
   try {
     if (!Voce.pronta()) { modo('pensa', 'Preparo la voce…'); }
     await TR.avvia(l, opz); modo('riposo');
     try { localStorage.setItem('lode:voce', '1'); } catch { }
+    if (opz.daFile) {   // una registrazione: si trascrive tutta, poi si chiude da sola
+      await mostraFatto({ testo: `Trascrivo «${opz.daFile}» nella lezione di ${l.corso}.`, nota: 'Puoi chiudere il pannello: ti avviso alla fine.', sintesi: 'registrazione in trascrizione' });
+      aggiornaTutto();
+      await new Promise(ok => { const g = () => { const t = TR.stato(); if (!t || (!t.coda && !TR.occupata())) ok(); else setTimeout(g, 500); }; setTimeout(g, 800); });
+      return fermaTrascrizione();
+    }
     await mostraFatto({ testo: `Trascrivo ${l.corso === 'Appunti sparsi' ? 'gli appunti sparsi' : 'la lezione di ' + l.corso}.`, nota: 'Le righe arrivano nella nota ogni 20-30 secondi.', azione: ['Apri in Obsidian', () => apriAppunti(l)], sintesi: 'trascrizione avviata' });
     segnala('focus'); aggiornaTutto();
     if (!opz.audioProva) dopo(1200, () => { if (A.aperto && !A.attesa) chiudi('Trascrivo la lezione'); });
@@ -640,7 +657,8 @@ async function fermaTrascrizione() {
   if (!TR.attiva()) return rispostaFissa('Non sto trascrivendo niente.');
   modo('pensa', 'Trascrivo gli ultimi secondi…');
   const l = TR.stato().lezione, r = await TR.ferma(); modo('riposo'); segnala('fatto'); aggiornaTutto();
-  await mostraFatto({ testo: `Lezione trascritta: ${r.parole.toLocaleString('it-IT')} parole in ${r.minuti} min.`, nota: 'È tutto nella nota.', azione: AI.attiva() ? ['Riordina', () => { nuovoTurno(); detto(A.turno, 'Riordina la lezione'); riordinaLezione(null, l); }] : ['Apri', () => apriAppunti(l)], sintesi: `${r.parole} parole trascritte` });
+  await mostraFatto({ testo: `Lezione trascritta: ${r.parole.toLocaleString('it-IT')} parole.`, nota: 'È tutto nella nota.', azione: AI.attiva() ? ['Riordina', () => { nuovoTurno(); detto(A.turno, 'Riordina la lezione'); riordinaLezione(null, l); }] : ['Condividi', () => { nuovoTurno(); detto(A.turno, 'Condividi la sbobina'); condividiLezione(l.corso); }], sintesi: `${r.parole} parole trascritte` });
+  if (!(D.imp.ripetiInAula && lezioneOra())) O.spegni();   // il microfono resta acceso solo se serve a «Ripeti» in aula
   if (!AI.attiva()) rispostaFissa('Con il **cervello locale** (da «Prepara Lode») la trascrizione diventa appunti ordinati, definizioni e ★ con un clic.');
 }
 async function riordinaLezione(corso, lez) {
@@ -657,10 +675,188 @@ async function riordinaLezione(corso, lez) {
     nota: `Vanno nella nota, in «Appunti riordinati da Lode», sotto la trascrizione (che resta). Li ha scritti ${AI.motore() === 'locale' ? 'il modello locale' : 'Claude'}: rileggili.` });
   await attendiDecisione(card, async () => {
     await V.annota('riordinati', md, { lezione: l, grezza: true });
-    await mostraFatto({ testo: 'Appunti salvati nella nota.', azione: ['Apri', () => apriAppunti(l)], sintesi: 'lezione riordinata' }, card);
+    await mostraFatto({ testo: 'Appunti salvati nella nota.', azione: ['Condividi', () => { nuovoTurno(); detto(A.turno, 'Condividi la sbobina'); condividiLezione(l.corso); }], sintesi: 'lezione riordinata' }, card);
     nuovoTurno(); detto(A.turno, 'Definizioni dalla lezione');
     return chiudiLezione(l.corso, { lezione: l, testo: md.slice(0, 9000) });
   });
+}
+
+/* ---------- «Ripeti»: cosa ha appena detto il prof ---------- */
+async function consensoAula() {
+  if (D.imp.trascrizioneOk) return true;
+  const card = schedaConferma({ titolo: 'Ascoltare la lezione?', fuoco: false,
+    righe: [['Ripeti', 'tengo in memoria solo gli ultimi 60 secondi, mai su disco'], ['Trascrivi', 'scrivo la lezione nella nota, l\'audio non si salva'], ['Dove', 'tutto sul computer, niente su internet']],
+    nota: 'Registrare una lezione dipende dal regolamento del tuo ateneo e dal docente: chiedi prima.' });
+  card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = 'Te lo chiedo solo la prima volta.';
+  const r = await attendiDecisione(card, async () => { D.imp.trascrizioneOk = true; salva(); await mostraFatto({ testo: 'D\'accordo.' }, card); return { ok: true }; });
+  return !!r?.ok;
+}
+async function accendiRipeti() {
+  if (!V.attivo) return rispostaFissa('«Ripeti» è nell\'**app desktop** di Lode.');
+  if (!(await consensoAula())) return;
+  try { await O.accendi(); D.imp.ripetiInAula = true; salva(); Voce.prepara().catch(() => { }); aggiornaTutto(); }
+  catch (e) { return rispostaFissa('Serve il permesso del microfono: Impostazioni di sistema > Privacy > Microfono.', { errore: true }); }
+  return mostraFatto({ testo: 'Ripeti è attivo.', nota: `Tengo gli ultimi 60 secondi. Ti sei perso qualcosa? ${MAC ? '⌃⌥P' : 'Ctrl Alt P'} o «ripeti».`, sintesi: 'ripeti attivo' });
+}
+function spegniRipeti() { D.imp.ripetiInAula = false; salva(); if (!TR.attiva()) O.spegni(); aggiornaTutto(); return mostraFatto({ testo: 'Ripeti spento.', nota: 'Il microfono è chiuso.' }); }
+async function ripeti(sec = 60) {
+  if (!O.attivo()) return accendiRipeti();
+  if (O.secondi() < 1) return rispostaFissa('Ascolto da un attimo: non ho ancora niente da ripeterti.');
+  const quando = new Date(), audio = O.ultimi(sec);
+  modo('pensa', `Riascolto gli ultimi ${Math.round(Math.min(sec, O.secondi()))} secondi…`); segnala('pensa');
+  let testo = ''; try { testo = await Voce.trascriviAudio(audio); } catch (e) { modo('riposo'); return rispostaFissa('Non sono riuscito a riascoltare: ' + e.message, { errore: true }); }
+  modo('riposo');
+  if (!testo) return rispostaFissa('Negli ultimi 60 secondi non ho sentito parlare.');
+  const f = parlatoInFormule(testo), hh = `${String(quando.getHours()).padStart(2, '0')}:${String(quando.getMinutes()).padStart(2, '0')}`;
+  const s = scheda('ld-ripeti', `<span class="ld-lbl">Gli ultimi ${Math.round(Math.min(sec, audio.length / 16000))} secondi · ${hh}</span><p class="ld-detto-prof">${mdHtml(f)}</p>
+    <div class="az"><button type="button" class="btn primary" data-r="appunti">Agli appunti</button><button type="button" class="btn" data-r="stella">★ Da esame</button><button type="button" class="btn" data-r="copia">Copia</button></div>`);
+  s.querySelector('[data-r=copia]').addEventListener('click', e => { navigator.clipboard.writeText(f).then(() => { e.target.textContent = 'Copiato'; }); });
+  s.querySelector('[data-r=appunti]').addEventListener('click', async e => { e.target.disabled = true; const l = await V.annota('appunti', `- **${hh}** ${f}`, { grezza: true }); mostraFatto({ testo: `Negli appunti di ${l.corso}.` }); });
+  s.querySelector('[data-r=stella]').addEventListener('click', async e => { e.target.disabled = true; const l = await V.annota('stella', f); mostraFatto({ testo: `★ Segnato in ${l.corso}.` }); aggiornaTutto(); });
+  if (A.turno) A.turno.dataset.sintesi = f.slice(0, 80);
+}
+
+/* ---------- condividere la sbobina ---------- */
+async function condividiLezione(corso) {
+  if (!V.attivo) return rispostaFissa('Le sbobine si condividono dall\'**app desktop**.');
+  const l = lezioni().find(x => x.file && (!corso || norm(x.corso) === norm(corso)) && ((x.paroleTrascritte || 0) > 20 || x.riordinata || (x.definizioni || []).length));
+  if (!l) return rispostaFissa(corso ? `Non trovo una lezione di **${corso}** da condividere.` : 'Non trovo una lezione da condividere: prima trascrivila o riordinala.');
+  modo('pensa', 'Preparo la sbobina…');
+  try {
+    const sb = SB.crea(await V.leggiNota(l.file), { autore: D.profilo.nome }), pagina = await SB.html(sb);
+    const a = await V.salvaFile(`Sbobine/${sb.nome}.md`, { testo: sb.md, sostituisci: true }), b = await V.salvaFile(`Sbobine/${sb.nome}.html`, { testo: pagina, sostituisci: true });
+    modo('riposo'); const r = await V.condividi([b.file, a.file]);
+    return mostraFatto({ testo: `Sbobina di ${l.corso} pronta.`, nota: r.esito === 'menu' ? 'Scegli dove mandarla: AirDrop, Messaggi, Mail…' : 'È nella cartella Sbobine del vault.', azione: ['Mostra', () => V.condividi([b.file, a.file])], sintesi: 'sbobina condivisa' });
+  } catch (e) { modo('riposo'); return rispostaFissa('Non riesco a preparare la sbobina: ' + e.message, { errore: true }); }
+}
+
+/* ---------- i file lasciati sulla pillola ---------- */
+const ICONA_FILE = { pdf: 'doc', slide: 'doc', word: 'doc', testo: 'doc', sbobina: 'appunti', carte: 'ripasso', foto: 'foto', audio: 'audio', altro: 'doc' };
+const NOME_TIPO = { pdf: 'PDF', slide: 'slide PowerPoint', word: 'documento Word', testo: 'testo', sbobina: 'sbobina di Lode', carte: 'carte (Anki/CSV)', foto: 'foto', audio: 'registrazione audio', altro: 'file' };
+function corsiPossibili() {
+  const c = new Map(); const metti = n => { if (n && n !== 'Appunti sparsi' && !c.has(norm(n))) c.set(norm(n), n); };
+  const lo = lezioneOra(); metti(lo?.corso); metti(V.lezioneDaAnnotare().corso); metti(prossimi()[0]?.nome);
+  D.orario.forEach(o => metti(o.corso)); lezioni().forEach(l => metti(l.corso)); daFare().forEach(e => metti(e.nome));
+  return [...c.values()];
+}
+const isoDi = t => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+export async function riceviFile(lista) {
+  const tutti = [...lista].filter(f => f.size > 0);
+  if (!tutti.length) return;
+  const f = tutti[0];
+  await apri({ fisso: true }); nuovoTurno(); detto(A.turno, f.name);
+  if (tutti.length > 1) rispostaFissa(`Uno alla volta: comincio da **${f.name}**, poi lascia gli altri ${tutti.length - 1}.`);
+  let x; try { x = await FILE.classifica(f); } catch (e) { return rispostaFissa('Non riesco a leggere il file: ' + e.message, { errore: true }); }
+  schedaFile(x);
+}
+function opzioniPer(x) {
+  const ai = AI.attiva(), app = V.attivo, serveAI = ai ? '' : 'serve il cervello locale o Claude', serveApp = app ? '' : 'nell\'app desktop';
+  const testo = ['pdf', 'slide', 'word', 'testo'].includes(x.tipo);
+  if (x.tipo === 'sbobina') return [{ k: 'sbobina', t: 'Aggiungi al mio vault', d: 'Diventa una lezione nel tuo Obsidian: definizioni e ★ entrano nei giochi', no: serveApp, primo: true }, { k: 'allega', t: 'Allega soltanto', d: 'Salvo il file negli allegati della lezione', no: serveApp }];
+  if (x.tipo === 'carte') return [{ k: 'importaCarte', t: 'Importa le carte', d: 'Una per riga: domanda, poi Tab, «;» o « = », poi risposta', primo: true }];
+  if (x.tipo === 'audio') return [{ k: 'audio', t: 'Trascrivi la registrazione', d: 'Tutta la lezione in appunti, formule comprese, nella nota della lezione', no: app ? '' : serveApp, primo: true, corso: true, data: true }, { k: 'allega', t: 'Allega alla lezione', d: 'Salvo l\'audio negli allegati, con il link nella nota', no: serveApp, corso: true }];
+  if (x.tipo === 'foto') return [{ k: 'lavagna', t: 'Trascrivi in appunti', d: 'Testo e formule in LaTeX, nella nota della lezione', no: serveAI || serveApp, primo: true, corso: true }, { k: 'carte', t: 'Carte del ripasso', d: 'Le domande che chiederebbero all\'esame', no: serveAI }, { k: 'allega', t: 'Allega alla lezione', d: 'La foto nella nota della lezione', no: serveApp, corso: true }];
+  if (testo) return [
+    { k: 'carte', t: 'Carte del ripasso', d: 'Domande e risposte per il ripasso a intervalli', no: serveAI, primo: true },
+    { k: 'riassunto', t: 'Riassunto in Obsidian', d: 'Appunti ordinati con formule, in una nota nuova', no: serveAI || serveApp, corso: true },
+    { k: 'definizioni', t: 'Definizioni per i giochi', d: 'Le aggiungo alla lezione: diventano giochi di memoria', no: serveAI || serveApp, corso: true },
+    { k: 'orale', t: 'Interrogami su questo', d: 'Un prof d\'orale con domande su questo materiale', no: serveAI },
+    { k: 'allega', t: 'Allega alla lezione', d: 'Salvo il file con il link nella nota', no: serveApp, corso: true },
+  ];
+  return [];
+}
+function schedaFile(x) {
+  if (x.tipo === 'altro') return rispostaFissa(`Questo non lo so usare: ${x.motivo}.`);
+  const op = opzioniPer(x), corsi = corsiPossibili(), serveCorso = op.some(o => o.corso), serveData = op.some(o => o.data);
+  const s = scheda('ld-file-op', `<div class="capo">${ico(ICONA_FILE[x.tipo] || 'doc')}<span class="t"><b>${esc(x.nome)}</b><span>${NOME_TIPO[x.tipo]} · ${x.mb < 1 ? Math.max(1, Math.round(x.mb * 1024)) + ' KB' : x.mb.toFixed(1).replace('.', ',') + ' MB'}</span></span></div>
+    <span class="ld-lbl">Cosa ne faccio?</span>
+    <div class="ld-opzioni">${op.map(o => `<button type="button" class="ld-op${o.primo && !o.no ? ' primo' : ''}" data-op="${o.k}"${o.no ? ' disabled' : ''}><b>${esc(o.t)}</b><span>${esc(o.no ? o.d + ' · ' + o.no : o.d)}</span></button>`).join('')}</div>
+    ${serveCorso && corsi.length ? `<div class="ld-riga-form ld-per"><span class="ld-lbl">Per</span><select aria-label="Corso">${corsi.map(c => `<option>${esc(c)}</option>`).join('')}</select>${serveData ? `<input type="date" aria-label="Data della lezione" value="${isoDi(x.file.lastModified || Date.now())}">` : ''}</div>` : ''}`);
+  s.querySelectorAll('.ld-op').forEach((b, i) => entra(b, { ritardo: 80 + i * 55, dy: 6, blur: 5, ms: 420 }));
+  s.querySelectorAll('[data-op]').forEach(b => b.addEventListener('click', async () => {
+    s.querySelectorAll('[data-op]').forEach(y => { y.disabled = true; y.classList.toggle('scelta', y === b); });
+    const corso = s.querySelector('.ld-per select')?.value || corsi[0] || null, data = s.querySelector('.ld-per input[type=date]')?.value;
+    try { await usaFile(x, b.dataset.op, { corso, data }); }
+    catch (e) { modo('riposo'); rispostaFissa('Non è andata: ' + e.message, { errore: true }); s.querySelectorAll('[data-op]').forEach((y, i) => { y.disabled = !!op[i].no; y.classList.remove('scelta'); }); }
+  }));
+  if (A.turno) A.turno.dataset.sintesi = `${x.nome}: cosa ne faccio?`;
+}
+const lezionePer = (corso, data) => {
+  const d = data || oggi();
+  const v = lezioni().find(l => l.file && norm(l.corso) === norm(corso) && l.data === d);
+  if (v) return v;
+  const o = D.orario.find(y => norm(y.corso) === norm(corso));
+  return { corso: corso || 'Appunti sparsi', data: d, inizio: o?.inizio, fine: o?.fine, aula: o?.aula };
+};
+async function allegaFile(x, corso) {
+  const r = await V.salvaFile(`Allegati/${x.nome}`, { dati: new Uint8Array(await x.file.arrayBuffer()) });
+  const nome = r.file.split('/').pop(), l = lezionePer(corso);
+  await V.annota('appunti', `- ![[${nome}]]`, { lezione: l, grezza: true });
+  return { l, nome };
+}
+async function usaFile(x, op, { corso, data }) {
+  if (op === 'allega') { const r = await allegaFile(x, corso); return mostraFatto({ testo: `Allegato alla lezione di ${r.l.corso}.`, azione: ['Apri', () => apriAppunti(r.l)] }); }
+  if (op === 'sbobina') {
+    const sb = SB.leggi(x.testo), corsoN = trovaEsame(sb.corso)?.nome || sb.corso;
+    const r = await V.salvaFile(`Lezioni/${pulito(corsoN)}/${sb.data} ${pulito(corsoN)} · sbobina${sb.da ? ' di ' + pulito(sb.da) : ''}.md`, { testo: sb.nota });
+    aggiornaTutto(); segnala('fatto');
+    return mostraFatto({ testo: `Sbobina di ${corsoN} nel tuo vault.`, nota: `${dataBreve(sb.data)}${sb.da ? ' · da ' + sb.da : ''}`, azione: ['Apri', () => apriAppunti({ file: r.file, corso: corsoN })], sintesi: 'sbobina ricevuta' });
+  }
+  if (op === 'importaCarte') {
+    const carte = [];
+    for (const riga of x.testo.split(/\r?\n/)) { if (!riga.trim() || riga.startsWith('#')) continue; const p = riga.split(/\t| = | → |;(?=[^;]*$)/); if (p.length >= 2 && p[0].trim() && p[1].trim()) carte.push({ fronte: p[0].trim().replace(/^"|"$/g, ''), retro: p.slice(1).join(' ').trim().replace(/^"|"$/g, '') }); }
+    if (!carte.length) return rispostaFissa('Non ho trovato righe «domanda, risposta» in questo file.');
+    return eseguiStrumento('crea_carte', { carte: carte.slice(0, 30), esame: corso || prossimi()[0]?.nome });
+  }
+  if (op === 'audio') {
+    modo('pensa', 'Apro la registrazione…');
+    const audio = await FILE.audioDi(x.file); modo('riposo');
+    const l = lezionePer(corso, data);
+    return avviaTrascrizione({ audioProva: audio, lezione: l, daFile: x.nome });
+  }
+  if (op === 'lavagna') {
+    modo('pensa', 'Leggo la foto…'); segnala('pensa');
+    const blocco = await AI.bloccoFile(x.file), md = await AI.trascriviFoto({ blocco, corso }); modo('riposo');
+    const card = schedaConferma({ titolo: `Mettere negli appunti di ${corso}?`, extra: `<div class="ld-anteprima">${mdHtml(md.slice(0, 1400))}</div>`, nota: 'Insieme alla foto, nella nota della lezione di oggi. Rileggila: l\'ha trascritta ' + (AI.motore() === 'locale' ? 'il modello locale.' : 'Claude.') });
+    return attendiDecisione(card, async () => { const r = await allegaFile(x, corso); await V.annota('appunti', md, { lezione: r.l, grezza: true }); await mostraFatto({ testo: 'Lavagna negli appunti.', azione: ['Apri', () => apriAppunti(r.l)] }, card); return {}; });
+  }
+  // da qui serve il testo del file
+  modo('pensa', `Leggo ${x.nome}…`); segnala('pensa');
+  let testo = null, blocchi;
+  if (x.tipo === 'foto') blocchi = [await AI.bloccoFile(x.file)];
+  else {
+    try { testo = await FILE.testoDi(x); blocchi = [{ type: 'text', text: `[${x.nome}]\n${testo.slice(0, 120000)}` }]; }
+    catch (e) { if (x.tipo === 'pdf' && AI.motore() === 'claude') blocchi = [await AI.bloccoFile(x.file)]; else throw e; }
+  }
+  if (op === 'carte') {
+    modo('pensa', 'Scrivo le carte…');
+    const carte = await AI.carteDa(blocchi); modo('riposo');
+    if (!carte.length) return rispostaFissa('Da questo file non ho tirato fuori carte.');
+    return eseguiStrumento('crea_carte', { carte, esame: corso || prossimi()[0]?.nome });
+  }
+  if (op === 'definizioni') { modo('riposo'); return chiudiLezione(corso, { lezione: lezionePer(corso), testo: (testo || '').slice(0, 9000) }); }
+  if (op === 'orale') { modo('riposo'); return avviaOrale(trovaEsame(corso || '') || { id: null, nome: corso || x.nome }, null, (testo || '').slice(0, 30000)); }
+  if (op === 'riassunto') {
+    const md = await AI.riassumi({ corso, testo, nome: x.nome, avanza: p => modo('pensa', `Riassumo ${x.nome}… ${Math.round(p * 100)}%`) }); modo('riposo');
+    const card = schedaConferma({ titolo: `Salvare il riassunto in Obsidian?`, extra: `<div class="ld-anteprima">${mdHtml(md.slice(0, 1400))}${md.length > 1400 ? '<span class="ld-tenue"> …</span>' : ''}</div>`, nota: `Nota nuova in Materiali/${pulito(corso || 'Varie')}, con il file originale allegato.` });
+    return attendiDecisione(card, async () => {
+      const al = await V.salvaFile(`Allegati/${x.nome}`, { dati: new Uint8Array(await x.file.arrayBuffer()) });
+      const n = await V.salvaFile(`Materiali/${pulito(corso || 'Varie')}/${x.nome.replace(/\.[^.]+$/, '')}.md`, { testo: `---\ntipo: materiale\ncorso: "[[${pulito(corso || '')}]]"\nfonte: "[[${al.file.split('/').pop()}]]"\ntags: [materiale]\n---\n# ${x.nome.replace(/\.[^.]+$/, '')}\n\n[[${pulito(corso || 'Home')}]] · file originale: ![[${al.file.split('/').pop()}]]\n\n${md}\n` });
+      await mostraFatto({ testo: 'Riassunto salvato.', azione: ['Apri', () => apriAppunti({ file: n.file, corso: x.nome })] }, card); return {};
+    });
+  }
+}
+
+/* ---------- la zona dove lasciare i file: la pillola si allarga ---------- */
+function zonaOn() {
+  if (A.zona) return; A.zona = true; shell.classList.add('drop');
+  if (!A.aperto) { forma.w.t = Math.min(470, innerWidth - 16); forma.h.t = 148; forma.r.t = 24; molla(); }
+  entra(shell.querySelector('.ld-zona-in'), { dy: 6, blur: 6, ms: 420, scala: .97 });
+  segnala('conferma-pronta');
+}
+function zonaOff() {
+  if (!A.zona) return; A.zona = false; shell.classList.remove('drop', 'sopra');
+  if (!A.aperto) { forma.w.t = larghezza(); forma.h.t = 36; forma.r.t = 18; molla(); }
 }
 
 /* ---------- preparare il computer: Obsidian e il cervello locale ---------- */
@@ -904,6 +1100,9 @@ async function esegui(c) {
     case 'chiudiLezione': return chiudiLezione(c.corso);
     case 'prepara': return schedaPrepara(c.cosa);
     case 'trascrivi': return avviaTrascrizione();
+    case 'ripeti': return ripeti(c.sec || 60);
+    case 'spegniRipeti': return spegniRipeti();
+    case 'condividi': return condividiLezione(c.corso);
     case 'fineTrascrizione': return fermaTrascrizione();
     case 'pausaTrascrizione': TR.pausa(); return mostraFatto({ testo: 'Trascrizione in pausa.', nota: 'Scrivi «riprendi trascrizione» quando ricomincia.' });
     case 'riprendiTrascrizione': TR.riprendi(); return mostraFatto({ testo: 'Riprendo a trascrivere.' });
@@ -963,7 +1162,7 @@ async function chiediAI(testo, { sistema } = {}) {
 }
 
 /* ---------- l'orale ---------- */
-async function avviaOrale(e, nomeDetto) {
+async function avviaOrale(e, nomeDetto, materialeFile) {
   if (!A.turno || A.home) nuovoTurno();
   if (!AI.attiva()) {
     rispostaFissa(V.attivo ? 'Per l\'interrogazione serve l\'AI: installa il **cervello locale** da «Prepara Lode» (gratis, offline) o aggiungi una chiave Claude. Intanto puoi fare il **ripasso** delle carte.' : 'Per l\'interrogazione serve l\'AI: aggiungi la tua chiave Claude in **Impostazioni** (costa pochi centesimi a sessione). Intanto puoi fare il **ripasso** delle carte.');
@@ -982,7 +1181,7 @@ async function avviaOrale(e, nomeDetto) {
   A.orale = { esameId: e.id, nome: e.nome }; A.storia = [];
   const c = contesto(`Orale · <b>${esc(e.nome)}</b>`); const via = h('button', 'ld-esci', 'Esci'); via.type = 'button'; via.addEventListener('click', esciOrale); c.append(via);
   const carte = D.carte.filter(x => x.esameId === e.id).slice(0, 80);
-  const materiale = carte.length ? `\n\nMateriale dello studente (sue carte del ripasso):\n${carte.map(x => `– ${x.fronte} → ${x.retro}`).join('\n')}` : '';
+  const materiale = materialeFile ? `\n\nMateriale su cui interrogarmi (dal file che ti ho dato):\n${materialeFile}` : carte.length ? `\n\nMateriale dello studente (sue carte del ripasso):\n${carte.map(x => `– ${x.fronte} → ${x.retro}`).join('\n')}` : '';
   A.turno.dataset.sintesi = `orale di ${e.nome}`;
   await chiediAI(`Iniziamo. Sono pronto per l'orale di ${e.nome}.${materiale}`, { sistema: AI.SISTEMA_ORALE(e.nome) });
 }
@@ -1035,8 +1234,8 @@ function allega(files) {
   inp.focus();
 }
 function scegliFile() {
-  const i = h('input'); i.type = 'file'; i.multiple = true; i.accept = '.pdf,.txt,.md,.csv,.tsv,image/*';
-  i.addEventListener('change', () => allega(i.files)); i.click();
+  const i = h('input'); i.type = 'file'; i.multiple = true; i.accept = '.pdf,.pptx,.docx,.txt,.md,.csv,.tsv,.html,image/*,audio/*';
+  i.addEventListener('change', () => riceviFile(i.files)); i.click();
 }
 // senza AI: importa carte da testo «domanda<TAB>risposta» (export di Anki), «domanda;risposta» o «domanda = risposta»
 async function importaSenzaAI() {
@@ -1104,6 +1303,7 @@ function collega() {
     const c = e.target.closest('[data-ld-cattura]'); if (c) { premi(c); cattura(c.dataset.ldCattura); return; }
     if (e.target.closest('[data-ld-appunti]')) apriAppunti();
     if (e.target.closest('[data-ld-trascrivi]')) { nuovoTurno(); detto(A.turno, 'Trascrivi la lezione'); avviaTrascrizione(); }
+    const rp = e.target.closest('[data-ld-ripeti]'); if (rp) { const k = rp.dataset.ldRipeti; nuovoTurno(); detto(A.turno, k === 'si' ? 'Ripeti' : k === 'spegni' ? 'Spegni Ripeti' : 'Accendi Ripeti'); k === 'si' ? ripeti() : k === 'spegni' ? spegniRipeti() : accendiRipeti(); return; }
     const tr = e.target.closest('[data-ld-tr]'); if (tr) { const k = tr.dataset.ldTr; if (k === 'fine') { nuovoTurno(); detto(A.turno, 'Fine trascrizione'); fermaTrascrizione(); } else { k === 'pausa' ? TR.pausa() : TR.riprendi(); disegnaHome(); } }
   });
   addEventListener('keydown', e => {
@@ -1126,12 +1326,13 @@ function collega() {
   });
   addEventListener('keyup', e => { if (pttAttivo && (e.code === 'Space' || e.key === 'Alt' || e.key === 'Control' || e.key === 'Shift')) { pttAttivo = false; fineAscolto(); } });
   addEventListener('blur', () => { if (pttAttivo) { pttAttivo = false; fineAscolto(); } });
-  // trascinare file sulla finestra
+  // trascinare file: la pillola si allarga in una zona dove lasciarli (anche a barra chiusa)
   let dentro = 0;
-  addEventListener('dragenter', e => { if (![...(e.dataTransfer?.types || [])].includes('Files')) return; e.preventDefault(); if (++dentro === 1) velo.classList.add('on'); });
-  addEventListener('dragover', e => { if ([...(e.dataTransfer?.types || [])].includes('Files')) e.preventDefault(); });
-  addEventListener('dragleave', () => { if (--dentro <= 0) { dentro = 0; velo.classList.remove('on'); } });
-  addEventListener('drop', e => { if (!e.dataTransfer?.files?.length) return; e.preventDefault(); dentro = 0; velo.classList.remove('on'); allega(e.dataTransfer.files); });
+  const conFile = e => [...(e.dataTransfer?.types || [])].includes('Files');
+  addEventListener('dragenter', e => { if (!conFile(e)) return; e.preventDefault(); if (++dentro === 1) zonaOn(); });
+  addEventListener('dragover', e => { if (!conFile(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; shell.classList.toggle('sopra', !!e.target.closest?.('.ld')); });
+  addEventListener('dragleave', e => { if (!conFile(e)) return; if (--dentro <= 0) { dentro = 0; zonaOff(); if (BRIDGE) BRIDGE.mouse(!A.aperto); } });
+  addEventListener('drop', e => { if (!e.dataTransfer?.files?.length) return; e.preventDefault(); dentro = 0; zonaOff(); riceviFile(e.dataTransfer.files); });
   // il timer aggiorna la pillola; la fine del focus festeggia
   addEventListener('lode:focus', e => {
     const ev = e.detail.evento;
@@ -1151,6 +1352,8 @@ function collega() {
   // il tempo passa: «fine tra 23 min», la lezione che inizia, il suggerimento del pomeriggio
   let minuto = -1;
   setInterval(() => { const m = new Date().getMinutes(); if (m === minuto) return; minuto = m;
+    // Ripeti: si accende da solo a lezione (se l'hai attivato una volta) e si spegne dopo
+    if (V.attivo && D.imp.ripetiInAula && D.imp.trascrizioneOk) { if (lezioneOra() && !O.attivo()) O.accendi().then(aggiornaTutto).catch(() => { }); else if (!lezioneOra() && O.attivo() && !TR.attiva()) { O.spegni(); aggiornaTutto(); } }
     // dieci minuti dopo la fine della lezione la trascrizione si chiude da sola
     const tr = TR.stato(); if (tr?.lezione.fine && !lezioneOra()) { const [hh, mm] = tr.lezione.fine.split(':').map(Number), d = new Date(); if (d.getHours() * 60 + d.getMinutes() >= hh * 60 + mm + 10) fermaTrascrizione(); } if (!A.avviso && !F.stato()) aggiornaPillola(); if (A.aperto && A.home && !shell.contains(document.activeElement)) { disegnaHome(); aggiornaTesta(); } }, 5000);
   if (BRIDGE) collegaDesktop();
@@ -1168,6 +1371,7 @@ function collegaDesktop() {
     if (nome === 'apri') { if (Voce.attivo()) return; pttAttivo = true; apri({ fisso: true }).then(() => campo.querySelector('input').focus({ preventScroll: true })); iniziaAscolto(); }
     else if (nome === 'scrivi') { apri({ fisso: true }).then(() => campo.querySelector('input').focus()); }
     else if (CATTURE[nome]) cattura(nome);
+    else if (nome === 'ripeti') { apri({ fisso: true }); nuovoTurno(); detto(A.turno, 'Ripeti'); ripeti(); }
     else if (nome === 'trascrivi') { apri({ fisso: true }); nuovoTurno(); if (TR.attiva()) { detto(A.turno, 'Fine trascrizione'); fermaTrascrizione(); } else { detto(A.turno, 'Trascrivi la lezione'); avviaTrascrizione(); } }
     else if (nome === 'gioco') { apri({ fisso: true }); nuovoTurno(); detto(A.turno, 'Gioca'); schedaGioco(); }
   });
@@ -1186,7 +1390,7 @@ export function avvia() {
 }
 // la pagina sotto chiede a Lode di fare cose (ripassa, interroga, focus) dal suo pannello
 // per le prove automatiche (test/): accesso ai motori della barra
-window.__lode = { invia, indietro, TR, Voce, avviaTrascrizione, fermaTrascrizione, riordinaLezione, stato: () => A };
+window.__lode = { invia, riceviFile, O, ripeti, condividiLezione, indietro, TR, Voce, avviaTrascrizione, fermaTrascrizione, riordinaLezione, stato: () => A };
 export const azioni = {
   focus: esameId => avviaFocus({ esameId }),
   ripassa: esameId => { apri({ fisso: true }); nuovoTurno(); detto(A.turno, esameId ? 'Ripassa ' + esame(esameId)?.nome : 'Ripasso'); schedaRipasso(esameId); },
@@ -1195,5 +1399,6 @@ export const azioni = {
   scrivi: testo => { apri({ fisso: true }).then(() => { const i = campo.querySelector('input'); i.value = testo; i.focus(); }); },
   invia: testo => { apri({ fisso: true }); invia(testo); },
   file: () => scegliFile(),
+  ricevi: lista => riceviFile(lista),
   home: () => { ricomincia(); },
 };

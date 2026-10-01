@@ -166,3 +166,7 @@ export const stato = () => L ? L.invoca('installa:stato') : Promise.resolve(null
 export const installa = cosa => L.invoca(cosa === 'obsidian' ? 'installa:obsidian' : 'installa:cervello');
 export const suProgresso = fn => L?.su('installa:progresso', fn);
 if (L) { addEventListener('lode:lezioni', aggiornaPagine); addEventListener('lode:dati', aggiornaPagine); aggiornaPagine(); }
+
+export const leggiNota = file => L.invoca('vault:leggi', { file });
+export const salvaFile = (file, { testo, dati, sostituisci } = {}) => L.invoca('vault:salvaFile', { file, testo, dati, sostituisci });
+export const condividi = files => L.invoca('condividi', { files });

@@ -88,6 +88,9 @@ export function interpreta(frase) {
   }
   if (/^(?:apri )?(?:gli |i miei )?(?:appunti|obsidian|vault|la nota|nota)( di oggi| della lezione)?$/.test(t)) return { tipo: 'appunti' };
   if (/^(?:trascrivi|registra|ascolta|sbobina)(?: (?:la|tutta la|questa))? lezione\b|^(?:avvia|inizia|parti con) (?:la )?(?:trascrizione|sbobinatura)/.test(t)) return { tipo: 'trascrivi' };
+  if (/^(?:ripeti|ripetimi|ripeti(?:mi)? (?:l'ultima frase|gli ultimi \d+ secondi|cosa ha detto)|cosa ha (?:appena )?detto|che (?:cosa )?ha detto|non ho capito|mi sono pers[oa] (?:qualcosa|una frase)|cos'ha detto)(?: il prof(?:essore)?)?$/.test(t)) { const sec = +(t.match(/(\d+) secondi/)?.[1] || 60); return { tipo: 'ripeti', sec: Math.min(90, sec) }; }
+  if (/^(?:spegni|disattiva|basta)(?: il)? ripeti$/.test(t)) return { tipo: 'spegniRipeti' };
+  if (/^(?:condividi|manda|passa|invia)(?: la)? (?:sbobina|lezione|trascrizione|appunti)\b/.test(t)) { const r = pulisci(t.replace(/^.*?(sbobina|lezione|trascrizione|appunti)\s*/, '').replace(/^(?:ai|a|ai miei) (?:compagni|colleghi)\s*/, '')); return { tipo: 'condividi', corso: r || null }; }
   if (/^(?:stop|ferma|fine|basta|termina|chiudi)(?: la)? (?:trascrizione|registrazione|sbobinatura)|^(?:la )?lezione è finita$|^fine lezione$/.test(t)) return { tipo: 'fineTrascrizione' };
   if (/^(?:pausa|sospendi)(?: la)? (?:trascrizione|registrazione)/.test(t)) return { tipo: 'pausaTrascrizione' };
   if (/^riprendi(?: la)? (?:trascrizione|registrazione)/.test(t)) return { tipo: 'riprendiTrascrizione' };
@@ -187,6 +190,8 @@ export const ESEMPI = [
   ['gioca', 'due minuti sulle definizioni dell\'ultima lezione'],
   ['trascrivi la lezione', 'in aula: tutta la lezione in appunti, formule comprese, salvata in Obsidian'],
   ['riordina la lezione', 'dalla trascrizione ad appunti puliti (AI)'],
+  ['ripeti', 'in aula: cosa ha detto il prof negli ultimi 60 secondi'],
+  ['condividi la sbobina', 'la lezione ai compagni: AirDrop, WhatsApp, mail'],
   ['chiudi lezione', 'definizioni e ★ estratte dagli appunti (AI)'],
   ['apri glossario', 'salta a una pagina del vault'],
   ['interrogami su basi di dati', 'simula l\'orale (con l\'AI)'],

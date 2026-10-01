@@ -6,10 +6,12 @@
 import * as Voce from './voce.js';
 import { parlatoInFormule } from './formule.js';
 import * as V from './vault.js';
+import * as O from './orecchio.js';
 
 let R = null;
 const avvisa = () => dispatchEvent(new CustomEvent('lode:trascrizione', { detail: stato() }));
 export const attiva = () => !!R;
+export const occupata = () => !!R?.lavora;
 export const stato = () => R ? { lezione: R.lezione, inizio: R.inizio, parole: R.parole, righe: R.righe, ultima: R.ultima, inPausa: R.inPausa, coda: R.coda.length, minuti: Math.round((Date.now() - R.inizio - R.pausaTot) / 60000) } : null;
 const ora = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
@@ -63,12 +65,9 @@ export async function avvia(lezione, { audioProva } = {}) {
     for (let i = 0; i < audioProva.length && R; i += 2048) { seg.aggiungi(audioProva.subarray(i, i + 2048)); if (i % (2048 * 64) === 0) await new Promise(r => setTimeout(r, 0)); }
     avvisa(); return stato();
   }
-  const flusso = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: false, noiseSuppression: true, autoGainControl: true } });
-  const ctx = new AudioContext({ sampleRate: 16000 }); if (ctx.state === 'suspended') await ctx.resume().catch(() => { });
-  const src = ctx.createMediaStreamSource(flusso), proc = ctx.createScriptProcessor(4096, 1, 1);
-  proc.onaudioprocess = e => { if (R && !R.inPausa) R.seg.aggiungi(new Float32Array(e.inputBuffer.getChannelData(0))); };
-  src.connect(proc); proc.connect(ctx.destination);
-  R.spegni = () => { proc.disconnect(); src.disconnect(); flusso.getTracks().forEach(t => t.stop()); ctx.close(); };
+  // il microfono è quello condiviso (orecchio.js): resta acceso anche per «Ripeti», se l'hai attivato
+  await O.accendi();
+  R.spegni = O.ascolta(x => { if (R && !R.inPausa) R.seg.aggiungi(x); });
   avvisa(); return stato();
 }
 export function pausa() { if (!R || R.inPausa) return; R.inPausa = true; R.pausaDa = Date.now(); R.seg.fine(); avvisa(); }

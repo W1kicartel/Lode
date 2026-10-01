@@ -1,8 +1,8 @@
 // Lode, l'app desktop. Una finestra trasparente in cima allo schermo, sopra tutte le altre: dentro c'è solo la barra.
 // I clic passano attraverso tranne che sulla barra. Scorciatoie globali per la cattura in aula. Il vault Obsidian in
 // Documenti/Lode è la memoria: dati di Lode in .lode/dati.json, lezioni in Markdown. Icona nella barra dei menu.
-import { app, BrowserWindow, Menu, Tray, dialog, globalShortcut, ipcMain, nativeImage, powerMonitor, screen, shell } from 'electron';
-import { existsSync, readFileSync, mkdirSync } from 'node:fs';
+import { app, BrowserWindow, Menu, ShareMenu, Tray, dialog, globalShortcut, ipcMain, nativeImage, powerMonitor, screen, shell } from 'electron';
+import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as V from './vault.mjs';
@@ -105,6 +105,34 @@ ipcMain.handle('vault:blocco', (_, x) => {
   return V.blocco(vault(), x);
 });
 ipcMain.handle('vault:note', () => V.note(vault()));
+// leggere una nota (per le sbobine) e salvare file nel vault: sbobine, allegati, materiali, sbobine ricevute
+ipcMain.handle('vault:leggi', (_, { file }) => { if (!/\.md$/.test(file)) throw new Error('solo note'); return readFileSync(V.dentro(vault(), file), 'utf8'); });
+ipcMain.handle('vault:salvaFile', (_, { file, testo, dati, sostituisci = false }) => {
+  if (!/^(Sbobine|Allegati|Materiali|Lezioni)\//.test(file)) throw new Error('cartella non permessa');
+  let p = V.dentro(vault(), file), rel = file;
+  if (!sostituisci) for (let k = 2; existsSync(p); k++) { rel = file.replace(/(\.[a-z0-9]+)$/i, ` ${k}$1`); p = V.dentro(vault(), rel); }
+  mkdirSync(dirname(p), { recursive: true });
+  if (dati) writeFileSync(p, Buffer.from(dati)); else V.scriviSicuro(p, testo);
+  return { file: rel, percorso: p };
+});
+// condividere: il menu Condividi di macOS (AirDrop, Messaggi, Mail, WhatsApp…), altrove la cartella con i file
+ipcMain.handle('condividi', (e, { files }) => {
+  const percorsi = files.map(f => V.dentro(vault(), f));
+  const w = BrowserWindow.fromWebContents(e.sender);
+  if (process.env.LODE_NON_APRIRE) return { esito: 'prova', percorsi };   // prove: niente menu sullo schermo
+  if (MAC) { new ShareMenu({ filePaths: percorsi }).popup({ window: w }); return { esito: 'menu' }; }
+  shell.showItemInFolder(percorsi[0]); return { esito: 'cartella' };
+});
+// la zona della pillola (per far arrivare i file trascinati anche quando la barra lascia passare i clic)
+let zona = null, forzata = false;
+ipcMain.on('finestra:zona', (_, r) => { zona = r; });
+setInterval(() => {
+  if (!barra || barra.isDestroyed() || !zona || zona.aperto) { forzata = false; return; }
+  const c = screen.getCursorScreenPoint(), b = barra.getBounds(), m = 26;
+  const dentro = c.x >= b.x + zona.x - m && c.x <= b.x + zona.x + zona.w + m && c.y >= b.y + zona.y - m && c.y <= b.y + zona.y + zona.h + m;
+  if (dentro && !forzata) { forzata = true; barra.setIgnoreMouseEvents(false); }
+  else if (!dentro && forzata) { forzata = false; barra.setIgnoreMouseEvents(true, { forward: true }); }
+}, 80);
 /* ---------- installazioni (Obsidian, cervello locale), sempre chieste dallo studente ---------- */
 const progresso = (cosa, x) => manda('installa:progresso', { cosa, ...x });
 async function stato() {
@@ -167,8 +195,8 @@ ipcMain.handle('finestra:rilascia', e => {
 
 /* ---------- scorciatoie e icona ---------- */
 const TASTI = MAC
-  ? { apri: 'Alt+Space', scrivi: 'Control+Alt+Space', stella: 'Control+Alt+S', definizione: 'Control+Alt+D', domanda: 'Control+Alt+Q', gioco: 'Control+Alt+G', trascrivi: 'Control+Alt+R' }
-  : { apri: 'Control+Shift+Space', scrivi: 'Control+Alt+Space', stella: 'Control+Alt+S', definizione: 'Control+Alt+D', domanda: 'Control+Alt+Q', gioco: 'Control+Alt+G', trascrivi: 'Control+Alt+R' };
+  ? { apri: 'Alt+Space', scrivi: 'Control+Alt+Space', stella: 'Control+Alt+S', definizione: 'Control+Alt+D', domanda: 'Control+Alt+Q', gioco: 'Control+Alt+G', trascrivi: 'Control+Alt+R', ripeti: 'Control+Alt+P' }
+  : { apri: 'Control+Shift+Space', scrivi: 'Control+Alt+Space', stella: 'Control+Alt+S', definizione: 'Control+Alt+D', domanda: 'Control+Alt+Q', gioco: 'Control+Alt+G', trascrivi: 'Control+Alt+R', ripeti: 'Control+Alt+P' };
 function scorciatoie() {
   for (const [nome, tasti] of Object.entries(TASTI)) {
     const ok = globalShortcut.register(tasti, () => {

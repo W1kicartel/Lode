@@ -179,16 +179,18 @@ Estrai:
 }
 // «Riordina»: dalla trascrizione grezza della lezione ad appunti da studiare. A pezzi (il modello locale ha poco contesto):
 // ogni pezzo diventa una parte con titolo, punti chiari e formule in LaTeX; niente che il prof non abbia detto.
-export async function riordina({ corso, testo, appunti = '', avanza }) {
+export async function riordina({ corso, testo, appunti = '', avanza, fonte = 'lezione' }) {
   const parole = String(testo).split(/\s+/), passo = motore() === 'claude' ? 9000 : 1400, pezzi = [];
   for (let i = 0; i < parole.length; i += passo) pezzi.push(parole.slice(i, i + passo).join(' '));
-  const istr = (k, n) => `Questa è ${n > 1 ? `la parte ${k} di ${n} della` : 'la'} trascrizione automatica di una lezione universitaria di «${corso}» (contiene errori di trascrizione; le formule dette a voce sono già in LaTeX tra $…$).
-Trasformala in appunti da studiare, in italiano:
+  const istr = (k, n) => fonte === 'documento' ? `Questa è ${n > 1 ? `la parte ${k} di ${n} del` : 'il'} testo di un documento di studio (slide o dispense) del corso «${corso}».` : `Questa è ${n > 1 ? `la parte ${k} di ${n} della` : 'la'} trascrizione automatica di una lezione universitaria di «${corso}» (contiene errori di trascrizione; le formule dette a voce sono già in LaTeX tra $…$).`;
+  const istr2 = (k, n) => istr(k, n) + `
+
+Trasformalo in appunti da studiare, in italiano:
 - un titolo per ogni argomento, con «### »;
 - punti brevi e chiari con «- », nell'ordine della lezione;
 - formule in LaTeX tra $…$ (Obsidian le mostra), correggendo quelle trascritte male se il senso è chiaro;
 - in **grassetto** i termini definiti;
-- niente che non sia nella trascrizione; se un pezzo è incomprensibile, saltalo.
+- niente che non sia nel testo; se un pezzo è incomprensibile, saltalo.
 Rispondi solo con gli appunti, senza introduzioni.`;
   const out = [];
   for (const [k, pezzo] of pezzi.entries()) {
@@ -196,13 +198,25 @@ Rispondi solo con gli appunti, senza introduzioni.`;
     const contenuto = `Trascrizione:\n\n${pezzo}${k === 0 && appunti ? `\n\nAppunti presi a mano dallo studente (per orientarti):\n${appunti}` : ''}`;
     if (motore() === 'claude') {
       const c = await cliente();
-      const r = await c.messages.create({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low' }, messages: [{ role: 'user', content: contenuto + '\n\n' + istr(k + 1, pezzi.length) }] });
+      const r = await c.messages.create({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low' }, messages: [{ role: 'user', content: contenuto + '\n\n' + istr2(k + 1, pezzi.length) }] });
       out.push(r.content.filter(b => b.type === 'text').map(b => b.text).join('').trim());
-    } else if (motore() === 'locale') out.push((await chatLocale(perOllama([{ role: 'user', content: contenuto + '\n\n' + istr(k + 1, pezzi.length) }]))).trim());
+    } else if (motore() === 'locale') out.push((await chatLocale(perOllama([{ role: 'user', content: contenuto + '\n\n' + istr2(k + 1, pezzi.length) }]))).trim());
     else throw new Error('Serve il cervello locale o una chiave Claude.');
   }
   avanza?.(1);
   return out.join('\n\n').replace(/^#{1,2}\s/gm, '### ');
+}
+
+// la foto della lavagna (o di una pagina) diventa appunti: testo fedele, formule in LaTeX, schemi descritti a parole
+export async function trascriviFoto({ blocco, corso }) {
+  const istr = `È una foto di una lavagna o di una pagina di appunti${corso ? ` della lezione di «${corso}»` : ''}. Trascrivila in appunti Markdown in italiano, fedeli a ciò che si vede: titoli con «### », punti con «- », formule in LaTeX tra $…$ (Obsidian le mostra), grafici e schemi descritti in una riga tra parentesi quadre. Se una parte è illeggibile scrivi [illeggibile]. Solo gli appunti, senza introduzioni.`;
+  if (motore() === 'claude') { const c = await cliente(); const r = await c.messages.create({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low' }, messages: [{ role: 'user', content: [blocco, { type: 'text', text: istr }] }] }); return r.content.filter(b => b.type === 'text').map(b => b.text).join('').trim(); }
+  if (motore() === 'locale') return (await chatLocale(perOllama([{ role: 'user', content: [blocco, { type: 'text', text: istr }] }]))).trim();
+  throw new Error('Serve il cervello locale o una chiave Claude.');
+}
+// un documento (slide, dispense, PDF) diventa un riassunto da studiare, a pezzi come la trascrizione
+export async function riassumi({ corso, testo, nome, avanza }) {
+  return riordina({ corso: corso || nome, testo: `[Documento «${nome}»]\n${testo}`, avanza, fonte: 'documento' });
 }
 
 export async function carteDa(blocchi) {

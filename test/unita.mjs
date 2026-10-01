@@ -1,11 +1,19 @@
 // Prove veloci, senza browser: node test/unita.mjs
 // Comandi in italiano (anche detti a voce), formule parlate → LaTeX, note di Obsidian, conti del libretto, giochi.
+// prima di tutto: ogni file dell'interfaccia deve essere un modulo valido (doppioni, sintassi)
+import { readFileSync, readdirSync } from 'node:fs';
+import vm from 'node:vm';
+const JS = new URL('../js/', import.meta.url);
+const rotti = [];
+if (vm.SourceTextModule) for (const f of readdirSync(JS).filter(f => f.endsWith('.js'))) { try { new vm.SourceTextModule(readFileSync(new URL(f, JS), 'utf8')); } catch (e) { rotti.push(`${f}: ${e.message}`); } }
+else console.log('(controllo dei moduli saltato: lancia con node --experimental-vm-modules)');
 globalThis.localStorage = { getItem: () => null, setItem() { }, removeItem() { } };
 globalThis.addEventListener = () => { }; globalThis.dispatchEvent = () => { }; globalThis.CustomEvent = class { constructor(t, o) { this.detail = o?.detail; } };
 const D = await import('../js/dati.js'), C = await import('../js/comandi.js'), F = await import('../js/formule.js'), M = await import('../js/markdown.js'), G = await import('../js/giochi.js');
 D.sostituisci(D.esempio());
 let ok = 0, ko = 0;
 const prova = (nome, cond, dett = '') => { if (cond) ok++; else { ko++; console.log('✗', nome, dett); } };
+prova('moduli validi', !rotti.length, rotti.join('; '));
 const c = f => C.interpreta(f);
 
 // comandi scritti e detti a voce
