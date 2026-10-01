@@ -450,3 +450,17 @@ html.barra .ld-drop{background:transparent}
 .ld-indietro:not([hidden])+.esc{margin-left:10px}
 /* l'intestazione resta in cima quando il pannello scorre: «Indietro» è sempre a portata */
 .ld-testa{position:sticky;top:0;z-index:6;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.14) 50%,rgba(255,255,255,0)) bottom/100% 1px no-repeat,rgba(17,17,17,.97);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+
+/* ---------- trascrivere la lezione ---------- */
+.ld-trascrivi{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;margin-top:8px;padding:10px 12px;border-radius:11px;box-shadow:inset 0 0 0 1px var(--ld-filo);background:rgba(255,255,255,.03);cursor:pointer;transition:background-color .25s}
+button.ld-trascrivi:hover{background:rgba(255,255,255,.07)}
+button.ld-trascrivi:focus-visible{outline:2px solid var(--ink)}
+.ld-trascrivi span{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.ld-trascrivi b{font-size:13.5px;font-weight:600}
+.ld-trascrivi small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ld-trascrivi.on{cursor:default;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+.ld-trascrivi .btn{flex:none}
+.ld-rec{flex:none;width:10px;height:10px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--ink)}
+.ld-trascrivi.on .ld-rec,.ld-live.rec{background:var(--ink);box-shadow:none}
+@media (prefers-reduced-motion:no-preference){.ld-trascrivi.on .ld-rec,.ld-live.rec{animation:ld-respira 1.6s var(--morbido) infinite}}
+.ld-anteprima{max-height:240px;overflow-y:auto;padding:10px 12px;border-radius:9px;background:rgba(255,255,255,.03);font-size:13px;line-height:1.5;color:rgba(245,245,245,.88);scrollbar-width:thin}

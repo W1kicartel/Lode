@@ -25,10 +25,10 @@ export function lezioneDaAnnotare(corsoDetto) {
   const u = ultimaLezioneFinita(); if (u && u.data === oggi()) return u;
   return { corso: 'Appunti sparsi', data: oggi() };
 }
-export async function annota(tipo, testo, { corso, termine, lezione } = {}) {
+export async function annota(tipo, testo, { corso, termine, lezione, grezza } = {}) {
   const l = lezione || lezioneDaAnnotare(corso);
   termine = termine && termine.trim().replace(/^./, c => c.toUpperCase());
-  const riga = tipo === 'definizione' ? `- **${termine}**: ${testo.trim()}` : tipo === 'stella' ? `- ${ora()} ${testo.trim()}` : `- ${testo.trim()}`;
+  const riga = grezza ? testo : tipo === 'definizione' ? `- **${termine}**: ${testo.trim()}` : tipo === 'stella' ? `- ${ora()} ${testo.trim()}` : `- ${testo.trim()}`;
   if (L) {
     await L.invoca('vault:annota', { file: l.file || fileLezione(l), nuovo: notaLezione(l), corso: l.corso === 'Appunti sparsi' ? null : { file: fileCorso(l.corso), testo: notaCorso(l.corso, { cfu: trovaEsame(l.corso)?.cfu, appello: trovaEsame(l.corso)?.data }) }, chiave: tipo, riga });
   } else {

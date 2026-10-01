@@ -149,7 +149,7 @@ export async function scaricaModello(nome, avanza) {
 // una chat col modello locale, in streaming: i pezzi arrivano a chi chiama
 export async function chatLocale({ modello, messaggi, formato, segnale, pezzo }) {
   await avviaOllama();
-  const r = await fetch(OLLAMA + '/api/chat', { method: 'POST', signal: segnale, body: JSON.stringify({ model: modello, messages: messaggi, stream: true, ...(formato ? { format: formato } : {}), options: { temperature: formato ? 0.2 : 0.6, num_ctx: 8192 }, keep_alive: '10m' }) });
+  const r = await fetch(OLLAMA + '/api/chat', { method: 'POST', signal: segnale, body: JSON.stringify({ model: modello, messages: messaggi, stream: true, ...(formato ? { format: formato } : {}), options: { temperature: formato ? 0.2 : 0.6, num_ctx: 8192 }, keep_alive: '15m' }) });
   if (!r.ok || !r.body) throw new Error(r.status === 404 ? `Il modello ${modello} non è installato` : 'Il modello locale non risponde');
   const lettore = r.body.getReader(), dec = new TextDecoder(); let resto = '', tutto = '';
   for (; ;) {

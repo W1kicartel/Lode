@@ -204,8 +204,20 @@ export function aggiungiOrario({ corso, giorni, inizio, fine, aula = '' }) {
 /* ---------- lezioni e definizioni (dal vault nell'app, da qui nel browser) ---------- */
 let LEZ_VAULT = null;
 export function impostaLezioniVault(l) { LEZ_VAULT = l; dispatchEvent(new CustomEvent('lode:lezioni')); }
-// nel vault le lezioni vere; quelle salvate qui (esempio, browser) solo se il vault non ha già la stessa lezione
-export const lezioni = () => [...(LEZ_VAULT || []), ...D.lezioni.filter(l => !(LEZ_VAULT || []).some(v => norm(v.corso) === norm(l.corso) && v.data === l.data))].filter(l => l.data).sort((a, b) => b.data.localeCompare(a.data) || String(b.inizio || '').localeCompare(String(a.inizio || '')));
+// nel vault le lezioni vere; quelle salvate qui (esempio, browser) si aggiungono, e se c'è la stessa lezione nel vault
+// le loro definizioni, ★ e domande si sommano a quelle della nota
+export const lezioni = () => {
+  const v = (LEZ_VAULT || []).map(l => ({ ...l }));
+  for (const l of D.lezioni) {
+    const x = v.find(y => norm(y.corso) === norm(l.corso) && y.data === l.data);
+    if (!x) { v.push(l); continue; }
+    const ha = new Set((x.definizioni || []).map(d => norm(d.t)));
+    x.definizioni = [...(x.definizioni || []), ...(l.definizioni || []).filter(d => !ha.has(norm(d.t)))];
+    x.stelle = [...(x.stelle || []), ...(l.stelle || []).filter(s => !(x.stelle || []).includes(s))];
+    x.domande = [...(x.domande || []), ...(l.domande || []).filter(s => !(x.domande || []).includes(s))];
+  }
+  return v.filter(l => l.data).sort((a, b) => b.data.localeCompare(a.data) || String(b.inizio || '').localeCompare(String(a.inizio || '')));
+};
 export const chiaveDef = (corso, t) => norm(corso) + '|' + norm(t);
 // tutte le definizioni con la loro memoria, dalla lezione più recente
 export function definizioni({ giorni = 60 } = {}) {
