@@ -440,3 +440,13 @@ html.barra .ld-drop{background:transparent}
 .ld-nota-r span{font:500 11px var(--mono);color:var(--ld-tenue);white-space:nowrap}
 .ld-nota-r:hover,.ld-nota-r.su{background:rgba(255,255,255,.06)}
 .ld-nota-r:focus-visible{outline:2px solid var(--ink)}
+
+/* tornare indietro dalla scheda aperta alla home */
+.ld-indietro{all:unset;cursor:pointer;margin-left:auto;display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 10px 0 6px;border-radius:8px;font-size:12.5px;font-weight:500;color:var(--muted);box-shadow:inset 0 0 0 1px var(--ld-filo);transition:color .2s,background-color .2s}
+.ld-indietro svg{width:14px;height:14px}
+.ld-indietro:hover{color:var(--ink);background:rgba(255,255,255,.06)}
+.ld-indietro:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.ld-indietro[hidden]{display:none}
+.ld-indietro:not([hidden])+.esc{margin-left:10px}
+/* l'intestazione resta in cima quando il pannello scorre: «Indietro» è sempre a portata */
+.ld-testa{position:sticky;top:0;z-index:6;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.14) 50%,rgba(255,255,255,0)) bottom/100% 1px no-repeat,rgba(17,17,17,.97);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}

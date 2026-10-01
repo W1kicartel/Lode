@@ -170,8 +170,12 @@ export async function estraiLezione({ corso, appunti, gia = [] }) {
   const r = await strutturato(`Sei l'assistente di uno studente universitario italiano. Qui sopra ci sono i suoi appunti della lezione di «${corso}».
 Estrai:
 - definizioni: i concetti definiti o spiegati negli appunti, con una definizione corta (massimo 25 parole), fedele agli appunti, in italiano. Termini brevi. Niente concetti che negli appunti non ci sono.${gia.length ? ` Salta questi, li ha già: ${gia.join(', ')}.` : ''}
-- da_esame: le frasi in cui il prof fa capire che una cosa sarà all'esame o è importante (massimo 5, riformulate in breve). Lista vuota se non ce ne sono.`, `Appunti di ${corso}:\n\n${appunti}`, SCHEMA_LEZIONE);
-  return { definizioni: (r.definizioni || []).filter(d => d.termine?.trim() && d.definizione?.trim()).slice(0, 15), daEsame: (r.da_esame || []).filter(Boolean).slice(0, 5) };
+- da_esame: SOLO le frasi in cui gli appunti dicono esplicitamente che il prof la chiederà all'esame o che è importante (parole come «esame», «importante», «ricordatevi», «attenzione»). Riformulate in breve. Se gli appunti non lo dicono, lista vuota.`, `Appunti di ${corso}:\n\n${appunti}`, SCHEMA_LEZIONE);
+  // i modelli piccoli tendono a vedere «cose da esame» ovunque: al massimo tante quante le volte che gli appunti lo dicono
+  const segnali = appunti.split(/(?<=[.!?\n])\s+/).filter(f => /esame|important|ricordat|attenzione|lo chiede|chiede sempre|domanda sicura/i.test(f)).length;
+  const visti = new Set(gia.map(t => t.toLowerCase().trim()));
+  const definizioni = (r.definizioni || []).filter(d => { const k = d.termine?.toLowerCase().trim(); if (!k || !d.definizione?.trim() || visti.has(k)) return false; visti.add(k); return true; }).slice(0, 15);
+  return { definizioni, daEsame: (r.da_esame || []).filter(Boolean).slice(0, Math.min(5, segnali)) };
 }
 export async function carteDa(blocchi) {
   const r = await strutturato('Crea da 8 a 20 carte del ripasso da questo materiale: una sola idea per carta, domanda precisa, risposta corta (massimo 2 frasi), in italiano. Solo concetti presenti nel materiale.', blocchi, SCHEMA_CARTE);

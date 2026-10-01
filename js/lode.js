@@ -62,7 +62,7 @@ function costruisci() {
   shell = h('div', 'ld'); shell.setAttribute('role', 'region'); shell.setAttribute('aria-label', 'Lode, assistente di studio'); shell.dataset.aperto = '0';
   pill = h('button', 'ld-pill'); pill.type = 'button'; pill.setAttribute('aria-expanded', 'false');
   corpo = h('div', 'ld-corpo');
-  testa = h('header', 'ld-testa', `<div class="r1"><i class="ld-rombo"></i><h2></h2><span class="esc">Esc</span></div><div class="sotto"><p></p><small></small></div>`);
+  testa = h('header', 'ld-testa', `<div class="r1"><i class="ld-rombo"></i><h2></h2><button type="button" class="ld-indietro" hidden aria-label="Torna alla home di Lode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>Indietro</button><span class="esc">Esc</span></div><div class="sotto"><p></p><small></small></div>`);
   const dentro = h('div', 'ld-dentro');
   campo = h('div', 'ld-campo'); campo.dataset.modo = 'riposo';
   campo.innerHTML = `<div class="cerca">${IC.lente}<input type="text" aria-label="Chiedi o scrivi un comando" placeholder="Chiedi o scrivi un comando…" autocomplete="off" spellcheck="true"></div>
@@ -74,7 +74,7 @@ function costruisci() {
   home = h('div', 'ld-home');
   filo = h('div', 'ld-filo'); filo.setAttribute('aria-live', 'polite');
   dentro.append(campo, allegatiBox, home, filo);
-  const piede = h('footer', 'ld-piede', `<span>Tieni premuto per parlare <kbd>${TASTI}</kbd></span><span>${IC.lucchetto}I dati restano su questo computer</span>`);
+  const piede = h('footer', 'ld-piede', `<span class="ld-piede-sx">Tieni premuto per parlare <kbd>${TASTI}</kbd></span><span>${IC.lucchetto}I dati restano su questo computer</span>`);
   corpo.append(testa, dentro, piede);
   shell.append(pill, corpo);
   document.body.append(shell);
@@ -250,6 +250,18 @@ function mostraAvviso(testo, silenzioso) {
   if (!silenzioso) entra(pill, { dy: 0, blur: 4, ms: 300 });
   A.avviso = dopo(2800, () => { A.avviso = null; if (A.aperto) return; tween(160, e => { pill.style.opacity = (1 - e).toFixed(3); }).then(() => { aggiornaPillola(); tween(260, e => { pill.style.opacity = e.toFixed(3); }); }); });
 }
+// tornare indietro: dalla scheda aperta alla home del pannello, con la conversazione che scivola via
+export async function indietro() {
+  if (A.home) return;
+  if (A.attesa && !A.attesa.inCorso) A.attesa.risolvi({ esito: 'annullato_dallo_studente' });
+  if (A.orale) A.orale = null;
+  Voce.zitto(); A.controller?.abort();
+  await tween(160, e => { filo.style.opacity = (1 - e).toFixed(3); filo.style.transform = `translateY(${(e * 6).toFixed(1)}px)`; });
+  filo.style.opacity = ''; filo.style.transform = '';
+  ricomincia();
+  [testa.querySelector('.sotto'), home].forEach((el, i) => entra(el, { ritardo: i * 50, dy: -6, blur: 6, ms: 460 }));
+  if (A.aperto) campo.querySelector('input').focus({ preventScroll: true });
+}
 function ricomincia() {
   GEN++; A.controller?.abort(); Voce.zitto();
   const fisso = A.fisso, aperto = A.aperto;
@@ -281,10 +293,11 @@ function modo(m, etichetta) {
 /* ---------- conversazione ---------- */
 function nascondiHome() {
   if (!A.home) return; A.home = false;
+  const b = testa.querySelector('.ld-indietro'); b.hidden = false; entra(b, { dy: 0, blur: 4, ms: 320 });
   comprimi(home, 380, false); comprimi(testa.querySelector('.sotto'), 380, false);
 }
 function mostraHome() {
-  A.home = true;
+  A.home = true; testa.querySelector('.ld-indietro').hidden = true;
   for (const el of [home, testa.querySelector('.sotto')]) { el.style.display = ''; el.style.height = ''; el.style.marginBottom = ''; el.style.opacity = ''; el.style.overflow = ''; }
   disegnaHome(); aggiornaTesta();
 }
@@ -1005,6 +1018,7 @@ function collega() {
     if (e.pointerType !== 'mouse') return; A.apriTra?.(); A.apriTra = null;
     if (A.aperto && !A.fisso && !shell.contains(document.activeElement) && !Voce.attivo()) A.chiudiTra = dopo(380, () => { A.chiudiTra = null; if (!A.fisso) chiudi(); });
   });
+  testa.querySelector('.ld-indietro').addEventListener('click', () => indietro());
   pill.addEventListener('click', () => { apri({ fisso: true }).then(() => campo.querySelector('input').focus({ preventScroll: true })); });
   corpo.addEventListener('pointerdown', () => { A.fisso = true; });
   document.addEventListener('pointerdown', e => { if (A.aperto && !shell.contains(e.target) && !e.target.closest('.ld-drop')) chiudi(); });
@@ -1022,7 +1036,9 @@ function collega() {
   addEventListener('keydown', e => {
     const ptt = (MAC ? e.altKey && !e.ctrlKey : e.ctrlKey && e.shiftKey) && e.code === 'Space';
     if (ptt) { e.preventDefault(); if (!e.repeat && !pttAttivo) { pttAttivo = true; iniziaAscolto(); } return; }
-    if (e.key === 'Escape') { if (Voce.attivo()) { fineAscolto(true); return; } if (A.aperto) { e.preventDefault(); chiudi(); } return; }
+    // Esc: prima torna indietro alla home, la seconda volta chiude
+    if (e.key === 'Escape') { if (Voce.attivo()) { fineAscolto(true); return; } if (A.cattura) { e.preventDefault(); fineCattura(); chiudi(); return; } if (A.aperto) { e.preventDefault(); A.home ? chiudi() : indietro(); } return; }
+    if (A.aperto && !A.home && (e.metaKey || e.ctrlKey) && (e.key === '[' || e.key === 'ArrowLeft')) { e.preventDefault(); indietro(); return; }
     const inCampo0 = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName);
     if (A.aperto && A.gioco && !inCampo0 && !e.metaKey && !e.ctrlKey && !e.altKey) {
       if (e.code === 'Space') { e.preventDefault(); A.gioco.gira(); return; }
