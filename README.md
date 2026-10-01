@@ -28,6 +28,15 @@ Tutto funziona sul computer, senza account e senza internet.
 
 - **Sa quando sei a lezione.** Scrivi una volta «lezione analisi 2 lunedì e mercoledì 9-11 aula 7». Da quel momento la barra mostra `● Analisi 2 · fine tra 23 min · ★2`.
 - **Trascrive la lezione intera** (⌃⌥R). Ogni 20-30 secondi aggiunge le parole del prof alla nota della lezione in Obsidian, quindi niente si perde. Le **formule dette a voce diventano LaTeX**: «l'integrale da zero a pi greco di seno di x in d x» → $\int_{0}^{\pi} \sin x \, dx$. L'audio non viene mai salvato.
+- **Ripeti** (⌃⌥P): ti sei perso una frase? In aula Lode tiene in memoria gli ultimi 60 secondi, solo in RAM e mai su disco, e su richiesta te li trascrive. Poi puoi aggiungerli agli appunti o segnarli come ★.
+- **Sbobine da passare ai compagni.** Con «condividi la sbobina» Lode crea due file: un `.md` per Obsidian e una pagina `.html` che si apre su qualsiasi telefono, con le formule disegnate. Partono dal menu Condividi (AirDrop, Messaggi, Mail…). Chi ha Lode trascina la sbobina sulla pillola e se la ritrova nel vault, con definizioni e ★ pronte per i giochi.
+- **Trascina un file sulla pillola, anche chiusa.** Si allarga in una zona di rilascio e poi chiede *cosa ne faccio?*. Accetta:
+  - PDF e slide `.pptx`: carte del ripasso, riassunto in Obsidian, definizioni per i giochi, interrogazione, allegato alla lezione;
+  - foto della lavagna: trascritta in appunti con le formule;
+  - registrazioni audio: trascritte nella lezione;
+  - appunti `.md`, `.txt` e `.docx`;
+  - sbobine dei compagni;
+  - carte di Anki.
 - **Riordina.** A fine lezione il modello locale (o Claude) trasforma la trascrizione in appunti puliti, con titoli, punti e formule. Poi ne estrae definizioni e ★ da esame.
 - **Cattura veloce senza lasciare gli appunti:** ⌃⌥S **★ Da esame**, ⌃⌥D **Definizione**, ⌃⌥Q **Domanda per il prof**.
 - **Voce:** tieni premuto ⌥ Spazio e parla. Esempi: «ho preso ventotto in fisica due», «definizione nucleofilo uguale specie ricca di elettroni», «spiegami il teorema di Green».
@@ -110,6 +119,9 @@ Lode usa Claude Opus 5.5 con la chiave dello studente (si crea su [console.anthr
 | `js/vault.js` | Il vault visto dalla barra: annota nella lezione giusta, apre Obsidian, scrive la Memoria |
 | `js/giochi.js` | I giochi di memoria: abbina, chi sono?, completa, flash |
 | `js/trascrizione.js` | La lezione intera: microfono → pezzi da 20-30 s → Whisper → formule → nota Obsidian, salvata a ogni pezzo |
+| `js/orecchio.js` | Il microfono condiviso in aula, con gli ultimi 90 secondi solo in memoria (per «Ripeti») |
+| `js/file.js` | I file trascinati: tipo, testo di PDF (pdf.js), Word e PowerPoint (zip di XML), audio a 16 kHz |
+| `js/sbobina.js` | Sbobine da condividere (.md + .html con formule MathML) e sbobine ricevute |
 | `js/formule.js` | Le formule dette a voce in LaTeX (integrali, limiti, sommatorie, derivate, frazioni, potenze, lettere greche…) |
 | `desktop/installa.mjs` | Installa Obsidian (installer ufficiale, firma verificata) e Ollama + Gemma 3 |
 | `desktop/main.mjs` | L'app Electron: finestra trasparente sempre in primo piano, clic che passano attraverso, scorciatoie globali, icona nella barra dei menu |
@@ -124,7 +136,6 @@ Design: solo bianco e nero, font [Geist](https://github.com/vercel/geist-font) (
 - [ ] Calendario `.ics` degli appelli e promemoria
 - [ ] Esportazione dei mazzi per Anki
 - [ ] Mazzi condivisi per corso (link a un JSON)
-- [ ] «Ripeti gli ultimi 60 secondi» del prof (il buffer audio c'è già nella trascrizione)
 - [ ] Riconoscere chi parla (prof o studenti) nella trascrizione
 - [ ] Passare da Electron a Tauri (app più leggera)
 - [ ] Regole dei singoli atenei per il voto di laurea (punti bonus, lodi, Erasmus)
