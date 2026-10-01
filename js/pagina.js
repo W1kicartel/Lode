@@ -46,7 +46,7 @@ export function disegna() {
 
   <footer class="piede"><span>Lode è open source (MIT). I tuoi dati restano in questo browser: nessun account, nessun server.</span>
     <span><button data-a="importa">Importa un backup</button> · <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a></span></footer>`;
-  anima(main); primaVolta = false;
+  anima(main, primaVolta); primaVolta = false;
 }
 function cartaEsame(e) {
   const pi = piano(e), g = e.data ? giorniTra(oggi(), e.data) : null, nc = D.carte.filter(c => c.esameId === e.id).length, nd = daRipassare(e.id).length;
@@ -71,10 +71,11 @@ function mazzi() {
   if (!gruppi.size) return `<p style="margin:0;padding:18px 16px;color:var(--muted);font-size:14px">Ancora nessuna carta. Scrivi <kbd>carta: domanda = risposta</kbd> o trascina un PDF sulla finestra.</p>`;
   return [...gruppi].sort((a, b) => b[1] - a[1]).map(([k, n]) => { const d = daRipassare(k || undefined).filter(c => (c.esameId || '') === k).length; return `<div class="mazzo"><div><b>${esc(k ? esame(k)?.nome || 'Esame tolto' : 'Senza esame')}</b><span>${n} ${n === 1 ? 'carta' : 'carte'}</span></div><span class="n${d ? '' : ' zero'}" title="da ripassare oggi">${d}</span><button class="btn small" data-a="ripassaE" data-e="${k}"${d ? '' : ' disabled'}>Ripassa</button></div>`; }).join('');
 }
-function anima(r) {
-  r.querySelectorAll('[data-c]').forEach((el, i) => { const v = parseFloat(el.dataset.c); if (isNaN(v)) return; conta(el, v, x => num(x, +el.dataset.dec), { ritardo: 120 + i * 60 }); });
-  r.querySelectorAll('[data-x]').forEach((el, i) => tween(900, e => { el.style.transform = `scaleX(${(+el.dataset.x * e).toFixed(4)})`; }, { ritardo: 200 + i * 40 }));
-  r.querySelectorAll('.sett i').forEach((el, i) => tween(620, e => { el.style.transform = `scaleY(${e.toFixed(3)})`; }, { ritardo: 200 + i * 55 }));
+// la prima volta i numeri salgono e le barre crescono; agli aggiornamenti successivi cambiano e basta
+function anima(r, prima) {
+  r.querySelectorAll('[data-c]').forEach((el, i) => { const v = parseFloat(el.dataset.c); if (isNaN(v)) return; if (prima) conta(el, v, x => num(x, +el.dataset.dec), { ritardo: 120 + i * 60 }); else el.textContent = num(v, +el.dataset.dec); });
+  r.querySelectorAll('[data-x]').forEach((el, i) => prima ? tween(900, e => { el.style.transform = `scaleX(${(+el.dataset.x * e).toFixed(4)})`; }, { ritardo: 200 + i * 40 }) : (el.style.transform = `scaleX(${el.dataset.x})`));
+  r.querySelectorAll('.sett i').forEach((el, i) => prima ? tween(620, e => { el.style.transform = `scaleY(${e.toFixed(3)})`; }, { ritardo: 200 + i * 55 }) : (el.style.transform = ''));
 }
 
 /* ---------- finestre ---------- */

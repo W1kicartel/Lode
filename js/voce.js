@@ -5,6 +5,8 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 export const disponibile = !!SR;
 let rec = null, finale = '', livello = 0;
 export function ascolta({ parziale, fine, errore }) {
+  // nell'app desktop il riconoscimento del browser non c'è (usa i server di Google): arriverà Whisper in locale
+  if (window.lodeDesktop) { errore?.('Nell\'app la voce arriva con la trascrizione in locale (Whisper), nel prossimo aggiornamento. Intanto scrivi qui.'); return null; }
   if (!SR) { errore?.('Il riconoscimento vocale non c\'è in questo browser: prova Chrome o Edge.'); return null; }
   ferma(true);
   finale = '';

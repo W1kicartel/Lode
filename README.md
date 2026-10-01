@@ -17,6 +17,35 @@ interrogami su basi di dati
 
 Niente account, niente server, niente pubblicità. Si apre nel browser, funziona offline, si installa come app su computer e telefono.
 
+## In aula, a casa, nel tuo vault Obsidian
+
+**L'app desktop** mette la barra sopra tutte le finestre (Notion, Word, il PDF delle slide) e alla prima apertura crea un **vault Obsidian già pronto** in `Documenti/Lode`: cartelle, modello della lezione, orario, tema bianco e nero. Se Obsidian è installato, il vault compare già nella sua lista.
+
+- **Sa quando sei a lezione.** Imposti l'orario una volta («lezione analisi 2 lunedì e mercoledì 9-11 aula 7») e la barra diventa `● Analisi 2 · fine tra 23 min · ★2`.
+- **Cattura veloce senza lasciare gli appunti:**
+  - ⌃⌥S **★ Da esame**: quello che il prof ha detto che chiederà;
+  - ⌃⌥D **Definizione**;
+  - ⌃⌥Q **Domanda per il prof**.
+
+  Finisce tutto nella nota della lezione, `Lezioni/Analisi 2/2026-10-01 Analisi 2.md`, e il fuoco torna dove stavi scrivendo.
+- **A casa ti allena.** Quando la memoria sta per cedere, la barra propone *«2 minuti · 6 definizioni di Analisi 2 di stamattina»*. I giochi sono quattro:
+  - **abbina** termini e definizioni;
+  - **chi sono?**;
+  - **completa** la parola mancante;
+  - **flash**.
+- **Impara con te.** Le definizioni le prende dalle tue note, scritte come preferisci:
+  - `- **Termine**: definizione`;
+  - `Termine :: definizione`, compatibile col plugin Spaced Repetition;
+  - un callout `> [!definizione]`.
+
+  Dopo ogni gioco Lode aggiorna `Lode/Memoria.md`: definizioni sicure, da rinforzare, le ★ recenti. È una nota leggibile e correggibile. Nella sezione «Note per Lode» gli dici come vuoi essere aiutato, e l'AI la legge.
+
+```bash
+cd desktop && npm install && npm start
+```
+
+Per i pacchetti: `npm run dist:mac`, `dist:win`, `dist:linux`.
+
 ## Cosa fa
 
 | | |
@@ -68,7 +97,12 @@ Lode usa Claude Opus 5.5 con la chiave dello studente (si crea su [console.anthr
 | `js/voce.js` | Riconoscimento e lettura ad alta voce del browser, in italiano |
 | `js/mascotte.js` | La gemma con gli occhi: guarda il cursore, ascolta, pensa, legge mentre studi, salta quando finisci |
 | `js/motore.js` | Un solo ciclo di animazione: curve morbide, entrate sfocate, molle senza rimbalzi |
-| `js/pagina.js` | La pagina sotto la barra: numeri, appelli, libretto, mazzi, impostazioni |
+| `js/pagina.js` | La pagina sotto la barra (nel browser) o «il quadro» (nell'app): numeri, appelli, libretto, mazzi, impostazioni |
+| `js/markdown.js` | Le note di Obsidian: modello della lezione, lettura di definizioni/★/domande, inserimento in una sezione, orario come tabella |
+| `js/vault.js` | Il vault visto dalla barra: annota nella lezione giusta, apre Obsidian, scrive la Memoria |
+| `js/giochi.js` | I giochi di memoria: abbina, chi sono?, completa, flash |
+| `desktop/main.mjs` | L'app Electron: finestra trasparente sempre in primo piano, clic che passano attraverso, scorciatoie globali, icona nella barra dei menu |
+| `desktop/vault.mjs` | Crea il vault, lo registra in Obsidian, lo guarda e rilegge le lezioni quando cambiano |
 
 Design: solo bianco e nero, font [Geist](https://github.com/vercel/geist-font) (OFL), luce che segue il cursore, `prefers-reduced-motion` rispettato.
 
@@ -79,7 +113,9 @@ Design: solo bianco e nero, font [Geist](https://github.com/vercel/geist-font) (
 - [ ] Calendario `.ics` degli appelli e promemoria
 - [ ] Esportazione dei mazzi per Anki
 - [ ] Mazzi condivisi per corso (link a un JSON)
-- [ ] App desktop sempre in primo piano (Electron/Tauri) con la barra sopra a tutte le finestre
+- [ ] Voce nell'app con Whisper in locale e «Ripeti gli ultimi 60 secondi» del prof
+- [ ] «Chiudi lezione»: appunti riordinati e carte dalla nota, con un modello locale (Ollama) o Claude
+- [ ] Passare da Electron a Tauri (app più leggera)
 - [ ] Regole dei singoli atenei per il voto di laurea (punti bonus, lodi, Erasmus)
 
 Le pull request sono benvenute: leggi [CONTRIBUTING.md](CONTRIBUTING.md).

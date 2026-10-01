@@ -91,7 +91,7 @@
 .ld-riga .n{white-space:nowrap;font-size:20px;font-weight:600;letter-spacing:-.028em;text-align:right}
 .ld-riga.info .n,.ld-riga.att .n{font-weight:500;color:var(--muted)}
 .ld-riga .btn{justify-content:center;height:32px}
-.ld-strumenti{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:2px 0 10px}
+.ld-strumenti{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:2px 0 10px}
 .ld-strumenti .btn{height:40px;justify-content:flex-start;padding:0 12px;font-size:13.5px}
 .ld-strumenti .btn svg{width:16px;height:16px;stroke:var(--muted);flex:none}
 
@@ -322,3 +322,94 @@
 .ld .btn.primary:hover{background:var(--primario-hover)}
 .ld .btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 @media (max-width:620px){.ld-strumenti{grid-template-columns:repeat(2,minmax(0,1fr))}.ld-riga{grid-template-columns:3px minmax(0,1fr) 40px 76px;column-gap:10px}.ld-piede span:last-child{display:none}.ld-kpi .v{font-size:28px}}
+
+/* ---------- in aula ---------- */
+.ld-live{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ink);margin-right:7px;vertical-align:1px;box-shadow:0 0 0 0 rgba(255,255,255,.5)}
+.ld-pill .ld-testo .ld-live{align-self:center;margin-right:0}
+@media (prefers-reduced-motion:no-preference){.ld-live{animation:ld-respira 2.4s var(--morbido) infinite}}
+@keyframes ld-respira{0%{box-shadow:0 0 0 0 rgba(255,255,255,.45)}70%{box-shadow:0 0 0 6px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
+.ld-aula{padding:2px 0 4px}
+.ld-aula .capo{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:10px}
+.ld-aula .capo>span:last-child{font-size:12px;color:var(--ld-tenue)}
+.ld-cattura{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:8px}
+.ld-cattura .btn{height:46px;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;padding:0 12px}
+.ld-cattura .btn kbd{font:500 10px var(--mono);color:var(--ld-tenue);background:none;padding:0;box-shadow:none}
+.ld-cattura .btn.primary{align-items:center;padding:0 18px}
+.ld-aula .ld-nota{margin-top:8px}
+.ld-tipo{flex:none;display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:7px;background:var(--ink);color:#000;font-size:12px;font-weight:600;white-space:nowrap}
+.ld-campo[data-cattura] .lente{display:none}
+.ld-campo[data-cattura]{box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)}
+
+/* ---------- orario ---------- */
+.ld-sett{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-top:10px}
+.ld-giorno{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ld-giorno b{font:600 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ld-tenue);padding-bottom:4px;border-bottom:1px solid var(--ld-riga)}
+.ld-giorno.oggi b{color:var(--ink);border-bottom-color:var(--ink)}
+.ld-giorno span{display:flex;flex-direction:column;padding:5px 6px;border-radius:6px;background:rgba(255,255,255,.06);font-size:11px;line-height:1.25;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ld-giorno span em{font:500 9.5px var(--mono);font-style:normal;color:var(--muted)}
+.ld-giorno.oggi span{background:rgba(255,255,255,.12)}
+.ld-giorno span.vuoto{background:none;color:var(--ld-tenue);font-weight:400}
+.ld-orari{margin-top:12px}
+.ld-or{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;min-height:44px;border-top:1px solid var(--ld-riga)}
+.ld-or .t{display:flex;flex-direction:column;min-width:0}
+.ld-or .t b{font-size:13.5px;font-weight:600}
+.ld-or .t span{font-size:12.5px;color:var(--muted)}
+.ld-x{all:unset;cursor:pointer;display:grid;place-items:center;width:26px;height:26px;border-radius:7px;color:var(--ld-tenue)}
+.ld-x:hover{color:var(--ink);background:rgba(255,255,255,.08)}
+.ld-x:focus-visible{outline:1.5px solid var(--ink)}
+.ld-or-form{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--ld-riga)}
+.ld-or-form input[name=corso]{grid-column:1}
+.ld-or-form .ld-giorni{grid-column:2;display:flex;gap:4px}
+.ld-or-form input[type=time]{color-scheme:dark}
+.ld-or-form{grid-template-columns:repeat(4,minmax(0,1fr))}
+.ld-or-form input[name=corso]{grid-column:1/3}
+.ld-or-form .ld-giorni{grid-column:3/5}
+.ld-giorni label{flex:1;cursor:pointer}
+.ld-giorni input{position:absolute;opacity:0;pointer-events:none}
+.ld-giorni span{display:grid;place-items:center;height:34px;border-radius:8px;font:600 11px var(--mono);text-transform:uppercase;color:var(--muted);box-shadow:inset 0 0 0 1px var(--ld-filo);transition:background-color .25s,color .25s}
+.ld-giorni input:checked+span{background:var(--ink);color:#000;box-shadow:none}
+.ld-giorni input:focus-visible+span{outline:2px solid var(--ink);outline-offset:1px}
+.ld-or-form .btn{height:34px;justify-content:center}
+.ld-orario .ld-nota{margin-top:10px}
+
+/* ---------- giochi ---------- */
+.ld-gioco .capo{display:flex;justify-content:space-between;align-items:baseline}
+.ld-gioco .conto{font:500 11.5px var(--mono);color:var(--ld-tenue)}
+.ld-gioco .manche{padding-top:12px;min-height:150px}
+.ld-gioco .dom{margin:0 0 8px;font:600 10.5px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ld-gioco .def{margin:0;font-size:16px;line-height:1.5;color:rgba(245,245,245,.92)}
+.ld-gioco .termine{margin:0 0 6px;font-size:22px;font-weight:600;letter-spacing:-.025em}
+.ld-gioco .az{display:flex;gap:8px;margin-top:14px}
+.ld-gioco .az .btn{flex:1;justify-content:center;height:40px}
+.ld-gioco .az kbd{font:500 10px var(--mono);padding:1px 5px;border-radius:4px;box-shadow:inset 0 0 0 1px currentColor;opacity:.45;background:none}
+.ld-abbina{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:8px}
+.ld-abbina .col{display:flex;flex-direction:column;gap:6px}
+.ld-tess{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;min-height:52px;padding:8px 11px;border-radius:10px;font-size:13px;font-weight:600;line-height:1.3;box-shadow:inset 0 0 0 1px var(--ld-filo);background:rgba(255,255,255,.03);transition:background-color .25s,box-shadow .25s,opacity .4s var(--morbido),color .25s}
+.ld-tess.def{font-weight:450;font-size:12.5px;color:rgba(245,245,245,.88)}
+.ld-tess:hover{background:rgba(255,255,255,.07)}
+.ld-tess.sel{background:var(--ink);color:#000;box-shadow:none}
+.ld-tess.ok{opacity:.32;cursor:default;box-shadow:inset 0 0 0 1px rgba(255,255,255,.4);background:none}
+.ld-tess:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.ld-scelte{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.ld-scelte .btn{height:44px;justify-content:center;white-space:normal;text-align:center;line-height:1.2}
+.ld-scelte .btn.giusta{background:var(--ink);color:#000;box-shadow:none;opacity:1}
+.ld-scelte .btn.errata{box-shadow:inset 0 0 0 1px rgba(255,255,255,.6);text-decoration:line-through;text-decoration-color:rgba(255,255,255,.6)}
+.ld-scelte .btn[disabled]{cursor:default}
+.ld-buco{all:unset;display:inline-block;box-sizing:content-box;margin:0 3px;padding:0 4px;border-bottom:1.5px solid var(--ink);font-weight:600;text-align:center;color:var(--ink);min-width:4ch}
+.ld-buco.ok{border-bottom-color:transparent;background:var(--ink);color:#000;border-radius:4px}
+.ld-buco.no{border-bottom-style:dashed;color:var(--muted)}
+.ld-esito{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.ld-esito b{font-size:44px;line-height:1;font-weight:600;letter-spacing:-.05em}
+.ld-esito b small{font-size:20px;color:var(--muted);font-weight:500}
+.ld-esito span{font-size:14px;color:rgba(245,245,245,.88)}
+.ld-esito small{font:500 11px var(--mono);color:var(--ld-tenue)}
+.ld-esito .btn{margin-top:6px}
+
+/* ---------- l'app desktop: solo la barra, su una finestra trasparente ---------- */
+html.barra,html.barra body{background:transparent!important}
+html.barra main,html.barra .toast{display:none}
+html.barra .ld{top:8px}
+@media (max-width:620px){.ld-cattura{grid-template-columns:1fr 1fr 1fr}.ld-cattura .btn.primary{grid-column:1/-1}.ld-or-form{grid-template-columns:1fr 1fr}.ld-or-form input[name=corso],.ld-or-form .ld-giorni{grid-column:1/-1}}
+/* sopra le altre app il vetro non può sfocare quello che c'è dietro: più pieno, per restare leggibile */
+html.barra .ld{--ld-vetro:rgba(16,16,16,.95)}
+html.barra .ld-drop{background:transparent}

@@ -2,13 +2,17 @@
 // o il timer che scorre. Passandoci sopra si apre a molla in un pannello: «Oggi», sei strumenti e il campo
 // «Chiedi o scrivi un comando…». Si parla tenendo premuto ⌥ Spazio. I file trascinati diventano carte del ripasso.
 // Senza AI capisce i comandi in italiano (comandi.js); con la chiave Claude spiega, crea carte e interroga come all'orale.
-import { D, RISPOSTE, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esc, fatti, media, minuti, num, oggi, ore, piano, prossimi, prossimoIntervallo, registraVoto, rispondi, salva, serie, serve, simula, sostituisci, traQuanto, trovaEsame, intervalloTesto, giorniTra } from './dati.js';
+import { D, DESKTOP, lezioneOra, prossimaLezione, daGiocare, ricorda, aggiungiOrario, lezioni, RISPOSTE, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esc, fatti, media, minuti, num, oggi, ore, piano, prossimi, prossimoIntervallo, registraVoto, rispondi, salva, serie, serve, simula, sostituisci, traQuanto, trovaEsame, intervalloTesto, giorniTra } from './dati.js';
 import { RIDOTTO, attendi, comprimi, conta, dopo, entra, h, lineare, morbido, ogni, premi, tween } from './motore.js';
 import { ESEMPI, interpreta } from './comandi.js';
 import * as F from './focus.js';
 import * as AI from './ai.js';
 import * as Voce from './voce.js';
 import { livelloVoce } from './mascotte.js';
+import * as V from './vault.js';
+import { partita, giusta } from './giochi.js';
+import { GIORNI_BREVI } from './markdown.js';
+const BRIDGE = DESKTOP ? window.lodeDesktop : null;
 
 const segnala = (evento, x = {}) => dispatchEvent(new CustomEvent('lode', { detail: { evento, ...x } }));
 const MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
@@ -28,6 +32,9 @@ const IC = {
   esami: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16"/><path d="M9 3v4"/><path d="M15 3v4"/><path d="M8 14h3"/>',
   orale: '<path d="M4 5h16v11H9l-5 4z"/><path d="M9 10h.01M12 10h.01M15 10h.01"/>',
   file: '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M12 11v6M9 14h6"/>',
+  gioco: '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><path d="M15 17h4M17 15v4"/>',
+  orario: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  appunti: '<path d="M12 3l7 4v10l-7 4-7-4V7z"/><path d="M12 3v18"/><path d="M5 7l7 4 7-4"/>',
   doc: '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 12h5M10 15h5M10 18h3"/>',
 };
 const ico = k => `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${IC[k]}</svg>`;
@@ -35,7 +42,7 @@ const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
 /* ---------- stato ---------- */
 let A, shell, pill, corpo, testa, campo, home, filo, allegatiBox, tacche = [], forma, velo, GEN = 0;
-const nuovoStato = () => ({ aperto: false, fisso: false, modo: 'riposo', turno: null, attesa: null, home: true, avviso: null, chiudiTra: null, apriTra: null, storia: [], allegati: [], orale: null, controller: null, ripasso: null, risposta: null, ultimoUso: 0 });
+const nuovoStato = () => ({ cattura: null, gioco: null, aperto: false, fisso: false, modo: 'riposo', turno: null, attesa: null, home: true, avviso: null, chiudiTra: null, apriTra: null, storia: [], allegati: [], orale: null, controller: null, ripasso: null, risposta: null, ultimoUso: 0 });
 
 function saluto() {
   const n = String(D.profilo.nome || '').trim().split(/\s+/)[0], o = new Date().getHours();
@@ -78,8 +85,28 @@ function costruisci() {
 }
 
 /* ---------- la home del pannello: «Oggi» e gli strumenti ---------- */
+// «di stamattina», «di ieri», «di lunedì»: quando era la lezione
+function quandoEra(data, inizio) {
+  const g = giorniTra(data, oggi());
+  if (g === 0) return inizio && inizio < '13:00' ? 'di stamattina' : 'di oggi';
+  if (g === 1) return 'di ieri';
+  return 'di ' + dataLunga(data).split(' ')[0];
+}
+// il suggerimento fuori dall'aula: un gioco di due minuti sulle definizioni da fissare (mai durante una lezione)
+function suggerimento() {
+  if (!D.imp.suggerimenti || lezioneOra() || F.stato()) return null;
+  const pl = prossimaLezione(); if (pl && pl.tra <= 20) return null;
+  const { scelte } = daGiocare(6); if (scelte.length < 3) return null;
+  const corsi = [...new Set(scelte.map(d => d.corso))], primo = scelte[0];
+  return { n: scelte.length, corso: corsi.length === 1 ? primo.corso : null, testo: `${scelte.length} definizioni ${corsi.length === 1 ? `di ${primo.corso} ${quandoEra(primo.data, lezioni().find(l => l.data === primo.data && l.corso === primo.corso)?.inizio)}` : 'delle ultime lezioni'}` };
+}
+const stelleOggi = corso => (lezioni().find(l => l.corso === corso && l.data === oggi())?.stelle || []).length;
 function righeOggi() {
   const r = [];
+  const lo = lezioneOra(), pl = prossimaLezione();
+  if (!lo && pl && pl.tra <= 90) r.push({ cls: pl.tra <= 15 ? 'urg' : 'att', t: `${pl.corso} alle ${pl.inizio}`, d: `${pl.aula ? 'Aula ' + pl.aula + ' · ' : ''}tra ${pl.tra} min`, n: '', b: V.attivo ? 'Appunti' : 'Orario', f: () => V.attivo ? apriAppunti(pl) : (nuovoTurno(), schedaOrario()) });
+  const sg = suggerimento();
+  if (sg) r.push({ cls: 'att', t: 'Gioco da due minuti', d: cap(sg.testo), n: String(sg.n), b: 'Gioca', f: () => { nuovoTurno(); detto(A.turno, 'Gioca'); schedaGioco(sg.corso); } });
   for (const e of prossimi().slice(0, 2)) {
     const p = piano(e), g = giorniTra(oggi(), e.data);
     r.push({ cls: g <= 7 ? 'urg' : 'att', t: e.nome, d: `${cap(dataLunga(e.data))} · ${p.oggi >= .1 ? `${num(p.oggi)} h oggi per stare in pari` : 'oggi sei in pari'}`, n: g === 0 ? 'oggi' : `${g} g`, b: 'Focus', f: () => avviaFocus({ esameId: e.id }) });
@@ -90,26 +117,37 @@ function righeOggi() {
   if (m || s) r.push({ cls: 'info', t: m ? `${ore(m)} di studio oggi` : 'Oggi non hai ancora studiato', d: s ? `${s} ${s === 1 ? 'giorno' : 'giorni'} di fila` : 'Bastano 25 minuti per iniziare una serie', n: '', b: m ? 'Libretto' : 'Focus', f: () => m ? (nuovoTurno(), schedaLibretto()) : avviaFocus({}) });
   return r.slice(0, 4);
 }
+// in aula il pannello si apre sulla cattura veloce: ★ da esame, definizione, domanda
+function bloccoAula(lo) {
+  const st = stelleOggi(lo.corso);
+  return `<section class="ld-aula"><div class="capo"><span class="ld-lbl"><i class="ld-live"></i>In aula · ${esc(lo.corso)}</span><span>${lo.aula ? 'aula ' + esc(lo.aula) + ' · ' : ''}finisce tra ${lo.mancano} min</span></div>
+    <div class="ld-cattura">${[['stella', '★ Da esame', 'S'], ['definizione', 'Definizione', 'D'], ['domanda', 'Domanda', 'Q']].map(([k, t, l]) => `<button type="button" class="btn" data-ld-cattura="${k}"><span>${t}</span><kbd>${MAC ? '⌃⌥' : 'Ctrl Alt '}${l}</kbd></button>`).join('')}
+      ${V.attivo ? '<button type="button" class="btn primary" data-ld-appunti>Appunti</button>' : ''}</div>
+    ${st ? `<p class="ld-nota">${st} ${st === 1 ? 'cosa segnata' : 'cose segnate'} da esame oggi.</p>` : ''}</section>`;
+}
 function disegnaHome() {
-  const r = righeOggi();
+  const r = righeOggi(), lo = lezioneOra();
   home._righe = r;
-  home.innerHTML = `<section class="ld-oggi"><div class="capo"><span class="ld-lbl">Oggi</span><span>${D.esami.length ? `${cfuFatti()} di ${D.profilo.cfuTotali} CFU` : ''}</span></div>
+  home.innerHTML = `${lo ? bloccoAula(lo) : ''}${lo && !r.length ? '' : `<section class="ld-oggi"><div class="capo"><span class="ld-lbl">Oggi</span><span>${D.esami.length ? `${cfuFatti()} di ${D.profilo.cfuTotali} CFU` : ''}</span></div>
     ${r.map((x, i) => `<div class="ld-riga ${x.cls}"><i class="ld-seg"></i><div class="t"><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div><span class="n">${esc(x.n)}</span><button type="button" class="btn small${i === 0 && x.cls === 'urg' ? ' primary' : ''}" data-ld-riga="${i}">${x.b}</button></div>`).join('') ||
-    `<div class="ld-riga info vuota"><i class="ld-seg"></i><div class="t"><b>Inizia da qui</b><span>Scrivi «esame analisi 2 il 15 gennaio 9 cfu», oppure prova i dati di esempio</span></div><span class="n"></span><button type="button" class="btn small primary" data-ld-esempio>Esempio</button></div>`}</section>
+    `<div class="ld-riga info vuota"><i class="ld-seg"></i><div class="t"><b>Inizia da qui</b><span>Scrivi «lezione analisi 2 lunedì 9-11 aula 7», oppure prova i dati di esempio</span></div><span class="n"></span><button type="button" class="btn small primary" data-ld-esempio>Esempio</button></div>`}</section>`}
     <div class="ld-strumenti">${STRUMENTI.map(([k, t], i) => `<button type="button" class="btn" data-ld-strumento="${i}">${ico(k)}<span>${t}</span></button>`).join('')}</div>`;
 }
 const STRUMENTI = [
   ['focus', 'Focus', () => schedaFocus()],
   ['ripasso', 'Ripasso', () => schedaRipasso()],
+  ['gioco', 'Gioco', () => schedaGioco()],
+  ['orario', 'Orario', () => schedaOrario()],
+  ['appunti', 'Appunti', () => apriAppunti()],
+  ['orale', 'Interrogami', () => avviaOrale(null)],
   ['libretto', 'Libretto', () => schedaLibretto()],
   ['esami', 'Esami', () => schedaEsami()],
-  ['orale', 'Interrogami', () => avviaOrale(null)],
-  ['file', 'Carte da file', () => scegliFile()],
 ];
 function aggiornaTesta() {
   testa.querySelector('h2').textContent = saluto();
-  testa.querySelector('p').textContent = frase();
-  const d = new Date(), m = media();
+  const lo = lezioneOra();
+  testa.querySelector('p').textContent = lo ? `Sei a lezione di ${lo.corso}. Prendi appunti tranquillo: ci penso io a non perdere niente.` : frase();
+  const m = media();
   testa.querySelector('small').textContent = `${cap(dataLunga(oggi()))}${m.ponderata ? ` · media ${num(m.ponderata, 2)}` : ''}${serie() ? ` · serie di ${serie()} ${serie() === 1 ? 'giorno' : 'giorni'}` : ''}`;
   testa.querySelector('.r1 .ld-rombo').classList.toggle('ld-cavo', !prossimi().some(e => giorniTra(oggi(), e.data) <= 7));
 }
@@ -119,7 +157,7 @@ function aggiornaPillola(avviso) {
   if (!pill) return;
   const T = F.stato();
   pill.classList.toggle('timer', !!T && !avviso);
-  if (avviso) { pill.innerHTML = `<svg class="ld-ok" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>${esc(avviso)}</span>`; pill.setAttribute('aria-label', avviso); return; }
+  if (avviso) { pill.innerHTML = `<i class="ld-rombo"></i><span class="ld-testo"><b>${esc(avviso)}</b></span>`; pill.setAttribute('aria-label', avviso); return; }
   if (T) {
     const fermo = !!T.fermo, pausa = T.fase === 'pausa';
     if (!pill.querySelector('.ld-tempo')) pill.innerHTML = `<i class="ld-rombo"></i><b class="ld-tempo"></b><span class="ld-cosa"></span><i class="ld-avanza"><i></i></i>`;
@@ -130,13 +168,23 @@ function aggiornaPillola(avviso) {
     pill.setAttribute('aria-label', `${pausa ? 'Pausa' : 'Focus su ' + F.etichetta()}: mancano ${F.mmss(F.restante())}`);
     return;
   }
+  const lo = lezioneOra(), pl = prossimaLezione(), sg = suggerimento();
   const p = prossimi()[0], c = daRipassare().length;
-  let testo;
-  if (p) { const g = giorniTra(oggi(), p.data); testo = `<b>${esc(p.nome)}</b><span class="ld-tenue">${g === 0 ? 'oggi' : g === 1 ? 'domani' : `tra ${g} g`}</span>${c ? `<span class="ld-punto"></span><span class="ld-tenue">${c} carte</span>` : ''}`; }
+  let testo, pieno = false;
+  if (lo) { const st = stelleOggi(lo.corso); testo = `<i class="ld-live"></i><b>${esc(lo.corso)}</b><span class="ld-tenue">fine tra ${lo.mancano} min</span>${st ? `<span class="ld-punto"></span><span class="ld-tenue">★${st}</span>` : ''}`; pieno = true; }
+  else if (pl && pl.tra <= 20) { testo = `<b>${esc(pl.corso)}</b><span class="ld-tenue">${pl.aula ? 'aula ' + esc(pl.aula) + ' · ' : ''}tra ${pl.tra} min</span>`; pieno = true; }
+  else if (sg) testo = `<b>2 minuti</b><span class="ld-tenue">${esc(sg.testo)}</span>`;
+  else if (p) { const g = giorniTra(oggi(), p.data); testo = `<b>${esc(p.nome)}</b><span class="ld-tenue">${g === 0 ? 'oggi' : g === 1 ? 'domani' : `tra ${g} g`}</span>${c ? `<span class="ld-punto"></span><span class="ld-tenue">${c} carte</span>` : ''}`; pieno = g <= 7; }
   else if (c) testo = `<b>${c}</b><span class="ld-tenue">carte da ripassare</span>`;
   else testo = `<b>Lode</b><span class="ld-tenue">passa qui sopra</span>`;
-  pill.innerHTML = `<i class="ld-rombo${p && giorniTra(oggi(), p.data) <= 7 ? '' : ' ld-cavo'}"></i><span class="ld-testo">${testo}</span>`;
+  pill.innerHTML = `<i class="ld-rombo${pieno ? '' : ' ld-cavo'}"></i><span class="ld-testo">${testo}</span>`;
   pill.setAttribute('aria-label', `Lode: ${pill.textContent}. Passa sopra o premi ${TASTI}.`);
+  // un suggerimento nuovo: la gemma fa un piccolo cenno, al massimo ogni 90 minuti
+  const chiave = sg ? sg.testo : '';
+  if (chiave && chiave !== aggiornaPillola._ultimo && Date.now() - (D.imp.ultimoSuggerimento || 0) > 90 * 60e3 && !A.aperto) {
+    D.imp.ultimoSuggerimento = Date.now(); salva(); segnala('conferma-pronta');
+  }
+  aggiornaPillola._ultimo = chiave;
 }
 
 // a riposo la pillola è larga 336; col timer si stringe attorno al tempo
@@ -165,7 +213,8 @@ function molla() {
 export function apri({ fisso = false } = {}) {
   if (fisso) A.fisso = true;
   if (A.aperto) return Promise.resolve();
-  if (A.storia.length && Date.now() - A.ultimoUso > 20 * 60e3 && !A.attesa && !A.orale) ricomincia();
+  // si riparte dalla home: dopo 2 minuti se erano solo comandi, dopo 20 se c'era una conversazione con l'AI
+  if (!A.home && Date.now() - A.ultimoUso > (A.storia.length ? 20 : 2) * 60e3 && !A.attesa && !A.orale && !A.gioco && !Voce.attivo()) ricomincia();
   A.apriTra?.(); A.chiudiTra?.(); A.aperto = true;
   if (A.home) disegnaHome();
   aggiornaTesta();
@@ -188,6 +237,8 @@ export function chiudi(avviso) {
   if (avviso) mostraAvviso(avviso, true); else aggiornaPillola();
   pill.style.visibility = '';
   tween(300, e => { if (A.aperto) return; pill.style.opacity = e.toFixed(3); pill.style.transform = `scale(${.96 + .04 * e})`; }, { ritardo: 170 });
+  if (A.cattura) fineCattura(); A.gioco = null;
+  if (BRIDGE && document.hasFocus()) BRIDGE.invoca('finestra:rilascia');
   segnala('chiuso'); if (F.stato()?.fase === 'focus' && !F.stato().fermo) dopo(700, () => segnala('focus'));
   return attendi(480).then(() => { if (!A.aperto) shell.dataset.aperto = '0'; });
 }
@@ -495,6 +546,128 @@ function schedaAiuto() {
   if (A.turno) A.turno.dataset.sintesi = 'comandi';
 }
 
+/* ---------- orario delle lezioni ---------- */
+function schedaOrario() {
+  const corsi = [...new Set([...D.orario.map(o => o.corso), ...daFare().map(e => e.nome)])];
+  const s = scheda('ld-orario', `<span class="ld-lbl">Orario · ${D.orario.length} ${D.orario.length === 1 ? 'lezione' : 'lezioni'} a settimana</span>
+    <div class="ld-sett">${[1, 2, 3, 4, 5, 6].map(g => { const del = D.orario.filter(o => o.giorni.includes(g)).sort((a, b) => a.inizio.localeCompare(b.inizio)); return `<div class="ld-giorno${new Date().getDay() === g ? ' oggi' : ''}"><b>${GIORNI_BREVI[g]}</b>${del.map(o => `<span title="${esc(o.corso)}${o.aula ? ' · aula ' + esc(o.aula) : ''}"><em>${o.inizio}</em>${esc(o.corso)}</span>`).join('') || '<span class="vuoto">—</span>'}</div>`; }).join('')}</div>
+    ${D.orario.length ? `<div class="ld-orari">${D.orario.map(o => `<div class="ld-or"><span class="t"><b>${esc(o.corso)}</b><span>${o.giorni.map(g => GIORNI_BREVI[g]).join(', ')} · ${o.inizio}–${o.fine}${o.aula ? ' · aula ' + esc(o.aula) : ''}</span></span><button type="button" class="ld-x" data-via="${o.id}" aria-label="Togli ${esc(o.corso)}">${IC.chiudi}</button></div>`).join('')}</div>` : ''}
+    <form class="ld-or-form"><input name="corso" list="ld-corsi" placeholder="Corso" aria-label="Corso" required><datalist id="ld-corsi">${corsi.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
+      <div class="ld-giorni" role="group" aria-label="Giorni">${[1, 2, 3, 4, 5, 6].map(g => `<label><input type="checkbox" name="g" value="${g}"><span>${GIORNI_BREVI[g].slice(0, 2)}</span></label>`).join('')}</div>
+      <input name="inizio" type="time" value="09:00" aria-label="Inizio" required><input name="fine" type="time" value="11:00" aria-label="Fine" required><input name="aula" placeholder="Aula" aria-label="Aula"><button class="btn" type="submit">Aggiungi</button></form>
+    <p class="ld-nota">${V.attivo ? 'L\'orario è anche nel vault, in «Orario.md»: puoi cambiarlo da Obsidian.' : 'Oppure scrivi: «lezione analisi 2 lunedì e mercoledì 9-11 aula 7».'}</p>`);
+  s.querySelectorAll('[data-via]').forEach(b => b.addEventListener('click', () => { D.orario = D.orario.filter(o => o.id !== b.dataset.via); salva(); V.scriviOrario(); comprimi(b.closest('.ld-or'), 300); aggiornaTutto(); }));
+  s.querySelector('form').addEventListener('submit', ev => {
+    ev.preventDefault(); const f = new FormData(ev.target), giorni = f.getAll('g').map(Number);
+    if (!giorni.length) { s.querySelector('.ld-giorni').animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'translateX(0)' }], { duration: 260 }); return; }
+    const o = aggiungiOrario({ corso: f.get('corso'), giorni, inizio: f.get('inizio'), fine: f.get('fine'), aula: f.get('aula') }); V.scriviOrario();
+    mostraFatto({ testo: `${o.corso} in orario.`, nota: `${o.giorni.map(g => GIORNI_BREVI[g]).join(', ')} · ${o.inizio}–${o.fine}` }); aggiornaTutto();
+    nuovoTurno(); schedaOrario();
+  });
+  if (A.turno) A.turno.dataset.sintesi = `${D.orario.length} lezioni a settimana`;
+}
+
+/* ---------- cattura veloce in aula ---------- */
+const CATTURE = { stella: ['★ Da esame', 'Cosa ha detto il prof che sarà all\'esame?'], definizione: ['Definizione', 'Termine: definizione'], domanda: ['Domanda', 'La domanda da fare al prof'] };
+export function cattura(tipo) {
+  A.cattura = tipo; apri({ fisso: true });
+  campo.dataset.cattura = tipo;
+  let chip = campo.querySelector('.ld-tipo'); if (!chip) { chip = h('span', 'ld-tipo'); campo.querySelector('.cerca').prepend(chip); }
+  chip.textContent = CATTURE[tipo][0];
+  const inp = campo.querySelector('input'); inp.placeholder = CATTURE[tipo][1];
+  requestAnimationFrame(() => inp.focus({ preventScroll: true }));
+}
+function fineCattura() { A.cattura = null; delete campo.dataset.cattura; campo.querySelector('.ld-tipo')?.remove(); campo.querySelector('input').placeholder = 'Chiedi o scrivi un comando…'; }
+async function salvaCattura(tipo, testo, { termine, corso } = {}) {
+  if (tipo === 'definizione' && !termine) { const m = testo.match(/^(.+?)\s*(?:::|:|=|→|—)\s*(.+)$/); if (!m) { rispostaFissa('Scrivila così: **termine: definizione**.'); return false; } termine = m[1]; testo = m[2]; }
+  let l; try { l = await V.annota(tipo, testo, { termine, corso }); } catch (e) { rispostaFissa('Non riesco a scrivere nel vault: ' + e.message, { errore: true }); return false; }
+  const dove = l.corso === 'Appunti sparsi' ? 'negli appunti sparsi di oggi' : `in ${l.corso}`;
+  const testoFatto = tipo === 'stella' ? `★ Segnato ${dove}.` : tipo === 'definizione' ? `«${termine.trim().replace(/^./, c => c.toUpperCase())}» ${dove}.` : `Domanda salvata ${dove}.`;
+  aggiornaTutto();
+  return { testo: testoFatto, l };
+}
+
+/* ---------- i giochi di memoria ---------- */
+async function apriAppunti(l) {
+  if (V.attivo) {
+    l ||= V.lezioneDaAnnotare(); if (!A.turno || A.home) nuovoTurno();
+    const r = await V.apri(l), nome = l.corso === 'Appunti sparsi' ? 'gli appunti sparsi di oggi' : 'la nota di ' + l.corso;
+    if (r.esito === 'ok') return mostraFatto({ testo: `Apro ${nome} in Obsidian.` });
+    if (r.esito === 'da_aprire') return rispostaFissa(`Apro ${nome}. Se Obsidian non trova il vault, la prima volta fai **Apri cartella come vault** e scegli la cartella «${r.percorso}»: poi resta collegato.`);
+    if (r.esito === 'manca') return rispostaFissa(`Ho aperto ${nome} con l'editor di sistema. Con **Obsidian** (gratis, obsidian.md) il vault «${r.percorso}» è già pronto: cartelle, modelli, orario e la tua memoria.`);
+    return rispostaFissa('Non riesco ad aprire la nota: ' + (r.errore || ''), { errore: true });
+  }
+  rispostaFissa('Gli appunti in Obsidian sono nell\'**app desktop** di Lode: lì ogni lezione diventa una nota del tuo vault, con le ★ e le definizioni che segni dalla barra.');
+}
+function schedaGioco(corso) {
+  const { scelte, tutte } = daGiocare(6, corso);
+  if (scelte.length < 2) {
+    rispostaFissa(tutte.length ? `Le definizioni ${corso ? 'di ' + corso + ' ' : ''}per oggi le sai già: tornano quando stanno per scappare.` : `Ancora nessuna definizione${corso ? ' di ' + corso : ''}. In aula premi **Definizione** (o scrivi «def: termine = definizione»), oppure scrivile in Obsidian nella sezione «Definizioni» della lezione.`);
+    return;
+  }
+  const manche = partita(scelte, tutte), corsi = [...new Set(scelte.map(d => d.corso))];
+  let i = 0, punti = 0, tot = 0; const t0 = Date.now(), sbagliate = new Set();
+  const s = scheda('ld-gioco', `<div class="capo"><span class="ld-lbl">Gioco · ${esc(corsi.length === 1 ? corsi[0] : 'ultime lezioni')}</span><span class="conto"></span></div><i class="ld-prog"><i></i></i><div class="manche"></div>`);
+  const box = s.querySelector('.manche'), conto = s.querySelector('.conto'), pr = s.querySelector('.ld-prog i');
+  const segna = (d, ok, q) => { tot++; if (ok) punti++; else sbagliate.add(d.t); ricorda(d.k, ok, q); };
+  const avanti = () => { i++; tween(140, e => { box.style.opacity = (1 - e).toFixed(3); }).then(() => { box.style.opacity = ''; mostra(); }); };
+  const scuoti = el => tween(260, e => { el.style.transform = e >= 1 ? '' : `translateX(${(Math.sin(e * Math.PI * 4) * 4 * (1 - e)).toFixed(2)}px)`; }, { ease: lineare });
+  const mostra = () => {
+    pr.style.transform = `scaleX(${(i / manche.length).toFixed(4)})`;
+    if (i >= manche.length) return fine();
+    const m = manche[i]; conto.textContent = `${i + 1} di ${manche.length}`;
+    if (m.tipo === 'abbina') {
+      const destra = [...m.defs].sort(() => Math.random() - .5);
+      box.innerHTML = `<p class="dom">Abbina ogni termine alla sua definizione.</p><div class="ld-abbina"><div class="col">${m.defs.map((d, j) => `<button type="button" class="ld-tess" data-s="${j}">${esc(d.t)}</button>`).join('')}</div><div class="col">${destra.map(d => `<button type="button" class="ld-tess def" data-d="${m.defs.indexOf(d)}">${esc(d.d.length > 92 ? d.d.slice(0, 90) + '…' : d.d)}</button>`).join('')}</div></div>`;
+      let sel = null, fatte = 0; const errori = new Set();
+      box.querySelectorAll('[data-s]').forEach(b => b.addEventListener('click', () => { if (b.disabled) return; box.querySelectorAll('[data-s]').forEach(x => x.classList.toggle('sel', x === b)); sel = +b.dataset.s; }));
+      box.querySelectorAll('[data-d]').forEach(b => b.addEventListener('click', () => {
+        if (sel == null || b.disabled) return; const sx = box.querySelector(`[data-s="${sel}"]`);
+        if (+b.dataset.d === sel) {
+          [sx, b].forEach(x => { x.disabled = true; x.classList.remove('sel'); x.classList.add('ok'); }); segna(m.defs[sel], !errori.has(sel), errori.has(sel) ? 3 : 4); sel = null; fatte++;
+          if (fatte === m.defs.length) { segnala('fatto'); dopo(500, avanti); }
+        } else { errori.add(sel); scuoti(b); scuoti(sx); }
+      }));
+    } else if (m.tipo === 'chi') {
+      box.innerHTML = `<p class="dom">Chi sono?</p><p class="def">${esc(m.def.d)}</p><div class="ld-scelte">${m.opzioni.map(o => `<button type="button" class="btn" data-o="${esc(o.k)}">${esc(o.t)}</button>`).join('')}</div>`;
+      box.querySelectorAll('[data-o]').forEach(b => b.addEventListener('click', () => {
+        const ok = b.dataset.o === m.def.k; box.querySelectorAll('[data-o]').forEach(x => { x.disabled = true; if (x.dataset.o === m.def.k) x.classList.add('giusta'); });
+        if (!ok) { b.classList.add('errata'); scuoti(b); } segna(m.def, ok); segnala(ok ? 'fatto' : 'quiete'); dopo(ok ? 650 : 1500, avanti);
+      }));
+    } else if (m.tipo === 'completa') {
+      box.innerHTML = `<p class="dom">${esc(m.def.t)}: completa la definizione.</p><p class="def">${esc(m.buco.prima)}<input class="ld-buco" aria-label="Parola mancante" autocomplete="off" spellcheck="false" style="width:${Math.max(5, m.buco.parola.length) + 1}ch">${esc(m.buco.dopo)}</p><div class="az"><button type="button" class="btn primary">Controlla <kbd>Invio</kbd></button><button type="button" class="btn ld-piano" data-salta>Non la so</button></div>`;
+      const inp = box.querySelector('.ld-buco'), verifica = salta => {
+        if (inp.disabled) return; const ok = !salta && giusta(inp.value, m.buco.parola); inp.disabled = true;
+        inp.value = m.buco.parola; inp.classList.add(ok ? 'ok' : 'no'); if (!ok) scuoti(inp); segna(m.def, ok); segnala(ok ? 'fatto' : 'quiete'); dopo(ok ? 700 : 1600, avanti);
+      };
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); verifica(false); } });
+      box.querySelector('.btn.primary').addEventListener('click', () => verifica(false)); box.querySelector('[data-salta]').addEventListener('click', () => verifica(true));
+      requestAnimationFrame(() => inp.focus({ preventScroll: true }));
+    } else {
+      box.innerHTML = `<p class="dom">Te la ricordi?</p><p class="termine">${esc(m.def.t)}</p><p class="def" hidden>${esc(m.def.d)}</p><div class="az"><button type="button" class="btn primary" data-gira>Mostra <kbd>Spazio</kbd></button></div>`;
+      const gira = () => { const d = box.querySelector('.def'); if (!d.hidden) return; d.hidden = false; entra(d, { dy: 6, blur: 6, ms: 400 });
+        box.querySelector('.az').innerHTML = '<button type="button" class="btn" data-no>Non la sapevo <kbd>1</kbd></button><button type="button" class="btn primary" data-si>La sapevo <kbd>2</kbd></button>';
+        box.querySelector('[data-no]').addEventListener('click', () => { segna(m.def, false); avanti(); }); box.querySelector('[data-si]').addEventListener('click', () => { segna(m.def, true); avanti(); }); };
+      box.querySelector('[data-gira]').addEventListener('click', gira);
+      A.gioco = { gira, vota: k => box.querySelector(k === '1' ? '[data-no]' : '[data-si]')?.click() };
+      return entra(box, { dy: 6, blur: 6, ms: 420 });
+    }
+    A.gioco = null;
+    entra(box, { dy: 6, blur: 6, ms: 420 });
+  };
+  const fine = () => {
+    A.gioco = null; salva(); V.scriviMemoria(); aggiornaTutto();
+    const sec = Math.round((Date.now() - t0) / 1000);
+    box.innerHTML = `<div class="ld-esito"><b>${punti}<small>/${tot}</small></b><span>${punti === tot ? 'Tutte giuste. Queste restano.' : `Da rinforzare: ${[...sbagliate].slice(0, 3).map(esc).join(', ')}. Tornano domani.`}</span><small>${sec < 60 ? sec + ' secondi' : Math.round(sec / 60) + ' min'}</small></div>`;
+    entra(box, { dy: 8, blur: 6, ms: 480 }); segnala(punti >= tot - 1 ? 'confermato' : 'quiete');
+    if (A.turno) A.turno.dataset.sintesi = `${punti} su ${tot}`;
+    const ancora = daGiocare(6, corso).scelte.length;
+    if (ancora >= 2) { const b = h('button', 'btn small', 'Ancora una'); b.type = 'button'; b.addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Gioca ancora'); schedaGioco(corso); }); box.querySelector('.ld-esito').append(b); }
+  };
+  mostra();
+  if (A.turno) A.turno.dataset.sintesi = 'gioco';
+}
+
 /* ---------- eseguire un comando locale ---------- */
 async function esegui(c) {
   switch (c.tipo) {
@@ -541,6 +714,18 @@ async function esegui(c) {
       return schedaRipasso(c.esame?.id);
     }
     case 'orale': return avviaOrale(c.esame, c.nomeDetto);
+    case 'stella': case 'domanda': case 'definizione': {
+      const r = await salvaCattura(c.tipo, c.testo, { termine: c.termine }); if (!r) return;
+      return mostraFatto({ testo: r.testo, nota: V.attivo ? 'Nella nota della lezione.' : '', azione: V.attivo ? ['Apri', () => apriAppunti(r.l)] : null, sintesi: r.testo });
+    }
+    case 'orario': {
+      const o = aggiungiOrario(c); V.scriviOrario(); aggiornaTutto();
+      await mostraFatto({ testo: `${o.corso} in orario.`, nota: `${o.giorni.map(g => GIORNI_BREVI[g]).join(', ')} · ${o.inizio}–${o.fine}${o.aula ? ' · aula ' + o.aula : ''}`, sintesi: `${o.corso} in orario` });
+      return rispostaFissa('Quando sei a lezione la barra lo sa: si apre sulla cattura veloce (★ da esame, definizioni, domande) e a casa ti propone due minuti di gioco su quello che hai appena fatto.');
+    }
+    case 'vediOrario': return schedaOrario();
+    case 'gioco': return schedaGioco(c.corso);
+    case 'appunti': return apriAppunti();
   }
 }
 
@@ -621,6 +806,12 @@ export async function invia(testo) {
   if (!testo) return;
   Voce.zitto();
   const inp = campo.querySelector('input'); inp.value = '';
+  if (A.cattura) {
+    const tipo = A.cattura; fineCattura();
+    const r = await salvaCattura(tipo, testo);
+    if (r) { segnala('fatto'); return chiudi(r.testo); }
+    return;
+  }
   if (A.attesa && !A.attesa.inCorso) { if (SI.test(testo)) return conferma(); if (NO.test(testo)) return annulla(); }
   if (A.orale) {
     if (/^(esci|basta orale|chiudi( l'orale)?|fine orale)$/i.test(testo)) { nuovoTurno(); detto(A.turno, testo); return esciOrale(); }
@@ -716,11 +907,18 @@ function collega() {
     const r = e.target.closest('[data-ld-riga]'); if (r) { premi(r); home._righe[+r.dataset.ldRiga]?.f(); return; }
     const s = e.target.closest('[data-ld-strumento]'); if (s) { premi(s); const [, nome, f] = STRUMENTI[+s.dataset.ldStrumento]; if (nome !== 'Carte da file') { nuovoTurno(); detto(A.turno, nome); } f(); return; }
     if (e.target.closest('[data-ld-esempio]')) dispatchEvent(new CustomEvent('lode:esempio'));
+    const c = e.target.closest('[data-ld-cattura]'); if (c) { premi(c); cattura(c.dataset.ldCattura); return; }
+    if (e.target.closest('[data-ld-appunti]')) apriAppunti();
   });
   addEventListener('keydown', e => {
     const ptt = (MAC ? e.altKey && !e.ctrlKey : e.ctrlKey && e.shiftKey) && e.code === 'Space';
     if (ptt) { e.preventDefault(); if (!e.repeat && !pttAttivo) { pttAttivo = true; iniziaAscolto(); } return; }
     if (e.key === 'Escape') { if (Voce.attivo()) { fineAscolto(true); return; } if (A.aperto) { e.preventDefault(); chiudi(); } return; }
+    const inCampo0 = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName);
+    if (A.aperto && A.gioco && !inCampo0 && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (e.code === 'Space') { e.preventDefault(); A.gioco.gira(); return; }
+      if (e.key === '1' || e.key === '2') { e.preventDefault(); A.gioco.vota(e.key); return; }
+    }
     const inCampo = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable;
     if ((e.key === 'k' && (e.metaKey || e.ctrlKey)) || (e.key === '/' && !inCampo)) { e.preventDefault(); apri({ fisso: true }).then(() => inp.focus()); return; }
     if (A.aperto && A.ripasso && !inCampo && !e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -749,6 +947,25 @@ function collega() {
   });
   addEventListener('lode:dati', () => { if (!A.avviso) aggiornaPillola(); if (A.aperto && A.home) { disegnaHome(); aggiornaTesta(); } });
   addEventListener('resize', () => { if (A.aperto) { forma.w.t = Math.min(560, innerWidth - 16); molla(); } });
+  addEventListener('lode:lezioni', () => { if (!A.avviso) aggiornaPillola(); if (A.aperto && A.home) disegnaHome(); });
+  // il tempo passa: «fine tra 23 min», la lezione che inizia, il suggerimento del pomeriggio
+  let minuto = -1;
+  setInterval(() => { const m = new Date().getMinutes(); if (m === minuto) return; minuto = m; if (!A.avviso && !F.stato()) aggiornaPillola(); if (A.aperto && A.home && !shell.contains(document.activeElement)) { disegnaHome(); aggiornaTesta(); } }, 5000);
+  if (BRIDGE) collegaDesktop();
+}
+// nell'app la barra è una finestra trasparente sopra tutte le altre: i clic passano attraverso tranne che sulla barra
+function collegaDesktop() {
+  let ignora = null;
+  const passa = v => { if (v !== ignora) { ignora = v; BRIDGE.mouse(v); } };
+  document.addEventListener('pointermove', e => passa(!(e.target instanceof Element && e.target.closest('.ld'))), { passive: true });
+  document.addEventListener('pointerleave', () => { if (!A.aperto) passa(true); });
+  passa(true);
+  addEventListener('blur', () => { setTimeout(() => { if (A.aperto && !document.hasFocus() && !Voce.attivo()) chiudi(); }, 120); });
+  BRIDGE.su('scorciatoia', nome => {
+    if (nome === 'apri') { if (A.aperto && A.fisso) return chiudi(); apri({ fisso: true }).then(() => campo.querySelector('input').focus()); }
+    else if (CATTURE[nome]) cattura(nome);
+    else if (nome === 'gioco') { apri({ fisso: true }); nuovoTurno(); detto(A.turno, 'Gioca'); schedaGioco(); }
+  });
 }
 
 export function avvia() {

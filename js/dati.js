@@ -1,4 +1,5 @@
-// I dati di Lode: tutto in questo browser (localStorage), niente account, niente server.
+// I dati di Lode: nel browser (localStorage) oppure, nell'app desktop, dentro il vault Obsidian (.lode/dati.json).
+// Niente account, niente server. La chiave AI non va mai nel vault (i vault si sincronizzano): resta in questo computer.
 // Esami e voti, sessioni di studio, carte del ripasso, impostazioni. Più i conti che servono a uno studente:
 // media ponderata, base di laurea, voto che serve, ore da fare oggi, ripasso a intervalli (SM-2).
 const CHIAVE = 'lode:v1';
@@ -8,24 +9,41 @@ export const VUOTO = () => ({
   esami: [],      // {id, nome, cfu, data, voto, lode, idoneita, fatto, oreObiettivo}
   sessioni: [],   // {id, esameId, inizio, min}
   carte: [],      // {id, esameId, fronte, retro, ease, int, rip, scad, creata}
-  imp: { focus: 25, pausa: 5, voceAlta: false, chiave: '', aspetto: 'scuro', suoni: true },
+  orario: [],     // {id, corso, giorni:[0-6], inizio:'09:00', fine:'11:00', aula}
+  lezioni: [],    // solo nel browser: {id, corso, data, inizio, fine, aula, definizioni:[{t,d}], stelle:[], domande:[]} (nell'app stanno nel vault)
+  memoria: {},    // definizioni ripassate: chiave → {ease, int, rip, scad, giuste, sbagliate, ultima}
+  imp: { focus: 25, pausa: 5, voceAlta: false, chiave: '', aspetto: 'scuro', suoni: true, suggerimenti: true, ultimoSuggerimento: 0 },
   benvenuto: false,
 });
 
+export const DESKTOP = typeof window !== 'undefined' && !!window.lodeDesktop;
+const chiaveLocale = () => { try { return localStorage.getItem('lode:chiave') || ''; } catch { return ''; } };
+function unisci(d) { return d && d.v === 1 ? { ...VUOTO(), ...d, profilo: { ...VUOTO().profilo, ...d.profilo }, imp: { ...VUOTO().imp, ...d.imp } } : null; }
 function carica() {
-  try { const d = JSON.parse(localStorage.getItem(CHIAVE)); if (d && d.v === 1) return { ...VUOTO(), ...d, profilo: { ...VUOTO().profilo, ...d.profilo }, imp: { ...VUOTO().imp, ...d.imp } }; } catch { }
-  return VUOTO();
+  let d = null;
+  try { d = unisci(DESKTOP ? window.lodeDesktop.leggiDati() : JSON.parse(localStorage.getItem(CHIAVE))); } catch { }
+  d ||= VUOTO();
+  if (DESKTOP) d.imp.chiave = chiaveLocale();
+  return d;
 }
 export let D = carica();
 export function salva() {
-  try { localStorage.setItem(CHIAVE, JSON.stringify(D)); } catch (e) { console.warn('Lode: salvataggio non riuscito', e); }
+  try {
+    if (DESKTOP) {
+      const c = { ...D, imp: { ...D.imp, chiave: '' } };
+      window.lodeDesktop.salvaDati(c);
+      localStorage.setItem('lode:chiave', D.imp.chiave || '');
+    } else localStorage.setItem(CHIAVE, JSON.stringify(D));
+  } catch (e) { console.warn('Lode: salvataggio non riuscito', e); }
   dispatchEvent(new CustomEvent('lode:dati'));
 }
+// un'altra finestra dell'app (o un altro computer, via vault sincronizzato) ha cambiato i dati
+if (DESKTOP) window.lodeDesktop.su('dati:cambiati', d => { const n = unisci(d); if (!n) return; n.imp.chiave = D.imp.chiave; D = n; dispatchEvent(new CustomEvent('lode:dati')); });
 export function sostituisci(nuovi) { D = { ...VUOTO(), ...nuovi, profilo: { ...VUOTO().profilo, ...nuovi.profilo }, imp: { ...VUOTO().imp, ...nuovi.imp, chiave: D.imp.chiave } }; salva(); }
 // la chiave AI non esce mai in un'esportazione
 export function esporta() { const c = structuredClone(D); c.imp.chiave = ''; return c; }
 // in ascolto da altre schede dello stesso browser
-addEventListener('storage', e => { if (e.key === CHIAVE) { D = carica(); dispatchEvent(new CustomEvent('lode:dati')); } });
+addEventListener('storage', e => { if (e.key === CHIAVE && !DESKTOP) { D = carica(); dispatchEvent(new CustomEvent('lode:dati')); } });
 
 export const id = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 export const oggi = () => isoGiorno(new Date());
@@ -154,6 +172,71 @@ export function rispondi(c, q) {
 }
 export const intervalloTesto = n => n === 0 ? 'ora' : n === 1 ? '1 g' : n < 30 ? `${n} g` : n < 365 ? `${Math.round(n / 30)} mesi` : `${num(n / 365)} anni`;
 
+/* ---------- orario delle lezioni ---------- */
+const minutiDi = hhmm => { const [h, m] = String(hhmm).split(':').map(Number); return h * 60 + (m || 0); };
+const adesso = () => { const d = new Date(); return { g: d.getDay(), m: d.getHours() * 60 + d.getMinutes() }; };
+// la lezione in corso (con qualche minuto di margine prima dell'inizio)
+export function lezioneOra() {
+  const { g, m } = adesso();
+  const x = D.orario.find(o => o.giorni.includes(g) && m >= minutiDi(o.inizio) - 3 && m < minutiDi(o.fine));
+  return x ? { ...x, data: oggi(), mancano: minutiDi(x.fine) - m, passati: m - minutiDi(x.inizio) } : null;
+}
+// la prossima lezione di oggi
+export function prossimaLezione() {
+  const { g, m } = adesso();
+  return D.orario.filter(o => o.giorni.includes(g) && minutiDi(o.inizio) > m).map(o => ({ ...o, data: oggi(), tra: minutiDi(o.inizio) - m })).sort((a, b) => a.tra - b.tra)[0] || null;
+}
+// l'ultima lezione finita (oggi o nei giorni scorsi, fino a una settimana fa)
+export function ultimaLezioneFinita() {
+  const { g, m } = adesso();
+  for (let k = 0; k < 8; k++) {
+    const gg = (g - k + 7) % 7, data = piuGiorni(oggi(), -k);
+    const l = D.orario.filter(o => o.giorni.includes(gg) && (k > 0 || minutiDi(o.fine) <= m)).sort((a, b) => minutiDi(b.fine) - minutiDi(a.fine))[0];
+    if (l) return { ...l, data };
+  }
+  return null;
+}
+export function aggiungiOrario({ corso, giorni, inizio, fine, aula = '' }) {
+  const o = { id: id(), corso: String(corso).trim().replace(/^./, c => c.toUpperCase()), giorni: [...new Set(giorni)].sort(), inizio, fine, aula: String(aula || '').trim() };
+  D.orario.push(o); salva(); return o;
+}
+
+/* ---------- lezioni e definizioni (dal vault nell'app, da qui nel browser) ---------- */
+let LEZ_VAULT = null;
+export function impostaLezioniVault(l) { LEZ_VAULT = l; dispatchEvent(new CustomEvent('lode:lezioni')); }
+// nel vault le lezioni vere; quelle salvate qui (esempio, browser) solo se il vault non ha già la stessa lezione
+export const lezioni = () => [...(LEZ_VAULT || []), ...D.lezioni.filter(l => !(LEZ_VAULT || []).some(v => norm(v.corso) === norm(l.corso) && v.data === l.data))].filter(l => l.data).sort((a, b) => b.data.localeCompare(a.data) || String(b.inizio || '').localeCompare(String(a.inizio || '')));
+export const chiaveDef = (corso, t) => norm(corso) + '|' + norm(t);
+// tutte le definizioni con la loro memoria, dalla lezione più recente
+export function definizioni({ giorni = 60 } = {}) {
+  const da = piuGiorni(oggi(), -giorni), visti = new Set(), out = [];
+  for (const l of lezioni()) {
+    if (l.data < da) continue;
+    for (const d of l.definizioni || []) {
+      const k = chiaveDef(l.corso, d.t); if (visti.has(k)) continue; visti.add(k);
+      out.push({ ...d, k, corso: l.corso, data: l.data, file: l.file, stella: (l.stelle || []).some(s => norm(s).includes(norm(d.t))), m: D.memoria[k] || null });
+    }
+  }
+  return out;
+}
+const forza = d => !d.m ? 0 : d.m.giuste / Math.max(1, d.m.giuste + d.m.sbagliate);
+// le definizioni da giocare adesso: mai viste o in scadenza, prima quelle dell'ultima lezione e quelle «da esame»
+export function daGiocare(n = 6, corso) {
+  const T = oggi();
+  const tutte = definizioni().filter(d => !corso || norm(d.corso) === norm(corso));
+  const pronte = tutte.filter(d => !d.m || d.m.scad <= T);
+  pronte.sort((a, b) => b.data.localeCompare(a.data) || (b.stella - a.stella) || (forza(a) - forza(b)));
+  return { scelte: pronte.slice(0, n), tutte };
+}
+export function ricorda(k, ok, q = ok ? 4 : 0) {
+  const m = D.memoria[k] ||= { ease: 2.5, int: 0, rip: 0, scad: oggi(), giuste: 0, sbagliate: 0, ultima: null };
+  const finta = { ...m };
+  if (ok) { m.giuste++; m.int = prossimoIntervallo(finta, q); m.rip++; m.scad = piuGiorni(oggi(), m.int); }
+  else { m.sbagliate++; m.rip = 0; m.int = 0; m.scad = piuGiorni(oggi(), 1); }
+  m.ease = Math.max(1.3, m.ease + .1 - (5 - q) * (.08 + (5 - q) * .02));
+  m.ultima = oggi();
+}
+
 /* ---------- dati di esempio: per provare Lode in dieci secondi ---------- */
 export function esempio() {
   const T = oggi(), d = VUOTO();
@@ -184,6 +267,31 @@ export function esempio() {
     C('Che cos\'è una chiave primaria?', 'Un insieme minimo di attributi che identifica in modo univoco ogni tupla di una relazione.', 0, bd),
     C('Differenza tra LEFT JOIN e INNER JOIN', 'La LEFT JOIN tiene tutte le righe della tabella di sinistra, anche senza corrispondenze (con NULL); la INNER solo le coppie che combaciano.', 0, bd),
     C('Che cosa garantisce la 3ª forma normale?', 'Che ogni attributo non chiave dipenda dalla chiave, da tutta la chiave e da nient\'altro che la chiave (niente dipendenze transitive).', 2, bd),
+  ];
+  const dow = new Date(T + 'T12:00').getDay(), ieri = piuGiorni(T, -1);
+  d.orario = [
+    { id: id(), corso: 'Analisi 2', giorni: [...new Set([1, 3, dow])].sort(), inizio: '09:00', fine: '11:00', aula: '7' },
+    { id: id(), corso: 'Basi di dati', giorni: [...new Set([2, (dow + 6) % 7])].sort(), inizio: '14:00', fine: '16:00', aula: 'B2' },
+    { id: id(), corso: 'Fisica 2', giorni: [5], inizio: '11:00', fine: '13:00', aula: 'Magna' },
+  ];
+  d.lezioni = [
+    { id: id(), corso: 'Analisi 2', data: T, inizio: '09:00', fine: '11:00', aula: '7', domande: ['Perché nel teorema di Schwarz serve la continuità delle derivate miste?'],
+      stelle: ['Il teorema di Green all\'esame lo chiede sempre, con la dimostrazione', 'Classificare i punti stazionari con l\'hessiana: esercizio sicuro'],
+      definizioni: [
+        { t: 'Gradiente', d: 'Il vettore delle derivate parziali di f: punta nella direzione di massima crescita.' },
+        { t: 'Punto stazionario', d: 'Un punto in cui il gradiente della funzione si annulla.' },
+        { t: 'Matrice hessiana', d: 'La matrice quadrata delle derivate seconde parziali di una funzione.' },
+        { t: 'Punto di sella', d: 'Un punto stazionario che non è né di massimo né di minimo locale: l\'hessiana è indefinita.' },
+        { t: 'Teorema di Green', d: 'Lega l\'integrale di linea lungo il bordo di un dominio all\'integrale doppio sul dominio.' },
+        { t: 'Forma differenziale esatta', d: 'Una forma che ammette un potenziale, cioè è il differenziale di una funzione.' },
+      ] },
+    { id: id(), corso: 'Basi di dati', data: ieri, inizio: '14:00', fine: '16:00', aula: 'B2', domande: [], stelle: ['Normalizzazione fino alla BCNF: c\'è sempre nello scritto'],
+      definizioni: [
+        { t: 'Chiave primaria', d: 'Un insieme minimo di attributi che identifica in modo univoco ogni tupla.' },
+        { t: 'Chiave esterna', d: 'Un attributo che fa riferimento alla chiave primaria di un\'altra relazione.' },
+        { t: 'Dipendenza funzionale', d: 'Un vincolo per cui il valore di un insieme di attributi determina quello di un altro.' },
+        { t: 'Forma normale di Boyce-Codd', d: 'Ogni dipendenza funzionale non banale ha a sinistra una superchiave.' },
+      ] },
   ];
   return d;
 }

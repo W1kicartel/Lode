@@ -1,0 +1,35 @@
+{
+  "name": "lode",
+  "productName": "Lode",
+  "version": "0.2.0",
+  "description": "L'assistente di studio in cima allo schermo, collegato al tuo vault Obsidian",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "main": "main.mjs",
+  "scripts": {
+    "prepara": "node prepara.mjs",
+    "start": "electron .",
+    "dist:mac": "node prepara.mjs && electron-builder --mac --publish never",
+    "dist:win": "node prepara.mjs && electron-builder --win nsis --publish never",
+    "dist:linux": "node prepara.mjs && electron-builder --linux AppImage --publish never"
+  },
+  "devDependencies": {
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "it.lode.app",
+    "productName": "Lode",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["main.mjs", "preload.cjs", "vault.mjs", "web/**", "build/tray*.png", "package.json"],
+    "mac": {
+      "category": "public.app-category.education",
+      "target": [{ "target": "dmg", "arch": ["universal"] }],
+      "extendInfo": { "LSUIElement": true, "NSMicrophoneUsageDescription": "Lode usa il microfono solo quando tieni premuto il tasto per parlare." }
+    },
+    "win": { "target": "nsis" },
+    "nsis": { "oneClick": true, "perMachine": false, "runAfterFinish": true },
+    "linux": { "target": "AppImage", "category": "Education" }
+  }
+}

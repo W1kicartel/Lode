@@ -1,7 +1,7 @@
 // L'AI di Lode (facoltativa): Claude, con la chiave API dello studente, salvata solo in questo browser.
 // Spiega, crea carte da appunti/PDF/foto, interroga come all'orale. Non scrive mai da sola: ogni modifica ai dati
 // (carte, esami, voti) arriva come proposta con «Conferma / Annulla», come fa Lumi nel gestionale.
-import { D, cfuFatti, dataLunga, fatti, media, num, oggi, prossimi, daRipassare } from './dati.js';
+import { D, cfuFatti, dataLunga, fatti, media, num, oggi, prossimi, daRipassare, lezioni, lezioneOra } from './dati.js';
 
 const MODELLO = 'claude-opus-5-5';
 let SDK = null, client = null, chiaveUsata = '';
@@ -23,6 +23,8 @@ export function contesto() {
     `Prossimi appelli: ${p.map(e => `${e.nome} (${e.cfu} CFU) il ${e.data}`).join('; ') || 'nessuno segnato'}.`,
     `Esami ancora da dare senza data: ${D.esami.filter(e => !e.fatto && !e.data).map(e => e.nome).join('; ') || 'nessuno'}.`,
     `Carte del ripasso: ${D.carte.length}, da ripassare oggi ${daRipassare().length}.`,
+    `Orario: ${D.orario.map(o => `${o.corso} (${o.giorni.join(',')} ${o.inizio}-${o.fine})`).join('; ') || 'non impostato'}.${lezioneOra() ? ` Adesso è a lezione di ${lezioneOra().corso}.` : ''}`,
+    ...lezioni().slice(0, 3).map(l => `Lezione di ${l.corso} del ${l.data}: ★ da esame: ${(l.stelle || []).join(' | ') || '—'}. Definizioni: ${(l.definizioni || []).map(d => d.t + ' = ' + d.d).join(' | ') || '—'}.${l.appunti ? ` Appunti: ${l.appunti.slice(0, 1500)}` : ''}`),
   ];
   return righe.filter(Boolean).join('\n');
 }
