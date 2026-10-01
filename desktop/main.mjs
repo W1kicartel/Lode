@@ -2,7 +2,7 @@
 // I clic passano attraverso tranne che sulla barra. Scorciatoie globali per la cattura in aula. Il vault Obsidian in
 // Documenti/Lode è la memoria: dati di Lode in .lode/dati.json, lezioni in Markdown. Icona nella barra dei menu.
 import { app, BrowserWindow, Menu, ShareMenu, Tray, dialog, globalShortcut, ipcMain, nativeImage, powerMonitor, screen, shell } from 'electron';
-import { existsSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as V from './vault.mjs';
@@ -56,7 +56,18 @@ function apriQuadro() {
   if (MAC) app.dock?.show();
   quadro.on('closed', () => { quadro = null; if (MAC) app.dock?.hide(); });
 }
-const tutte = () => [barra, quadro].filter(w => w && !w.isDestroyed());
+/* ---------- la prima volta: la finestra di benvenuto ---------- */
+let benvenuto = null;
+function apriBenvenuto() {
+  if (benvenuto && !benvenuto.isDestroyed()) { benvenuto.show(); benvenuto.focus(); return; }
+  benvenuto = new BrowserWindow({ width: 980, height: 760, minWidth: 420, minHeight: 600, title: 'Benvenuto in Lode', backgroundColor: '#0A0A0A', titleBarStyle: MAC ? 'hiddenInset' : 'default', show: false,
+    webPreferences: { preload: join(QUI, 'preload.cjs'), contextIsolation: true, sandbox: true } });
+  benvenuto.loadFile(join(WEB, 'index.html'), { query: { benvenuto: '1' } });
+  benvenuto.once('ready-to-show', () => { benvenuto.show(); benvenuto.focus(); if (MAC) app.focus({ steal: true }); });
+  if (MAC) app.dock?.show();
+  benvenuto.on('closed', () => { benvenuto = null; if (MAC && !quadro) app.dock?.hide(); });
+}
+const tutte = () => [barra, quadro, benvenuto].filter(w => w && !w.isDestroyed());
 const manda = (canale, x, tranne) => tutte().forEach(w => { if (w.webContents !== tranne) w.webContents.send(canale, x); });
 
 /* ---------- vault ---------- */
@@ -92,6 +103,16 @@ ipcMain.on('dati:salva', (e, d) => {
 });
 ipcMain.on('mouse', (e, ignora) => BrowserWindow.fromWebContents(e.sender)?.setIgnoreMouseEvents(ignora, { forward: true }));
 ipcMain.handle('vault:info', () => info());
+ipcMain.handle('benvenuto:fatto', () => { conf.benvenuto = new Date().toISOString(); salvaConf(); benvenuto?.close(); barra?.webContents.reload(); setTimeout(() => barra?.webContents.send('scorciatoia', 'scrivi'), 1500); return true; });
+// i corsi di esempio se ne vanno dal vault, ma solo le note che non contengono niente di scritto dallo studente
+ipcMain.handle('vault:pulisciCorsi', (_, { nomi }) => {
+  let tolte = 0;
+  for (const n of nomi) {
+    const p = V.dentro(vault(), `Corsi/${n.replace(/[\\/:*?"<>|#^[\]]/g, ' ').trim()}.md`);
+    try { const t = readFileSync(p, 'utf8').replace(/%% lode:corso %%[\s\S]*?%% \/lode:corso %%/, '').replace(/^---[\s\S]*?---/, '').replace(/^# .*$/m, '').replace(/%%[\s\S]*?%%/g, '').replace(/Le lezioni di questo corso[\s\S]*?definizioni\./, '').trim(); if (!t) { rmSync(p); tolte++; } } catch { }
+  }
+  return tolte;
+});
 ipcMain.handle('vault:lezioni', () => V.lezioni(vault()));
 ipcMain.handle('vault:annota', (_, x) => V.annota(vault(), x));
 ipcMain.handle('vault:scrivi', (_, { file, testo }) => {
@@ -213,6 +234,7 @@ function creaTray() {
   const menu = () => Menu.buildFromTemplate([
     { label: `Apri Lode (${MAC ? '⌥ Spazio' : 'Ctrl+Shift+Spazio'})`, click: () => { barra.show(); barra.focus(); barra.setIgnoreMouseEvents(false); barra.webContents.send('scorciatoia', 'apri'); } },
     { label: 'Il quadro: libretto, esami, ripasso', click: apriQuadro },
+    { label: 'Rifai la configurazione…', click: apriBenvenuto },
     { type: 'separator' },
     { label: 'Apri il vault in Obsidian', click: async () => { const l = V.linkObsidian(vault(), 'Home.md'); if (l.url) I.apriObsidian(l.url); else shell.openPath(vault()); } },
     { label: 'Mostra il vault nella cartella', click: () => shell.openPath(vault()) },
@@ -232,6 +254,7 @@ app.whenReady().then(async () => {
   await V.carica(WEB);
   avviaVault();
   creaBarra(); creaTray(); scorciatoie();
+  if (!conf.benvenuto && !process.env.LODE_PROVA) apriBenvenuto();
   screen.on('display-metrics-changed', posiziona); screen.on('display-added', posiziona); screen.on('display-removed', posiziona);
   if (process.env.LODE_QUADRO) apriQuadro();
   // prove automatiche: esegue uno script nella barra e ne salva una foto (LODE_PROVA=script.js, LODE_FOTO=cartella)

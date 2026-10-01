@@ -16,6 +16,7 @@ import * as TR from './trascrizione.js';
 import * as O from './orecchio.js';
 import * as FILE from './file.js';
 import * as SB from './sbobina.js';
+import * as AL from './allenatore.js';
 import { parlatoInFormule } from './formule.js';
 import { pulito } from './markdown.js';
 const BRIDGE = DESKTOP ? window.lodeDesktop : null;
@@ -50,7 +51,7 @@ const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
 /* ---------- stato ---------- */
 let A, shell, pill, corpo, testa, campo, home, filo, allegatiBox, tacche = [], forma, velo, GEN = 0;
-const nuovoStato = () => ({ zona: false, cattura: null, gioco: null, aperto: false, fisso: false, modo: 'riposo', turno: null, attesa: null, home: true, avviso: null, chiudiTra: null, apriTra: null, storia: [], allegati: [], orale: null, controller: null, ripasso: null, risposta: null, ultimoUso: 0 });
+const nuovoStato = () => ({ proposta: null, zona: false, cattura: null, gioco: null, aperto: false, fisso: false, modo: 'riposo', turno: null, attesa: null, home: true, avviso: null, chiudiTra: null, apriTra: null, storia: [], allegati: [], orale: null, controller: null, ripasso: null, risposta: null, ultimoUso: 0 });
 
 function saluto() {
   const n = String(D.profilo.nome || '').trim().split(/\s+/)[0], o = new Date().getHours();
@@ -86,7 +87,8 @@ function costruisci() {
   corpo.append(testa, dentro, piede);
   const zona = h('div', 'ld-zona', `<i class="bordo"></i><div class="ld-zona-in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><b>Lascia qui il file</b><span>${FILE.ACCETTATI}</span></div>`);
   zona.setAttribute('aria-hidden', 'true');
-  shell.append(pill, corpo, zona);
+  const prop = h('div', 'ld-proposta', '<i class="ld-rombo"></i><span class="t"><b></b><span></span></span><button type="button" class="btn small primary" data-p="si"></button><button type="button" class="btn small ld-piano" data-p="dopo">Dopo</button>');
+  shell.append(pill, corpo, zona, prop);
   document.body.append(shell);
   velo = h('div', 'ld-drop', '<i class="bordo"></i><div class="ld-drop-in"><b>Lascia qui il file</b><span>PDF, slide, appunti, foto della lavagna: Lode ne fa carte del ripasso</span></div>');
   velo.setAttribute('aria-hidden', 'true'); document.body.append(velo);
@@ -118,6 +120,7 @@ function righeOggi() {
   if (V.attivo && STATO && (!STATO.obsidian.installato || !STATO.modello) && !D.imp.preparaNascosto) r.push({ cls: 'att', t: 'Completa Lode', d: [!STATO.obsidian.installato && 'Obsidian', !STATO.modello && 'il cervello locale'].filter(Boolean).join(' e ') + ': un clic, gratis', n: '', b: 'Prepara', f: () => { nuovoTurno(); detto(A.turno, 'Prepara Lode'); schedaPrepara(); } });
   const dc = daChiudere();
   if (dc) r.push({ cls: 'att', t: `Chiudi la lezione di ${dc.corso}`, d: `${dc.parole} parole di appunti · estraggo definizioni e ★`, n: '', b: 'Chiudi', f: () => { nuovoTurno(); detto(A.turno, 'Chiudi lezione'); chiudiLezione(dc.corso); } });
+  if (A.propostaAperta) { const p = A.propostaAperta; r.push({ cls: 'urg', t: p.titolo, d: p.testo, n: '', b: p.bottone, f: () => { A.propostaAperta = null; A.proposta = p; accettaProposta(); } }); }
   const sg = suggerimento();
   if (sg) r.push({ cls: 'att', t: 'Gioco da due minuti', d: cap(sg.testo), n: String(sg.n), b: 'Gioca', f: () => { nuovoTurno(); detto(A.turno, 'Gioca'); schedaGioco(sg.corso); } });
   for (const e of prossimi().slice(0, 2)) {
@@ -242,6 +245,7 @@ function molla() {
 /* ---------- aprire e chiudere ---------- */
 export function apri({ fisso = false } = {}) {
   if (fisso) A.fisso = true;
+  if (A.proposta && !A.aperto) { A.propostaAperta = nascondiProposta(null); }
   if (A.aperto) return Promise.resolve();
   // si riparte dalla home: dopo 2 minuti se erano solo comandi, dopo 20 se c'era una conversazione con l'AI
   if (!A.home && Date.now() - A.ultimoUso > (A.storia.length ? 20 : 2) * 60e3 && !A.attesa && !A.orale && !A.gioco && !Voce.attivo()) ricomincia();
@@ -847,6 +851,42 @@ async function usaFile(x, op, { corso, data }) {
   }
 }
 
+/* ---------- le proposte dell'allenatore: la pillola si allunga e chiede ---------- */
+let tProposta = 0;
+function mostraProposta(p) {
+  if (A.aperto || A.zona || A.proposta) return;
+  A.proposta = p; const el = shell.querySelector('.ld-proposta');
+  el.querySelector('b').textContent = p.titolo; el.querySelector('.t span').textContent = p.testo; el.querySelector('[data-p=si]').textContent = p.bottone;
+  shell.classList.add('propone'); forma.w.t = Math.min(520, innerWidth - 16); forma.h.t = 50; forma.r.t = 25; molla();
+  entra(el, { ritardo: 120, dy: 4, blur: 6, ms: 480 }); segnala('conferma-pronta');
+  clearTimeout(tProposta); tProposta = setTimeout(() => nascondiProposta('ignorata'), 90e3);
+}
+function nascondiProposta(esito) {
+  const p = A.proposta; if (!p) return; A.proposta = null; clearTimeout(tProposta);
+  if (esito) AL.registra(p, esito);
+  shell.classList.remove('propone');
+  if (!A.aperto) { forma.w.t = larghezza(); forma.h.t = 36; forma.r.t = 18; molla(); }
+  return p;
+}
+async function accettaProposta() {
+  const p = nascondiProposta('accettata'); if (!p) return;
+  await apri({ fisso: true }); nuovoTurno(); detto(A.turno, `${p.bottone} · ${p.esame?.nome || p.corso || ''}`);
+  if (p.tipo === 'gioco') return schedaGioco(p.esame?.nome || p.corso);
+  if (p.tipo === 'ripasso') return schedaRipasso(p.esame?.id);
+  if (p.tipo === 'orale') return avviaOrale(p.esame);
+  if (p.tipo === 'focus') return avviaFocus({ esameId: p.esame?.id });
+  if (p.tipo === 'stelle') {
+    const s = scheda('ld-elenco-stelle', `<span class="ld-lbl">★ Da esame · ${esc(p.esame?.nome || '')}</span>${p.stelle.map(x => `<div class="ld-stella">${mdHtml(x.replace(/^\d\d:\d\d\s*/, ''))}</div>`).join('')}<div class="az"><button type="button" class="btn primary" data-g>Ora un gioco</button></div>`);
+    s.querySelector('[data-g]').addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Gioca'); schedaGioco(p.esame?.nome); });
+    s.querySelectorAll('.ld-stella').forEach((x, i) => entra(x, { ritardo: 80 + i * 60, dy: 6, blur: 5, ms: 420 }));
+  }
+}
+export async function provaAllenatore(forza = false) {
+  const r = await AL.momento({ forza });
+  if (r.proposta) mostraProposta(r.proposta);
+  return r.proposta ? r.proposta.tipo + ': ' + r.proposta.testo : r.no;
+}
+
 /* ---------- la zona dove lasciare i file: la pillola si allarga ---------- */
 function zonaOn() {
   if (A.zona) return; A.zona = true; shell.classList.add('drop');
@@ -1067,7 +1107,7 @@ async function esegui(c) {
       else e = aggiungiEsame({ nome: c.nome, cfu: c.cfu || 6, data: c.data });
       await mostraFatto({ testo: `${e.nome}${c.esistente && !c.esistente.fatto ? ' aggiornato' : ' aggiunto'}.`, nota: `${e.data ? cap(dataLunga(e.data)) + ' · ' : 'senza data · '}${e.cfu} CFU${!c.cfu && !c.esistente ? ' (cambiali se sono di più)' : ''}`, annulla: ann, sintesi: `${e.nome} ${e.data ? traQuanto(e.data) : ''}` });
       aggiornaTutto();
-      if (e.data) { const p = piano(e); rispostaFissa(`Per arrivarci pronto: circa **${num(p.perGiorno)} h al giorno** (${p.tot} h in tutto, le cambi dal piano).`); }
+      if (e.data) { const p = piano(e), g = giorniTra(oggi(), e.data), liv = D.imp.allenatore || 'normale'; rispostaFissa(`Per arrivarci pronto: circa **${num(p.perGiorno)} h al giorno** (${p.tot} h in tutto). ${liv === 'mai' ? 'Le proposte sono spente: le riaccendi con «proposte normali».' : `Da adesso, quando sei al computer e libero, ti propongo giochi, ripassi e domande su ${e.nome}${g <= 14 ? ', sempre più spesso man mano che si avvicina' : ''}.`}`); }
       return;
     }
     case 'carta': {
@@ -1099,6 +1139,8 @@ async function esegui(c) {
     case 'naviga': return schedaNote(c.q);
     case 'chiudiLezione': return chiudiLezione(c.corso);
     case 'prepara': return schedaPrepara(c.cosa);
+    case 'proposte': D.imp.allenatore = c.livello; salva(); return mostraFatto({ testo: c.livello === 'mai' ? 'Proposte spente.' : `Proposte ${({ poco: 'poche', normale: 'normali', spesso: 'frequenti' })[c.livello]}.`, nota: c.livello === 'mai' ? 'Le riaccendi quando vuoi.' : 'Mai a lezione, in focus o nelle ore di silenzio.' });
+    case 'proponi': { const r = await provaAllenatore(true); return r?.includes(':') ? null : rispostaFissa('Per ora non ho niente da proporti: aggiungi un esame con la data, o segna qualche definizione a lezione.'); }
     case 'trascrivi': return avviaTrascrizione();
     case 'ripeti': return ripeti(c.sec || 60);
     case 'spegniRipeti': return spegniRipeti();
@@ -1286,6 +1328,10 @@ function collega() {
     if (A.aperto && !A.fisso && !shell.contains(document.activeElement) && !Voce.attivo()) A.chiudiTra = dopo(380, () => { A.chiudiTra = null; if (!A.fisso) chiudi(); });
   });
   testa.querySelector('.ld-indietro').addEventListener('click', () => indietro());
+  shell.querySelector('.ld-proposta [data-p=si]').addEventListener('click', e => { e.stopPropagation(); accettaProposta(); });
+  shell.querySelector('.ld-proposta [data-p=dopo]').addEventListener('click', e => { e.stopPropagation(); nascondiProposta('rimandata'); mostraAvviso('Va bene, più tardi'); });
+  // l'allenatore guarda ogni minuto (con un po' di caso dentro): niente proposte se la barra è aperta
+  setTimeout(() => setInterval(() => { if (!A.aperto && !A.zona && !A.proposta) provaAllenatore().catch(() => { }); }, 60e3), Math.random() * 30e3);
   pill.addEventListener('click', () => { apri({ fisso: true }).then(() => campo.querySelector('input').focus({ preventScroll: true })); });
   corpo.addEventListener('pointerdown', () => { A.fisso = true; });
   document.addEventListener('pointerdown', e => { if (A.aperto && !shell.contains(e.target) && !e.target.closest('.ld-drop')) chiudi(); });
@@ -1390,7 +1436,7 @@ export function avvia() {
 }
 // la pagina sotto chiede a Lode di fare cose (ripassa, interroga, focus) dal suo pannello
 // per le prove automatiche (test/): accesso ai motori della barra
-window.__lode = { invia, riceviFile, O, ripeti, condividiLezione, indietro, TR, Voce, avviaTrascrizione, fermaTrascrizione, riordinaLezione, stato: () => A };
+window.__lode = { D: () => D, invia, provaAllenatore, AL, riceviFile, O, ripeti, condividiLezione, indietro, TR, Voce, avviaTrascrizione, fermaTrascrizione, riordinaLezione, stato: () => A };
 export const azioni = {
   focus: esameId => avviaFocus({ esameId }),
   ripassa: esameId => { apri({ fisso: true }); nuovoTurno(); detto(A.turno, esameId ? 'Ripassa ' + esame(esameId)?.nome : 'Ripasso'); schedaRipasso(esameId); },

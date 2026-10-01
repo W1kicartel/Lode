@@ -219,6 +219,21 @@ export async function riassumi({ corso, testo, nome, avanza }) {
   return riordina({ corso: corso || nome, testo: `[Documento «${nome}»]\n${testo}`, avanza, fonte: 'documento' });
 }
 
+// setup veloce: il libretto incollato dal portale dell'ateneo e l'orario incollato dal sito
+const SCHEMA_LIBRETTO = { type: 'object', additionalProperties: false, required: ['esami'], properties: { esami: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['nome', 'cfu', 'voto', 'lode', 'idoneita', 'data'], properties: {
+  nome: { type: 'string' }, cfu: { type: 'integer' }, voto: { type: ['integer', 'null'] }, lode: { type: 'boolean' }, idoneita: { type: 'boolean' }, data: { type: ['string', 'null'], description: 'YYYY-MM-DD' } } } } } };
+export async function leggiLibretto(testo) {
+  const r = await strutturato('Qui sopra c\'è il libretto universitario di uno studente italiano, copiato da un portale (Esse3 o simili), con tanto testo inutile. Estrai SOLO gli esami superati: nome dell\'insegnamento (senza codici), CFU, voto da 18 a 30 (lode true se «30 e lode» o «30L»), idoneita true se è un\'idoneità senza voto, data in formato YYYY-MM-DD. Ignora gli esami non ancora sostenuti o senza esito.', `Libretto:\n${String(testo).slice(0, 30000)}`, SCHEMA_LIBRETTO);
+  return (r.esami || []).filter(e => e.nome?.trim() && (e.idoneita || (e.voto >= 18 && e.voto <= 30))).map(e => ({ ...e, nome: e.nome.trim(), data: /^\d{4}-\d\d-\d\d$/.test(e.data || '') ? e.data : null }));
+}
+const SCHEMA_ORARIO = { type: 'object', additionalProperties: false, required: ['lezioni'], properties: { lezioni: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['corso', 'giorni', 'inizio', 'fine', 'aula'], properties: {
+  corso: { type: 'string' }, giorni: { type: 'array', items: { type: 'integer', minimum: 0, maximum: 6 }, description: '0 domenica, 1 lunedì … 6 sabato' }, inizio: { type: 'string', description: 'HH:MM' }, fine: { type: 'string', description: 'HH:MM' }, aula: { type: 'string' } } } } } };
+export async function leggiOrario(testo) {
+  const r = await strutturato('Qui sopra c\'è l\'orario settimanale delle lezioni di uno studente universitario italiano, copiato da un sito. Estrai ogni insegnamento con i giorni della settimana (0 domenica, 1 lunedì … 6 sabato), ora di inizio e fine in formato HH:MM e aula (stringa vuota se non c\'è). Un insegnamento che si ripete negli stessi orari in più giorni va in una sola voce con più giorni.', `Orario:\n${String(testo).slice(0, 20000)}`, SCHEMA_ORARIO);
+  const ora = x => /^\d{1,2}[:.]\d\d$/.test(x || '') ? x.replace('.', ':').padStart(5, '0') : null;
+  return (r.lezioni || []).map(l => ({ corso: l.corso?.trim(), giorni: [...new Set(l.giorni || [])].filter(g => g >= 0 && g <= 6), inizio: ora(l.inizio), fine: ora(l.fine), aula: (l.aula || '').trim() })).filter(l => l.corso && l.giorni.length && l.inizio && l.fine);
+}
+
 export async function carteDa(blocchi) {
   const r = await strutturato('Crea da 8 a 20 carte del ripasso da questo materiale: una sola idea per carta, domanda precisa, risposta corta (massimo 2 frasi), in italiano. Solo concetti presenti nel materiale.', blocchi, SCHEMA_CARTE);
   return (r.carte || []).filter(c => c.fronte?.trim() && c.retro?.trim()).slice(0, 30);

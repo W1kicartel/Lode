@@ -520,3 +520,17 @@ button.ld-ripeti-riga:hover{background:rgba(255,255,255,.06)}
 @media (max-width:620px){.ld-opzioni{grid-template-columns:1fr}}
 .ld.drop .ld-zona-in svg{visibility:hidden}
 .ld.drop .ld-pill .ld-rombo,.ld.drop .ld-testa .r1 .ld-rombo{visibility:hidden}
+
+/* ---------- la proposta dell'allenatore: la pillola si allunga e chiede ---------- */
+.ld-proposta{position:absolute;inset:0;z-index:7;display:flex;align-items:center;gap:10px;padding:0 8px 0 18px;opacity:0;visibility:hidden;transition:opacity .25s var(--morbido),visibility 0s .25s}
+.ld.propone .ld-proposta{opacity:1;visibility:visible;transition:opacity .3s var(--morbido) .1s}
+.ld.propone .ld-pill{opacity:0!important;pointer-events:none}
+.ld-proposta .ld-rombo{flex:none}
+.ld-proposta .t{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.ld-proposta .t b{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ld-proposta .t span{font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ld-proposta .btn{height:32px;flex:none}
+.ld-elenco-stelle .ld-lbl{display:block;margin-bottom:6px}
+.ld-stella{padding:9px 0;border-top:1px solid var(--ld-riga);font-size:14px;line-height:1.45}
+.ld-stella::before{content:"★ ";color:var(--muted)}
+.ld-elenco-stelle .az{margin-top:10px}
