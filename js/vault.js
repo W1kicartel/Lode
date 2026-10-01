@@ -50,6 +50,13 @@ export const apriFile = file => L?.invoca('vault:apri', { file });
 export const apriVault = () => L?.invoca('vault:apri', { file: 'Benvenuto.md' });
 export function scriviOrario() { if (L) L.invoca('vault:scrivi', { file: 'Orario.md', testo: orarioMd(D.orario) }); }
 
+// le proposte dell'allenatore che funzionano (quelle accettate più spesso)
+const NOMI_PROP = { gioco: 'giochi', ripasso: 'ripasso delle carte', stelle: 'rileggere le ★', orale: 'domande lampo', focus: 'focus' };
+function proposte() {
+  const per = {}; for (const x of D.allenatore?.storia || []) { per[x.tipo] ||= { si: 0, tot: 0 }; per[x.tipo].tot++; if (x.esito === 'accettata') per[x.tipo].si++; }
+  const k = Object.entries(per).filter(([, v]) => v.tot >= 2).sort((a, b) => b[1].si / b[1].tot - a[1].si / a[1].tot);
+  return k.length ? `- Delle proposte di Lode accetti soprattutto: ${k.slice(0, 2).map(([t, v]) => `${NOMI_PROP[t] || t} (${v.si} su ${v.tot})`).join(', ')}.\n` : '';
+}
 // la memoria di Lode, leggibile dallo studente: cosa sa, cosa sbaglia, come studia
 export function scriviMemoria() {
   if (!L) return;
@@ -71,7 +78,7 @@ aggiornata: ${oggi()}
 ## In breve
 - ${lez.length} ${lez.length === 1 ? 'lezione annotata' : 'lezioni annotate'}, ${defs.length} ${defs.length === 1 ? 'definizione' : 'definizioni'}: **${sicure.length} sicure**, ${deboli.length} da rinforzare, ${mai.length} ancora da giocare.
 - Serie di studio: ${serie()} ${serie() === 1 ? 'giorno' : 'giorni'} di fila. Questo mese: ${Math.round(minuti({ da: oggi().slice(0, 8) + '01' }) / 60)} h.
-${fasce[0][1] ? `- Studi soprattutto di **${fasce[0][0]}**.\n` : ''}
+${fasce[0][1] ? `- Studi soprattutto di **${fasce[0][0]}**.\n` : ''}${proposte()}
 ## Da rinforzare
 ${deboli.map(d => `- **${d.t}** (${link(d)}): sbagliata ${d.m.sbagliate} ${d.m.sbagliate === 1 ? 'volta' : 'volte'} su ${d.m.giuste + d.m.sbagliate}`).join('\n') || '- Niente, per ora.'}
 

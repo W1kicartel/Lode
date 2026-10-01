@@ -90,6 +90,8 @@ export function interpreta(frase) {
   if (/^(?:trascrivi|registra|ascolta|sbobina)(?: (?:la|tutta la|questa))? lezione\b|^(?:avvia|inizia|parti con) (?:la )?(?:trascrizione|sbobinatura)/.test(t)) return { tipo: 'trascrivi' };
   if (/^(?:ripeti|ripetimi|ripeti(?:mi)? (?:l'ultima frase|gli ultimi \d+ secondi|cosa ha detto)|cosa ha (?:appena )?detto|che (?:cosa )?ha detto|non ho capito|mi sono pers[oa] (?:qualcosa|una frase)|cos'ha detto)(?: il prof(?:essore)?)?$/.test(t)) { const sec = +(t.match(/(\d+) secondi/)?.[1] || 60); return { tipo: 'ripeti', sec: Math.min(90, sec) }; }
   if (/^(?:spegni|disattiva|basta)(?: il)? ripeti$/.test(t)) return { tipo: 'spegniRipeti' };
+  if ((m = t.match(/^(?:proposte|suggerimenti)\s+(mai|spente|poche|normali|frequenti|tante)$|^(?:spegni|disattiva|basta)(?: con)? (?:le )?(?:proposte|suggerimenti)$/))) return { tipo: 'proposte', livello: !m[1] || /mai|spente/.test(m[1]) ? 'mai' : /poche/.test(m[1]) ? 'poco' : /frequenti|tante/.test(m[1]) ? 'spesso' : 'normale' };
+  if (/^(?:proponimi|dammi|suggeriscimi) (?:qualcosa|un ripasso|un gioco)|^cosa (?:posso )?(?:faccio|fare) adesso$|^che (?:cosa )?ripasso$/.test(t)) return { tipo: 'proponi' };
   if (/^(?:condividi|manda|passa|invia)(?: la)? (?:sbobina|lezione|trascrizione|appunti)\b/.test(t)) { const r = pulisci(t.replace(/^.*?(sbobina|lezione|trascrizione|appunti)\s*/, '').replace(/^(?:ai|a|ai miei) (?:compagni|colleghi)\s*/, '')); return { tipo: 'condividi', corso: r || null }; }
   if (/^(?:stop|ferma|fine|basta|termina|chiudi)(?: la)? (?:trascrizione|registrazione|sbobinatura)|^(?:la )?lezione è finita$|^fine lezione$/.test(t)) return { tipo: 'fineTrascrizione' };
   if (/^(?:pausa|sospendi)(?: la)? (?:trascrizione|registrazione)/.test(t)) return { tipo: 'pausaTrascrizione' };
@@ -125,6 +127,11 @@ export function interpreta(frase) {
     return { tipo: 'focus', min: mi ? Math.min(240, Math.max(1, mi.min)) : null, esame: e, nomeDetto: resto };
   }
 
+  // «l'appello di analisi è il 15 gennaio», «ho analisi 2 il 13 ottobre», «analisi 2 spostato al 20»
+  if ((m = t.match(/^(?:l')?(?:appello|esame|scritto|orale) (?:di |de )?(.+?) (?:è|e|sarà|sara|cade|ce l'ho) (?:il |l'|lo |a )?(.+)$/)) || (m = t.match(/^(?:ho|avrò|avro|dò|do) (?:l'esame di |lo scritto di |l'orale di )?(.+?) (il .+|tra .+|fra .+|domani|dopodomani|lunedì.*|martedì.*|mercoledì.*|giovedì.*|venerdì.*|sabato.*)$/)) || (m = t.match(/^(?:l'esame di |esame di |l'appello di )?(.+?) (?:è )?(?:spostato|rinviato|anticipato) (?:al|a|il) (.+)$/))) {
+    const d = leggiData(m[2]), e = trovaEsame(pulisci(m[1]));
+    if (d && (e || (/esame|appello|scritto|orale/.test(t) && pulisci(m[1]).length >= 3))) return { tipo: 'esame', nome: e?.nome || pulisci(m[1]), cfu: null, data: d.data, esistente: e && !e.fatto ? e : null };
+  }
   // nuovo esame: esame di basi di dati il 15 gennaio da 9 cfu
   if ((m = t.match(/^(?:aggiungi |nuovo |segna |segnami |metti |ho |c'e |c'è )?(?:un |l'|il )?(?:esame|appello)\s+(?:di |de )?(.+)$/)) && !/^(?:che|quali|quando|prossim)/.test(m[1])) {
     let resto = ' ' + m[1] + ' ';

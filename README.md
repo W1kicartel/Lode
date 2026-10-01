@@ -17,6 +17,30 @@ interrogami su basi di dati
 
 Niente account, niente server, niente pubblicità. Si apre nel browser, funziona offline, si installa come app su computer e telefono.
 
+## Al primo avvio
+
+Una finestra di benvenuto in due parti:
+- **Obbligatoria.** Come ti chiami, poi un clic per installare **Obsidian** (l'installer ufficiale), il **cervello locale** (Ollama + Gemma 3, scelto in base alla memoria del computer) e la **voce** (Whisper).
+- **Facoltativa, il setup veloce:**
+  - ateneo e corso;
+  - il **libretto incollato da Esse3**, letto anche senza AI;
+  - gli esami da dare con le date;
+  - l'**orario**, scritto a parole, incollato dal sito o importato dal calendario `.ics`;
+  - quando studi, quanto spesso Lode può proporti cose e le ore di silenzio.
+
+Si rifà dal menu dell'icona («Rifai la configurazione…»).
+
+## L'allenatore
+
+Dì a Lode quando hai l'esame: «ho l'esame di analisi 2 il 15 gennaio», «l'appello di fisica è il 3 febbraio», «analisi 2 spostato al 20». In momenti a caso della giornata, quando sei al computer e libero, la pillola si allunga e ti propone una cosa piccola. Per esempio:
+- *2 minuti su 6 definizioni?*
+- *8 carte da ripassare*
+- *Rileggi le cose che il prof ha detto «da esame»*
+- *Tre domande lampo, come all'orale?*
+- *Oggi ti mancano 2 h: un focus?*
+
+Rispondi con **Gioca** o con **Dopo**. Più l'esame è vicino, più le proposte sono frequenti. Mai a lezione, in focus, durante una trascrizione o nelle ore di silenzio. Lode impara: le proposte che accetti tornano più spesso, e la [[Memoria]] le registra. Per regolarle: «proposte poche / normali / frequenti», «spegni le proposte».
+
 ## In aula, a casa, nel tuo vault Obsidian
 
 L'**app desktop** mette la barra sopra tutte le finestre. Al primo avvio:
@@ -122,6 +146,8 @@ Lode usa Claude Opus 5.5 con la chiave dello studente (si crea su [console.anthr
 | `js/orecchio.js` | Il microfono condiviso in aula, con gli ultimi 90 secondi solo in memoria (per «Ripeti») |
 | `js/file.js` | I file trascinati: tipo, testo di PDF (pdf.js), Word e PowerPoint (zip di XML), audio a 16 kHz |
 | `js/sbobina.js` | Sbobine da condividere (.md + .html con formule MathML) e sbobine ricevute |
+| `js/benvenuto.js` | La configurazione guidata: nome, installazioni, setup veloce (libretto da Esse3, .ics, abitudini) |
+| `js/allenatore.js` | Le proposte a sorpresa: quando (al computer, libero, non in silenzio), cosa (giochi, carte, ★, orale, focus), e cosa impara |
 | `js/formule.js` | Le formule dette a voce in LaTeX (integrali, limiti, sommatorie, derivate, frazioni, potenze, lettere greche…) |
 | `desktop/installa.mjs` | Installa Obsidian (installer ufficiale, firma verificata) e Ollama + Gemma 3 |
 | `desktop/main.mjs` | L'app Electron: finestra trasparente sempre in primo piano, clic che passano attraverso, scorciatoie globali, icona nella barra dei menu |
