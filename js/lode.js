@@ -2,7 +2,7 @@
 // o il timer che scorre. Passandoci sopra si apre a molla in un pannello: «Oggi», sei strumenti e il campo
 // «Chiedi o scrivi un comando…». Si parla tenendo premuto ⌥ Spazio. I file trascinati diventano carte del ripasso.
 // Senza AI capisce i comandi in italiano (comandi.js); con la chiave Claude spiega, crea carte e interroga come all'orale.
-import { D, DESKTOP, lezioneOra, prossimaLezione, daGiocare, ricorda, aggiungiOrario, lezioni, RISPOSTE, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esc, fatti, media, minuti, num, oggi, ore, piano, prossimi, prossimoIntervallo, registraVoto, rispondi, salva, serie, serve, simula, sostituisci, traQuanto, trovaEsame, intervalloTesto, giorniTra } from './dati.js';
+import { piuGiorni, norm, D, DESKTOP, lezioneOra, prossimaLezione, daGiocare, ricorda, aggiungiOrario, lezioni, RISPOSTE, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esc, fatti, media, minuti, num, oggi, ore, piano, prossimi, prossimoIntervallo, registraVoto, rispondi, salva, serie, serve, simula, sostituisci, traQuanto, trovaEsame, intervalloTesto, giorniTra } from './dati.js';
 import { RIDOTTO, attendi, comprimi, conta, dopo, entra, h, lineare, morbido, ogni, premi, tween } from './motore.js';
 import { ESEMPI, interpreta } from './comandi.js';
 import * as F from './focus.js';
@@ -105,6 +105,9 @@ function righeOggi() {
   const r = [];
   const lo = lezioneOra(), pl = prossimaLezione();
   if (!lo && pl && pl.tra <= 90) r.push({ cls: pl.tra <= 15 ? 'urg' : 'att', t: `${pl.corso} alle ${pl.inizio}`, d: `${pl.aula ? 'Aula ' + pl.aula + ' · ' : ''}tra ${pl.tra} min`, n: '', b: V.attivo ? 'Appunti' : 'Orario', f: () => V.attivo ? apriAppunti(pl) : (nuovoTurno(), schedaOrario()) });
+  if (V.attivo && STATO && (!STATO.obsidian.installato || !STATO.modello) && !D.imp.preparaNascosto) r.push({ cls: 'att', t: 'Completa Lode', d: [!STATO.obsidian.installato && 'Obsidian', !STATO.modello && 'il cervello locale'].filter(Boolean).join(' e ') + ': un clic, gratis', n: '', b: 'Prepara', f: () => { nuovoTurno(); detto(A.turno, 'Prepara Lode'); schedaPrepara(); } });
+  const dc = daChiudere();
+  if (dc) r.push({ cls: 'att', t: `Chiudi la lezione di ${dc.corso}`, d: `${dc.parole} parole di appunti · estraggo definizioni e ★`, n: '', b: 'Chiudi', f: () => { nuovoTurno(); detto(A.turno, 'Chiudi lezione'); chiudiLezione(dc.corso); } });
   const sg = suggerimento();
   if (sg) r.push({ cls: 'att', t: 'Gioco da due minuti', d: cap(sg.testo), n: String(sg.n), b: 'Gioca', f: () => { nuovoTurno(); detto(A.turno, 'Gioca'); schedaGioco(sg.corso); } });
   for (const e of prossimi().slice(0, 2)) {
@@ -138,7 +141,7 @@ const STRUMENTI = [
   ['ripasso', 'Ripasso', () => schedaRipasso()],
   ['gioco', 'Gioco', () => schedaGioco()],
   ['orario', 'Orario', () => schedaOrario()],
-  ['appunti', 'Appunti', () => apriAppunti()],
+  ['appunti', 'Note', () => schedaNote()],
   ['orale', 'Interrogami', () => avviaOrale(null)],
   ['libretto', 'Libretto', () => schedaLibretto()],
   ['esami', 'Esami', () => schedaEsami()],
@@ -384,7 +387,7 @@ function istantanea() { const s = JSON.parse(JSON.stringify(D)); return () => so
 function aggiornaTutto() { aggiornaPillola(); if (A.home) disegnaHome(); aggiornaTesta(); }
 
 /* ---------- proposte con «Conferma / Annulla» (per l'AI) ---------- */
-function schedaConferma({ titolo, righe = [], extra = '', nota }) {
+function schedaConferma({ titolo, righe = [], extra = '', nota, fuoco = true }) {
   const s = scheda('ld-conf', `<h3>${esc(titolo || 'Confermi?')}</h3>
     ${righe.length ? `<dl>${righe.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : ''}${extra}
     ${nota ? `<p class="ld-nota">${esc(nota)}</p>` : ''}
@@ -393,6 +396,7 @@ function schedaConferma({ titolo, righe = [], extra = '', nota }) {
   s.querySelector('[data-ld=si]').addEventListener('click', () => conferma());
   s.querySelector('[data-ld=no]').addEventListener('click', () => annulla());
   dopo(520, () => segnala('conferma-pronta'));
+  if (fuoco) s.querySelector('[data-ld=si]').focus({ preventScroll: true });
   return s;
 }
 const attendiDecisione = (card, esegui) => new Promise(res => { A.attesa = { card, esegui, risolvi: r => { A.attesa = null; res(r); } }; });
@@ -587,6 +591,101 @@ async function salvaCattura(tipo, testo, { termine, corso } = {}) {
   return { testo: testoFatto, l };
 }
 
+/* ---------- preparare il computer: Obsidian e il cervello locale ---------- */
+let STATO = null;
+async function aggiornaStato() { if (!V.attivo) return; try { STATO = await V.stato(); AI.impostaLocale(STATO.modello); } catch { } if (A?.aperto && A.home) disegnaHome(); }
+const avanzamenti = {};
+function schedaPrepara(cosa) {
+  if (!V.attivo) return rispostaFissa('Obsidian e il cervello locale si installano dall\'**app desktop** di Lode.');
+  const st = STATO, m = st?.consigliato;
+  const riga = (k, titolo, pronto, dett, b) => `<div class="ld-prep${pronto ? ' ok' : ''}" data-k="${k}"><i class="ld-seg"></i><div class="t"><b>${titolo}</b><span class="d">${dett}</span><i class="ld-prog"><i></i></i></div>${b}</div>`;
+  const s = scheda('ld-prepara', `<span class="ld-lbl">Prepara Lode</span>
+    ${riga('vault', 'Il tuo vault', true, esc(V.info?.percorso || 'Documenti/Lode') + ' · Home, corsi, lezioni, glossario', '<button type="button" class="btn small" data-apri>Apri</button>')}
+    ${riga('obsidian', 'Obsidian', st?.obsidian.installato, st?.obsidian.installato ? 'Installato e collegato al vault' : 'Gratis per uso personale · installer ufficiale da GitHub, circa 230 MB', st?.obsidian.installato ? '<button type="button" class="btn small" data-apri>Apri</button>' : '<button type="button" class="btn small primary" data-installa="obsidian">Installa</button>')}
+    ${riga('cervello', 'Cervello locale', !!st?.modello, st?.modello ? `${esc(st.modello)} · gira sul computer, senza internet` : `Ollama + ${esc(m?.etichetta || 'Gemma 3')}, ${esc(m?.perche || '')} · circa ${m ? String(m.gb + 0.2).replace('.', ',') : '3,5'} GB`, st?.modello ? '<span class="ld-spunta">pronto</span>' : '<button type="button" class="btn small primary" data-installa="cervello">Installa</button>')}
+    <p class="ld-nota">${AI.motore() === 'claude' ? 'Hai anche Claude attivo: per spiegazioni e orale usa quello, il cervello locale lavora offline.' : 'Il cervello locale estrae le definizioni dagli appunti, crea carte, spiega e ti interroga. Tutto resta sul computer.'}</p>`);
+  s.querySelectorAll('[data-apri]').forEach(b => b.addEventListener('click', () => apriAppunti({ file: 'Home.md', corso: 'Home' })));
+  s.querySelectorAll('[data-installa]').forEach(b => b.addEventListener('click', () => chiediInstalla(b.dataset.installa, s)));
+  if (cosa && !(cosa === 'obsidian' ? st?.obsidian.installato : st?.modello)) chiediInstalla(cosa, s);
+  for (const [k, x] of Object.entries(avanzamenti)) mostraAvanzamento(s, k, x);
+  if (A.turno) A.turno.dataset.sintesi = 'prepara Lode';
+}
+async function chiediInstalla(cosa, s) {
+  const m = STATO?.consigliato;
+  const card = schedaConferma(cosa === 'obsidian'
+    ? { titolo: 'Installare Obsidian?', righe: [['Da', 'github.com/obsidianmd (ufficiale)'], ['Peso', 'circa 230 MB'], ['Dove', STATO?.piattaforma === 'darwin' ? 'Applicazioni' : 'il tuo utente']], nota: 'Obsidian è gratis per uso personale. Si apre già sul tuo vault, sulla Home.', fuoco: false }
+    : { titolo: `Installare ${m?.etichetta || 'il cervello locale'}?`, righe: [['Cosa', `Ollama (motore) + ${m?.nome || 'gemma3'}`], ['Peso', `circa ${m ? String(m.gb + 0.2).replace('.', ',') : '3,5'} GB`], ['Perché', m?.perche || '']], nota: 'Si scarica una volta sola. Poi funziona senza internet e senza chiavi.', fuoco: false });
+  card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = 'Si conferma solo col clic.';
+  await attendiDecisione(card, async () => {
+    await mostraFatto({ testo: 'Avviato.', nota: 'Puoi chiudere il pannello: continuo da solo.' }, card);
+    const r = await V.installa(cosa);
+    await aggiornaStato();
+    if (r.esito === 'ok') { segnala('confermato'); mostraAvviso(cosa === 'obsidian' ? 'Obsidian è pronto' : 'Cervello locale pronto'); }
+    else if (r.esito === 'errore') rispostaFissa(`Non è andata: ${r.errore}`, { errore: true });
+    return r;
+  });
+}
+function mostraAvanzamento(s, cosa, x) {
+  const r = s?.querySelector(`.ld-prep[data-k="${cosa}"]`); if (!r) return;
+  r.classList.add('va'); r.querySelector('.d').textContent = x.testo || '';
+  r.querySelector('.ld-prog i').style.transform = `scaleX(${(x.p ?? 0).toFixed(3)})`;
+  if (x.fase === 'fatto') { r.classList.remove('va'); r.classList.add('ok'); r.querySelector('.btn.primary')?.replaceWith(h('span', 'ld-spunta', 'pronto')); }
+  if (x.fase === 'errore') r.classList.remove('va');
+}
+
+/* ---------- navigare il vault ---------- */
+async function schedaNote(q = '') {
+  if (!V.attivo) return apriAppunti();
+  const tutte = await V.note(), lo = V.lezioneDaAnnotare(), ultima = lezioni().find(l => l.file);
+  const rapide = [['Home', 'Home.md'], [lo.corso === 'Appunti sparsi' ? (ultima ? 'Ultima lezione' : null) : `Lezione di ${lo.corso}`, lo.corso === 'Appunti sparsi' ? ultima?.file : null], ['Orario', 'Orario.md'], ['Esami', 'Esami.md'], ['Glossario', 'Glossario.md'], ['Cosa sa Lode di me', 'Lode/Memoria.md']].filter(x => x[0]);
+  const s = scheda('ld-note', `<span class="ld-lbl">Vai a… · ${tutte.length} note</span>
+    <div class="ld-rapide">${rapide.map(([t, f], i) => `<button type="button" class="ld-chip larga" data-r="${i}"><b>${esc(t)}</b><span>${esc(f ? f.replace(/\.md$/, '').split('/').slice(0, -1).join('/') || 'vault' : 'oggi')}</span></button>`).join('')}</div>
+    <input class="ld-cerca-note" placeholder="Cerca una nota: corso, lezione, data…" aria-label="Cerca una nota" value="${esc(q)}"><div class="ld-risultati"></div>`);
+  const apriR = i => { const [t, f] = rapide[i]; f ? apriAppunti({ file: f, corso: t }) : apriAppunti(lo); };
+  s.querySelectorAll('[data-r]').forEach(b => b.addEventListener('click', () => apriR(+b.dataset.r)));
+  const inp = s.querySelector('input'), box = s.querySelector('.ld-risultati');
+  const filtra = () => {
+    const w = norm(inp.value).split(' ').filter(Boolean);
+    const ris = (w.length ? tutte.filter(n => w.every(x => norm(n.file).includes(x))) : tutte.filter(n => n.cartella === 'Lezioni').sort((a, b) => b.titolo.localeCompare(a.titolo))).slice(0, 7);
+    box.innerHTML = ris.map((n, i) => `<button type="button" class="ld-nota-r${i === 0 ? ' su' : ''}" data-f="${esc(n.file)}"><b>${esc(n.titolo)}</b><span>${esc(n.file.split('/').slice(0, -1).join(' / ') || 'vault')}</span></button>`).join('') || '<p class="ld-nota">Nessuna nota trovata.</p>';
+    box.querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => apriAppunti({ file: b.dataset.f, corso: b.querySelector('b').textContent })));
+  };
+  inp.addEventListener('input', filtra);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); box.querySelector('[data-f]')?.click(); } });
+  filtra();
+  if (q && box.querySelectorAll('[data-f]').length === 1) box.querySelector('[data-f]').click();
+  requestAnimationFrame(() => inp.focus({ preventScroll: true }));
+  if (A.turno) A.turno.dataset.sintesi = q ? `cerco «${q}»` : 'note';
+}
+
+/* ---------- chiudere una lezione: dagli appunti alle definizioni (con l'AI, anche locale) ---------- */
+function daChiudere() {
+  if (!AI.attiva() || lezioneOra()) return null;
+  const l = lezioni().find(x => x.file && x.data >= piuGiorni(oggi(), -2) && (x.parole || 0) >= 30 && (x.definizioni?.length || 0) < 3 && !(D.imp.chiuse || []).includes(x.file));
+  return l || null;
+}
+async function chiudiLezione(corso) {
+  const l = lezioni().find(x => (x.file || x.appunti) && (!corso || norm(x.corso) === norm(corso)) && (x.parole || 0) >= 10);
+  if (!l) return rispostaFissa(corso ? `Non trovo appunti di **${corso}** negli ultimi giorni.` : 'Non trovo una lezione con abbastanza appunti: scrivili nella sezione «Appunti» della nota.');
+  if (!AI.attiva()) return rispostaFissa('Per leggere gli appunti serve l\'AI: installa il **cervello locale** (gratis, funziona offline) da «Prepara Lode», oppure aggiungi una chiave Claude.');
+  modo('pensa', `Leggo gli appunti di ${l.corso}…`); segnala('pensa');
+  let r; try { r = await AI.estraiLezione({ corso: l.corso, appunti: l.appunti, gia: (l.definizioni || []).map(d => d.t) }); }
+  catch (e) { modo('riposo'); return rispostaFissa('Non sono riuscito a leggere gli appunti: ' + e.message, { errore: true }); }
+  modo('riposo');
+  if (!r.definizioni.length && !r.daEsame.length) return rispostaFissa('Negli appunti non ho trovato definizioni nuove. Prova a scriverle per esteso, anche brevi.');
+  const card = schedaConferma({ titolo: `Aggiungere a ${l.corso} · ${dataBreve(l.data)}?`,
+    extra: `<ol class="ld-proposte">${r.definizioni.map(d => `<li><b>${esc(d.termine)}</b><span>${esc(d.definizione)}</span></li>`).join('')}${r.daEsame.map(x => `<li><b>★ ${esc(x)}</b></li>`).join('')}</ol>`,
+    nota: `${r.definizioni.length} definizioni${r.daEsame.length ? ` e ${r.daEsame.length} ★` : ''} nella nota della lezione. Controlla che siano giuste: le ha scritte ${AI.motore() === 'locale' ? 'il modello locale' : 'Claude'}.` });
+  card.querySelectorAll('.ld-proposte li').forEach((li, i) => entra(li, { ritardo: 100 + Math.min(i, 12) * 55, dy: 6, blur: 5, ms: 420 }));
+  await attendiDecisione(card, async () => {
+    for (const d of r.definizioni) await V.annota('definizione', d.definizione, { termine: d.termine, lezione: l });
+    for (const x of r.daEsame) await V.annota('stella', x, { lezione: l });
+    D.imp.chiuse = [...(D.imp.chiuse || []), l.file].slice(-60); salva();
+    await mostraFatto({ testo: 'Lezione chiusa.', nota: `${r.definizioni.length} definizioni pronte per i giochi.`, azione: ['Gioca', () => { nuovoTurno(); schedaGioco(l.corso); }], sintesi: `${r.definizioni.length} definizioni` }, card);
+    aggiornaTutto(); return {};
+  });
+}
+
 /* ---------- i giochi di memoria ---------- */
 async function apriAppunti(l) {
   if (V.attivo) {
@@ -726,6 +825,9 @@ async function esegui(c) {
     case 'vediOrario': return schedaOrario();
     case 'gioco': return schedaGioco(c.corso);
     case 'appunti': return apriAppunti();
+    case 'naviga': return schedaNote(c.q);
+    case 'chiudiLezione': return chiudiLezione(c.corso);
+    case 'prepara': return schedaPrepara(c.cosa);
   }
 }
 
@@ -757,9 +859,16 @@ async function chiediAI(testo, { sistema } = {}) {
   const blocchi = [];
   for (const f of A.allegati) { try { blocchi.push(await AI.bloccoFile(f.file)); } catch { } }
   if (A.allegati.length) { const t = A.turno; const box = h('div', 'ld-allegati'); A.allegati.forEach(f => box.append(chipFile(f.file, false))); t.append(box); A.allegati = []; allegatiBox.innerHTML = ''; }
+  // col modello locale i file diventano carte con una risposta strutturata (niente strumenti)
+  if (blocchi.length && AI.motore() === 'locale' && !A.orale) {
+    try { const carte = await AI.carteDa([...blocchi, { type: 'text', text: testo }]); modo('riposo'); if (!carte.length) return rispostaFissa('Da questo file non ho tirato fuori carte: se è un PDF, il modello locale non lo legge. Prova con una foto delle pagine o col testo.'); return eseguiStrumento('crea_carte', { carte, esame: prossimi()[0]?.nome }); }
+    catch (e) { modo('riposo'); return rispostaFissa('Non sono riuscito a leggere il file: ' + e.message, { errore: true }); }
+    finally { if (g === GEN) segnala('quiete'); }
+  }
   A.storia.push({ role: 'user', content: [...blocchi, { type: 'text', text: testo }] });
   A.controller = new AbortController();
   try {
+    if (AI.motore() === 'locale') { await AI.conversaLocale({ storia: A.storia, sistema, segnale: A.controller.signal, suTesto: d => { if (g !== GEN) return; if (!A.risposta) { modo('riposo'); A.risposta = nuovaRisposta(); } A.risposta.aggiungi(d); } }); A.risposta?.fine(); return; }
     await AI.conversa({ storia: A.storia, sistema, strumenti: !A.orale, segnale: A.controller.signal, esegui: eseguiStrumento,
       suTesto: d => { if (g !== GEN) return; if (!A.risposta) { modo('riposo'); A.risposta = nuovaRisposta(); } A.risposta.aggiungi(d); } });
     A.risposta?.fine();
@@ -777,7 +886,7 @@ async function chiediAI(testo, { sistema } = {}) {
 async function avviaOrale(e, nomeDetto) {
   if (!A.turno || A.home) nuovoTurno();
   if (!AI.attiva()) {
-    rispostaFissa('Per l\'interrogazione serve l\'AI: aggiungi la tua chiave Claude in **Impostazioni** (costa pochi centesimi a sessione). Intanto puoi fare il **ripasso** delle carte.');
+    rispostaFissa(V.attivo ? 'Per l\'interrogazione serve l\'AI: installa il **cervello locale** da «Prepara Lode» (gratis, offline) o aggiungi una chiave Claude. Intanto puoi fare il **ripasso** delle carte.' : 'Per l\'interrogazione serve l\'AI: aggiungi la tua chiave Claude in **Impostazioni** (costa pochi centesimi a sessione). Intanto puoi fare il **ripasso** delle carte.');
     return;
   }
   if (!e) {
@@ -812,7 +921,7 @@ export async function invia(testo) {
     if (r) { segnala('fatto'); return chiudi(r.testo); }
     return;
   }
-  if (A.attesa && !A.attesa.inCorso) { if (SI.test(testo)) return conferma(); if (NO.test(testo)) return annulla(); }
+  if (A.attesa && !A.attesa.inCorso && !A.attesa.card.dataset.soloClic) { if (SI.test(testo)) return conferma(); if (NO.test(testo)) return annulla(); }
   if (A.orale) {
     if (/^(esci|basta orale|chiudi( l'orale)?|fine orale)$/i.test(testo)) { nuovoTurno(); detto(A.turno, testo); return esciOrale(); }
     const t = h('article', 'ld-turno'); filo.append(t); A.turno = t; detto(t, testo); requestAnimationFrame(() => { corpo.scrollTop = corpo.scrollHeight; });
@@ -970,6 +1079,10 @@ function collegaDesktop() {
 
 export function avvia() {
   A = nuovoStato(); costruisci(); collega();
+  if (V.attivo) {
+    aggiornaStato(); setInterval(aggiornaStato, 5 * 60e3);
+    V.suProgresso(x => { avanzamenti[x.cosa] = x; if (x.fase === 'fatto' || x.fase === 'errore') { delete avanzamenti[x.cosa]; aggiornaStato(); } document.querySelectorAll('.ld-prepara').forEach(s => mostraAvanzamento(s, x.cosa, x)); if (!A.aperto && x.fase !== 'fatto' && x.fase !== 'errore' && x.p != null) mostraAvviso(`${x.cosa === 'obsidian' ? 'Obsidian' : 'Cervello locale'} · ${Math.round(x.p * 100)}%`, true); });
+  }
   if (F.stato()?.fase === 'focus' && !F.stato().fermo) setTimeout(() => segnala('focus'), 600);
 }
 // la pagina sotto chiede a Lode di fare cose (ripassa, interroga, focus) dal suo pannello

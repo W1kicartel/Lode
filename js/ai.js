@@ -5,7 +5,13 @@ import { D, cfuFatti, dataLunga, fatti, media, num, oggi, prossimi, daRipassare,
 
 const MODELLO = 'claude-opus-5-5';
 let SDK = null, client = null, chiaveUsata = '';
-export const attiva = () => !!D.imp.chiave;
+// due motori: Claude (chiave dello studente) o il cervello locale (Ollama + Gemma, installato da Lode). Claude se c'è la chiave.
+const PONTE = typeof window !== 'undefined' ? window.lodeDesktop : null;
+let LOCALE = null;
+export const impostaLocale = m => { LOCALE = m || null; };
+export const modelloLocale = () => LOCALE;
+export const motore = () => D.imp.chiave ? 'claude' : (PONTE && LOCALE) ? 'locale' : null;
+export const attiva = () => !!motore();
 async function cliente() {
   if (!D.imp.chiave) throw new Error('Manca la chiave: aggiungila in Impostazioni.');
   SDK ||= (await import('https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk/+esm')).default;
@@ -104,6 +110,72 @@ export async function bloccoFile(file) {
   if (/^image\/(png|jpe?g|gif|webp)$/.test(file.type)) return { type: 'image', source: { type: 'base64', media_type: file.type.replace('jpg', 'jpeg'), data: await b64(file) } };
   const testo = await file.text();
   return { type: 'document', source: { type: 'text', media_type: 'text/plain', data: testo.slice(0, 400000) }, title: file.name };
+}
+
+/* ---------- il cervello locale ---------- */
+const ascolta = new Map();
+if (PONTE) PONTE.su('locale:pezzo', ({ id, t }) => ascolta.get(id)?.(t));
+async function chatLocale(messaggi, { formato, pezzo, segnale } = {}) {
+  const id = Math.random().toString(36).slice(2);
+  if (pezzo) ascolta.set(id, pezzo);
+  const stop = () => PONTE.invoca('locale:stop', { id }); segnale?.addEventListener('abort', stop);
+  try { return await PONTE.invoca('locale:chat', { id, messaggi, formato, modello: LOCALE }); }
+  catch (e) { if (segnale?.aborted) { const x = new Error('interrotta'); x.name = 'AbortError'; throw x; } throw e; }
+  finally { ascolta.delete(id); segnale?.removeEventListener('abort', stop); }
+}
+// la conversazione nel formato di Claude diventa quella di Ollama (le foto passano, i PDF no)
+function perOllama(storia) {
+  return storia.map(m => {
+    if (typeof m.content === 'string') return { role: m.role, content: m.content };
+    const testi = [], foto = [];
+    for (const b of m.content) {
+      if (b.type === 'text') testi.push(b.text);
+      else if (b.type === 'image') foto.push(b.source.data);
+      else if (b.type === 'document' && b.source?.type === 'text') testi.push(`[File ${b.title || ''}]\n${b.source.data.slice(0, 24000)}`);
+      else if (b.type === 'document') testi.push(`[Il PDF «${b.title || ''}» il modello locale non lo legge: chiedi allo studente di copiare il testo o una foto delle pagine.]`);
+    }
+    return { role: m.role, content: testi.join('\n\n'), ...(foto.length ? { images: foto } : {}) };
+  });
+}
+const SISTEMA_LOCALE = SISTEMA.split('\nStrumenti:')[0] + `
+Non puoi modificare i dati di Lode: se lo studente vuole salvare carte o definizioni, digli di usare «chiudi lezione» o i comandi della barra.
+Non inventare: se non sei sicuro di una definizione o di una formula, dillo.`;
+export async function conversaLocale({ storia, sistema, suTesto, segnale }) {
+  const testo = await chatLocale([{ role: 'system', content: (sistema || SISTEMA_LOCALE) + '\n\nDati dello studente adesso:\n' + contesto() }, ...perOllama(storia)], { pezzo: suTesto, segnale });
+  storia.push({ role: 'assistant', content: [{ type: 'text', text: testo }] });
+  return storia;
+}
+
+/* ---------- compiti con risposta strutturata (Claude o locale) ---------- */
+const SCHEMA_LEZIONE = { type: 'object', additionalProperties: false, required: ['definizioni', 'da_esame'], properties: {
+  definizioni: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['termine', 'definizione'], properties: { termine: { type: 'string' }, definizione: { type: 'string' } } } },
+  da_esame: { type: 'array', items: { type: 'string' } } } };
+const SCHEMA_CARTE = { type: 'object', additionalProperties: false, required: ['carte'], properties: {
+  carte: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['fronte', 'retro'], properties: { fronte: { type: 'string' }, retro: { type: 'string' } } } } } };
+async function strutturato(istruzioni, contenuto, schema) {
+  if (motore() === 'claude') {
+    const c = await cliente();
+    const r = await c.messages.create({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low', format: { type: 'json_schema', schema } }, messages: [{ role: 'user', content: [...(Array.isArray(contenuto) ? contenuto : [{ type: 'text', text: contenuto }]), { type: 'text', text: istruzioni }] }] });
+    if (r.stop_reason === 'refusal') throw new Error('Claude ha declinato la richiesta.');
+    return JSON.parse(r.content.find(b => b.type === 'text')?.text || '{}');
+  }
+  if (motore() === 'locale') {
+    const m = perOllama([{ role: 'user', content: [...(Array.isArray(contenuto) ? contenuto : [{ type: 'text', text: contenuto }]), { type: 'text', text: istruzioni }] }]);
+    return JSON.parse(await chatLocale(m, { formato: schema }));
+  }
+  throw new Error('Serve il cervello locale o una chiave Claude.');
+}
+// «chiudi lezione»: dagli appunti grezzi alle definizioni e alle cose da esame, solo ciò che c'è davvero negli appunti
+export async function estraiLezione({ corso, appunti, gia = [] }) {
+  const r = await strutturato(`Sei l'assistente di uno studente universitario italiano. Qui sopra ci sono i suoi appunti della lezione di «${corso}».
+Estrai:
+- definizioni: i concetti definiti o spiegati negli appunti, con una definizione corta (massimo 25 parole), fedele agli appunti, in italiano. Termini brevi. Niente concetti che negli appunti non ci sono.${gia.length ? ` Salta questi, li ha già: ${gia.join(', ')}.` : ''}
+- da_esame: le frasi in cui il prof fa capire che una cosa sarà all'esame o è importante (massimo 5, riformulate in breve). Lista vuota se non ce ne sono.`, `Appunti di ${corso}:\n\n${appunti}`, SCHEMA_LEZIONE);
+  return { definizioni: (r.definizioni || []).filter(d => d.termine?.trim() && d.definizione?.trim()).slice(0, 15), daEsame: (r.da_esame || []).filter(Boolean).slice(0, 5) };
+}
+export async function carteDa(blocchi) {
+  const r = await strutturato('Crea da 8 a 20 carte del ripasso da questo materiale: una sola idea per carta, domanda precisa, risposta corta (massimo 2 frasi), in italiano. Solo concetti presenti nel materiale.', blocchi, SCHEMA_CARTE);
+  return (r.carte || []).filter(c => c.fronte?.trim() && c.retro?.trim()).slice(0, 30);
 }
 
 export async function provaChiave(chiave) {
