@@ -59,6 +59,21 @@ export function interpreta(frase) {
   if (/^(sospendi|metti in pausa|pausa timer)$/.test(t)) return { tipo: 'sospendi' };
   if (/^(riprendi|continua|vai avanti)$/.test(t)) return { tipo: 'riprendi' };
 
+  // in aula: ★ da esame, definizione, domanda per il prof
+  if ((m = grezzo.match(/^(?:★|\*{1,2}|!|da esame\s*:?|importante\s*:|stella\s*:?)\s*(.+)$/i))) return { tipo: 'stella', testo: m[1].trim() };
+  if ((m = grezzo.match(/^(?:def|definizione)\s*:?\s*(.+?)\s*(?:::|:|=|→|—|-{1,2}>)\s*(.+)$/i))) return { tipo: 'definizione', termine: m[1].replace(/\*\*/g, '').trim(), testo: m[2].trim() };
+  if ((m = grezzo.match(/^(?:\?|domanda(?: per il prof)?\s*:)\s*(.+)$/i))) return { tipo: 'domanda', testo: m[1].trim() };
+
+  // l'orario: «lezione analisi 2 lunedì e mercoledì dalle 9 alle 11 aula 7»
+  if ((m = t.match(/^(?:aggiungi |nuova |ho )?(?:lezione|lezioni|corso)\s+(?:di\s+)?(.+)$/))) {
+    const o = leggiOrario(m[1]); if (o) return { tipo: 'orario', ...o };
+  }
+  if (/^(?:orario|il mio orario|le mie lezioni|lezioni|quando ho lezione|che lezione ho)$/.test(t)) return { tipo: 'vediOrario' };
+  if ((m = t.match(/^(?:gioca(?:mo)?|gioco|giochino|memory|allenami|allenamento|fissa(?:mi)? le definizioni|definizioni)\b\s*(.*)$/))) {
+    const r = pulisci(m[1] || ''); return { tipo: 'gioco', corso: r || null };
+  }
+  if (/^(?:apri )?(?:gli |i miei )?(?:appunti|obsidian|vault|la nota|nota)( di oggi| della lezione)?$/.test(t)) return { tipo: 'appunti' };
+
   // carta: fronte = retro
   if ((m = grezzo.match(/^(?:nuova\s+)?(?:carta|flashcard|domanda)\s*(?:di\s+([^:]+?))?\s*:\s*(.+?)\s*(?:=|->|→|\|)\s*(.+)$/i)))
     return { tipo: 'carta', esame: m[1] ? trovaEsame(m[1]) : null, fronte: m[2], retro: m[3] };
@@ -118,6 +133,23 @@ export function interpreta(frase) {
   return null;
 }
 
+// giorni, ore e aula di una lezione; quello che resta è il nome del corso
+export function leggiOrario(testo) {
+  const basso = String(testo).toLowerCase();
+  const o = basso.match(/(?:dalle\s+)?(\d{1,2})(?:[:.](\d{2}))?\s*(?:-|–|alle|a)\s*(\d{1,2})(?:[:.](\d{2}))?/);
+  if (!o) return null;
+  let r = ' ' + norm(basso.replace(o[0], ' ')) + ' ';
+  const giorni = [], G = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
+  r = r.replace(/ (?:il |la |ogni )?(lun|mar|mer|gio|ven|sab|dom)[a-z]*\b/g, (_, g) => { giorni.push(G.indexOf(g)); return ' '; });
+  if (!giorni.length) return null;
+  const hh = (h, mm) => `${String(+h).padStart(2, '0')}:${mm || '00'}`;
+  let aula = ''; r = r.replace(/ (?:in )?aula (\w+)/, (_, a) => { aula = a.length <= 3 ? a.toUpperCase() : a.charAt(0).toUpperCase() + a.slice(1); return ' '; });
+  const corso = r.replace(/\b(e|il|la|di|dalle|alle|ore|in|ogni|a)\b/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!corso) return null;
+  const e = trovaEsame(corso);
+  return { corso: e?.nome || corso.replace(/^./, c => c.toUpperCase()), giorni, inizio: hh(o[1], o[2]), fine: hh(o[3], o[4]), aula };
+}
+
 export const ESEMPI = [
   ['focus 50 su analisi 2', 'parte il timer e conta le ore'],
   ['ho preso 28 in fisica', 'segna il voto e ricalcola la media'],
@@ -126,6 +158,10 @@ export const ESEMPI = [
   ['se prendo 30 in analisi 2', 'simula la media'],
   ['ripassa analisi 2', 'le carte di oggi'],
   ['carta: teorema di Green = …', 'una carta al volo'],
+  ['lezione analisi 2 lunedì e mercoledì 9-11 aula 7', 'l\'orario: Lode sa quando sei in aula'],
+  ['★ il teorema di Green lo chiede sempre', 'in aula: segna cosa è da esame'],
+  ['def: gradiente = vettore delle derivate parziali', 'in aula: una definizione nella nota'],
+  ['gioca', 'due minuti sulle definizioni dell\'ultima lezione'],
   ['interrogami su basi di dati', 'simula l\'orale (con l\'AI)'],
 ];
 export { D };
