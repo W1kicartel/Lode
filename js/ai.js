@@ -177,6 +177,34 @@ Estrai:
   const definizioni = (r.definizioni || []).filter(d => { const k = d.termine?.toLowerCase().trim(); if (!k || !d.definizione?.trim() || visti.has(k)) return false; visti.add(k); return true; }).slice(0, 15);
   return { definizioni, daEsame: (r.da_esame || []).filter(Boolean).slice(0, Math.min(5, segnali)) };
 }
+// «Riordina»: dalla trascrizione grezza della lezione ad appunti da studiare. A pezzi (il modello locale ha poco contesto):
+// ogni pezzo diventa una parte con titolo, punti chiari e formule in LaTeX; niente che il prof non abbia detto.
+export async function riordina({ corso, testo, appunti = '', avanza }) {
+  const parole = String(testo).split(/\s+/), passo = motore() === 'claude' ? 9000 : 1400, pezzi = [];
+  for (let i = 0; i < parole.length; i += passo) pezzi.push(parole.slice(i, i + passo).join(' '));
+  const istr = (k, n) => `Questa è ${n > 1 ? `la parte ${k} di ${n} della` : 'la'} trascrizione automatica di una lezione universitaria di «${corso}» (contiene errori di trascrizione; le formule dette a voce sono già in LaTeX tra $…$).
+Trasformala in appunti da studiare, in italiano:
+- un titolo per ogni argomento, con «### »;
+- punti brevi e chiari con «- », nell'ordine della lezione;
+- formule in LaTeX tra $…$ (Obsidian le mostra), correggendo quelle trascritte male se il senso è chiaro;
+- in **grassetto** i termini definiti;
+- niente che non sia nella trascrizione; se un pezzo è incomprensibile, saltalo.
+Rispondi solo con gli appunti, senza introduzioni.`;
+  const out = [];
+  for (const [k, pezzo] of pezzi.entries()) {
+    avanza?.(k / pezzi.length);
+    const contenuto = `Trascrizione:\n\n${pezzo}${k === 0 && appunti ? `\n\nAppunti presi a mano dallo studente (per orientarti):\n${appunti}` : ''}`;
+    if (motore() === 'claude') {
+      const c = await cliente();
+      const r = await c.messages.create({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low' }, messages: [{ role: 'user', content: contenuto + '\n\n' + istr(k + 1, pezzi.length) }] });
+      out.push(r.content.filter(b => b.type === 'text').map(b => b.text).join('').trim());
+    } else if (motore() === 'locale') out.push((await chatLocale(perOllama([{ role: 'user', content: contenuto + '\n\n' + istr(k + 1, pezzi.length) }]))).trim());
+    else throw new Error('Serve il cervello locale o una chiave Claude.');
+  }
+  avanza?.(1);
+  return out.join('\n\n').replace(/^#{1,2}\s/gm, '### ');
+}
+
 export async function carteDa(blocchi) {
   const r = await strutturato('Crea da 8 a 20 carte del ripasso da questo materiale: una sola idea per carta, domanda precisa, risposta corta (massimo 2 frasi), in italiano. Solo concetti presenti nel materiale.', blocchi, SCHEMA_CARTE);
   return (r.carte || []).filter(c => c.fronte?.trim() && c.retro?.trim()).slice(0, 30);

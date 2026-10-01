@@ -49,8 +49,22 @@ function leggiMinuti(t) {
   return null;
 }
 
+// i numeri detti a voce: «ventotto» → 28, «cinquanta» → 50, «trenta e lode» resta lode
+const UNITA = ['', 'uno', 'due', 'tre', 'quattro', 'cinque', 'sei', 'sette', 'otto', 'nove'];
+const SPECIALI = { dieci: 10, undici: 11, dodici: 12, tredici: 13, quattordici: 14, quindici: 15, sedici: 16, diciassette: 17, diciotto: 18, diciannove: 19 };
+const DECINE = { venti: 20, trenta: 30, quaranta: 40, cinquanta: 50, sessanta: 60, settanta: 70, ottanta: 80, novanta: 90 };
+const PAROLE_NUM = { ...SPECIALI, ...DECINE, cento: 100 };
+UNITA.forEach((u, i) => { if (i) PAROLE_NUM[u] = i; });
+for (const [d, v] of Object.entries(DECINE)) UNITA.forEach((u, i) => { if (!i) return; const tronca = /^[aeiou]/.test(u) ? d.slice(0, -1) : d; PAROLE_NUM[tronca + u] = v + i; });
+for (const [w, v] of Object.entries({ ...PAROLE_NUM })) if (v < 100) PAROLE_NUM['cento' + w] = 100 + v;
+// errori tipici della trascrizione
+const SENTITO = { guale: 'uguale', priso: 'preso', presso: 'preso', fucus: 'focus', focos: 'focus', ripasa: 'ripassa' };
+export const numeri = t => t.replace(/\b[a-zà]+\b/g, w => SENTITO[w.toLowerCase()] || ((w in PAROLE_NUM && !/^(un|una)$/.test(w)) ? String(PAROLE_NUM[w]) : w));
+
 export function interpreta(frase) {
-  const grezzo = String(frase || '').trim(); if (!grezzo) return null;
+  const grezzo0 = String(frase || '').trim(); if (!grezzo0) return null;
+  // la voce aggiunge maiuscole e un punto finale; i numeri arrivano a parole
+  const grezzo = numeri(grezzo0.replace(/[.!]+$/, '').replace(/^(\w)/, c => c));
   const t = grezzo.toLowerCase().replace(/[’`]/g, "'").replace(/\s+/g, ' ').replace(/[?!.]+$/, '').trim();
   let m;
 
@@ -60,9 +74,9 @@ export function interpreta(frase) {
   if (/^(riprendi|continua|vai avanti)$/.test(t)) return { tipo: 'riprendi' };
 
   // in aula: ★ da esame, definizione, domanda per il prof
-  if ((m = grezzo.match(/^(?:★|\*{1,2}|!|da esame\s*:?|importante\s*:|stella\s*:?)\s*(.+)$/i))) return { tipo: 'stella', testo: m[1].trim() };
-  if ((m = grezzo.match(/^(?:def|definizione)\s*:?\s*(.+?)\s*(?:::|:|=|→|—|-{1,2}>)\s*(.+)$/i))) return { tipo: 'definizione', termine: m[1].replace(/\*\*/g, '').trim(), testo: m[2].trim() };
-  if ((m = grezzo.match(/^(?:\?|domanda(?: per il prof)?\s*:)\s*(.+)$/i))) return { tipo: 'domanda', testo: m[1].trim() };
+  if ((m = grezzo.match(/^(?:★|\*{1,2}|!|da esame\s*:?|importante\s*:|stella\s*:?|segna(?: che)?(?: è)? da esame\s*:?|questo è da esame\s*:?)\s*(.+)$/i))) return { tipo: 'stella', testo: m[1].trim() };
+  if ((m = grezzo.match(/^(?:definizione|definisci|def)\s*:?\s*(.+?)\s*(?:::|:|=|→|—|-{1,2}>|\buguale a\b|\buguale\b|\bvuol dire\b|\bsignifica\b|\bè\b)\s*(.+)$/i))) return { tipo: 'definizione', termine: m[1].replace(/\*\*/g, '').trim(), testo: m[2].trim() };
+  if ((m = grezzo.match(/^(?:\?|domanda\s*:|domanda per il prof(?:essore)?\s*:?|chiedi al prof\s*:?)\s*(.+)$/i))) return { tipo: 'domanda', testo: m[1].trim() };
 
   // l'orario: «lezione analisi 2 lunedì e mercoledì dalle 9 alle 11 aula 7»
   if ((m = t.match(/^(?:aggiungi |nuova |ho )?(?:lezione|lezioni|corso)\s+(?:di\s+)?(.+)$/))) {
@@ -73,7 +87,12 @@ export function interpreta(frase) {
     const r = pulisci(m[1] || ''); return { tipo: 'gioco', corso: r || null };
   }
   if (/^(?:apri )?(?:gli |i miei )?(?:appunti|obsidian|vault|la nota|nota)( di oggi| della lezione)?$/.test(t)) return { tipo: 'appunti' };
-  if (/^(?:chiudi|riordina|sistema|finisci)(?: la)? lezione\b|^estrai(?: le)? definizioni/.test(t)) { const r = pulisci(t.replace(/^.*?(lezione|definizioni)\s*/, '')); return { tipo: 'chiudiLezione', corso: r || null }; }
+  if (/^(?:trascrivi|registra|ascolta|sbobina)(?: (?:la|tutta la|questa))? lezione\b|^(?:avvia|inizia|parti con) (?:la )?(?:trascrizione|sbobinatura)/.test(t)) return { tipo: 'trascrivi' };
+  if (/^(?:stop|ferma|fine|basta|termina|chiudi)(?: la)? (?:trascrizione|registrazione|sbobinatura)|^(?:la )?lezione è finita$|^fine lezione$/.test(t)) return { tipo: 'fineTrascrizione' };
+  if (/^(?:pausa|sospendi)(?: la)? (?:trascrizione|registrazione)/.test(t)) return { tipo: 'pausaTrascrizione' };
+  if (/^riprendi(?: la)? (?:trascrizione|registrazione)/.test(t)) return { tipo: 'riprendiTrascrizione' };
+  if (/^(?:riordina|sistema|metti in ordine|pulisci)(?: la| gli)? (?:lezione|appunti|trascrizione)\b/.test(t)) { const r = pulisci(t.replace(/^.*?(lezione|appunti|trascrizione)\s*/, '')); return { tipo: 'riordina', corso: r || null }; }
+  if (/^(?:chiudi|finisci)(?: la)? lezione\b|^estrai(?: le)? definizioni/.test(t)) { const r = pulisci(t.replace(/^.*?(lezione|definizioni)\s*/, '')); return { tipo: 'chiudiLezione', corso: r || null }; }
   if (/^(?:prepara|configura|installa|setup)\b/.test(t)) return { tipo: 'prepara', cosa: /obsidian/.test(t) ? 'obsidian' : /modello|cervello|ollama|gemma|ai/.test(t) ? 'cervello' : null };
   if ((m = t.match(/^(?:apri|vai a|vai su|vai alla?|portami a|mostrami|nota|pagina)\s+(.+)$/)) && !/^(?:il |la )?(?:focus|timer)/.test(m[1])) return { tipo: 'naviga', q: pulisci(m[1]) };
   if (/^(?:note|pagine|home|indice)$/.test(t)) return { tipo: 'naviga', q: t === 'home' ? 'home' : '' };
@@ -93,7 +112,7 @@ export function interpreta(frase) {
     const v = m[1] === 'trenta' ? 30 : +m[1];
     if (v >= 18 && v <= 30) return { tipo: 'voto', voto: v, lode: !!m[2] && v === 30, esame: trovaEsame(pulisci(m[3])), nomeDetto: pulisci(m[3]) };
   }
-  if ((m = t.match(/^(?:ho )?(?:passato|superato|dato|preso) (?:l'idoneit[aà] (?:di|in) )?(.+?)(?: \(?idoneit[aà]\)?)?$/)) && !/\d/.test(m[1]))
+  if ((m = t.match(/^(?:ho )?(?:passato|superato|preso l'idoneit[aà] (?:di|in)) (?:l'idoneit[aà] (?:di|in) |l'esame di )?(.+?)(?: \(?idoneit[aà]\)?)?$/)) && !/\d/.test(m[1]) && trovaEsame(pulisci(m[1])))
     return { tipo: 'idoneita', esame: trovaEsame(pulisci(m[1])), nomeDetto: pulisci(m[1]) };
 
   // focus
@@ -166,6 +185,8 @@ export const ESEMPI = [
   ['★ il teorema di Green lo chiede sempre', 'in aula: segna cosa è da esame'],
   ['def: gradiente = vettore delle derivate parziali', 'in aula: una definizione nella nota'],
   ['gioca', 'due minuti sulle definizioni dell\'ultima lezione'],
+  ['trascrivi la lezione', 'in aula: tutta la lezione in appunti, formule comprese, salvata in Obsidian'],
+  ['riordina la lezione', 'dalla trascrizione ad appunti puliti (AI)'],
   ['chiudi lezione', 'definizioni e ★ estratte dagli appunti (AI)'],
   ['apri glossario', 'salta a una pagina del vault'],
   ['interrogami su basi di dati', 'simula l\'orale (con l\'AI)'],

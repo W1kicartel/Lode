@@ -12,6 +12,7 @@ import { livelloVoce } from './mascotte.js';
 import * as V from './vault.js';
 import { partita, giusta } from './giochi.js';
 import { GIORNI_BREVI } from './markdown.js';
+import * as TR from './trascrizione.js';
 const BRIDGE = DESKTOP ? window.lodeDesktop : null;
 
 const segnala = (evento, x = {}) => dispatchEvent(new CustomEvent('lode', { detail: { evento, ...x } }));
@@ -126,7 +127,14 @@ function bloccoAula(lo) {
   return `<section class="ld-aula"><div class="capo"><span class="ld-lbl"><i class="ld-live"></i>In aula · ${esc(lo.corso)}</span><span>${lo.aula ? 'aula ' + esc(lo.aula) + ' · ' : ''}finisce tra ${lo.mancano} min</span></div>
     <div class="ld-cattura">${[['stella', '★ Da esame', 'S'], ['definizione', 'Definizione', 'D'], ['domanda', 'Domanda', 'Q']].map(([k, t, l]) => `<button type="button" class="btn" data-ld-cattura="${k}"><span>${t}</span><kbd>${MAC ? '⌃⌥' : 'Ctrl Alt '}${l}</kbd></button>`).join('')}
       ${V.attivo ? '<button type="button" class="btn primary" data-ld-appunti>Appunti</button>' : ''}</div>
+    ${V.attivo ? bloccoTrascrizione() : ''}
     ${st ? `<p class="ld-nota">${st} ${st === 1 ? 'cosa segnata' : 'cose segnate'} da esame oggi.</p>` : ''}</section>`;
+}
+function bloccoTrascrizione() {
+  const t = TR.stato();
+  if (!t) return `<button type="button" class="ld-trascrivi" data-ld-trascrivi><i class="ld-rec"></i><span><b>Trascrivi la lezione</b><small>Tutto quello che dice il prof, formule comprese, nella nota Obsidian · ${MAC ? '⌃⌥R' : 'Ctrl Alt R'}</small></span></button>`;
+  return `<div class="ld-trascrivi on"><i class="ld-rec"></i><span><b>${t.inPausa ? 'In pausa' : 'Trascrivo'} · ${t.minuti} min · ${t.parole.toLocaleString('it-IT')} parole</b><small>${t.ultima ? esc(t.ultima.replace(/^\*\*\d\d:\d\d\*\*\s*/, '').slice(-110)) : 'Ascolto: la prima riga arriva fra una ventina di secondi.'}</small></span>
+    <button type="button" class="btn small" data-ld-tr="${t.inPausa ? 'riprendi' : 'pausa'}">${t.inPausa ? 'Riprendi' : 'Pausa'}</button><button type="button" class="btn small primary" data-ld-tr="fine">Fine</button></div>`;
 }
 function disegnaHome() {
   const r = righeOggi(), lo = lezioneOra();
@@ -171,10 +179,11 @@ function aggiornaPillola(avviso) {
     pill.setAttribute('aria-label', `${pausa ? 'Pausa' : 'Focus su ' + F.etichetta()}: mancano ${F.mmss(F.restante())}`);
     return;
   }
-  const lo = lezioneOra(), pl = prossimaLezione(), sg = suggerimento();
+  const lo = lezioneOra(), pl = prossimaLezione(), sg = suggerimento(), tr = TR.stato();
   const p = prossimi()[0], c = daRipassare().length;
   let testo, pieno = false;
-  if (lo) { const st = stelleOggi(lo.corso); testo = `<i class="ld-live"></i><b>${esc(lo.corso)}</b><span class="ld-tenue">fine tra ${lo.mancano} min</span>${st ? `<span class="ld-punto"></span><span class="ld-tenue">★${st}</span>` : ''}`; pieno = true; }
+  if (tr) { testo = `<i class="ld-live rec"></i><b>${esc(tr.lezione.corso)}</b><span class="ld-tenue">${tr.inPausa ? 'trascrizione in pausa' : 'trascrivo'} · ${tr.parole.toLocaleString('it-IT')} parole</span>`; pieno = true; }
+  else if (lo) { const st = stelleOggi(lo.corso); testo = `<i class="ld-live"></i><b>${esc(lo.corso)}</b><span class="ld-tenue">fine tra ${lo.mancano} min</span>${st ? `<span class="ld-punto"></span><span class="ld-tenue">★${st}</span>` : ''}`; pieno = true; }
   else if (pl && pl.tra <= 20) { testo = `<b>${esc(pl.corso)}</b><span class="ld-tenue">${pl.aula ? 'aula ' + esc(pl.aula) + ' · ' : ''}tra ${pl.tra} min</span>`; pieno = true; }
   else if (sg) testo = `<b>2 minuti</b><span class="ld-tenue">${esc(sg.testo)}</span>`;
   else if (p) { const g = giorniTra(oggi(), p.data); testo = `<b>${esc(p.nome)}</b><span class="ld-tenue">${g === 0 ? 'oggi' : g === 1 ? 'domani' : `tra ${g} g`}</span>${c ? `<span class="ld-punto"></span><span class="ld-tenue">${c} carte</span>` : ''}`; pieno = g <= 7; }
@@ -228,6 +237,7 @@ export function apri({ fisso = false } = {}) {
   const pezzi = [testa, ...corpo.querySelector('.ld-dentro').children, corpo.querySelector('.ld-piede')].filter(x => x.style.display !== 'none' && !(x === filo && !filo.children.length) && !(x === allegatiBox && !allegatiBox.children.length));
   pezzi.forEach((p, i) => entra(p, { ritardo: 50 + i * 45, dy: 10, blur: 8, ms: 560 }));
   segnala('aperto');
+  if (BRIDGE && AI.motore() === 'locale') BRIDGE.invoca('locale:scalda').catch(() => { });
   return attendi(560);
 }
 export function chiudi(avviso) {
@@ -604,6 +614,55 @@ async function salvaCattura(tipo, testo, { termine, corso } = {}) {
   return { testo: testoFatto, l };
 }
 
+/* ---------- trascrivere la lezione ---------- */
+async function avviaTrascrizione(opz = {}) {
+  if (!V.attivo) return rispostaFissa('La trascrizione delle lezioni è nell\'**app desktop** di Lode: scrive direttamente nella nota Obsidian della lezione.');
+  if (TR.attiva()) return mostraFatto({ testo: 'Sto già trascrivendo.', nota: `${TR.stato().parole} parole finora.` });
+  const l = V.lezioneDaAnnotare();
+  if (!D.imp.trascrizioneOk) {
+    const card = schedaConferma({ titolo: `Trascrivere la lezione${l.corso !== 'Appunti sparsi' ? ' di ' + l.corso : ''}?`, fuoco: false,
+      righe: [['Dove', l.corso === 'Appunti sparsi' ? 'nota «Appunti sparsi» di oggi' : `nota della lezione, sezione «Trascrizione»`], ['Audio', 'non viene salvato: resta solo il testo'], ['Formule', 'quelle dette a voce diventano LaTeX']],
+      nota: 'Registrare una lezione dipende dal regolamento del tuo ateneo e dal docente: chiedi prima. Lode lavora tutto sul computer, niente va su internet.' });
+    card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = 'Te lo chiedo solo la prima volta.';
+    const r = await attendiDecisione(card, async () => { D.imp.trascrizioneOk = true; salva(); await mostraFatto({ testo: 'D\'accordo.' }, card); return { ok: true }; });
+    if (!r?.ok) return;
+  }
+  try {
+    if (!Voce.pronta()) { modo('pensa', 'Preparo la voce…'); }
+    await TR.avvia(l, opz); modo('riposo');
+    try { localStorage.setItem('lode:voce', '1'); } catch { }
+    await mostraFatto({ testo: `Trascrivo ${l.corso === 'Appunti sparsi' ? 'gli appunti sparsi' : 'la lezione di ' + l.corso}.`, nota: 'Le righe arrivano nella nota ogni 20-30 secondi.', azione: ['Apri in Obsidian', () => apriAppunti(l)], sintesi: 'trascrizione avviata' });
+    segnala('focus'); aggiornaTutto();
+    if (!opz.audioProva) dopo(1200, () => { if (A.aperto && !A.attesa) chiudi('Trascrivo la lezione'); });
+  } catch (e) { modo('riposo'); rispostaFissa('Non riesco a trascrivere: ' + (/Permission|NotAllowed/i.test(e.name + e.message) ? 'serve il permesso del microfono (Impostazioni di sistema > Privacy > Microfono).' : e.message), { errore: true }); }
+}
+async function fermaTrascrizione() {
+  if (!TR.attiva()) return rispostaFissa('Non sto trascrivendo niente.');
+  modo('pensa', 'Trascrivo gli ultimi secondi…');
+  const l = TR.stato().lezione, r = await TR.ferma(); modo('riposo'); segnala('fatto'); aggiornaTutto();
+  await mostraFatto({ testo: `Lezione trascritta: ${r.parole.toLocaleString('it-IT')} parole in ${r.minuti} min.`, nota: 'È tutto nella nota.', azione: AI.attiva() ? ['Riordina', () => { nuovoTurno(); detto(A.turno, 'Riordina la lezione'); riordinaLezione(null, l); }] : ['Apri', () => apriAppunti(l)], sintesi: `${r.parole} parole trascritte` });
+  if (!AI.attiva()) rispostaFissa('Con il **cervello locale** (da «Prepara Lode») la trascrizione diventa appunti ordinati, definizioni e ★ con un clic.');
+}
+async function riordinaLezione(corso, lez) {
+  await new Promise(r => setTimeout(r, 600));   // il vault rilegge la nota appena scritta
+  const l = lez ? (lezioni().find(x => x.file && norm(x.corso) === norm(lez.corso) && x.data === lez.data) || lez) : lezioni().find(x => (x.paroleTrascritte || 0) >= 40 && (!corso || norm(x.corso) === norm(corso)));
+  if (!l?.trascrizione || l.paroleTrascritte < 30) return rispostaFissa(corso ? `Non trovo una trascrizione di **${corso}**.` : 'Non trovo una lezione trascritta. In aula premi **Trascrivi la lezione**.');
+  if (!AI.attiva()) return rispostaFissa('Per riordinare serve l\'AI: installa il **cervello locale** da «Prepara Lode» (gratis, offline) o aggiungi una chiave Claude.');
+  modo('pensa', `Riordino ${l.corso}…`); segnala('pensa');
+  let md;
+  try { md = await AI.riordina({ corso: l.corso, testo: l.trascrizione, appunti: l.appunti, avanza: p => modo('pensa', `Riordino ${l.corso}… ${Math.round(p * 100)}%`) }); }
+  catch (e) { modo('riposo'); return rispostaFissa('Non sono riuscito a riordinare: ' + e.message, { errore: true }); }
+  modo('riposo');
+  const card = schedaConferma({ titolo: `Salvare gli appunti riordinati di ${l.corso}?`, extra: `<div class="ld-anteprima">${mdHtml(md.slice(0, 1400))}${md.length > 1400 ? '<span class="ld-tenue"> …</span>' : ''}</div>`,
+    nota: `Vanno nella nota, in «Appunti riordinati da Lode», sotto la trascrizione (che resta). Li ha scritti ${AI.motore() === 'locale' ? 'il modello locale' : 'Claude'}: rileggili.` });
+  await attendiDecisione(card, async () => {
+    await V.annota('riordinati', md, { lezione: l, grezza: true });
+    await mostraFatto({ testo: 'Appunti salvati nella nota.', azione: ['Apri', () => apriAppunti(l)], sintesi: 'lezione riordinata' }, card);
+    nuovoTurno(); detto(A.turno, 'Definizioni dalla lezione');
+    return chiudiLezione(l.corso, { lezione: l, testo: md.slice(0, 9000) });
+  });
+}
+
 /* ---------- preparare il computer: Obsidian e il cervello locale ---------- */
 let STATO = null;
 async function aggiornaStato() { if (!V.attivo) return; try { STATO = await V.stato(); AI.impostaLocale(STATO.modello); } catch { } if (A?.aperto && A.home) disegnaHome(); }
@@ -616,9 +675,11 @@ function schedaPrepara(cosa) {
     ${riga('vault', 'Il tuo vault', true, esc(V.info?.percorso || 'Documenti/Lode') + ' · Home, corsi, lezioni, glossario', '<button type="button" class="btn small" data-apri>Apri</button>')}
     ${riga('obsidian', 'Obsidian', st?.obsidian.installato, st?.obsidian.installato ? 'Installato e collegato al vault' : 'Gratis per uso personale · installer ufficiale da GitHub, circa 230 MB', st?.obsidian.installato ? '<button type="button" class="btn small" data-apri>Apri</button>' : '<button type="button" class="btn small primary" data-installa="obsidian">Installa</button>')}
     ${riga('cervello', 'Cervello locale', !!st?.modello, st?.modello ? `${esc(st.modello)} · gira sul computer, senza internet` : `Ollama + ${esc(m?.etichetta || 'Gemma 3')}, ${esc(m?.perche || '')} · circa ${m ? String(m.gb + 0.2).replace('.', ',') : '3,5'} GB`, st?.modello ? '<span class="ld-spunta">pronto</span>' : '<button type="button" class="btn small primary" data-installa="cervello">Installa</button>')}
+    ${riga('voce', 'Voce', Voce.pronta(), Voce.pronta() ? 'Whisper in locale · tieni premuto ' + TASTI + ' e parla' : `Whisper ${Voce.MODELLO_VOCE.endsWith('small') ? 'small' : 'base'} in locale, in italiano · circa ${Voce.MODELLO_VOCE.endsWith('small') ? '600' : '200'} MB, una volta sola`, Voce.pronta() ? '<span class="ld-spunta">pronta</span>' : '<button type="button" class="btn small primary" data-voce>Prepara</button>')}
     <p class="ld-nota">${AI.motore() === 'claude' ? 'Hai anche Claude attivo: per spiegazioni e orale usa quello, il cervello locale lavora offline.' : 'Il cervello locale estrae le definizioni dagli appunti, crea carte, spiega e ti interroga. Tutto resta sul computer.'}</p>`);
   s.querySelectorAll('[data-apri]').forEach(b => b.addEventListener('click', () => apriAppunti({ file: 'Home.md', corso: 'Home' })));
   s.querySelectorAll('[data-installa]').forEach(b => b.addEventListener('click', () => chiediInstalla(b.dataset.installa, s)));
+  s.querySelector('[data-voce]')?.addEventListener('click', () => { mostraAvanzamento(s, 'voce', { testo: 'Scarico Whisper…', p: 0 }); Voce.prepara().then(() => { try { localStorage.setItem('lode:voce', '1'); } catch { } }).catch(() => { }); });
   if (cosa && !(cosa === 'obsidian' ? st?.obsidian.installato : st?.modello)) chiediInstalla(cosa, s);
   for (const [k, x] of Object.entries(avanzamenti)) mostraAvanzamento(s, k, x);
   if (A.turno) A.turno.dataset.sintesi = 'prepara Lode';
@@ -677,8 +738,9 @@ function daChiudere() {
   const l = lezioni().find(x => x.file && x.data >= piuGiorni(oggi(), -2) && (x.parole || 0) >= 30 && (x.definizioni?.length || 0) < 3 && !(D.imp.chiuse || []).includes(x.file));
   return l || null;
 }
-async function chiudiLezione(corso) {
-  const l = lezioni().find(x => (x.file || x.appunti) && (!corso || norm(x.corso) === norm(corso)) && (x.parole || 0) >= 10);
+async function chiudiLezione(corso, { lezione, testo } = {}) {
+  const l0 = lezione || lezioni().find(x => (x.file || x.appunti) && (!corso || norm(x.corso) === norm(corso)) && ((x.parole || 0) >= 10 || (x.paroleTrascritte || 0) >= 60));
+  const l = l0 && { ...l0, appunti: testo || (l0.parole >= 10 ? l0.appunti : (l0.trascrizione || '').slice(0, 9000)) };
   if (!l) return rispostaFissa(corso ? `Non trovo appunti di **${corso}** negli ultimi giorni.` : 'Non trovo una lezione con abbastanza appunti: scrivili nella sezione «Appunti» della nota.');
   if (!AI.attiva()) return rispostaFissa('Per leggere gli appunti serve l\'AI: installa il **cervello locale** (gratis, funziona offline) da «Prepara Lode», oppure aggiungi una chiave Claude.');
   modo('pensa', `Leggo gli appunti di ${l.corso}…`); segnala('pensa');
@@ -714,7 +776,7 @@ async function apriAppunti(l) {
 function schedaGioco(corso) {
   const { scelte, tutte } = daGiocare(6, corso);
   if (scelte.length < 2) {
-    rispostaFissa(tutte.length ? `Le definizioni ${corso ? 'di ' + corso + ' ' : ''}per oggi le sai già: tornano quando stanno per scappare.` : `Ancora nessuna definizione${corso ? ' di ' + corso : ''}. In aula premi **Definizione** (o scrivi «def: termine = definizione»), oppure scrivile in Obsidian nella sezione «Definizioni» della lezione.`);
+    rispostaFissa(tutte.length ? `Le definizioni ${corso ? 'di ' + (tutte[0]?.corso || corso) + ' ' : ''}per oggi le sai già: tornano quando stanno per scappare.` : `Ancora nessuna definizione${corso ? ' di ' + corso : ''}. In aula premi **Definizione** (o scrivi «def: termine = definizione»), oppure scrivile in Obsidian nella sezione «Definizioni» della lezione.`);
     return;
   }
   const manche = partita(scelte, tutte), corsi = [...new Set(scelte.map(d => d.corso))];
@@ -841,6 +903,11 @@ async function esegui(c) {
     case 'naviga': return schedaNote(c.q);
     case 'chiudiLezione': return chiudiLezione(c.corso);
     case 'prepara': return schedaPrepara(c.cosa);
+    case 'trascrivi': return avviaTrascrizione();
+    case 'fineTrascrizione': return fermaTrascrizione();
+    case 'pausaTrascrizione': TR.pausa(); return mostraFatto({ testo: 'Trascrizione in pausa.', nota: 'Scrivi «riprendi trascrizione» quando ricomincia.' });
+    case 'riprendiTrascrizione': TR.riprendi(); return mostraFatto({ testo: 'Riprendo a trascrivere.' });
+    case 'riordina': return riordinaLezione(c.corso);
   }
 }
 
@@ -993,6 +1060,7 @@ let pttAttivo = false, testoVoce = '';
 function iniziaAscolto() {
   if (Voce.attivo()) return;
   apri({ fisso: true });
+  campo.querySelector('.stato.ascolto .lbl').textContent = DESKTOP && !Voce.pronta() ? 'Ti ascolto · preparo la voce…' : 'Ti ascolto';
   Voce.zitto(); testoVoce = '';
   const t = A.orale ? (() => { const x = h('article', 'ld-turno'); filo.append(x); A.turno = x; return x; })() : null;
   let turno = t;
@@ -1013,7 +1081,7 @@ function fineAscolto(annulla = false) { if (!Voce.attivo()) { modo('riposo'); re
 
 /* ---------- collegamenti ---------- */
 function collega() {
-  shell.addEventListener('pointerenter', e => { if (e.pointerType !== 'mouse') return; A.chiudiTra?.(); A.chiudiTra = null; if (!A.aperto) A.apriTra = dopo(110, () => apri()); });
+  shell.addEventListener('pointerenter', e => { if (e.pointerType !== 'mouse') return; A.chiudiTra?.(); A.chiudiTra = null; if (!A.aperto) A.apriTra = dopo(70, () => apri()); });
   shell.addEventListener('pointerleave', e => {
     if (e.pointerType !== 'mouse') return; A.apriTra?.(); A.apriTra = null;
     if (A.aperto && !A.fisso && !shell.contains(document.activeElement) && !Voce.attivo()) A.chiudiTra = dopo(380, () => { A.chiudiTra = null; if (!A.fisso) chiudi(); });
@@ -1023,7 +1091,10 @@ function collega() {
   corpo.addEventListener('pointerdown', () => { A.fisso = true; });
   document.addEventListener('pointerdown', e => { if (A.aperto && !shell.contains(e.target) && !e.target.closest('.ld-drop')) chiudi(); });
   const inp = campo.querySelector('input');
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); invia(inp.value); } });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); invia(inp.value); return; }
+    if (Voce.attivo() && e.key.length === 1 && !pttAttivo) fineAscolto(true);   // si mette a scrivere: smetto di ascoltare
+  });
   inp.addEventListener('focus', () => { A.fisso = true; });
   campo.querySelector('.ld-mic').addEventListener('click', () => { Voce.attivo() ? fineAscolto() : iniziaAscolto(); });
   home.addEventListener('click', e => {
@@ -1032,6 +1103,8 @@ function collega() {
     if (e.target.closest('[data-ld-esempio]')) dispatchEvent(new CustomEvent('lode:esempio'));
     const c = e.target.closest('[data-ld-cattura]'); if (c) { premi(c); cattura(c.dataset.ldCattura); return; }
     if (e.target.closest('[data-ld-appunti]')) apriAppunti();
+    if (e.target.closest('[data-ld-trascrivi]')) { nuovoTurno(); detto(A.turno, 'Trascrivi la lezione'); avviaTrascrizione(); }
+    const tr = e.target.closest('[data-ld-tr]'); if (tr) { const k = tr.dataset.ldTr; if (k === 'fine') { nuovoTurno(); detto(A.turno, 'Fine trascrizione'); fermaTrascrizione(); } else { k === 'pausa' ? TR.pausa() : TR.riprendi(); disegnaHome(); } }
   });
   addEventListener('keydown', e => {
     const ptt = (MAC ? e.altKey && !e.ctrlKey : e.ctrlKey && e.shiftKey) && e.code === 'Space';
@@ -1072,10 +1145,14 @@ function collega() {
   });
   addEventListener('lode:dati', () => { if (!A.avviso) aggiornaPillola(); if (A.aperto && A.home) { disegnaHome(); aggiornaTesta(); } });
   addEventListener('resize', () => { if (A.aperto) { forma.w.t = Math.min(560, innerWidth - 16); molla(); } });
+  let tTr = 0;
+  addEventListener('lode:trascrizione', () => { if (!A.avviso) aggiornaPillola(); clearTimeout(tTr); tTr = setTimeout(() => { if (A.aperto && A.home && !shell.contains(document.activeElement)) disegnaHome(); }, 300); });
   addEventListener('lode:lezioni', () => { if (!A.avviso) aggiornaPillola(); if (A.aperto && A.home) disegnaHome(); });
   // il tempo passa: «fine tra 23 min», la lezione che inizia, il suggerimento del pomeriggio
   let minuto = -1;
-  setInterval(() => { const m = new Date().getMinutes(); if (m === minuto) return; minuto = m; if (!A.avviso && !F.stato()) aggiornaPillola(); if (A.aperto && A.home && !shell.contains(document.activeElement)) { disegnaHome(); aggiornaTesta(); } }, 5000);
+  setInterval(() => { const m = new Date().getMinutes(); if (m === minuto) return; minuto = m;
+    // dieci minuti dopo la fine della lezione la trascrizione si chiude da sola
+    const tr = TR.stato(); if (tr?.lezione.fine && !lezioneOra()) { const [hh, mm] = tr.lezione.fine.split(':').map(Number), d = new Date(); if (d.getHours() * 60 + d.getMinutes() >= hh * 60 + mm + 10) fermaTrascrizione(); } if (!A.avviso && !F.stato()) aggiornaPillola(); if (A.aperto && A.home && !shell.contains(document.activeElement)) { disegnaHome(); aggiornaTesta(); } }, 5000);
   if (BRIDGE) collegaDesktop();
 }
 // nell'app la barra è una finestra trasparente sopra tutte le altre: i clic passano attraverso tranne che sulla barra
@@ -1087,14 +1164,20 @@ function collegaDesktop() {
   passa(true);
   addEventListener('blur', () => { setTimeout(() => { if (A.aperto && !document.hasFocus() && !Voce.attivo()) chiudi(); }, 120); });
   BRIDGE.su('scorciatoia', nome => {
-    if (nome === 'apri') { if (A.aperto && A.fisso) return chiudi(); apri({ fisso: true }).then(() => campo.querySelector('input').focus()); }
+    // ⌥ Spazio: si apre e ascolta (tieni premuto e parla; lasci o stai zitto e parte). Se inizi a scrivere, smette.
+    if (nome === 'apri') { if (Voce.attivo()) return; pttAttivo = true; apri({ fisso: true }).then(() => campo.querySelector('input').focus({ preventScroll: true })); iniziaAscolto(); }
+    else if (nome === 'scrivi') { apri({ fisso: true }).then(() => campo.querySelector('input').focus()); }
     else if (CATTURE[nome]) cattura(nome);
+    else if (nome === 'trascrivi') { apri({ fisso: true }); nuovoTurno(); if (TR.attiva()) { detto(A.turno, 'Fine trascrizione'); fermaTrascrizione(); } else { detto(A.turno, 'Trascrivi la lezione'); avviaTrascrizione(); } }
     else if (nome === 'gioco') { apri({ fisso: true }); nuovoTurno(); detto(A.turno, 'Gioca'); schedaGioco(); }
   });
 }
 
 export function avvia() {
   A = nuovoStato(); costruisci(); collega();
+  addEventListener('lode:voce', e => { const x = e.detail; document.querySelectorAll('.ld-prepara').forEach(s => mostraAvanzamento(s, 'voce', x.fase === 'pronta' ? { fase: 'fatto', p: 1, testo: 'Whisper in locale · tieni premuto ' + TASTI + ' e parla' } : x.fase === 'errore' ? { fase: 'errore', testo: x.testo } : { p: x.p, testo: `Scarico Whisper · ${Math.round((x.p || 0) * 100)}%` })); if (A.modo === 'ascolto' && x.fase === 'scarico') campo.querySelector('.stato.ascolto .lbl').textContent = `Ti ascolto · preparo la voce ${Math.round((x.p || 0) * 100)}%`; if (x.fase === 'pronta' && A.modo === 'ascolto') campo.querySelector('.stato.ascolto .lbl').textContent = 'Ti ascolto'; });
+  // la voce già preparata si carica in silenzio dopo l'avvio: così il primo ⌥ Spazio è immediato
+  try { if (DESKTOP && localStorage.getItem('lode:voce')) setTimeout(() => Voce.prepara().catch(() => { }), 4000); } catch { }
   if (V.attivo) {
     aggiornaStato(); setInterval(aggiornaStato, 5 * 60e3);
     V.suProgresso(x => { avanzamenti[x.cosa] = x; if (x.fase === 'fatto' || x.fase === 'errore') { delete avanzamenti[x.cosa]; aggiornaStato(); } document.querySelectorAll('.ld-prepara').forEach(s => mostraAvanzamento(s, x.cosa, x)); if (!A.aperto && x.fase !== 'fatto' && x.fase !== 'errore' && x.p != null) mostraAvviso(`${x.cosa === 'obsidian' ? 'Obsidian' : 'Cervello locale'} · ${Math.round(x.p * 100)}%`, true); });
@@ -1102,6 +1185,8 @@ export function avvia() {
   if (F.stato()?.fase === 'focus' && !F.stato().fermo) setTimeout(() => segnala('focus'), 600);
 }
 // la pagina sotto chiede a Lode di fare cose (ripassa, interroga, focus) dal suo pannello
+// per le prove automatiche (test/): accesso ai motori della barra
+window.__lode = { invia, indietro, TR, Voce, avviaTrascrizione, fermaTrascrizione, riordinaLezione, stato: () => A };
 export const azioni = {
   focus: esameId => avviaFocus({ esameId }),
   ripassa: esameId => { apri({ fisso: true }); nuovoTurno(); detto(A.turno, esameId ? 'Ripassa ' + esame(esameId)?.nome : 'Ripasso'); schedaRipasso(esameId); },

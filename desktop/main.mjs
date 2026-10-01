@@ -13,6 +13,7 @@ const WEB = existsSync(join(QUI, 'web', 'index.html')) ? join(QUI, 'web') : join
 const MAC = process.platform === 'darwin';
 // per le prove: LODE_DATI e LODE_VAULT spostano configurazione e vault in una cartella a parte
 if (process.env.LODE_DATI) app.setPath('userData', process.env.LODE_DATI);
+if (process.env.LODE_AUDIO_FINTO) { app.commandLine.appendSwitch('use-fake-ui-for-media-stream'); app.commandLine.appendSwitch('use-fake-device-for-media-stream'); app.commandLine.appendSwitch('use-file-for-fake-audio-capture', process.env.LODE_AUDIO_FINTO + '%noloop'); }   // prove della voce
 if (!app.requestSingleInstanceLock()) app.quit();
 
 /* ---------- configurazione: dov'è il vault ---------- */
@@ -35,7 +36,7 @@ function creaBarra() {
     width: LARGA, height: 760, frame: false, transparent: true, resizable: false, movable: false, minimizable: false, maximizable: false,
     fullscreenable: false, hasShadow: false, skipTaskbar: true, alwaysOnTop: true, show: false, backgroundColor: '#00000000',
     ...(MAC ? { type: 'panel' } : {}),
-    webPreferences: { preload: join(QUI, 'preload.cjs'), contextIsolation: true, sandbox: true, spellcheck: true },
+    webPreferences: { preload: join(QUI, 'preload.cjs'), contextIsolation: true, sandbox: true, spellcheck: true, autoplayPolicy: 'no-user-gesture-required', backgroundThrottling: false },
   });
   barra.setAlwaysOnTop(true, MAC ? 'floating' : 'screen-saver');
   barra.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
@@ -145,6 +146,7 @@ ipcMain.handle('locale:chat', async (e, { id, messaggi, formato, modello }) => {
   try { return await I.chatLocale({ modello: modello || conf.modello, messaggi, formato, segnale: c.signal, pezzo: t => e.sender.send('locale:pezzo', { id, t }) }); }
   finally { chat.delete(id); }
 });
+ipcMain.handle('locale:scalda', async () => { if (conf.modello) await fetch(I.OLLAMA + '/api/generate', { method: 'POST', body: JSON.stringify({ model: conf.modello, keep_alive: '15m' }) }).catch(() => { }); return true; });
 ipcMain.handle('locale:stop', (_, { id }) => { chat.get(id)?.abort(); return true; });
 ipcMain.handle('vault:memoria', (_, { testo }) => { V.memoria(vault(), testo); return true; });
 ipcMain.handle('vault:apri', async (_, { file, nuovo }) => {
@@ -165,8 +167,8 @@ ipcMain.handle('finestra:rilascia', e => {
 
 /* ---------- scorciatoie e icona ---------- */
 const TASTI = MAC
-  ? { apri: 'Alt+Space', stella: 'Control+Alt+S', definizione: 'Control+Alt+D', domanda: 'Control+Alt+Q', gioco: 'Control+Alt+G' }
-  : { apri: 'Control+Shift+Space', stella: 'Control+Alt+S', definizione: 'Control+Alt+D', domanda: 'Control+Alt+Q', gioco: 'Control+Alt+G' };
+  ? { apri: 'Alt+Space', scrivi: 'Control+Alt+Space', stella: 'Control+Alt+S', definizione: 'Control+Alt+D', domanda: 'Control+Alt+Q', gioco: 'Control+Alt+G', trascrivi: 'Control+Alt+R' }
+  : { apri: 'Control+Shift+Space', scrivi: 'Control+Alt+Space', stella: 'Control+Alt+S', definizione: 'Control+Alt+D', domanda: 'Control+Alt+Q', gioco: 'Control+Alt+G', trascrivi: 'Control+Alt+R' };
 function scorciatoie() {
   for (const [nome, tasti] of Object.entries(TASTI)) {
     const ok = globalShortcut.register(tasti, () => {

@@ -2,7 +2,7 @@
 // Una lezione è un file Markdown normale: frontmatter + sezioni «Appunti», «★ Da esame», «Definizioni», «Domande per il prof».
 // Le definizioni si scrivono come vuoi: «- **Gradiente**: il vettore…», «- Gradiente: …», «Gradiente :: …» (anche il formato
 // del plugin Spaced Repetition) o in un callout «> [!definizione] Gradiente». Lode le trova e ne fa giochi e ripasso.
-export const SEZIONI = { appunti: 'Appunti', stella: '★ Da esame', definizione: 'Definizioni', domanda: 'Domande per il prof' };
+export const SEZIONI = { appunti: 'Appunti', stella: '★ Da esame', definizione: 'Definizioni', domanda: 'Domande per il prof', trascrizione: 'Trascrizione', riordinati: 'Appunti riordinati da Lode' };
 const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
 const GIORNI = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
 export const GIORNI_BREVI = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
@@ -70,7 +70,7 @@ const pulisciRiga = r => r.replace(/^\s*(?:[-*+]|\d+[.)])\s+(\[[ x]\]\s+)?/, '')
 
 function trovaSezione(sez, chiave) {
   const nome = SEZIONI[chiave].replace(/[^\p{L}]/gu, '').toLowerCase();
-  const alias = { stella: ['daesame', 'importante', 'esame'], definizione: ['definizioni', 'glossario'], domanda: ['domande', 'domandeperilprof'], appunti: ['appunti', 'note'] }[chiave] || [];
+  const alias = { stella: ['daesame', 'importante', 'esame'], definizione: ['definizioni', 'glossario'], domanda: ['domande', 'domandeperilprof'], appunti: ['appunti', 'note'], trascrizione: ['trascrizione'] }[chiave] || [];
   const k = Object.keys(sez).find(k => { const x = k.replace(/[^\p{L}]/gu, '').toLowerCase(); return x === nome || alias.includes(x); });
   return k ? sez[k] : [];
 }
@@ -101,9 +101,11 @@ export function leggiLezione(testo, file) {
   });
   const elenco = k => trovaSezione(sez, k).filter(r => /^\s*(?:[-*+]|\d+[.)])\s+/.test(r) && !/::/.test(r)).map(pulisciRiga).filter(Boolean);
   const appunti = trovaSezione(sez, 'appunti').join('\n').trim();
+  const trascrizione = trovaSezione(sez, 'trascrizione').map(r => r.replace(/^\*\*\d\d:\d\d\*\*\s*/, '')).join(' ').replace(/\s+/g, ' ').trim();
   return { file, corso, data: /^\d{4}-\d\d-\d\d$/.test(fm.data || '') ? fm.data : (file || '').match(/(\d{4}-\d\d-\d\d)/)?.[1] || null,
     inizio: ora[0]?.trim() || null, fine: ora[1]?.trim() || null, aula: fm.aula || null,
-    definizioni, stelle: elenco('stella'), domande: elenco('domanda'), parole: appunti.split(/\s+/).filter(Boolean).length, appunti: appunti.slice(0, 4000) };
+    definizioni, stelle: elenco('stella'), domande: elenco('domanda'), parole: appunti.split(/\s+/).filter(Boolean).length, appunti: appunti.slice(0, 4000),
+    paroleTrascritte: trascrizione ? trascrizione.split(' ').length : 0, trascrizione: trascrizione.slice(0, 120000), riordinata: Object.keys(sez).some(k => /riordinati/i.test(k)) };
 }
 
 // aggiunge una riga in fondo a una sezione (la crea se manca), senza toccare il resto del file
