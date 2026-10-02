@@ -1,7 +1,7 @@
 {
   "name": "lode",
   "productName": "Lode",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "L'assistente di studio in cima allo schermo, collegato al tuo vault Obsidian",
   "license": "MIT",
   "private": true,
@@ -21,16 +21,64 @@
   "build": {
     "appId": "it.lode.app",
     "productName": "Lode",
-    "directories": { "output": "dist", "buildResources": "build" },
-    "files": ["main.mjs", "preload.cjs", "vault.mjs", "installa.mjs", "voce.mjs", "web/**", "build/tray*.png", "package.json"],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.mjs",
+      "preload.cjs",
+      "vault.mjs",
+      "installa.mjs",
+      "voce.mjs",
+      "progetto.mjs",
+      "esegui.mjs",
+      "web/**",
+      "package.json",
+      "build/tray*.png"
+    ],
     "mac": {
       "category": "public.app-category.education",
-      "extraResources": [{ "from": "bin", "to": "bin", "filter": ["lode-voce"] }],
-      "target": [{ "target": "dmg", "arch": ["universal"] }],
-      "extendInfo": { "LSUIElement": true, "NSMicrophoneUsageDescription": "Lode usa il microfono quando parli con lui, per «Ripeti» in aula e per trascrivere le lezioni che scegli. L'audio non viene mai salvato." }
+      "extraResources": [
+        {
+          "from": "bin",
+          "to": "bin",
+          "filter": [
+            "lode-voce"
+          ]
+        }
+      ],
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "extendInfo": {
+        "LSUIElement": true,
+        "NSMicrophoneUsageDescription": "Lode usa il microfono quando parli con lui, per «Ripeti» in aula e per trascrivere le lezioni che scegli. L'audio non viene mai salvato."
+      },
+      "identity": "-",
+      "hardenedRuntime": false,
+      "artifactName": "Lode-${version}-mac.${ext}",
+      "x64ArchFiles": "Contents/Resources/bin/lode-voce"
     },
-    "win": { "target": "nsis", "icon": "../icone/icona.svg" },
-    "nsis": { "oneClick": true, "perMachine": false, "runAfterFinish": true },
-    "linux": { "target": "AppImage", "category": "Education" }
+    "win": {
+      "target": "nsis",
+      "artifactName": "Lode-${version}-windows.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Education",
+      "artifactName": "Lode-${version}-linux.${ext}"
+    },
+    "artifactName": "Lode-${version}-${os}.${ext}"
   }
 }

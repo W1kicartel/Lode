@@ -1,0 +1,92 @@
+# Gli installer di Lode, costruiti dalle macchine di GitHub e pubblicati come «Release» (da scaricare con un clic):
+# - Mac: .dmg universale (Apple Silicon e Intel), con la voce Parakeet per i Mac con chip Apple;
+# - Windows: .exe (installazione per l'utente, senza permessi di amministratore);
+# - Linux: .AppImage.
+# Non sono firmati con un certificato (costa e Lode è gratis): al primo avvio il sistema chiede conferma, vedi il README.
+# Parte con un tag «v…» (git tag v0.3.0 && git push --tags) o col pulsante «Run workflow» (bozza da controllare).
+name: Rilascio
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  pacchetti:
+    name: Installer (${{ matrix.nome }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest, nome: mac, comando: 'npx electron-builder --mac --publish never', file: 'desktop/dist/*.dmg' }
+          - { os: windows-latest, nome: windows, comando: 'npx electron-builder --win nsis --publish never', file: 'desktop/dist/*.exe' }
+          - { os: ubuntu-latest, nome: linux, comando: 'npx electron-builder --linux AppImage --publish never', file: 'desktop/dist/*.AppImage' }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Voce Parakeet (solo Mac)
+        if: matrix.nome == 'mac'
+        # se la compilazione non riesce l'installer esce lo stesso: sul Mac la voce resta Whisper
+        continue-on-error: true
+        working-directory: desktop/voce-mac
+        run: |
+          swift build -c release || bash compila.sh
+          mkdir -p ../bin && cp .build/release/lode-voce ../bin/lode-voce && file ../bin/lode-voce
+      - name: Dipendenze
+        working-directory: desktop
+        run: npm ci
+      - name: Installer
+        working-directory: desktop
+        shell: bash
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          mkdir -p bin
+          node prepara.mjs
+          ${{ matrix.comando }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lode-${{ matrix.nome }}
+          path: ${{ matrix.file }}
+          if-no-files-found: error
+
+  pubblica:
+    name: Pubblica la Release
+    needs: pacchetti
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: installer
+          merge-multiple: true
+      - name: Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          ls -la installer
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            TAG="${GITHUB_REF_NAME}"
+            gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Lode ${TAG#v}" --notes-file - <<'NOTE'
+          Scarica l'installer per il tuo computer qui sotto (Assets):
+          - **Mac** (chip Apple e Intel): `Lode-…-mac.dmg`
+          - **Windows**: `Lode-…-windows.exe`
+          - **Linux**: `Lode-…-linux.AppImage`
+
+          Non sono firmati con un certificato a pagamento: al primo avvio il sistema chiede una conferma. Come fare, passo per passo: https://github.com/W1kicartel/Lode#installa
+          NOTE
+            gh release upload "$TAG" installer/* --clobber
+          else
+            # dal pulsante: una bozza, da controllare prima di pubblicarla
+            TAG="anteprima-${GITHUB_RUN_NUMBER}"
+            gh release create "$TAG" --draft --prerelease --target "${GITHUB_SHA}" --title "Anteprima ${GITHUB_RUN_NUMBER}" --notes "Installer di prova, non pubblicati." installer/*
+          fi
