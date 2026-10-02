@@ -1,4 +1,4 @@
-// Il tempo di Lode: un solo giro di requestAnimationFrame per tutte le animazioni (lo stesso motore di Lumi).
+// Il tempo di Lode: un solo giro di requestAnimationFrame per tutte le animazioni.
 // Curva morbida cubic-bezier(.22,1,.36,1), entrate con sfocatura, molle smorzate senza rimbalzi.
 export const RIDOTTO = matchMedia('(prefers-reduced-motion: reduce)').matches;
 export function bezier(x1, y1, x2, y2) {
