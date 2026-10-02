@@ -3,9 +3,10 @@
 //     ridistribuiamo noi) e aperto già sul vault di Lode;
 //  2. il «cervello locale»: Ollama più un modello Qwen3.5 scelto in base alla memoria del computer, per estrarre
 //     definizioni dagli appunti, creare carte, spiegare e interrogare senza chiavi e senza internet.
-import { shell } from 'electron';
+import { shell, net } from 'electron';
 import { createWriteStream, existsSync, mkdirSync, rmSync, accessSync, constants, chmodSync, writeFileSync } from 'node:fs';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
+import { rm } from 'node:fs/promises';
 import { homedir, totalmem, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
@@ -16,10 +17,17 @@ const MAC = process.platform === 'darwin', WIN = process.platform === 'win32';
 const esegui = (cmd, args, opz = {}) => new Promise((ok, ko) => execFile(cmd, args, { maxBuffer: 1 << 24, ...opz }, (e, out, err) => e ? ko(new Error((err || e.message).toString().trim())) : ok(out.toString())));
 const scrivibile = d => { try { mkdirSync(d, { recursive: true }); accessSync(d, constants.W_OK); return true; } catch { return false; } };
 const cartellaApp = () => process.env.LODE_APPS || (scrivibile('/Applications') ? '/Applications' : join(homedir(), 'Applications'));
+// avvia un programma staccato da Lode (non si chiude con Lode, niente output); true se è partito
+const lancia = (exe, args = []) => new Promise(ok => { try { const p = spawn(exe, args, { detached: true, stdio: 'ignore' }); p.once('error', () => ok(false)); p.once('spawn', () => { p.unref(); ok(true); }); } catch { ok(false); } });
+// la cartella temporanea si toglie in sottofondo e senza errori: su Windows l'antivirus tiene a volte l'installer ancora aperto
+const pulisci = d => rm(d, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 }).catch(() => { });
+// internet passa dalla rete di Chromium: certificati e proxy del sistema, come il browser (su Windows l'antivirus che
+// ispeziona HTTPS aggiunge un suo certificato che il fetch di Node non conosce). Ollama in locale resta sul fetch di Node.
+export const rete = (url, opz) => net?.fetch ? net.fetch(url, opz) : fetch(url, opz);
 
 // scarica un file con l'avanzamento (0-1)
 async function scarica(url, dest, avanza) {
-  const r = await fetch(url, { redirect: 'follow', headers: { 'User-Agent': 'Lode' } });
+  const r = await rete(url, { redirect: 'follow', headers: { 'User-Agent': 'Lode' } });
   if (!r.ok) throw new Error(`download non riuscito (${r.status})`);
   const tot = +r.headers.get('content-length') || 0; let fatto = 0, ultimo = 0;
   const conta = new TransformStream({ transform(pezzo, c) { fatto += pezzo.byteLength; const t = Date.now(); if (tot && t - ultimo > 150) { ultimo = t; avanza(fatto / tot, fatto); } c.enqueue(pezzo); } });
@@ -30,12 +38,13 @@ async function scarica(url, dest, avanza) {
 /* ---------- Obsidian ---------- */
 export function percorsiObsidian() {
   if (MAC) return ['/Applications/Obsidian.app', join(homedir(), 'Applications', 'Obsidian.app'), ...(process.env.LODE_APPS ? [join(process.env.LODE_APPS, 'Obsidian.app')] : [])];
-  if (WIN) return [join(process.env.LOCALAPPDATA || '', 'Programs', 'Obsidian', 'Obsidian.exe'), join(process.env.LOCALAPPDATA || '', 'Obsidian', 'Obsidian.exe')];
+  if (WIN) return [join(process.env.LOCALAPPDATA || '', 'Programs', 'Obsidian', 'Obsidian.exe'), join(process.env.LOCALAPPDATA || '', 'Obsidian', 'Obsidian.exe'),
+    ...[process.env.ProgramFiles, process.env['ProgramFiles(x86)']].filter(Boolean).map(d => join(d, 'Obsidian', 'Obsidian.exe'))];   // installato per tutti gli utenti
   return [join(homedir(), 'Applications', 'Obsidian.AppImage'), '/usr/bin/obsidian', '/opt/Obsidian/obsidian'];
 }
 export const obsidianInstallato = () => percorsiObsidian().some(existsSync);
 async function ultimaObsidian() {
-  const r = await fetch('https://raw.githubusercontent.com/obsidianmd/obsidian-releases/master/desktop-releases.json', { headers: { 'User-Agent': 'Lode' } });
+  const r = await rete('https://raw.githubusercontent.com/obsidianmd/obsidian-releases/master/desktop-releases.json', { headers: { 'User-Agent': 'Lode' } });
   const v = (await r.json()).latestVersion;
   if (!/^\d+\.\d+\.\d+$/.test(v)) throw new Error('versione di Obsidian sconosciuta');
   const nome = MAC ? `Obsidian-${v}.dmg` : WIN ? `Obsidian-${v}.exe` : process.arch === 'arm64' ? `Obsidian-${v}-arm64.AppImage` : `Obsidian-${v}.AppImage`;
@@ -74,11 +83,13 @@ export async function installaObsidian({ vault, confObsidian, avanza }) {
     preparaListaVault(confObsidian, vault);
     avanza({ fase: 'fatto', p: 1, testo: `Obsidian ${v} installato` });
     return { versione: v };
-  } finally { rmSync(tmp, { recursive: true, force: true }); }
+  } finally { pulisci(tmp); }
 }
 export async function apriObsidian(url) {
   if (process.env.LODE_NON_APRIRE) return;   // solo per le prove
   if (MAC) { const app = percorsiObsidian().find(existsSync); if (app) { await esegui('open', ['-a', app, ...(url ? [url] : [])]).catch(() => shell.openExternal(url)); return; } }
+  // Windows: obsidian:// lo registra Obsidian al primo avvio, che l'installazione silenziosa non fa: apriamo l'exe col link
+  if (WIN) { const exe = percorsiObsidian().find(existsSync); if (exe && await lancia(exe, url ? [url] : [])) return; }
   if (url) await shell.openExternal(url);
 }
 
@@ -112,7 +123,8 @@ async function aspettaOllama(sec = 60) {
 export async function avviaOllama() {
   if ((await statoOllama()).acceso) return true;
   if (MAC) { const a = [join(cartellaApp(), 'Ollama.app'), '/Applications/Ollama.app', join(homedir(), 'Applications', 'Ollama.app')].find(existsSync); if (a) await esegui('open', ['-g', '-a', a]); }
-  else if (WIN) { const e = join(process.env.LOCALAPPDATA || '', 'Programs', 'Ollama', 'ollama app.exe'); if (existsSync(e)) execFile(e).unref?.(); }
+  // Windows: «hidden» resta nell'area di notifica senza rubare il fuoco; staccato, così non si chiude con Lode
+  else if (WIN) { const e = join(process.env.LOCALAPPDATA || '', 'Programs', 'Ollama', 'ollama app.exe'); if (existsSync(e)) await lancia(e, ['hidden']); }
   return aspettaOllama();
 }
 export async function installaOllama({ avanza }) {
@@ -130,9 +142,9 @@ export async function installaOllama({ avanza }) {
       await esegui('ditto', [join(tmp, 'Ollama.app'), dest]);
     } else await esegui(file, ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART']);
     avanza({ fase: 'avvio', testo: 'Avvio Ollama' });
-    await avviaOllama();
+    await (WIN ? aspettaOllama(20).catch(() => avviaOllama()) : avviaOllama());   // su Windows lo avvia già l'installer: non ne apriamo un secondo
     return true;
-  } finally { rmSync(tmp, { recursive: true, force: true }); }
+  } finally { pulisci(tmp); }
 }
 export async function scaricaModello(nome, avanza) {
   await avviaOllama();

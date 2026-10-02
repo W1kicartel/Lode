@@ -1,8 +1,9 @@
 // Lode, l'app desktop. Una finestra trasparente in cima allo schermo, sopra tutte le altre: dentro c'è solo la barra.
 // I clic passano attraverso tranne che sulla barra. Scorciatoie globali per la cattura in aula. Il vault Obsidian in
 // Documenti/Lode è la memoria: dati di Lode in .lode/dati.json, lezioni in Markdown. Icona nella barra dei menu.
-import { app, BrowserWindow, Menu, ShareMenu, Tray, dialog, globalShortcut, ipcMain, nativeImage, powerMonitor, screen, shell } from 'electron';
-import { existsSync, readFileSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { app, BrowserWindow, Menu, ShareMenu, Tray, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, powerMonitor, screen, shell } from 'electron';
+import { existsSync, readFileSync, mkdirSync, writeFileSync, rmSync, renameSync, copyFileSync } from 'node:fs';
+import { execFile } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as V from './vault.mjs';
@@ -11,7 +12,9 @@ import * as VOCE from './voce.mjs';
 
 const QUI = dirname(fileURLToPath(import.meta.url));
 const WEB = existsSync(join(QUI, 'web', 'index.html')) ? join(QUI, 'web') : join(QUI, '..');
-const MAC = process.platform === 'darwin';
+const MAC = process.platform === 'darwin', WIN = process.platform === 'win32';
+// Windows: lo stesso id dei collegamenti dell'installer (appId), per notifiche, barra delle applicazioni e avvio automatico
+if (WIN) app.setAppUserModelId(app.isPackaged ? 'it.lode.app' : process.execPath);
 // per le prove: LODE_DATI e LODE_VAULT spostano configurazione e vault in una cartella a parte
 if (process.env.LODE_DATI) app.setPath('userData', process.env.LODE_DATI);
 if (process.env.LODE_AUDIO_FINTO) { app.commandLine.appendSwitch('use-fake-ui-for-media-stream'); app.commandLine.appendSwitch('use-fake-device-for-media-stream'); app.commandLine.appendSwitch('use-file-for-fake-audio-capture', process.env.LODE_AUDIO_FINTO + '%noloop'); }   // prove della voce
@@ -26,9 +29,10 @@ const vault = () => conf.vault;
 const fileDati = () => join(vault(), '.lode', 'dati.json');
 
 /* ---------- finestre ---------- */
-let barra = null, quadro = null, tray = null, guardiano = null;
+let barra = null, quadro = null, tray = null, guardiano = null, uscendo = false;
 const LARGA = 640;
 function posiziona() {
+  if (!barra || barra.isDestroyed()) return;
   const d = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()), a = d.workArea;
   barra.setBounds({ x: Math.round(a.x + a.width / 2 - LARGA / 2), y: a.y, width: LARGA, height: Math.min(780, a.height) });
 }
@@ -36,7 +40,7 @@ function creaBarra() {
   barra = new BrowserWindow({
     width: LARGA, height: 760, frame: false, transparent: true, resizable: false, movable: false, minimizable: false, maximizable: false,
     fullscreenable: false, hasShadow: false, skipTaskbar: true, alwaysOnTop: true, show: false, backgroundColor: '#00000000',
-    ...(MAC ? { type: 'panel' } : {}),
+    ...(MAC ? { type: 'panel' } : WIN ? { type: 'toolbar' } : {}),   // toolbar: su Windows fuori da Alt+Tab e da Visualizzazione attività
     webPreferences: { preload: join(QUI, 'preload.cjs'), contextIsolation: true, sandbox: true, spellcheck: true, autoplayPolicy: 'no-user-gesture-required', backgroundThrottling: false },
   });
   barra.setAlwaysOnTop(true, MAC ? 'floating' : 'screen-saver');
@@ -47,6 +51,10 @@ function creaBarra() {
   barra.once('ready-to-show', () => barra.showInactive());
   barra.webContents.setWindowOpenHandler(({ url }) => { if (/^https?:|^obsidian:/.test(url)) shell.openExternal(url); return { action: 'deny' }; });
   barra.webContents.session.setPermissionRequestHandler((_, p, cb) => cb(['media', 'notifications', 'clipboard-sanitized-write'].includes(p)));
+  // Alt+F4 (o Ctrl+W) non la distrugge: si richiude e basta. Se ne va solo uscendo da Lode
+  barra.on('close', e => { if (!uscendo) { e.preventDefault(); rilascia(); } });
+  barra.on('closed', () => { barra = null; if (!uscendo) creaBarra(); });
+  barra.on('session-end', () => { uscendo = true; scriviTutto(); });   // Windows si spegne o esce l'utente: before-quit non arriva
 }
 function apriQuadro() {
   if (quadro && !quadro.isDestroyed()) { quadro.show(); quadro.focus(); return; }
@@ -74,7 +82,7 @@ const manda = (canale, x, tranne) => tutte().forEach(w => { if (w.webContents !=
 /* ---------- vault ---------- */
 function info() { const o = V.obsidian(vault()); return { percorso: vault(), nome: vault().split(/[\\/]/).pop(), obsidian: { installato: o.installato, registrato: !!o.registrato }, note: V.notePerLode(vault()) }; }
 function avviaVault() {
-  guardiano?.chiudi();
+  guardiano?.chiudi(); guardiano = null;
   let orario = [];
   try { orario = JSON.parse(readFileSync(fileDati(), 'utf8')).orario || []; } catch { }
   V.crea(vault(), orario);
@@ -89,17 +97,81 @@ function avviaVault() {
 async function scegliVault() {
   const r = await dialog.showOpenDialog({ title: 'Scegli il vault Obsidian', buttonLabel: 'Usa questo vault', properties: ['openDirectory', 'createDirectory'], defaultPath: vault() });
   if (r.canceled || !r.filePaths[0]) return null;
-  conf.vault = r.filePaths[0]; salvaConf(); avviaVault();
+  scriviTutto();   // i dati in sospeso vanno nel vault di prima
+  conf.vault = r.filePaths[0]; salvaConf();
+  const ok = await apriVault();
   tutte().forEach(w => w.webContents.reload());
-  return info();
+  return ok ? info() : null;
+}
+// la cartella può essere bloccata (Windows: accesso controllato alle cartelle, antivirus, OneDrive irraggiungibile): lo si dice e si sceglie
+async function apriVault() {
+  try { avviaVault(); return true; }
+  catch (x) {
+    console.error(x);
+    if (process.env.LODE_PROVA) return false;   // prove automatiche: nessuna finestra modale che le blocchi
+    const r = await dialog.showMessageBox({ type: 'warning', title: 'Lode', message: `Lode non riesce a usare la cartella ${vault()}`, noLink: true,
+      detail: WIN && /^(EPERM|EACCES)$/.test(x.code) ? 'Probabilmente Windows la protegge (Sicurezza di Windows › Protezione da ransomware › Accesso alle cartelle controllato) o l\'antivirus blocca Lode. Consenti Lode, oppure scegli un\'altra cartella.' : x.message,
+      buttons: ['Scegli un\'altra cartella', 'Riprova', 'Non ora'], defaultId: 0, cancelId: 2 });
+    return r.response === 1 ? apriVault() : r.response === 0 ? !!(await scegliVault()) : false;
+  }
 }
 
+/* ---------- i dati di Lode: .lode/dati.json ---------- */
+// «non c'è» (ENOENT) vuol dire primo avvio; ogni altro errore no (OneDrive offline, file bloccato da antivirus o sync).
+// La finestra che non ha letto i dati veri non scrive mai sopra dati.json: le sue modifiche vanno in dati.recupero.json
+const accanto = nome => join(vault(), '.lode', nome);
+const ATTESA = new Int32Array(new SharedArrayBuffer(4)), pausa = ms => Atomics.wait(ATTESA, 0, 0, ms);
+function leggiDati() {
+  const f = fileDati();
+  for (let i = 1; ; i++) {
+    let testo;
+    try { testo = readFileSync(f, 'utf8'); } catch (x) { if (x.code === 'ENOENT') return null; if (i >= 3) throw x; pausa(250); continue; }
+    try { return JSON.parse(testo.replace(/^\uFEFF/, '')); } catch { }
+    // rovinato (es. corrente saltata mentre scriveva): resta da parte e si riparte dalla copia di prima
+    renameSync(f, accanto(`dati.illeggibile-${Date.now()}.json`));
+    try { const d = JSON.parse(readFileSync(accanto('dati.prev.json'), 'utf8')); try { copyFileSync(accanto('dati.prev.json'), f); } catch { } return d; } catch { return null; }
+  }
+}
+// si scrive dopo 250 ms; se Windows tiene il file bloccato (EPERM, EBUSY) si riprova più tardi, senza perdere niente
+const inSospeso = new Map();   // percorso → { d, t, n }
+const recuperoRuotato = new Set();
+function scriviDopo(f, d) { clearTimeout(inSospeso.get(f)?.t); inSospeso.set(f, { d, n: 0, t: setTimeout(() => scrivi(f), 250) }); }
+function scrivi(f) {
+  const x = inSospeso.get(f); if (!x) return; clearTimeout(x.t);
+  try {
+    if (/[\\/]dati\.json$/.test(f)) try { copyFileSync(f, f.replace(/json$/, 'prev.json')); } catch { }   // la versione di prima, per ogni evenienza
+    else if (!recuperoRuotato.has(f)) { if (existsSync(f)) renameSync(f, f.replace(/json$/, `${Date.now()}.json`)); recuperoRuotato.add(f); }   // il recupero di un'altra volta resta
+    V.scriviSicuro(f, JSON.stringify(x.d, null, 1)); inSospeso.delete(f);
+  } catch (e) { console.error(e); if (x.n < 10) x.t = setTimeout(() => scrivi(f), Math.min(30e3, 1000 * 2 ** x.n++)); }   // poi riprova al prossimo salvataggio o all'uscita
+}
+const scriviTutto = () => [...inSospeso.keys()].forEach(scrivi);   // all'uscita, quando Windows si spegne, prima di cambiare vault
+app.on('before-quit', () => { uscendo = true; scriviTutto(); });
+app.whenReady().then(() => { powerMonitor.on('resume', riprovaLettura); powerMonitor.on('unlock-screen', riprovaLettura); });
+
 /* ---------- canali con la barra ---------- */
-let tSalva = 0, daSalvare = null;
-ipcMain.on('dati:leggi', e => { try { e.returnValue = JSON.parse(readFileSync(fileDati(), 'utf8')); } catch { e.returnValue = null; } });
+const nonLetti = new Set();   // finestre partite senza i dati veri (lettura fallita)
+// appena dati.json torna leggibile (OneDrive di nuovo in linea, file sbloccato) le finestre ricevono i dati veri;
+// le modifiche fatte nel frattempo restano in dati.recupero.json
+let tRilettura = 0;
+function riprovaLettura() {
+  clearTimeout(tRilettura); if (!nonLetti.size) return;
+  try {
+    const d = leggiDati(); if (!d) throw new Error('vuoto');
+    for (const w of tutte()) if (nonLetti.has(w.webContents.id)) { nonLetti.delete(w.webContents.id); w.webContents.send('dati:cambiati', d); }
+    console.log('Lode: dati di nuovo leggibili');
+  } catch { tRilettura = setTimeout(riprovaLettura, 30e3); }
+}
+ipcMain.on('dati:leggi', e => {
+  scrivi(fileDati());   // prima quello che aspetta di essere scritto (una finestra che si ricarica rilegge i dati giusti)
+  try { e.returnValue = leggiDati(); nonLetti.delete(e.sender.id); }
+  catch (x) { console.error('Lode: non riesco a leggere i dati', x); nonLetti.add(e.sender.id); e.returnValue = { __errore: x.code || 'lettura' }; tRilettura = setTimeout(riprovaLettura, 15e3); }   // js/dati.js parte vuoto e lo dice
+});
 ipcMain.on('dati:salva', (e, d) => {
-  daSalvare = d; clearTimeout(tSalva);
-  tSalva = setTimeout(() => { try { V.scriviSicuro(fileDati(), JSON.stringify(daSalvare, null, 1)); } catch (x) { console.error(x); } }, 250);
+  if (nonLetti.has(e.sender.id)) {   // niente dati.json, e i dati vuoti non arrivano alle finestre che hanno quelli veri
+    scriviDopo(accanto('dati.recupero.json'), d);
+    return tutte().forEach(w => { if (w.webContents !== e.sender && nonLetti.has(w.webContents.id)) w.webContents.send('dati:cambiati', d); });
+  }
+  scriviDopo(fileDati(), d);
   manda('dati:cambiati', d, e.sender);
 });
 ipcMain.on('mouse', (e, ignora) => BrowserWindow.fromWebContents(e.sender)?.setIgnoreMouseEvents(ignora, { forward: true }));
@@ -174,7 +246,7 @@ ipcMain.handle('installa:obsidian', async () => {
     if (!I.obsidianInstallato()) await I.installaObsidian({ vault: vault(), confObsidian: V.obsidian(vault()).conf, avanza: x => progresso('obsidian', x) });
     else V.registra(vault());
     const l = V.linkObsidian(vault(), 'Home.md');
-    await I.apriObsidian(l.url);
+    try { await I.apriObsidian(l.url); } catch (x) { console.warn('Lode: Obsidian installato ma non si apre da qui', x); }
     progresso('obsidian', { fase: 'fatto', p: 1, testo: 'Obsidian è pronto sul tuo vault' });
     manda('vault:info', info());
     return { esito: 'ok' };
@@ -206,7 +278,7 @@ const chatCloud = new Map();
 ipcMain.handle('ai:chat', async (e, { id, base, chiave, corpo }) => {
   const c = new AbortController(); chatCloud.set(id, c);
   try {
-    const r = await fetch(base.replace(/\/$/, '') + '/chat/completions', { method: 'POST', signal: c.signal, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + chiave, 'X-Title': 'Lode' }, body: JSON.stringify(corpo) });
+    const r = await I.rete(base.replace(/\/$/, '') + '/chat/completions', { method: 'POST', signal: c.signal, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + chiave, 'X-Title': 'Lode' }, body: JSON.stringify(corpo) });
     if (!r.ok) { const t = await r.text().catch(() => ''); return { errore: t.slice(0, 400) || r.statusText, stato: r.status }; }
     if (!corpo.stream) return { json: await r.json() };
     const lettore = r.body.getReader(), dec = new TextDecoder(); let resto = '', tutto = '';
@@ -225,7 +297,7 @@ ipcMain.handle('ai:chat', async (e, { id, base, chiave, corpo }) => {
 });
 ipcMain.handle('ai:stop', (_, { id }) => { chatCloud.get(id)?.abort(); return true; });
 ipcMain.handle('ai:modelli', async (_, { base, chiave }) => {
-  const r = await fetch(base.replace(/\/$/, '') + '/models', { headers: { authorization: 'Bearer ' + chiave } });
+  const r = await I.rete(base.replace(/\/$/, '') + '/models', { headers: { authorization: 'Bearer ' + chiave } });
   if (!r.ok) return { errore: (await r.text().catch(() => '')).slice(0, 300) || r.statusText, stato: r.status };
   const j = await r.json(); return { modelli: (j.data || j.models || []).map(m => String(m.id || m.name || '').replace(/^models\//, '')).filter(Boolean) };
 });
@@ -249,29 +321,56 @@ ipcMain.handle('voce:prepara', () => voce.avvia());
 ipcMain.handle('voce:trascrivi', (_, audio) => voce.trascrivi(audio));
 app.on('will-quit', () => voce.chiudi());
 // dopo una cattura veloce il fuoco torna all'app dove lo studente stava scrivendo
-ipcMain.handle('finestra:rilascia', e => {
-  const w = BrowserWindow.fromWebContents(e.sender); if (w !== barra) return;
-  if (MAC) { if (!quadro || !quadro.isVisible()) { app.hide(); setTimeout(() => barra.showInactive(), 60); } else barra.blur(); }
+function rilascia() {
+  if (!barra || barra.isDestroyed()) return;
+  if (MAC) { if (!quadro || !quadro.isVisible()) { app.hide(); setTimeout(() => barra?.showInactive(), 60); } else barra.blur(); }
+  // Windows: blur() darebbe il fuoco alla barra delle applicazioni; nascosta un attimo, Windows lo ridà alla finestra di prima
+  else if (WIN) { barra.hide(); setTimeout(() => { if (barra && !barra.isDestroyed()) barra.showInactive(); }, 60); }
   else barra.blur();
-});
+}
+ipcMain.handle('finestra:rilascia', e => { if (BrowserWindow.fromWebContents(e.sender) === barra) rilascia(); });
 
 /* ---------- scorciatoie e icona ---------- */
 const TASTI = MAC
   ? { apri: 'Alt+Space', scrivi: 'Control+Alt+Space', stella: 'Control+Alt+S', definizione: 'Control+Alt+D', domanda: 'Control+Alt+Q', gioco: 'Control+Alt+G', trascrivi: 'Control+Alt+R', ripeti: 'Control+Alt+P' }
   : { apri: 'Control+Shift+Space', scrivi: 'Control+Alt+Space', stella: 'Control+Alt+S', definizione: 'Control+Alt+D', domanda: 'Control+Alt+Q', gioco: 'Control+Alt+G', trascrivi: 'Control+Alt+R', ripeti: 'Control+Alt+P' };
-function scorciatoie() {
+// Windows: AltGr è Ctrl+Alt, e con tastiere come la tedesca (AltGr+Q = @) o la polacca Ctrl+Alt+lettera ruberebbe caratteri
+// in tutte le app. Le lettere si registrano solo se le tastiere installate sono italiana, inglese US o UK (nel dubbio, come prima)
+const tastiereSenzaAltGr = () => new Promise(fine => execFile('reg', ['query', 'HKCU\\Keyboard Layout', '/s'], { windowsHide: true, timeout: 4000 }, (err, out) =>
+  fine(!!err || (String(out).match(/\b[0-9a-f]{8}\b/gi) || []).every(x => ['00000410', '00000409', '00000809'].includes(x.toLowerCase())))));
+const attive = {};   // nome → tasti: solo le scorciatoie registrate davvero
+ipcMain.handle('scorciatoie:stato', () => attive);
+let ultimoApri = 0;
+async function scorciatoie() {
+  const lettere = !WIN || await tastiereSenzaAltGr();
   for (const [nome, tasti] of Object.entries(TASTI)) {
+    if (!lettere && /\+[A-Z]$/.test(tasti)) continue;
     const ok = globalShortcut.register(tasti, () => {
+      // tenuto premuto, Windows ripete la scorciatoia: quelle subito dopo non contano (le altre le scarta la barra)
+      if (WIN && nome === 'apri') { const t = Date.now(); if (t - ultimoApri < 600) return; ultimoApri = t; }
       posiziona(); barra.show(); barra.focus(); if (MAC) app.focus({ steal: true });
       barra.setIgnoreMouseEvents(false);
       barra.webContents.send('scorciatoia', nome);
     });
-    if (!ok) console.warn(`Lode: ${tasti} è già usata da un'altra app`);
+    if (ok) attive[nome] = tasti; else console.warn(`Lode: ${tasti} è già usata da un'altra app`);
   }
 }
+// l'icona del Mac è nera (template): sulla barra scura di Windows sparirebbe. Lì, se serve, la stessa forma in bianco
+function iconaTray() {
+  const img = nativeImage.createFromPath(join(QUI, 'build', 'trayTemplate.png'));
+  if (MAC) { img.setTemplateImage(true); return img; }
+  if (!WIN || !nativeTheme.shouldUseDarkColorsForSystemIntegratedUI) return img;
+  const bianca = nativeImage.createEmpty();
+  for (const scaleFactor of img.getScaleFactors()) {
+    const b = img.toBitmap({ scaleFactor }), lato = Math.round(Math.sqrt(b.length / 4));
+    for (let i = 0; i < b.length; i += 4) b[i] = b[i + 1] = b[i + 2] = b[i + 3];   // nero → bianco (alfa premoltiplicato)
+    bianca.addRepresentation({ scaleFactor, width: lato, height: lato, buffer: b });
+  }
+  return bianca.isEmpty() ? img : bianca;
+}
 function creaTray() {
-  const img = nativeImage.createFromPath(join(QUI, 'build', 'trayTemplate.png')); img.setTemplateImage(true);
-  tray = new Tray(img); tray.setToolTip('Lode');
+  tray = new Tray(iconaTray()); tray.setToolTip('Lode');
+  if (WIN) nativeTheme.on('updated', () => tray?.setImage(iconaTray()));   // barra delle applicazioni chiara o scura
   const menu = () => Menu.buildFromTemplate([
     { label: `Apri Lode (${MAC ? '⌥ Spazio' : 'Ctrl+Shift+Spazio'})`, click: () => { barra.show(); barra.focus(); barra.setIgnoreMouseEvents(false); barra.webContents.send('scorciatoia', 'apri'); } },
     { label: 'Il quadro: libretto, esami, ripasso', click: apriQuadro },
@@ -289,11 +388,15 @@ function creaTray() {
 
 app.whenReady().then(async () => {
   if (MAC) app.dock?.hide();
+  else Menu.setApplicationMenu(null);   // Windows e Linux: niente menu inglese nelle finestre, né Ctrl+R, Ctrl+W, Ctrl+Shift+I
   leggiConf();
   if (process.env.LODE_VAULT) conf.vault = process.env.LODE_VAULT;
-  if (!conf.vault) { conf.vault = join(app.getPath('documents'), 'Lode'); conf.primoAvvio = Date.now(); salvaConf(); if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: true }); }
+  if (!conf.vault) {
+    let documenti; try { documenti = app.getPath('documents'); } catch { documenti = app.getPath('home'); }   // Documenti su OneDrive o in rete non raggiungibile
+    conf.vault = join(documenti, 'Lode'); conf.primoAvvio = Date.now(); salvaConf(); if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: true });
+  }
   await V.carica(WEB);
-  avviaVault();
+  await apriVault();   // se la cartella è bloccata lo dice, e Lode parte comunque
   creaBarra(); creaTray(); scorciatoie();
   if (!conf.benvenuto && !process.env.LODE_PROVA) apriBenvenuto();
   screen.on('display-metrics-changed', posiziona); screen.on('display-added', posiziona); screen.on('display-removed', posiziona);

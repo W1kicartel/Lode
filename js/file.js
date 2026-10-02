@@ -12,7 +12,7 @@ export async function classifica(f) {
   if (/^audio\//.test(f.type) || /^(m4a|mp3|wav|aac|ogg|opus|flac|webm)$/.test(e)) return { ...base, tipo: 'audio' };
   if (e === 'docx') return { ...base, tipo: 'word' };
   if (/^(md|markdown|txt|csv|tsv|html?)$/.test(e) || /^text\//.test(f.type)) {
-    const testo = await f.text();
+    const testo = await leggiTesto(f);
     if (/^---[\s\S]*?\btipo:\s*sbobina\b/.test(testo) || /<meta name="lode-sbobina"/.test(testo)) return { ...base, tipo: 'sbobina', testo };
     if (/^(csv|tsv|txt)$/.test(e) && testo.split(/\r?\n/).filter(r => /\t|;| = /.test(r)).length >= 3 && testo.split(/\r?\n/).length < 5000) return { ...base, tipo: 'carte', testo };
     return { ...base, tipo: 'testo', testo };
@@ -22,6 +22,14 @@ export async function classifica(f) {
 }
 
 /* ---------- il testo dentro i file ---------- */
+// CSV e TXT di Excel o del Blocco note su Windows italiano: spesso non sono UTF-8 ma Windows-1252 (o UTF-16 «Unicode»)
+export async function leggiTesto(f) {
+  const b = new Uint8Array(await f.arrayBuffer());
+  if (b[0] === 0xFF && b[1] === 0xFE) return new TextDecoder('utf-16le').decode(b);
+  if (b[0] === 0xFE && b[1] === 0xFF) return new TextDecoder('utf-16be').decode(b);
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(b); }   // toglie anche il BOM
+  catch { return new TextDecoder('windows-1252').decode(b); }           // byte non UTF-8 (à, è, ù di un file ANSI)
+}
 export async function testoDi(x) {
   if (x.testo != null) return x.testo;
   if (x.tipo === 'word') return x.testo = await daWord(x.file);

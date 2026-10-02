@@ -2,21 +2,37 @@
 // della lezione, orario, la nota «Memoria» e un tema bianco e nero. Se Obsidian è installato, il vault viene aggiunto
 // alla sua lista, così lo studente lo trova già collegato. Lode non sovrascrive mai un file che esiste.
 // Poi lo guarda: ogni volta che lo studente scrive una lezione in Obsidian, la barra rilegge definizioni e ★.
-import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, readdirSync, statSync, watch } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, readdirSync, statSync, rmSync, watch } from 'node:fs';
 import { homedir } from 'node:os';
-import { join, dirname, relative, resolve, sep } from 'node:path';
+import { join, dirname, relative, resolve, sep, isAbsolute } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
 let M = null;   // js/markdown.js, condiviso con la barra
 export async function carica(web) { M = await import(pathToFileURL(join(web, 'js', 'markdown.js')).href); }
 
-const scriviSicuro = (f, testo) => { mkdirSync(dirname(f), { recursive: true }); const t = f + '.tmp-' + process.pid; writeFileSync(t, testo); renameSync(t, f); };
+// scrittura atomica: file temporaneo, poi rename. Su Windows il rename fallisce (EPERM/EACCES/EBUSY) se OneDrive, l'antivirus
+// o Obsidian tengono aperta la nota: si riprova per circa un secondo, poi si scrive sul posto. Il .tmp si cancella sempre.
+const OCCUPATO = new Set(['EPERM', 'EACCES', 'EBUSY']), ATTESA = new Int32Array(new SharedArrayBuffer(4));
+const scriviSicuro = (f, testo) => {
+  mkdirSync(dirname(f), { recursive: true });
+  const t = f + '.tmp-' + process.pid + '-' + randomBytes(3).toString('hex');
+  try {
+    writeFileSync(t, testo);
+    for (let i = 0; ; i++) {
+      try { return renameSync(t, f); } catch (e) {
+        if (process.platform !== 'win32' || !OCCUPATO.has(e.code)) throw e;   // altrove EPERM/EACCES sono definitivi: niente attesa
+        if (i >= 8) return writeFileSync(f, testo);   // non atomico, ma niente va perso
+        Atomics.wait(ATTESA, 0, 0, Math.min(25 * 2 ** i, 250));
+      }
+    }
+  } finally { try { rmSync(t, { force: true }); } catch { } }
+};
 const seManca = (f, testo) => { if (!existsSync(f)) scriviSicuro(f, testo); };
-// ogni percorso chiesto dalla barra deve restare dentro il vault
+// ogni percorso chiesto dalla barra deve restare dentro il vault (anche se il vault è la radice di un disco, E:\ o \\server\share)
 export function dentro(vault, rel) {
-  const p = resolve(vault, String(rel || '').replace(/^[/\\]+/, ''));
-  if (p !== resolve(vault) && !p.startsWith(resolve(vault) + sep)) throw new Error('percorso fuori dal vault');
+  const base = resolve(vault), p = resolve(base, String(rel || '').replace(/^[/\\]+/, '')), r = relative(base, p);
+  if (r === '..' || r.startsWith('..' + sep) || isAbsolute(r)) throw new Error('percorso fuori dal vault');
   return p;
 }
 
@@ -190,7 +206,8 @@ function cartellaObsidian() {
 export function obsidian(vault) {
   const conf = join(cartellaObsidian(), 'obsidian.json');
   const app = process.platform === 'darwin' ? ['/Applications/Obsidian.app', join(homedir(), 'Applications', 'Obsidian.app')]
-    : process.platform === 'win32' ? [join(process.env.LOCALAPPDATA || '', 'Programs', 'Obsidian', 'Obsidian.exe'), join(process.env.LOCALAPPDATA || '', 'Obsidian', 'Obsidian.exe')]
+    : process.platform === 'win32' ? [join(process.env.LOCALAPPDATA || '', 'Programs', 'Obsidian', 'Obsidian.exe'), join(process.env.LOCALAPPDATA || '', 'Obsidian', 'Obsidian.exe'),
+      join(process.env.ProgramFiles || 'C:\\Program Files', 'Obsidian', 'Obsidian.exe'), join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Obsidian', 'Obsidian.exe')]   // anche «per tutti gli utenti»
     : ['/usr/bin/obsidian', '/opt/Obsidian/obsidian', join(homedir(), '.local', 'share', 'flatpak', 'app', 'md.obsidian.Obsidian'), '/var/lib/flatpak/app/md.obsidian.Obsidian'];
   const installato = existsSync(conf) || app.some(existsSync);
   let registrato = null;
@@ -215,9 +232,11 @@ export function linkObsidian(vault, file) {
 }
 
 /* ---------- leggere le lezioni ---------- */
-function mdSotto(dir, out = []) {
-  if (!existsSync(dir)) return out;
-  for (const n of readdirSync(dir)) { if (n.startsWith('.')) continue; const p = join(dir, n); const s = statSync(p); if (s.isDirectory()) mdSotto(p, out); else if (n.endsWith('.md')) out.push(p); }
+// le cartelle di sistema di Windows (cestino, System Volume Information) si saltano; una voce illeggibile non ferma la ricerca
+const DI_SISTEMA = /^(\$recycle\.bin|recycler|system volume information)$/i;
+function mdSotto(dir, out = [], radice = true) {
+  let nomi; try { nomi = readdirSync(dir); } catch { return out; }
+  for (const n of nomi) { if (n.startsWith('.') || (radice && DI_SISTEMA.test(n))) continue; const p = join(dir, n); let s; try { s = statSync(p); } catch { continue; } if (s.isDirectory()) mdSotto(p, out, false); else if (n.endsWith('.md')) out.push(p); }
   return out;
 }
 export function lezioni(vault) {
@@ -250,15 +269,18 @@ export function memoria(vault, testo) {
 
 /* ---------- guardare il vault ---------- */
 export function guarda(vault, { lezioniCambiate, orarioCambiato, noteCambiate }) {
-  let t1 = 0, ultimoOrario = null;
+  let t1 = 0, t2 = 0, ultimoOrario = null;
   const segnaOrario = testo => { ultimoOrario = testo; };
+  const orario = () => { try { const t = readFileSync(join(vault, 'Orario.md'), 'utf8'); if (t !== ultimoOrario) { ultimoOrario = t; orarioCambiato(M.leggiOrario(t)); } } catch { } };
   let w;
   try {
     w = watch(vault, { recursive: true }, (_, nome) => {
-      const n = String(nome || '').split(sep).join('/');
+      // Windows: con tanti cambi insieme (OneDrive, git, uno zip) il nome si perde: può essere cambiato tutto, si rilegge tutto
+      if (!nome) { clearTimeout(t1); t1 = setTimeout(lezioniCambiate, 300); clearTimeout(t2); t2 = setTimeout(() => { orario(); noteCambiate(); }, 300); return; }
+      const n = String(nome).split(sep).join('/');
       if (!n.endsWith('.md') || n.includes('.tmp-')) return;
       if (n.startsWith('Lezioni/')) { clearTimeout(t1); t1 = setTimeout(lezioniCambiate, 300); }
-      else if (n === 'Orario.md') setTimeout(() => { try { const t = readFileSync(join(vault, 'Orario.md'), 'utf8'); if (t !== ultimoOrario) { ultimoOrario = t; orarioCambiato(M.leggiOrario(t)); } } catch { } }, 200);
+      else if (n === 'Orario.md') setTimeout(orario, 200);
       else if (n === 'Lode/Memoria.md') setTimeout(noteCambiate, 200);
     });
   } catch (e) { console.warn('Lode: non riesco a guardare il vault', e.message); }

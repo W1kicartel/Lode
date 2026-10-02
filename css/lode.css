@@ -200,8 +200,9 @@
 .ld-pill.sosta .ld-avanza i{background:rgba(255,255,255,.45);box-shadow:none}
 .ld-rombo.ld-cavo{background:transparent;box-shadow:inset 0 0 0 1.2px var(--ld-tenue)}
 
-/* il pannello scorre quando la conversazione è più alta della finestra */
-.ld-corpo{max-height:calc(100vh - 20px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent}
+/* il pannello scorre quando la conversazione è più alta della finestra. Su Windows la barra di scorrimento occupa spazio:
+   lo teniamo sempre, sui due lati (resta centrato), così il contenuto non salta. Sul Mac la barra non occupa spazio: niente cambia */
+.ld-corpo{max-height:calc(100vh - 20px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent;scrollbar-gutter:stable both-edges}
 .ld-riga.urg .n{font-weight:600}
 .ld-riga.vuota .btn{min-width:84px}
 .ld-strumenti .btn{position:relative}
@@ -301,7 +302,7 @@
 .ld-conf dl{margin:0;display:grid;grid-template-columns:72px minmax(0,1fr);row-gap:5px;column-gap:12px;font-size:13.5px}
 .ld-conf dt{color:var(--muted)}
 .ld-conf dd{margin:0}
-.ld-proposte{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;max-height:280px;overflow-y:auto;scrollbar-width:thin}
+.ld-proposte{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;max-height:280px;overflow-y:auto;scrollbar-width:thin;scrollbar-gutter:stable}
 .ld-proposte li{display:flex;flex-direction:column;gap:1px;padding:8px 0;border-top:1px solid var(--ld-riga);font-size:13px}
 .ld-proposte li b{font-weight:600}
 .ld-proposte li span{color:var(--muted)}
@@ -463,7 +464,7 @@ button.ld-trascrivi:focus-visible{outline:2px solid var(--ink)}
 .ld-rec{flex:none;width:10px;height:10px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--ink)}
 .ld-trascrivi.on .ld-rec,.ld-live.rec{background:var(--ink);box-shadow:none}
 @media (prefers-reduced-motion:no-preference){.ld-trascrivi.on .ld-rec,.ld-live.rec{animation:ld-respira 1.6s var(--morbido) infinite}}
-.ld-anteprima{max-height:240px;overflow-y:auto;padding:10px 12px;border-radius:9px;background:rgba(255,255,255,.03);font-size:13px;line-height:1.5;color:rgba(245,245,245,.88);scrollbar-width:thin}
+.ld-anteprima{max-height:240px;overflow-y:auto;padding:10px 12px;border-radius:9px;background:rgba(255,255,255,.03);font-size:13px;line-height:1.5;color:rgba(245,245,245,.88);scrollbar-width:thin;scrollbar-gutter:stable}
 
 /* ---------- la zona dove lasciare i file: la pillola si allarga ---------- */
 .ld-zona{position:absolute;inset:0;z-index:8;display:grid;place-items:center;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .25s var(--morbido),visibility 0s .25s}

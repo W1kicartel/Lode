@@ -9,11 +9,30 @@ import * as V from './vault.js';
 import * as O from './orecchio.js';
 
 let R = null;
+let sospese = [], scrivendo = null, tRiprova = 0;   // righe trascritte che non sono ancora entrate nella nota
 const avvisa = () => dispatchEvent(new CustomEvent('lode:trascrizione', { detail: stato() }));
 export const attiva = () => !!R;
 export const occupata = () => !!R?.lavora;
-export const stato = () => R ? { lezione: R.lezione, inizio: R.inizio, parole: R.parole, righe: R.righe, ultima: R.ultima, inPausa: R.inPausa, coda: R.coda.length, minuti: Math.round((Date.now() - R.inizio - R.pausaTot) / 60000) } : null;
+export const stato = () => R ? { lezione: R.lezione, inizio: R.inizio, parole: R.parole, righe: R.righe, ultima: R.ultima, inPausa: R.inPausa, coda: R.coda.length, sospese: sospese.length, minuti: Math.round((Date.now() - R.inizio - R.pausaTot) / 60000) } : null;
 const ora = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+const attendi = ms => new Promise(r => setTimeout(r, ms));
+
+// la nota a volte è occupata (su Windows OneDrive, l'antivirus o Obsidian la tengono aperta): si riprova un attimo
+const riprova = async (fn, volte = 4) => { for (let i = 1; ; i++) { try { return await fn(); } catch (e) { if (i >= volte) throw e; await attendi(400 * i); } } };
+// scrive in ordine le righe in attesa; se proprio non va restano in memoria e si riprova fra poco: nessuna riga si perde
+async function svuota() {
+  clearTimeout(tRiprova);
+  // a gruppi per lezione: una nota che non si scrive (bloccata) non ferma quelle delle altre lezioni
+  const lezioni = [...new Set(sospese.map(x => x.lezione))]; let fallite = 0, errore = null;
+  for (const l of lezioni) {
+    const righe = sospese.filter(x => x.lezione === l);
+    try { await riprova(() => V.annota('trascrizione', righe.map(x => x.riga).join('\n'), { lezione: l, grezza: true })); sospese = sospese.filter(x => !righe.includes(x)); }
+    catch (e) { fallite++; errore = e; }
+  }
+  if (!fallite) return true;
+  console.warn('Lode: righe non ancora salvate, riprovo fra poco', errore); tRiprova = setTimeout(scrivi, 15000); avvisa(); return false;
+}
+async function scrivi() { if (scrivendo) return scrivendo; scrivendo = svuota(); try { return await scrivendo; } finally { scrivendo = null; } }
 
 // i pezzi si trascrivono uno alla volta, in ordine, mentre la lezione continua
 async function lavora() {
@@ -24,10 +43,11 @@ async function lavora() {
       const testo = await Voce.trascriviAudio(audio);
       if (testo && R) {
         const riga = `**${ora(quando)}** ${parlatoInFormule(testo)}`;
-        await V.annota('trascrizione', riga, { lezione: R.lezione, grezza: true });
+        sospese.push({ lezione: R.lezione, riga });
         R.parole += testo.split(/\s+/).length; R.righe++; R.ultima = riga;
       }
     } catch (e) { console.warn('Lode: pezzo non trascritto', e); }
+    if (sospese.length) await scrivi();
     R?.coda.shift(); avvisa();
   }
   if (R) R.lavora = false;
@@ -60,7 +80,9 @@ export async function avvia(lezione, { audioProva } = {}) {
   R = { lezione, inizio: Date.now(), parole: 0, righe: 0, ultima: '', coda: [], inPausa: false, pausaTot: 0, pausaDa: 0 };
   const seg = segmentatore((audio, quando) => { R?.coda.push({ audio, quando }); lavora(); avvisa(); });
   R.seg = seg;
-  await V.annota('trascrizione', `%% Trascrizione automatica di Lode, iniziata alle ${ora(new Date())}. Le formule dette a voce sono in LaTeX. %%`, { lezione, grezza: true });
+  await scrivi();   // prima le righe rimaste indietro dalla volta scorsa
+  // se la nota non si scrive nemmeno adesso, meglio dirlo subito, prima che il prof cominci
+  try { await riprova(() => V.annota('trascrizione', `%% Trascrizione automatica di Lode, iniziata alle ${ora(new Date())}. Le formule dette a voce sono in LaTeX. %%`, { lezione, grezza: true })); } catch (e) { R = null; throw e; }
   if (audioProva) {   // prove: l'audio arriva da un file invece che dal microfono, più veloce del tempo reale
     for (let i = 0; i < audioProva.length && R; i += 2048) { seg.aggiungi(audioProva.subarray(i, i + 2048)); if (i % (2048 * 64) === 0) await new Promise(r => setTimeout(r, 0)); }
     avvisa(); return stato();
@@ -76,9 +98,10 @@ export function riprendi() { if (!R || !R.inPausa) return; R.inPausa = false; R.
 export async function ferma() {
   if (!R) return null;
   R.spegni?.(); R.seg.fine(); R.inPausa = true;
-  while (R.coda.length || R.lavora) await new Promise(r => setTimeout(r, 200));
+  while (R.coda.length || R.lavora) await attendi(200);
   const fatto = { ...stato(), minuti: Math.max(1, Math.round((Date.now() - R.inizio - R.pausaTot) / 60000)) };
-  await V.annota('trascrizione', `%% Fine della trascrizione alle ${ora(new Date())}: ${fatto.parole} parole. %%`, { lezione: R.lezione, grezza: true });
+  sospese.push({ lezione: R.lezione, riga: `%% Fine della trascrizione alle ${ora(new Date())}: ${fatto.parole} parole. %%` });
+  await scrivi(); fatto.sospese = sospese.length;   // se restano righe in attesa, si riprova da sole
   R = null; avvisa();
   return fatto;
 }

@@ -19,9 +19,11 @@ export const VUOTO = () => ({
 export const DESKTOP = typeof window !== 'undefined' && !!window.lodeDesktop;
 const chiaveLocale = () => { try { return localStorage.getItem('lode:chiave') || ''; } catch { return ''; } };
 function unisci(d) { return d && d.v === 1 ? { ...VUOTO(), ...d, profilo: { ...VUOTO().profilo, ...d.profilo }, imp: { ...VUOTO().imp, ...d.imp } } : null; }
+// i dati non si sono potuti leggere (non «non ci sono»: OneDrive offline, file bloccato): Lode lo dice e non li sovrascrive
+export let datiIllegibili = null;
 function carica() {
   let d = null;
-  try { d = unisci(DESKTOP ? window.lodeDesktop.leggiDati() : JSON.parse(localStorage.getItem(CHIAVE))); } catch { }
+  try { const g = DESKTOP ? window.lodeDesktop.leggiDati() : JSON.parse(localStorage.getItem(CHIAVE)); if (g?.__errore) datiIllegibili = g.__errore; d = unisci(g); } catch { }
   d ||= VUOTO();
   if (DESKTOP) d.imp.chiave = chiaveLocale();
   return d;
@@ -38,7 +40,7 @@ export function salva() {
   dispatchEvent(new CustomEvent('lode:dati'));
 }
 // un'altra finestra dell'app (o un altro computer, via vault sincronizzato) ha cambiato i dati
-if (DESKTOP) window.lodeDesktop.su('dati:cambiati', d => { const n = unisci(d); if (!n) return; n.imp.chiave = D.imp.chiave; D = n; dispatchEvent(new CustomEvent('lode:dati')); });
+if (DESKTOP) window.lodeDesktop.su('dati:cambiati', d => { const n = unisci(d); if (!n) return; n.imp.chiave = D.imp.chiave; D = n; datiIllegibili = null; dispatchEvent(new CustomEvent('lode:dati')); });
 export function sostituisci(nuovi) { D = { ...VUOTO(), ...nuovi, profilo: { ...VUOTO().profilo, ...nuovi.profilo }, imp: { ...VUOTO().imp, ...nuovi.imp, chiave: D.imp.chiave } }; salva(); }
 // la chiave AI non esce mai in un'esportazione
 export function esporta() { const c = structuredClone(D); c.imp.chiave = ''; return c; }
