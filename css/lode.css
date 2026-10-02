@@ -558,3 +558,4 @@ button.ld-ripeti-riga:hover{background:rgba(255,255,255,.06)}
 .ld-esito-r.e-giusta em{background:var(--ink);color:#000}
 .ld-esito-r.e-parziale em{box-shadow:inset 0 0 0 1px var(--ink);background:none;color:var(--ink)}
 .ld-ripassa{margin:6px 0 10px;padding-left:18px;font-size:13px;line-height:1.5}
+.ld-contesta{margin:6px 0 0 22px}

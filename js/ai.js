@@ -377,6 +377,7 @@ Risposta dello studente: «${risposta}»
 Giudica SOLO questa risposta a QUESTA domanda:
 - esito: «giusta» (completa e corretta), «parziale» (quello che dice è corretto ma è incompleto o vago), «sbagliata» (contiene almeno un'affermazione falsa), «fuori tema» (parla d'altro rispetto alla domanda, anche se quello che dice è vero), «non so» (lo studente non sa o non risponde);
   se non c'è niente di falso ma manca qualcosa, è «parziale», non «sbagliata»;
+  una risposta corretta detta con parole diverse dal materiale, o con un metodo equivalente (per esempio gli autovalori al posto dei segni dei minori), è «giusta»: non pretendere la formulazione del materiale e non chiedere cose che la domanda non chiede;
 - giudizio: una frase rivolta allo studente (dagli del tu), massimo 25 parole, concreta: cosa era giusto, cosa no;
 - mancava: la cosa più importante che mancava o andava corretta, massimo 20 parole, SOLO se è scritta nel materiale qui sopra; altrimenti stringa vuota.
 Usa il materiale qui sopra come riferimento. Non inventare ipotesi o condizioni di cui non sei sicuro: meglio dire meno.`, materialeOrale(materiale), SCHEMA_GIUDIZIO, 'chat');
