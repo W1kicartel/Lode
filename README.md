@@ -6,7 +6,7 @@ Lode è una piccola pillola di vetro nero in cima allo schermo. Mentre sei a lez
 
 ![«Ripeti»: gli ultimi 60 secondi del prof, con l'ultima frase in evidenza](docs/immagini/ripeti.jpg)
 
-> **Stato: beta.** Funziona ed è provato, ma su un computer solo, un Mac con chip Apple. Non c'è ancora un installer da scaricare: si installa dal codice in cinque minuti (vedi sotto). Windows e Linux non sono ancora stati provati.
+> **Stato: beta.** Funziona su **Windows, macOS e Linux**, ma finora è stato provato a fondo solo su un Mac con chip Apple. Il codice per Windows c'è tutto (installazione di Obsidian e dell'AI, scorciatoie, voce), però non l'abbiamo ancora provato su un PC vero: se lo provi, [raccontaci com'è andata](https://github.com/W1kicartel/Lode/issues). Non c'è ancora un installer da scaricare: si installa dal codice in pochi minuti (vedi sotto).
 
 ---
 
@@ -44,7 +44,7 @@ Trascina un file sulla pillola, anche chiusa: si allarga e ti chiede *cosa ne fa
 ![Il gioco: abbina ogni termine alla sua definizione](docs/immagini/gioco.jpg)
 
 ### Parli come parli
-Nessun comando da imparare. Scrivi, o tieni premuto ⌥ Spazio e parla:
+Nessun comando da imparare. Scrivi, oppure tieni premuto ⌥ Spazio (Ctrl+Shift+Spazio su Windows) e parla:
 
 ```
 ho preso 28 in fisica 2
@@ -61,12 +61,62 @@ spiegami il teorema di Green
 
 ## Installazione
 
-### Cosa serve
-- **Un Mac con chip Apple (M1 o successivi) e almeno 8 GB di memoria.** È la configurazione provata. Windows e Linux dovrebbero funzionare con la voce Whisper al posto di Parakeet, ma non sono ancora stati provati.
-- **Circa 5 GB liberi:** Obsidian circa 230 MB, l'AI locale circa 3,5 GB, la voce circa 470 MB.
-- **[Node.js](https://nodejs.org) 20 o successivo** e **git.** Sul Mac git arriva con gli strumenti di Apple (passo 1).
+Scegli il tuo sistema: [Windows](#windows) · [Mac](#mac) · [Linux](#linux). Ti servono circa **5 GB liberi**: Obsidian circa 300 MB, l'AI locale circa 3,5 GB, la voce dai 200 ai 600 MB.
 
-### Passo per passo (Mac)
+### Windows
+
+**Cosa serve:** Windows 10 o 11 a 64 bit, almeno 8 GB di memoria (16 GB consigliati per l'AI locale).
+
+1. **Apri PowerShell.** Tasto Windows, scrivi «PowerShell», Invio.
+
+2. **Installa Node.js e Git** (una volta sola):
+   ```powershell
+   winget install OpenJS.NodeJS.LTS
+   ```
+   ```powershell
+   winget install Git.Git
+   ```
+   Poi **chiudi e riapri PowerShell**, così vede i programmi nuovi. Se `winget` non c'è, scaricali a mano da [nodejs.org](https://nodejs.org) (versione «LTS») e [git-scm.com](https://git-scm.com/download/win).
+
+3. **Scarica Lode e avvialo:**
+   ```powershell
+   git clone https://github.com/W1kicartel/Lode.git
+   ```
+   ```powershell
+   cd Lode\desktop
+   ```
+   ```powershell
+   npm install
+   ```
+   ```powershell
+   npm start
+   ```
+
+4. **La configurazione guidata** si apre da sola. Ti chiede come ti chiami e con un clic installa **Obsidian**, l'**AI locale** (Ollama + Qwen3.5) e la **voce** (Whisper). Il vault con i tuoi appunti nasce in `Documenti\Lode`. La pillola compare in cima allo schermo; l'icona di Lode è vicino all'orologio, nell'area di notifica.
+
+5. **Il microfono.** Se la voce non sente niente: *Impostazioni → Privacy e sicurezza → Microfono* e attiva «Consenti alle app desktop di accedere al microfono».
+
+**Su Windows cambia questo:**
+
+| | Windows |
+|---|---|
+| Voce, Ripeti, trascrizione | **Whisper** (base o small, in base al computer), dentro l'app. Parakeet per ora è solo su Mac. |
+| Scorciatoie | **Ctrl+Shift+Spazio** tenuto premuto per parlare. Poi Ctrl+Alt+P Ripeti, Ctrl+Alt+R trascrivi, Ctrl+Alt+S/D/Q cattura. |
+| AI locale | Va bene con una scheda video NVIDIA o AMD. Senza scheda video funziona lo stesso, ma è lenta: le carte da un PDF possono richiedere qualche minuto (intanto puoi chiudere il pannello e continuare). Se il computer è debole, puoi collegare la tua AI (vedi sotto). |
+| Condividere una sbobina | Lode apre la cartella con i file, da mandare come vuoi (WhatsApp Web, Drive, mail). Sul Mac c'è il menu Condividi. |
+
+**Se qualcosa non va su Windows:**
+- **`npm` dà «impossibile caricare il file… l'esecuzione di script è disabilitata»:** PowerShell blocca gli script. Una volta sola:
+  ```powershell
+  Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+  ```
+  oppure usa `npm.cmd install` e `npm.cmd start`.
+- **La pillola non risponde alle scorciatoie:** un altro programma usa le stesse combinazioni (per esempio alcune utility di schede video o di tastiera). Chiudilo, oppure usa la pillola col mouse.
+- **Windows Defender chiede il permesso** per Ollama o Obsidian: sono gli installer ufficiali, scaricati dai loro siti.
+
+### Mac
+
+**Cosa serve:** macOS con chip Apple (M1 o successivi) e almeno 8 GB di memoria. Funziona anche sui Mac Intel, con Whisper al posto di Parakeet.
 
 1. **Gli strumenti di Apple.** Servono per git e per la voce Parakeet. Apri il Terminale e scrivi:
    ```bash
@@ -103,35 +153,47 @@ spiegami il teorema di Green
 
 7. **Il microfono.** La prima volta che usi la voce, Ripeti o la trascrizione, macOS chiede il permesso: concedilo. Se l'hai negato, si riattiva da *Impostazioni di Sistema → Privacy e sicurezza → Microfono*.
 
-### Aggiornare
-```bash
-cd Lode
-git pull
-bash desktop/voce-mac/compila.sh
-cd desktop
-npm install
-```
-
-### Se qualcosa non va
+**Se qualcosa non va sul Mac:**
 - **`npm install` dà `EACCES`:** la cartella della cache di npm appartiene a root (un vecchio difetto di npm). Si sistema con:
   ```bash
   sudo chown -R $(id -u):$(id -g) ~/.npm
   ```
 - **`compila.sh` si ferma con errori su `PackageDescription` o `SwiftBridging`:** sono due difetti noti dei Command Line Tools 16.4 di Apple. Lo script li aggira da solo. Se fallisce comunque, aggiorna gli strumenti di Apple (passo 1) e riprova.
 - **La prima trascrizione con Parakeet ci mette circa 45 secondi:** il Mac sta preparando il modello per il Neural Engine. Succede una volta sola.
-- **L'AI locale è lenta:** con 8 GB di memoria Qwen3.5 4B scrive circa 20 parole al secondo. Le carte da un PDF richiedono circa mezzo minuto.
 
-### Disinstallare
-Cancella la cartella `Lode`. I tuoi appunti restano in `Documenti/Lode`: sono tuoi. Obsidian e Ollama sono app normali, si tolgono dalla cartella Applicazioni. Il modello si toglie con `ollama rm qwen3.5:4b`.
+### Linux
 
-### Solo nel browser (senza installare)
-Per provare libretto, conti, timer, ripasso e giochi senza installare niente:
+**Cosa serve:** una distribuzione a 64 bit recente, Node.js 20 o successivo e git (dal gestore pacchetti).
+
+1. **Ollama** su Linux si installa con lo script ufficiale, da [ollama.com/download/linux](https://ollama.com/download/linux). Lode installa da sé Obsidian (AppImage) e il modello.
+2. **Scarica Lode e avvialo:**
+   ```bash
+   git clone https://github.com/W1kicartel/Lode.git
+   cd Lode/desktop
+   npm install
+   npm start
+   ```
+3. La voce è Whisper e le scorciatoie sono quelle di Windows. Le finestre trasparenti e le scorciatoie globali dipendono dal desktop (GNOME, KDE…): su Wayland alcune potrebbero non funzionare. Raccontaci com'è andata.
+
+### Per tutti
+
+**Quanto è veloce l'AI locale.** Dipende dal computer. Su un Mac con 8 GB, Qwen3.5 4B scrive circa 20 parole al secondo e le carte da un PDF arrivano in circa mezzo minuto. Su un portatile senza scheda video ci mette di più.
+
+**Aggiornare.** Dalla cartella `Lode`:
 ```bash
-python3 -m http.server 5173
+git pull
+cd desktop
+npm install
+```
+Sul Mac, dopo l'aggiornamento, rilancia anche `bash desktop/voce-mac/compila.sh` dalla cartella `Lode`.
+
+**Disinstallare.** Cancella la cartella `Lode`. I tuoi appunti restano in `Documenti/Lode`: sono tuoi. Obsidian e Ollama sono programmi normali e si disinstallano come gli altri. Il modello si toglie con `ollama rm qwen3.5:4b`.
+
+**Solo nel browser, senza installare.** Per provare libretto, conti, timer, ripasso e giochi, dalla cartella `Lode`:
+```bash
+npx --yes http-server -p 5173
 ```
 poi apri http://localhost:5173: segui la configurazione oppure, per vederlo pieno in un attimo, premi «Esempio» nella barra. Voce, trascrizione, Ripeti, Obsidian e AI locale sono solo nell'app.
-
----
 
 ## L'AI: gratis di base, potenziabile con la tua chiave
 
@@ -184,17 +246,17 @@ Lode non ha un server e non addestra modelli: **la sua memoria è il tuo vault**
 4. **L'AI legge tutto questo** quando le chiedi qualcosa: le spiegazioni e l'orale sono sul *tuo* corso, con le parole del *tuo* prof.
 5. **Le pagine Home, Esami, Glossario e dei corsi** si aggiornano da sole. Lode scrive solo dentro i suoi riquadri, il resto è tuo.
 
-## Scorciatoie (Mac)
+## Scorciatoie
 
-| | |
-|---|---|
-| ⌥ Spazio (tieni premuto) | parla |
-| ⌃⌥ Spazio | scrivi |
-| ⌃⌥P | Ripeti |
-| ⌃⌥R | trascrivi la lezione / fine |
-| ⌃⌥S · ⌃⌥D · ⌃⌥Q | ★ da esame · definizione · domanda |
-| ⌃⌥G | gioco |
-| Esc | indietro, poi chiudi |
+| | Mac | Windows e Linux |
+|---|---|---|
+| parla (tieni premuto) | ⌥ Spazio | Ctrl+Shift+Spazio |
+| scrivi | ⌃⌥ Spazio | Ctrl+Alt+Spazio |
+| Ripeti | ⌃⌥P | Ctrl+Alt+P |
+| trascrivi la lezione / fine | ⌃⌥R | Ctrl+Alt+R |
+| ★ da esame · definizione · domanda | ⌃⌥S · ⌃⌥D · ⌃⌥Q | Ctrl+Alt+S · D · Q |
+| gioco | ⌃⌥G | Ctrl+Alt+G |
+| indietro, poi chiudi | Esc | Esc |
 
 ---
 
@@ -208,7 +270,7 @@ node --experimental-vm-modules test/unita.mjs
 node test/prova-app.mjs
 ```
 - `test/unita.mjs` controlla comandi, formule, note e conti: 45 prove.
-- `test/prova-app.mjs` fa il giro completo dell'app su un vault temporaneo, senza toccare i tuoi dati: 57 prove. Funziona solo su macOS: le frasi «parlate» le genera la voce di sistema e l'audio va direttamente al motore, senza altoparlanti né microfono.
+- `test/prova-app.mjs` fa il giro completo dell'app su un vault temporaneo, senza toccare i tuoi dati: 57 prove. Per ora gira solo su macOS (su Windows e Linux manca la voce di sistema per generare l'audio delle prove; contributi benvenuti): le frasi «parlate» le genera la voce di sistema e l'audio va direttamente al motore, senza altoparlanti né microfono.
 
 **Pacchetti** (sperimentali, non ancora firmati): `cd desktop`, poi `npm run dist:mac`, `dist:win` oppure `dist:linux`.
 
@@ -238,7 +300,8 @@ Design: solo bianco e nero, font [Geist](https://github.com/vercel/geist-font), 
 
 ## Cosa manca (cerco mani)
 - [ ] Installer firmato per macOS e Windows
-- [ ] Prove vere su Windows e Linux; Parakeet anche lì (versione ONNX)
+- [ ] Prove vere su Windows e Linux, e la prova automatica dell'app anche lì
+- [ ] Parakeet anche su Windows e Linux (versione ONNX, gira sul processore)
 - [ ] Prove in aule vere: rumore, distanza, accenti
 - [ ] Sincronizzazione facoltativa fra dispositivi, cifrata
 - [ ] Esportazione dei mazzi per Anki
