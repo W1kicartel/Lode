@@ -1,7 +1,8 @@
 # Le prove di Lode sulle macchine di GitHub (gratis per i repository pubblici):
 # - prove unitarie su Windows, Linux e macOS;
-# - la prova completa dell'app desktop su Windows: installa davvero Obsidian, Ollama + il modello e la voce con gli
-#   installer di Lode, poi usa la barra come uno studente. Risultati e foto della barra vanno nel ramo «risultati-windows».
+# - la prova completa dell'app desktop su Windows (a richiesta: «Run workflow» o «[windows]» nel messaggio del commit):
+#   installa davvero Obsidian, Ollama + il modello e la voce con gli installer di Lode, poi usa la barra come uno studente.
+#   Risultati e foto della barra vanno nel ramo «risultati-windows».
 name: Prove
 
 on:
@@ -29,6 +30,8 @@ jobs:
 
   app-windows:
     name: App completa su Windows
+    # lunga (30-40 minuti): solo a richiesta, col pulsante «Run workflow» o con «[windows]» nel messaggio del commit
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[windows]')
     runs-on: windows-latest
     timeout-minutes: 120
     steps:
