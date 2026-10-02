@@ -1,7 +1,7 @@
 @font-face{font-family:"Geist";src:url(../fonts/Geist-Variable.woff2) format("woff2");font-weight:100 900;font-display:swap}
 @font-face{font-family:"Geist Mono";src:url(../fonts/GeistMono-Variable.woff2) format("woff2");font-weight:100 900;font-display:swap}
 
-/* Bianco e nero, come il gestionale da cui nasce. Nero è l'aspetto predefinito; data-aspetto="chiaro" lo inverte.
+/* Bianco e nero. Nero è l'aspetto predefinito; data-aspetto="chiaro" lo inverte.
    Niente tinte: gli stati si leggono da pieno/vuoto, luminosità e peso. */
 :root{
   --bg:#0A0A0A; --paper:#111111; --ink:#F5F5F5; --muted:#A1A1A1; --tenue:#6E6E6E; --line:#222222;

@@ -53,7 +53,7 @@ export function premi(b) {
 export function conta(el, a, fmt, { ms = 900, ritardo = 60 } = {}) { return tween(ms, e => { el.textContent = fmt(a * e); }, { ritardo }); }
 export function h(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
 
-// luce che segue il cursore sulle superfici (come movimento.js del gestionale)
+// luce che segue il cursore sulle superfici
 const LUCE = '.blocco,.esame,.btn,.ld-scheda,.stat';
 const mouse = matchMedia('(hover: hover) and (pointer: fine)');
 let ultimo = null, r2 = 0;

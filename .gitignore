@@ -8,5 +8,31 @@ desktop/voce-mac/build/
 desktop/voce-mac/build-log.txt
 desktop/voce-mac/prova/*.wav
 desktop/voce-mac/prova/*.aiff
-desktop/voce-mac/Package.resolved
 desktop/bin/
+# le librerie della barra copiate da desktop/node_modules (desktop/vendor.mjs): si rigenerano, il .wasm pesa ~21 MB
+/vendor/
+# segreti: mai nel repository (electron-builder legge da solo .env ed electron-builder.env, con GH_TOKEN e le password
+# dei certificati). I certificati per la firma stanno nei segreti di GitHub (docs/FIRMA.md), non qui
+.env
+.env.*
+!.env.example
+**/electron-builder.env
+*.p12
+*.pfx
+*.pem
+*.key
+*.cer
+# editor: Xcode crea .swiftpm/ e xcuserdata/<nome-utente> aprendo Package.swift; VS Code e IntelliJ salvano percorsi locali
+.swiftpm/
+xcuserdata/
+.vscode/
+.idea/
+node_modules/
+# Windows
+Thumbs.db
+desktop.ini
+# un vault di prova dentro il repository (LODE_VAULT): .lode/ ha voti, appunti e statistiche
+.lode/
+# foto e risultati delle prove (LODE_FOTO, LODE_RISULTATI): meglio fuori dal repository; il «registro» ha i percorsi della macchina
+/foto/
+/risultati*.json

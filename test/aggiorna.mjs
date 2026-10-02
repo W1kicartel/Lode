@@ -359,6 +359,32 @@ prova('rilascio.yml: Azure Trusted Signing solo con i segreti', /azureSignOption
 prova('rilascio.yml: i segreti del Mac non arrivano a Windows', /CSC_LINK: \$\{\{ matrix\.nome == 'mac' && secrets\.CSC_LINK \|\| '' \}\}/.test(RIL));
 const PROVE = readFileSync(join(RADICE, '.github', 'workflows', 'prove.yml'), 'utf8');
 prova('prove.yml: queste prove girano anche su GitHub', /node test\/aggiorna\.mjs/.test(PROVE));
+// il token di GitHub: di base legge e basta; scrive solo il job che pubblica, che non esegue npm né le build (né la prova
+// dell'app); il checkout non lo lascia in .git/config. Fine riga \n anche se Windows ha preso i file con \r\n, e senza le
+// righe di commento (raccontano le stesse parole: «persist-credentials: false», «--clobber», «npm»)
+const codice = t => t.replace(/\r\n/g, '\n').replace(/^\s*#.*\n/gm, '');
+const R = codice(RIL), P = codice(PROVE);
+const job = (t, nome) => { const i = t.indexOf(`\n  ${nome}:\n`); if (i < 0) return ''; const resto = t.slice(i + 1), j = resto.slice(1).search(/\n  [\w-]+:\n/); return j < 0 ? resto : resto.slice(0, j + 1); };
+const quante = (t, re) => (t.match(re) || []).length;
+prova('rilascio.yml e prove.yml: il token di base può solo leggere', /^permissions:\n  contents: read$/m.test(R) && /^permissions:\n  contents: read$/m.test(P));
+prova('rilascio.yml: scrive solo «pubblica»', quante(R, /contents: write/g) === 1 && /contents: write/.test(job(R, 'pubblica')) && !/npm |electron-builder|swift build/.test(job(R, 'pubblica')));
+prova('prove.yml: scrive solo «risultati-windows», senza checkout né npm', quante(P, /contents: write/g) === 1 && /contents: write/.test(job(P, 'risultati-windows')) && !/actions\/checkout|npm |node /.test(job(P, 'risultati-windows')));
+prova('prove.yml: «risultati-windows» non parte quando la prova su Windows è saltata', /needs\.app-windows\.result != 'skipped'/.test(job(P, 'risultati-windows')));
+for (const [nome, t] of [['rilascio.yml', R], ['prove.yml', P]])
+  prova(`${nome}: ogni checkout con persist-credentials: false`, quante(t, /uses: actions\/checkout@/g) > 0 && quante(t, /uses: actions\/checkout@/g) === quante(t, /persist-credentials: false/g));
+// la Release: bozza → tutti i file (anche le impronte) → pubblica. Una già pubblicata non si sovrascrive (Release immutabili)
+const pubblica = job(R, 'pubblica'), at = s => pubblica.indexOf(s);
+prova('rilascio.yml: la Release nasce in bozza, riceve i file e poi si pubblica', at('--draft --verify-tag') > 0 && at('gh release upload') > at('--draft --verify-tag') && at('--draft=false') > at('gh release upload'));
+prova('rilascio.yml: una Release già pubblicata non si sovrascrive', /isDraft/.test(pubblica) && /già pubblicata[^\n]*exit 1/.test(pubblica) && quante(R, /--clobber/g) === 1);
+prova('rilascio.yml: SHA256SUMS.txt con le impronte, caricato con gli installer', /sha256sum -- \*\s*\) > SHA256SUMS\.txt/.test(pubblica) && /gh release upload [^\n]*SHA256SUMS\.txt/.test(pubblica));
+// FluidAudio (la voce del Mac, dentro il .dmg) fermo alla versione provata: Package.resolved nel repository, stessa versione
+// di Package.swift, e le build lo usano così com'è
+const VM = join(RADICE, 'desktop', 'voce-mac'), SW = readFileSync(join(VM, 'Package.swift'), 'utf8');
+const pin = existsSync(join(VM, 'Package.resolved')) ? JSON.parse(readFileSync(join(VM, 'Package.resolved'), 'utf8')).pins?.find(p => p.identity === 'fluidaudio')?.state : null;
+const esatta = SW.match(/FluidAudio\.git", exact: "([\d.]+)"/)?.[1];
+prova('voce Mac: FluidAudio con versione esatta, la stessa di Package.resolved', !!esatta && pin?.version === esatta && /^[0-9a-f]{40}$/.test(pin?.revision || ''), { esatta, pin });
+prova('voce Mac: Package.resolved non è ignorato da git', !/Package\.resolved/.test(readFileSync(join(RADICE, '.gitignore'), 'utf8')));
+prova('voce Mac: rilascio.yml e compila.sh usano solo Package.resolved', /swift build -c release --force-resolved-versions/.test(R) && /--force-resolved-versions/.test(readFileSync(join(VM, 'compila.sh'), 'utf8')));
 
 console.log(`aggiorna: ${ok} prove passate, ${ko} fallite`);
 process.exit(ko ? 1 : 0);

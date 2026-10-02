@@ -1,0 +1,6 @@
+# Quando si apre una issue, GitHub mostra prima questa scelta. La sicurezza va in privato (SECURITY.md).
+blank_issues_enabled: true
+contact_links:
+  - name: Problema di sicurezza
+    url: https://github.com/W1kicartel/Lode/security/advisories/new
+    about: Non in una issue pubblica. Segnalalo in privato, come spiegato in SECURITY.md.

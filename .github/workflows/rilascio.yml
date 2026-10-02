@@ -16,8 +16,14 @@
 # le note della Release dicono «firmato» solo se la build ha firmato davvero.
 # Un tag con il trattino (v0.4.0-beta.1) esce come prerelease: /releases/latest non la dà, e chi ha una versione finale
 # non se la vede proporre.
-# Parte con un tag «v…» uguale alla versione di desktop/package.json (git tag v0.3.0 && git push --tags) o col pulsante
-# «Run workflow» (bozza da controllare).
+# Parte con un tag «v…» uguale alla versione di desktop/package.json, su un commit già su main (git push, poi
+# git tag v0.4.0 && git push --tags) o col pulsante «Run workflow» (bozza da controllare).
+# La Release nasce in bozza, riceve tutti i file (installer, latest*.yml, .blockmap, .zip e SHA256SUMS.txt con le impronte
+# SHA-256) e solo alla fine diventa pubblica: è l'ordine che regge le Release immutabili (docs/FIRMA.md). Una Release già
+# pubblicata non si sovrascrive mai: per cambiare gli installer serve una versione nuova.
+# Il token di GitHub può solo leggere, tranne in «Pubblica la Release»: le build eseguono codice di altri (npm ci,
+# electron-builder, FluidAudio) e non devono poter toccare main, i tag o le Release già uscite. Il checkout non lascia il
+# token in .git/config (persist-credentials: false). FluidAudio è fermo alla versione di desktop/voce-mac/Package.resolved.
 name: Rilascio
 
 on:
@@ -26,7 +32,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   pacchetti:
@@ -42,6 +48,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -49,11 +57,13 @@ jobs:
           cache-dependency-path: desktop/package-lock.json
       - name: Voce Parakeet (solo Mac)
         if: matrix.nome == 'mac'
-        # se la compilazione non riesce l'installer esce lo stesso: sul Mac la voce resta Whisper
+        # se la compilazione non riesce l'installer esce lo stesso: sul Mac la voce resta Whisper.
+        # --force-resolved-versions: FluidAudio solo alla versione di Package.resolved (quella provata); se il file non
+        # combacia con Package.swift la build si ferma invece di prendere l'ultima uscita. compila.sh fa lo stesso
         continue-on-error: true
         working-directory: desktop/voce-mac
         run: |
-          swift build -c release || bash compila.sh
+          swift build -c release --force-resolved-versions || bash compila.sh
           mkdir -p ../bin && cp .build/release/lode-voce ../bin/lode-voce && file ../bin/lode-voce
       - name: Dipendenze
         working-directory: desktop
@@ -168,9 +178,13 @@ jobs:
     name: Pubblica la Release
     needs: pacchetti
     runs-on: ubuntu-latest
+    # l'unico job che scrive: crea la Release e carica i file. Non esegue npm né le build, solo i due controlli qui sotto
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
+          persist-credentials: false
           sparse-checkout: |
             desktop/aggiorna.mjs
             desktop/verifica-rilascio.mjs
@@ -203,6 +217,9 @@ jobs:
           FIRMA_MAC=$([ "$(cat firma/firma-mac.txt 2>/dev/null)" = notarizzato ] && echo si || true)
           FIRMA_WINDOWS=$([ "$(cat firma/firma-windows.txt 2>/dev/null)" = firmato ] && echo si || true)
           echo "Firma: Mac ${FIRMA_MAC:-no}, Windows ${FIRMA_WINDOWS:-no}"
+          # le impronte SHA-256 di tutti i file, calcolate su quelli che stanno per essere caricati (README, «Installa»)
+          ( cd installer && sha256sum -- * ) > SHA256SUMS.txt
+          cat SHA256SUMS.txt
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             TAG="${GITHUB_REF_NAME}"
             {
@@ -223,13 +240,32 @@ jobs:
                 if [ -n "$FIRMA_WINDOWS" ]; then echo "L'installer di Windows è firmato."; fi
                 echo "Quelli non firmati con un certificato a pagamento al primo avvio chiedono una conferma. Come fare, passo per passo: https://github.com/W1kicartel/Lode#installa"
               fi
+              echo
+              echo "Le impronte SHA-256 di tutti i file sono in \`SHA256SUMS.txt\` (GitHub le mostra anche accanto a ogni file). Come controllare l'installer scaricato: https://github.com/W1kicartel/Lode#installa"
             } > note.md
+            # il tag deve stare su main (lo stesso commit o uno più indietro): un tag su un commit fuori da main non pubblica.
+            # Difende dagli sbagli, non da chi può cambiare questo file nel commit del tag: per quello servono le regole sui
+            # tag nelle impostazioni del repository (docs/FIRMA.md)
+            DOVE=$(gh api "repos/${GH_REPO}/compare/main...${GITHUB_SHA}" --jq .status)
+            case "$DOVE" in
+              identical|behind) ;;
+              *) echo "::error::Il tag ${TAG} è su un commit che non sta su main (${DOVE}): fai prima git push di main, poi «Re-run failed jobs»"; exit 1 ;;
+            esac
             # v0.4.0-beta.1 e simili: prerelease, così /releases/latest (e quindi gli aggiornamenti) resta sulle versioni finali
             PRE=; case "$TAG" in *-*) PRE=--prerelease ;; esac
-            gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" $PRE --title "Lode ${TAG#v}" --notes-file note.md
-            gh release upload "$TAG" installer/* --clobber
+            # bozza → tutti i file → pubblica: con le Release immutabili attive, dopo la pubblicazione file e tag non
+            # cambiano più. Una Release già pubblicata non si tocca: niente installer diversi con lo stesso numero di versione
+            BOZZA=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null || echo nessuna)
+            case "$BOZZA" in
+              nessuna) gh release create "$TAG" $PRE --draft --verify-tag --title "Lode ${TAG#v}" --notes-file note.md ;;
+              true) echo "La bozza di ${TAG} c'è già (job rilanciato): i file con lo stesso nome si sostituiscono" ;;
+              *) echo "::error::La Release ${TAG} è già pubblicata: non la sovrascrivo. Per cambiare gli installer serve una versione nuova (desktop/package.json e un tag nuovo)"; exit 1 ;;
+            esac
+            # --clobber solo qui, dove la Release è di sicuro ancora una bozza: un job rilanciato rimette i suoi file
+            gh release upload "$TAG" installer/* SHA256SUMS.txt --clobber
+            gh release edit "$TAG" --draft=false
           else
             # dal pulsante: una bozza, da controllare prima di pubblicarla
             TAG="anteprima-${GITHUB_RUN_NUMBER}"
-            gh release create "$TAG" --draft --prerelease --target "${GITHUB_SHA}" --title "Anteprima ${GITHUB_RUN_NUMBER}" --notes "Installer di prova, non pubblicati." installer/*
+            gh release create "$TAG" --draft --prerelease --target "${GITHUB_SHA}" --title "Anteprima ${GITHUB_RUN_NUMBER}" --notes "Installer di prova, non pubblicati." installer/* SHA256SUMS.txt
           fi

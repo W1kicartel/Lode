@@ -17,6 +17,11 @@ const WEB = existsSync(join(QUI, 'web', 'index.html')) ? join(QUI, 'web') : join
 const MAC = process.platform === 'darwin', WIN = process.platform === 'win32';
 // Windows: lo stesso id dei collegamenti dell'installer (appId), per notifiche, barra delle applicazioni e avvio automatico
 if (WIN) app.setAppUserModelId(app.isPackaged ? 'it.lode.app' : process.execPath);
+// Gli agganci per le prove (LODE_PROVA, LODE_CONFERMA_AUTO, LODE_PROGETTO, LODE_VAULT, LODE_DATI, LODE_AUDIO_FINTO,
+// LODE_NON_APRIRE, LODE_QUADRO, LODE_AI_BASE e tutte le altre LODE_*) valgono solo in sviluppo (npm start, test/prova-app.mjs).
+// Nell'app installata si tolgono qui, prima che main.mjs o gli altri moduli le leggano: chi avvia Lode con variabili scelte
+// da lui non salta la finestra di conferma dei comandi, non sposta vault e dati, non fa eseguire script alla barra
+if (app.isPackaged) for (const k of Object.keys(process.env)) if (/^LODE_/i.test(k)) delete process.env[k];
 // per le prove: LODE_DATI e LODE_VAULT spostano configurazione e vault in una cartella a parte
 if (process.env.LODE_DATI) app.setPath('userData', process.env.LODE_DATI);
 if (process.env.LODE_AUDIO_FINTO) { app.commandLine.appendSwitch('use-fake-ui-for-media-stream'); app.commandLine.appendSwitch('use-fake-device-for-media-stream'); app.commandLine.appendSwitch('use-file-for-fake-audio-capture', process.env.LODE_AUDIO_FINTO + '%noloop'); }   // prove della voce
@@ -38,6 +43,15 @@ function posiziona() {
   const d = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()), a = d.workArea;
   barra.setBounds({ x: Math.round(a.x + a.width / 2 - LARGA / 2), y: a.y, width: LARGA, height: Math.min(780, a.height) });
 }
+// La finestra resta Lode: un link senza target nella pagina (anche un <a> messo ad arte in un .lode/dati.json di un vault
+// condiviso o sincronizzato) non la porta su un'altra pagina, che riceverebbe lo stesso preload e quindi window.lodeDesktop
+// (vault, progetti, installazioni). setWindowOpenHandler copre solo target=_blank e window.open: qui il resto. Le pagine
+// https vanno nel browser; passa solo la pagina stessa di Lode, lo stesso file:// con un'altra query o un altro # (il
+// ricaricamento di «Riprova», ?benvenuto=1 delle prove): un altro file del disco, anche nel vault, resta fuori
+const stessaPagina = (a, b) => { try { const x = new URL(a), y = new URL(b); return x.protocol === 'file:' && y.protocol === 'file:' && x.host === y.host && x.pathname === y.pathname; } catch { return false; } };
+function restaLode(w) {
+  w.webContents.on('will-navigate', (e, url) => { if (stessaPagina(url, w.webContents.getURL())) return; e.preventDefault(); if (/^https:/.test(url)) shell.openExternal(url); });
+}
 function creaBarra() {
   barra = new BrowserWindow({
     width: LARGA, height: 760, frame: false, transparent: true, resizable: false, movable: false, minimizable: false, maximizable: false,
@@ -52,6 +66,7 @@ function creaBarra() {
   barra.loadFile(join(WEB, 'index.html'));
   barra.once('ready-to-show', () => barra.showInactive());
   barra.webContents.setWindowOpenHandler(({ url }) => { if (/^https?:|^obsidian:/.test(url)) shell.openExternal(url); return { action: 'deny' }; });
+  restaLode(barra);
   barra.webContents.session.setPermissionRequestHandler((_, p, cb) => cb(['media', 'notifications', 'clipboard-sanitized-write'].includes(p)));
   // Alt+F4 (o Ctrl+W) non la distrugge: si richiude e basta. Se ne va solo uscendo da Lode
   barra.on('close', e => { if (!uscendo) { e.preventDefault(); rilascia(); } });
@@ -64,6 +79,7 @@ function apriQuadro() {
     webPreferences: { preload: join(QUI, 'preload.cjs'), contextIsolation: true, sandbox: true } });
   quadro.loadFile(join(WEB, 'index.html'), { query: { quadro: '1' } });
   quadro.webContents.setWindowOpenHandler(({ url }) => { if (/^https?:/.test(url)) shell.openExternal(url); return { action: 'deny' }; });
+  restaLode(quadro);
   if (MAC) app.dock?.show();
   quadro.on('closed', () => { quadro = null; if (MAC) app.dock?.hide(); });
 }
@@ -74,6 +90,8 @@ function apriBenvenuto() {
   benvenuto = new BrowserWindow({ width: 980, height: 760, minWidth: 420, minHeight: 600, title: 'Benvenuto in Lode', backgroundColor: '#0A0A0A', titleBarStyle: MAC ? 'hiddenInset' : 'default', show: false,
     webPreferences: { preload: join(QUI, 'preload.cjs'), contextIsolation: true, sandbox: true } });
   benvenuto.loadFile(join(WEB, 'index.html'), { query: { benvenuto: '1' } });
+  benvenuto.webContents.setWindowOpenHandler(({ url }) => { if (/^https?:/.test(url)) shell.openExternal(url); return { action: 'deny' }; });   // come il quadro: niente finestre nuove col preload
+  restaLode(benvenuto);
   benvenuto.once('ready-to-show', () => { benvenuto.show(); benvenuto.focus(); if (MAC) app.focus({ steal: true }); });
   if (MAC) app.dock?.show();
   benvenuto.on('closed', () => { benvenuto = null; if (MAC && !quadro) app.dock?.hide(); });
@@ -189,21 +207,32 @@ ipcMain.handle('vault:pulisciCorsi', (_, { nomi }) => {
   return tolte;
 });
 ipcMain.handle('vault:lezioni', () => V.lezioni(vault()));
-ipcMain.handle('vault:annota', (_, x) => V.annota(vault(), x));
+// i percorsi che arrivano dalla barra passano tutti da V.relativo (barre in «/», niente «..» né cartelle o file che
+// cominciano col punto, come .obsidian o .lode) e solo dopo dal controllo delle cartelle permesse: «Lezioni/../.obsidian/x»
+// non passa più. Le note di una lezione possono stare in sottocartelle (Lezioni/Corso/Esercitazioni/x.md)
+const NOTA_LEZIONE = /^(Lezioni|Corsi)\/(?:[^/.][^/]*\/)*[^/.][^/]*\.md$/;
+ipcMain.handle('vault:annota', (_, x) => {
+  const file = V.relativo(x?.file), corso = x?.corso?.file ? { ...x.corso, file: V.relativo(x.corso.file) } : null;
+  if (!NOTA_LEZIONE.test(file) || (corso && !NOTA_LEZIONE.test(corso.file))) throw new Error('file non permesso');
+  return V.annota(vault(), { ...x, file, corso });
+});
 ipcMain.handle('vault:scrivi', (_, { file, testo }) => {
+  file = V.relativo(file);
   if (!/^(Orario|Lode\/[\w ]+)\.md$/.test(file)) throw new Error('file non permesso');
   if (file === 'Orario.md') guardiano?.segnaOrario(testo);
   V.scriviSicuro(V.dentro(vault(), file), testo); return true;
 });
 // le pagine che Lode tiene aggiornate (Home, Esami, Glossario, corsi, navigazione delle lezioni, diari dei progetti): solo dentro i suoi segni
 ipcMain.handle('vault:blocco', (_, x) => {
+  x = { ...x, file: V.relativo(x?.file) };
   if (!/^(Home|Esami|Glossario)\.md$|^Corsi\/[^/]+\.md$|^Lezioni\/[^/]+\/[^/]+\.md$|^Progetti\/[^/]+\/[^/]+\.md$/.test(x.file)) throw new Error('file non permesso');
   return V.blocco(vault(), x);
 });
 ipcMain.handle('vault:note', () => V.note(vault()));
 // leggere una nota (per le sbobine) e salvare file nel vault: sbobine, allegati, materiali, sbobine ricevute, file per Anki
-ipcMain.handle('vault:leggi', (_, { file }) => { if (!/\.md$/.test(file)) throw new Error('solo note'); return readFileSync(V.dentro(vault(), file), 'utf8'); });
+ipcMain.handle('vault:leggi', (_, { file }) => { file = V.relativo(file); if (!/\.md$/.test(file)) throw new Error('solo note'); return readFileSync(V.dentro(vault(), file), 'utf8'); });
 ipcMain.handle('vault:salvaFile', (_, { file, testo, dati, sostituisci = false }) => {
+  file = V.relativo(file);
   if (!/^(Sbobine|Allegati|Materiali|Lezioni|Anki)\//.test(file)) throw new Error('cartella non permessa');
   let p = V.dentro(vault(), file), rel = file;
   if (!sostituisci) for (let k = 2; existsSync(p); k++) { rel = file.replace(/(\.[a-z0-9]+)$/i, ` ${k}$1`); p = V.dentro(vault(), rel); }
@@ -213,14 +242,14 @@ ipcMain.handle('vault:salvaFile', (_, { file, testo, dati, sostituisci = false }
 });
 // mostrare un file del vault nella sua cartella (il file per Anki): solo dentro il vault, e nelle prove niente finestre
 ipcMain.handle('vault:mostra', (_, { file }) => {
-  const p = V.dentro(vault(), file);
+  const p = V.dentro(vault(), V.relativo(file));
   if (!existsSync(p)) throw new Error('il file non c\'è più');
   if (process.env.LODE_NON_APRIRE) return { esito: 'prova', percorso: p };
   shell.showItemInFolder(p); return { esito: 'cartella' };
 });
 // condividere: il menu Condividi di macOS (AirDrop, Messaggi, Mail, WhatsApp…), altrove la cartella con i file
 ipcMain.handle('condividi', (e, { files }) => {
-  const percorsi = files.map(f => V.dentro(vault(), f));
+  const percorsi = files.map(f => V.dentro(vault(), V.relativo(f)));
   const w = BrowserWindow.fromWebContents(e.sender);
   if (process.env.LODE_NON_APRIRE) return { esito: 'prova', percorsi };   // prove: niente menu sullo schermo
   if (MAC) { new ShareMenu({ filePaths: percorsi }).popup({ window: w }); return { esito: 'menu' }; }
@@ -283,11 +312,21 @@ ipcMain.handle('locale:chat', async (e, { id, messaggi, formato, modello }) => {
 });
 // l'AI dello studente (la sua chiave, il servizio che preferisce): le chiamate passano da qui, niente limiti CORS.
 // Formato OpenAI (ChatGPT, Gemini, Mistral, Groq, OpenRouter, DeepSeek). La chiave non viene mai salvata qui.
+// La barra manda solo l'id del servizio: la base la sceglie il main dall'elenco di js/fornitori.js (lo stesso della barra),
+// così una barra compromessa non può far chiamare al main indirizzi suoi (rete locale, localhost). Nelle prove, solo in
+// sviluppo, LODE_AI_BASE sostituisce la base (il server di Ollama in formato OpenAI)
+let FORN = null;
+async function baseAI(fornitore) {
+  FORN ||= await import(pathToFileURL(join(WEB, 'js', 'fornitori.js')).href);
+  const b = FORN.baseDi(fornitore);
+  if (!b) throw new Error('servizio sconosciuto');
+  return (process.env.LODE_AI_BASE || b).replace(/\/$/, '');
+}
 const chatCloud = new Map();
-ipcMain.handle('ai:chat', async (e, { id, base, chiave, corpo }) => {
+ipcMain.handle('ai:chat', async (e, { id, fornitore, chiave, corpo }) => {
   const c = new AbortController(); chatCloud.set(id, c);
   try {
-    const r = await I.rete(base.replace(/\/$/, '') + '/chat/completions', { method: 'POST', signal: c.signal, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + chiave, 'X-Title': 'Lode' }, body: JSON.stringify(corpo) });
+    const r = await I.rete(await baseAI(fornitore) + '/chat/completions', { method: 'POST', signal: c.signal, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + chiave, 'X-Title': 'Lode' }, body: JSON.stringify(corpo) });
     if (!r.ok) { const t = await r.text().catch(() => ''); return { errore: t.slice(0, 400) || r.statusText, stato: r.status }; }
     if (!corpo.stream) return { json: await r.json() };
     const lettore = r.body.getReader(), dec = new TextDecoder(); let resto = '', tutto = '';
@@ -305,8 +344,8 @@ ipcMain.handle('ai:chat', async (e, { id, base, chiave, corpo }) => {
   finally { chatCloud.delete(id); }
 });
 ipcMain.handle('ai:stop', (_, { id }) => { chatCloud.get(id)?.abort(); return true; });
-ipcMain.handle('ai:modelli', async (_, { base, chiave }) => {
-  const r = await I.rete(base.replace(/\/$/, '') + '/models', { headers: { authorization: 'Bearer ' + chiave } });
+ipcMain.handle('ai:modelli', async (_, { fornitore, chiave }) => {
+  const r = await I.rete(await baseAI(fornitore) + '/models', { headers: { authorization: 'Bearer ' + chiave } });
   if (!r.ok) return { errore: (await r.text().catch(() => '')).slice(0, 300) || r.statusText, stato: r.status };
   const j = await r.json(); return { modelli: (j.data || j.models || []).map(m => String(m.id || m.name || '').replace(/^models\//, '')).filter(Boolean) };
 });
@@ -314,7 +353,8 @@ ipcMain.handle('locale:scalda', async () => { if (conf.modello) await fetch(I.OL
 ipcMain.handle('locale:stop', (_, { id }) => { chat.get(id)?.abort(); return true; });
 ipcMain.handle('vault:memoria', (_, { testo }) => { V.memoria(vault(), testo); return true; });
 ipcMain.handle('vault:apri', async (_, { file, nuovo }) => {
-  if (!/\.md$/i.test(String(file))) throw new Error('solo note');   // la barra apre solo note: niente altri file con l'app predefinita
+  file = V.relativo(file);
+  if (!/\.md$/i.test(file)) throw new Error('solo note');   // la barra apre solo note: niente altri file con l'app predefinita
   const p = V.dentro(vault(), file);
   if (!existsSync(p) && nuovo) V.scriviSicuro(p, nuovo);
   const l = V.linkObsidian(vault(), file);
@@ -428,6 +468,10 @@ app.whenReady().then(async () => {
     let documenti; try { documenti = app.getPath('documents'); } catch { documenti = app.getPath('home'); }   // Documenti su OneDrive o in rete non raggiungibile
     conf.vault = join(documenti, 'Lode'); conf.primoAvvio = Date.now(); salvaConf(); if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: true });
   }
+  // in sviluppo (npm start, le prove) le librerie della barra si copiano da desktop/node_modules in vendor/ accanto a
+  // index.html, se mancano o se package.json ha cambiato versione (desktop/vendor.mjs); nel pacchetto sono già in web/vendor
+  if (!app.isPackaged && WEB !== join(QUI, 'web')) try { if ((await import('./vendor.mjs')).vendorAggiornato(join(WEB, 'vendor'))) console.log('Lode: librerie della barra copiate in vendor/'); }
+  catch (x) { console.error('Lode: librerie della barra non copiate (PDF, formule e voce Whisper non funzioneranno):', x.message); }
   await V.carica(WEB);
   try { ER = await import(pathToFileURL(join(WEB, 'js', 'errori.js')).href); } catch (x) { console.error('Lode: errori.js non si carica', x); }
   await apriVault();   // se la cartella è bloccata lo dice, e Lode parte comunque
@@ -450,9 +494,14 @@ app.whenReady().then(async () => {
   if (process.env.LODE_PROVA) barra.webContents.once('did-finish-load', async () => {
     const { writeFileSync: scrivi } = await import('node:fs');
     const passi = JSON.parse(readFileSync(process.env.LODE_PROVA, 'utf8'));
+    // se la barra cambia pagina mentre un passo aspetta (una navigazione che restaLode non ha fermato), executeJavaScript
+    // non risponde più: il passo finisce con un errore invece di bloccare tutte le prove fino al cane da guardia
+    const VIA = Symbol('via');
     for (const [i, p] of passi.entries()) {
       await new Promise(r => setTimeout(r, p.attesa ?? 1200));
-      try { const r = await barra.webContents.executeJavaScript(p.js || 'null'); if (r != null) console.log(`passo ${i}:`, JSON.stringify(r)); } catch (e) { console.log(`passo ${i} errore:`, e.message); }
+      let via; const cambiata = new Promise(ok => { via = () => ok(VIA); barra.webContents.once('did-navigate', via); });
+      try { const r = await Promise.race([barra.webContents.executeJavaScript(p.js || 'null'), cambiata]); if (r === VIA) console.log(`passo ${i} errore: la barra è andata su un'altra pagina (${barra.webContents.getURL().split('/').pop()})`); else if (r != null) console.log(`passo ${i}:`, JSON.stringify(r)); } catch (e) { console.log(`passo ${i} errore:`, e.message); }
+      finally { barra.webContents.off('did-navigate', via); }
       if (p.foto) { await new Promise(r => setTimeout(r, 900)); scrivi(join(process.env.LODE_FOTO, p.foto), (await barra.webContents.capturePage()).toPNG()); }
     }
     if (process.env.LODE_ESCI) app.quit();

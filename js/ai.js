@@ -4,24 +4,16 @@
 // Groq, OpenRouter, DeepSeek). La chiave resta su questo computer, mai nel vault. Lode non vede né incassa niente.
 // Non scrive mai da sola: ogni modifica ai dati arriva come proposta con «Conferma / Annulla».
 import { D, cfuFatti, dataLunga, fatti, media, num, oggi, prossimi, daRipassare, lezioni, lezioneOra } from './dati.js';
+import { FORNITORI } from './fornitori.js';
 
 const MODELLO = 'claude-opus-5-5';
-let SDK = null, client = null, chiaveUsata = '';
 const PONTE = typeof window !== 'undefined' ? window.lodeDesktop : null;
 let LOCALE = null;
 export const impostaLocale = m => { LOCALE = m || null; };
 export const modelloLocale = () => LOCALE;
 
-// i servizi: base dell'API in formato OpenAI, quali modelli preferire (dal più adatto), dove si crea la chiave, una nota
-export const FORNITORI = {
-  anthropic: { nome: 'Claude', ditta: 'Anthropic', sito: 'console.anthropic.com', segnaposto: 'sk-ant-…', nota: 'Il più bravo a spiegare e a interrogare; propone anche carte, esami e voti da confermare.' },
-  openai: { nome: 'ChatGPT', ditta: 'OpenAI', base: 'https://api.openai.com/v1', sito: 'platform.openai.com/api-keys', segnaposto: 'sk-…', preferiti: [/^gpt-5(\.\d+)?-mini$/, /^gpt-5(\.\d+)?$/, /^gpt-4\.1-mini$/, /^gpt-4o-mini$/], nota: 'A consumo, pochi centesimi a sessione.' },
-  google: { nome: 'Gemini', ditta: 'Google', base: 'https://generativelanguage.googleapis.com/v1beta/openai', sito: 'aistudio.google.com/apikey', segnaposto: 'AIza…', preferiti: [/^gemini-\d+(\.\d+)?-flash$/, /^gemini-\d+(\.\d+)?-flash-latest$/, /^gemini-[\d.]+-flash/, /^gemini-[\d.]+-pro$/], nota: 'Ha un piano gratuito con limiti; nel piano gratuito Google può usare i testi per migliorare i suoi modelli.' },
-  mistral: { nome: 'Mistral', ditta: 'Mistral AI (Francia)', base: 'https://api.mistral.ai/v1', sito: 'console.mistral.ai/api-keys', segnaposto: '', preferiti: [/^mistral-medium-latest$/, /^mistral-small-latest$/, /^mistral-large-latest$/], nota: 'Europeo, server in Europa.' },
-  groq: { nome: 'Groq', ditta: 'Groq', base: 'https://api.groq.com/openai/v1', sito: 'console.groq.com/keys', segnaposto: 'gsk_…', preferiti: [/^openai\/gpt-oss-120b$/, /^qwen\/qwen3/, /^llama-3\.3-70b/, /^meta-llama\/llama-4/], nota: 'Velocissimo, modelli aperti; ha un piano gratuito con limiti.' },
-  openrouter: { nome: 'OpenRouter', ditta: 'OpenRouter', base: 'https://openrouter.ai/api/v1', sito: 'openrouter.ai/keys', segnaposto: 'sk-or-…', preferiti: [/^openrouter\/auto$/], nota: 'Una chiave per centinaia di modelli, anche gratuiti.' },
-  deepseek: { nome: 'DeepSeek', ditta: 'DeepSeek', base: 'https://api.deepseek.com', sito: 'platform.deepseek.com/api_keys', segnaposto: 'sk-…', preferiti: [/^deepseek-chat$/], nota: 'Molto economico; server in Cina.' },
-};
+// i servizi (base dell'API, modelli preferiti, dove si crea la chiave) sono in fornitori.js: lo stesso elenco che usa il main
+export { FORNITORI };
 const ai = () => (D.imp.ai ||= { fornitore: D.imp.chiave ? 'anthropic' : null, modello: '', uso: 'tutto' });
 export const fornitore = () => D.imp.chiave ? (ai().fornitore || 'anthropic') : null;
 // chi fa il lavoro: 'claude', 'cloud' (un altro servizio con la chiave dello studente), 'locale', o nessuno.
@@ -33,11 +25,59 @@ export function motore(compito = 'chat') {
 }
 export const attiva = () => !!motore();
 export const nomeMotore = (compito = 'chat') => { const m = motore(compito); return m === 'locale' ? 'il modello locale' : m ? FORNITORI[fornitore()].nome : 'nessuno'; };
-async function cliente() {
-  if (!D.imp.chiave) throw new Error('Manca la chiave: aggiungila scrivendo «AI» nella barra.');
-  SDK ||= (await import('https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk/+esm')).default;
-  if (!client || chiaveUsata !== D.imp.chiave) { client = new SDK({ apiKey: D.imp.chiave, dangerouslyAllowBrowser: true }); chiaveUsata = D.imp.chiave; }
-  return client;
+
+/* ---------- Claude: l'API dei messaggi con fetch, senza SDK ---------- */
+// Prima l'SDK arrivava da un CDN all'ultima versione: codice di altri, nella finestra con la chiave e il ponte verso il vault.
+// Ora sono poche righe nostre: la chiave parte solo verso api.anthropic.com (come con l'SDK nel browser, con l'intestazione
+// «direct browser access»). Come l'SDK, riprova due volte quando il servizio è occupato (408, 409, 429, 5xx, 529).
+const API_CLAUDE = 'https://api.anthropic.com/v1';
+async function claude(percorso, { chiave = D.imp.chiave, corpo, segnale } = {}) {
+  if (!chiave) throw new Error('Manca la chiave: aggiungila scrivendo «AI» nella barra.');
+  const { betas, ...resto } = corpo || {};   // i «betas» vanno nell'intestazione anthropic-beta, non nel corpo
+  const headers = { 'x-api-key': chiave, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true', ...(corpo ? { 'content-type': 'application/json' } : {}), ...(betas?.length ? { 'anthropic-beta': betas.join(',') } : {}) };
+  for (let n = 0; ; n++) {
+    const r = await fetch(API_CLAUDE + percorso, { method: corpo ? 'POST' : 'GET', signal: segnale, headers, ...(corpo ? { body: JSON.stringify(resto) } : {}) });
+    if (r.ok) return r;
+    const testo = await r.text().catch(() => '');
+    if (n >= 2 || segnale?.aborted || !(r.status === 408 || r.status === 409 || r.status === 429 || r.status >= 500)) throw erroreHttp(testo, r.status);
+    const dopo = Math.min(8, Number(r.headers.get('retry-after')) || 0.5 * 2 ** n);
+    await new Promise(ok => setTimeout(ok, dopo * 1000));
+  }
+}
+const creaMessaggio = async corpo => (await claude('/messages', { corpo })).json();
+// in streaming (eventi SSE): il testo va a suTesto mentre arriva, alla fine il messaggio intero come lo dà l'API senza
+// streaming (blocchi di testo, di ragionamento con la firma, strumenti con l'input JSON ricomposto). Gli eventi che non
+// conosciamo si saltano; il blocco «fallback» (Claude passa a un altro modello) resta nel contenuto come gli altri.
+async function flussoMessaggio(corpo, { suTesto, segnale } = {}) {
+  const r = await claude('/messages', { corpo: { ...corpo, stream: true }, segnale });
+  const lettore = r.body.getReader(), dec = new TextDecoder(), json = {};
+  let msg = null, resto = '';
+  for (; ;) {
+    const { done, value } = await lettore.read(); if (done) break;
+    resto += dec.decode(value, { stream: true }); const righe = resto.split('\n'); resto = righe.pop();
+    for (const riga of righe) {
+      if (!riga.startsWith('data:')) continue;
+      let x; try { x = JSON.parse(riga.slice(5)); } catch { continue; }
+      if (x.type === 'message_start') msg = { ...x.message, content: [] };
+      else if (x.type === 'error') throw erroreHttp(JSON.stringify(x), x.error?.type === 'overloaded_error' ? 529 : 0);
+      else if (!msg) continue;
+      else if (x.type === 'content_block_start') msg.content[x.index] = { ...x.content_block };
+      else if (x.type === 'content_block_delta') {
+        const b = msg.content[x.index], d = x.delta; if (!b) continue;
+        if (d.type === 'text_delta') { b.text = (b.text || '') + d.text; suTesto?.(d.text); }
+        else if (d.type === 'input_json_delta') json[x.index] = (json[x.index] || '') + d.partial_json;
+        else if (d.type === 'thinking_delta') b.thinking = (b.thinking || '') + d.thinking;
+        else if (d.type === 'signature_delta') b.signature = d.signature;
+        else if (d.type === 'citations_delta') (b.citations ||= []).push(d.citation);
+      }
+      // l'input dello strumento: JSON incompleto (streaming dei parametri) → resta {} e valido() lo rifiuta
+      else if (x.type === 'content_block_stop' && x.index in json) { try { msg.content[x.index].input = JSON.parse(json[x.index]); } catch { } delete json[x.index]; }
+      else if (x.type === 'message_delta') { Object.assign(msg, x.delta || {}); if (x.usage) msg.usage = { ...msg.usage, ...x.usage }; }
+    }
+  }
+  if (!msg) throw new Error('Claude non ha risposto: riprova.');
+  msg.content = msg.content.filter(Boolean);
+  return msg;
 }
 
 export function contesto() {
@@ -92,7 +132,6 @@ function valido(nome, x) {
 
 // un giro di conversazione con strumenti: testo in streaming, strumenti eseguiti da chi chiama (con le sue conferme)
 export async function conversa({ storia, sistema = SISTEMA, strumenti = true, suTesto, esegui, segnale }) {
-  const c = await cliente();
   for (let giro = 0; giro < 6; giro++) {
     const parametri = {
       model: MODELLO, max_tokens: 32000, system: sistema + '\n\nDati dello studente adesso:\n' + contesto(),
@@ -100,9 +139,7 @@ export async function conversa({ storia, sistema = SISTEMA, strumenti = true, su
       betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default',
     };
     if (strumenti) parametri.tools = STRUMENTI;
-    const flusso = c.beta.messages.stream(parametri, { signal: segnale });
-    flusso.on('text', d => suTesto?.(d));
-    const msg = await flusso.finalMessage();
+    const msg = await flussoMessaggio(parametri, { suTesto, segnale });
     storia.push({ role: 'assistant', content: msg.content });
     if (msg.stop_reason === 'refusal') { suTesto?.('\n\nSu questo non posso aiutarti.'); return storia; }
     if (msg.stop_reason !== 'tool_use') return storia;
@@ -187,7 +224,7 @@ async function chiamaCloud(corpo, { pezzo, segnale } = {}) {
     if (pezzo) ascoltaCloud.set(id, pezzo);
     const stop = () => PONTE.invoca('ai:stop', { id }); segnale?.addEventListener('abort', stop);
     try {
-      const r = await PONTE.invoca('ai:chat', { id, base: f.base, chiave, corpo });
+      const r = await PONTE.invoca('ai:chat', { id, fornitore: fornitore(), chiave, corpo });   // solo l'id: la base la sceglie il main
       if (r.errore) { if (segnale?.aborted) { const x = new Error('interrotta'); x.name = 'AbortError'; throw x; } throw erroreHttp(r.errore, r.stato); }
       return r;
     } finally { ascoltaCloud.delete(id); segnale?.removeEventListener('abort', stop); }
@@ -241,7 +278,7 @@ const leggiJSON = t => { const x = String(t).replace(/^```(?:json)?\s*|\s*```$/g
 export async function provaFornitore(id, chiave) {
   if (id === 'anthropic') { await provaChiave(chiave); return { modelli: [MODELLO], modello: MODELLO }; }
   const f = FORNITORI[id];
-  const r = PONTE ? await PONTE.invoca('ai:modelli', { base: f.base, chiave })
+  const r = PONTE ? await PONTE.invoca('ai:modelli', { fornitore: id, chiave })
     : await fetch(f.base + '/models', { headers: { authorization: 'Bearer ' + chiave } }).then(async x => x.ok ? { modelli: ((await x.json()).data || []).map(m => String(m.id).replace(/^models\//, '')) } : { errore: await x.text(), stato: x.status });
   if (r.errore) throw erroreHttp(r.errore, r.stato);
   const modelli = r.modelli.filter(m => !/embed|tts|whisper|audio|image|moderation|dall-e|transcribe|realtime|guard|search/i.test(m));
@@ -253,7 +290,18 @@ export function collegaFornitore(id, chiave, modello) {
   D.imp.chiave = chiave;
   try { const c = JSON.parse(localStorage.getItem('lode:chiavi') || '{}'); c[id] = chiave; localStorage.setItem('lode:chiavi', JSON.stringify(c)); } catch { }
 }
-export function scollegaFornitore() { D.imp.chiave = ''; ai().fornitore = null; }
+// «Usa solo il cervello locale»: le chiavi si cancellano davvero da questo computer (quella in uso e quelle dei servizi
+// collegati prima, in 'lode:chiavi'; 'lode:chiave' la toglie salva() in dati.js). Restituisce il servizio di prima: nel suo
+// account la chiave vale ancora finché lo studente non la revoca, e la scheda glielo dice.
+// Passo successivo, non ancora fatto: le chiavi cifrate dal main con safeStorage. Sul Mac, con la firma ad hoc che cambia a
+// ogni versione, il portachiavi chiederebbe il permesso dopo ogni aggiornamento; su Linux senza portachiavi safeStorage
+// ricade su «basic_text», quasi in chiaro (va controllato getSelectedStorageBackend() e detto allo studente).
+export function scollegaFornitore() {
+  const prima = fornitore();
+  D.imp.chiave = ''; ai().fornitore = null;
+  try { localStorage.removeItem('lode:chiavi'); } catch { }
+  return prima;
+}
 export const chiaveSalvata = id => { try { return JSON.parse(localStorage.getItem('lode:chiavi') || '{}')[id] || ''; } catch { return ''; } };
 export const impostaUso = u => { ai().uso = u === 'pesante' ? 'pesante' : 'tutto'; };
 export const statoAI = () => ({ ...ai(), fornitore: fornitore(), locale: LOCALE });
@@ -267,8 +315,7 @@ const SCHEMA_CARTE = { type: 'object', additionalProperties: false, required: ['
 async function strutturato(istruzioni, contenuto, schema, compito = 'testo') {
   const m = motore(compito), parti = [...(Array.isArray(contenuto) ? contenuto : [{ type: 'text', text: contenuto }]), { type: 'text', text: istruzioni }];
   if (m === 'claude') {
-    const c = await cliente();
-    const r = await c.messages.create({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low', format: { type: 'json_schema', schema } }, messages: [{ role: 'user', content: parti }] });
+    const r = await creaMessaggio({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low', format: { type: 'json_schema', schema } }, messages: [{ role: 'user', content: parti }] });
     if (r.stop_reason === 'refusal') throw new Error('Claude ha declinato la richiesta.');
     return JSON.parse(r.content.find(b => b.type === 'text')?.text || '{}');
   }
@@ -309,8 +356,7 @@ Rispondi solo con gli appunti, senza introduzioni.`;
     const contenuto = `Trascrizione:\n\n${pezzo}${k === 0 && appunti ? `\n\nAppunti presi a mano dallo studente (per orientarti):\n${appunti}` : ''}`;
     const dom = contenuto + '\n\n' + istr2(k + 1, pezzi.length);
     if (M === 'claude') {
-      const c = await cliente();
-      const r = await c.messages.create({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low' }, messages: [{ role: 'user', content: dom }] });
+      const r = await creaMessaggio({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low' }, messages: [{ role: 'user', content: dom }] });
       out.push(r.content.filter(b => b.type === 'text').map(b => b.text).join('').trim());
     } else if (M === 'cloud') out.push((await chatCloud([{ role: 'user', content: dom }])).trim());
     else if (M === 'locale') out.push((await chatLocale(perOllama([{ role: 'user', content: dom }]))).trim());
@@ -324,7 +370,7 @@ Rispondi solo con gli appunti, senza introduzioni.`;
 export async function trascriviFoto({ blocco, corso }) {
   const istr = `È una foto di una lavagna o di una pagina di appunti${corso ? ` della lezione di «${corso}»` : ''}. Trascrivila in appunti Markdown in italiano, fedeli a ciò che si vede: titoli con «### », punti con «- », formule in LaTeX tra $…$ (Obsidian le mostra), grafici e schemi descritti in una riga tra parentesi quadre. Se una parte è illeggibile scrivi [illeggibile]. Solo gli appunti, senza introduzioni.`;
   const M = motore('testo'), msg = [{ role: 'user', content: [blocco, { type: 'text', text: istr }] }];
-  if (M === 'claude') { const c = await cliente(); const r = await c.messages.create({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low' }, messages: msg }); return r.content.filter(b => b.type === 'text').map(b => b.text).join('').trim(); }
+  if (M === 'claude') { const r = await creaMessaggio({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low' }, messages: msg }); return r.content.filter(b => b.type === 'text').map(b => b.text).join('').trim(); }
   if (M === 'cloud') return (await chatCloud(perOpenAI(msg))).trim();
   if (M === 'locale') return (await chatLocale(perOllama(msg))).trim();
   throw new Error('Serve il cervello locale o la tua AI.');
@@ -339,7 +385,8 @@ const SCHEMA_LIBRETTO = { type: 'object', additionalProperties: false, required:
   nome: { type: 'string' }, cfu: { type: 'integer' }, voto: { type: ['integer', 'null'] }, lode: { type: 'boolean' }, idoneita: { type: 'boolean' }, data: { type: ['string', 'null'], description: 'YYYY-MM-DD' } } } } } };
 export async function leggiLibretto(testo) {
   const r = await strutturato('Qui sopra c\'è il libretto universitario di uno studente italiano, copiato da un portale (Esse3 o simili), con tanto testo inutile. Estrai SOLO gli esami superati: nome dell\'insegnamento (senza codici), CFU, voto da 18 a 30 (lode true se «30 e lode» o «30L»), idoneita true se è un\'idoneità senza voto, data in formato YYYY-MM-DD. Ignora gli esami non ancora sostenuti o senza esito.', `Libretto:\n${String(testo).slice(0, 30000)}`, SCHEMA_LIBRETTO);
-  return (r.esami || []).filter(e => e.nome?.trim() && (e.idoneita || (e.voto >= 18 && e.voto <= 30))).map(e => ({ ...e, nome: e.nome.trim(), data: /^\d{4}-\d\d-\d\d$/.test(e.data || '') ? e.data : null }));
+  // cfu e voto diventano numeri: il modello può rispondere con una stringa, e i valori finiscono nelle pagine
+  return (r.esami || []).filter(e => typeof e.nome === 'string' && e.nome.trim() && (e.idoneita || (+e.voto >= 18 && +e.voto <= 30))).map(e => ({ ...e, nome: e.nome.trim(), cfu: Number(e.cfu) || 6, voto: e.idoneita ? null : Math.round(+e.voto), lode: !!e.lode, idoneita: !!e.idoneita, data: /^\d{4}-\d\d-\d\d$/.test(e.data || '') ? e.data : null }));
 }
 const SCHEMA_ORARIO = { type: 'object', additionalProperties: false, required: ['lezioni'], properties: { lezioni: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['corso', 'giorni', 'inizio', 'fine', 'aula'], properties: {
   corso: { type: 'string' }, giorni: { type: 'array', items: { type: 'integer', minimum: 0, maximum: 6 }, description: '0 domenica, 1 lunedì … 6 sabato' }, inizio: { type: 'string', description: 'HH:MM' }, fine: { type: 'string', description: 'HH:MM' }, aula: { type: 'string' } } } } } };
@@ -469,8 +516,6 @@ export function votoOrale(storico) {
 }
 
 export async function provaChiave(chiave) {
-  SDK ||= (await import('https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk/+esm')).default;
-  const c = new SDK({ apiKey: chiave, dangerouslyAllowBrowser: true });
-  await c.models.retrieve(MODELLO);
+  await claude('/models/' + MODELLO, { chiave });
   return true;
 }

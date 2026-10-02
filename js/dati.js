@@ -21,7 +21,29 @@ export const VUOTO = () => ({
 
 export const DESKTOP = typeof window !== 'undefined' && !!window.lodeDesktop;
 const chiaveLocale = () => { try { return localStorage.getItem('lode:chiave') || ''; } catch { return ''; } };
-function unisci(d) { return d && d.v === 1 ? { ...VUOTO(), ...d, profilo: { ...VUOTO().profilo, ...d.profilo }, imp: { ...VUOTO().imp, ...d.imp }, codice: { ...VUOTO().codice, ...d.codice } } : null; }
+// cfu, voto e ore sempre in forma (un numero, un voto intero 18-30 o null): arrivano anche da un libretto letto dall'AI, da
+// un backup o da un dati.json di un vault sincronizzato, e finiscono nelle pagine
+const ID = /^[\w-]{1,40}$/, DATA = /^\d{4}-\d{2}-\d{2}$/;
+const inForma = e => e && typeof e === 'object' ? { ...e, cfu: Number(e.cfu) || 6, voto: e.voto !== null && e.voto !== '' && Number.isInteger(+e.voto) && +e.voto >= 18 && +e.voto <= 30 ? +e.voto : null,
+  ...(e.oreObiettivo != null ? { oreObiettivo: Number(e.oreObiettivo) || null } : {}) } : e;
+// i dati di Lode letti dal disco: .lode/dati.json nel vault (che si sincronizza o si condivide: chi può scriverci può
+// metterci di tutto) o localStorage nel browser. Non passano da backupValido(), che rifiuterebbe tutto per un solo esame
+// storto: qui l'esame con un id strano (virgolette, HTML: finirebbe in un data-e="…") si scarta, gli altri restano
+function unisci(d) { return d && d.v === 1 ? { ...VUOTO(), ...d, esami: Array.isArray(d.esami) ? d.esami.filter(e => e && typeof e === 'object' && ID.test(e.id)).map(inForma) : [], profilo: { ...VUOTO().profilo, ...d.profilo }, imp: { ...VUOTO().imp, ...d.imp }, codice: { ...VUOTO().codice, ...d.codice } } : null; }
+// Un backup da importare (magari passato da un compagno) si controlla tutto e, se qualcosa non torna, si rifiuta: non si
+// «aggiusta», perché rigenerare gli id romperebbe i legami fra carte ed esami. Numeri come numeri (o cifre), id semplici,
+// date AAAA-MM-GG, giorni dell'orario 0-6. Poi passa da sostituisci(), che rimette in forma cfu e voti
+export function backupValido(d) {
+  const ogg = x => !!x && typeof x === 'object' && !Array.isArray(x), testo = x => x == null || typeof x === 'string';
+  const numero = x => x == null || x === '' || (typeof x === 'number' || (typeof x === 'string' && /^\d{1,3}$/.test(x))) && Number.isFinite(+x);
+  const lista = (x, ok) => x == null || (Array.isArray(x) && x.every(ok));
+  const esameOk = e => ogg(e) && ID.test(e.id) && typeof e.nome === 'string' && numero(e.cfu) && numero(e.voto) && (!e.data || DATA.test(e.data)) && numero(e.oreObiettivo);
+  const cartaOk = c => ogg(c) && ID.test(c.id) && (!c.esameId || ID.test(c.esameId)) && testo(c.fronte) && testo(c.retro);
+  const orarioOk = o => ogg(o) && (o.id == null || ID.test(o.id)) && testo(o.corso) && testo(o.inizio) && testo(o.fine) && testo(o.aula) && Array.isArray(o.giorni) && o.giorni.every(g => Number.isInteger(g) && g >= 0 && g <= 6);
+  const sessioneOk = s => ogg(s) && (s.id == null || ID.test(s.id)) && (!s.esameId || ID.test(s.esameId)) && numero(s.min);
+  return ogg(d) && d.v === 1 && Array.isArray(d.esami) && d.esami.every(esameOk) && lista(d.carte, cartaOk) && lista(d.orario, orarioOk) && lista(d.sessioni, sessioneOk)
+    && (d.profilo == null || (ogg(d.profilo) && testo(d.profilo.nome) && testo(d.profilo.corso) && numero(d.profilo.cfuTotali) && numero(d.profilo.lode))) && (d.imp == null || ogg(d.imp));
+}
 // i dati non si sono potuti leggere (non «non ci sono»: OneDrive offline, file bloccato): Lode lo dice e non li sovrascrive
 export let datiIllegibili = null;
 function carica() {
@@ -37,14 +59,14 @@ export function salva() {
     if (DESKTOP) {
       const c = { ...D, imp: { ...D.imp, chiave: '' } };
       window.lodeDesktop.salvaDati(c);
-      localStorage.setItem('lode:chiave', D.imp.chiave || '');
+      if (D.imp.chiave) localStorage.setItem('lode:chiave', D.imp.chiave); else localStorage.removeItem('lode:chiave');   // scollegata: niente resta sul disco
     } else localStorage.setItem(CHIAVE, JSON.stringify(D));
   } catch (e) { console.warn('Lode: salvataggio non riuscito', e); }
   dispatchEvent(new CustomEvent('lode:dati'));
 }
 // un'altra finestra dell'app (o un altro computer, via vault sincronizzato) ha cambiato i dati
 if (DESKTOP) window.lodeDesktop.su('dati:cambiati', d => { const n = unisci(d); if (!n) return; n.imp.chiave = D.imp.chiave; D = n; datiIllegibili = null; dispatchEvent(new CustomEvent('lode:dati')); });
-export function sostituisci(nuovi) { D = { ...VUOTO(), ...nuovi, profilo: { ...VUOTO().profilo, ...nuovi.profilo }, imp: { ...VUOTO().imp, ...nuovi.imp, chiave: D.imp.chiave }, codice: { ...VUOTO().codice, ...nuovi.codice } }; salva(); }
+export function sostituisci(nuovi) { D = { ...VUOTO(), ...nuovi, esami: (nuovi.esami || []).map(inForma), profilo: { ...VUOTO().profilo, ...nuovi.profilo }, imp: { ...VUOTO().imp, ...nuovi.imp, chiave: D.imp.chiave }, codice: { ...VUOTO().codice, ...nuovi.codice } }; salva(); }
 // la chiave AI non esce mai in un'esportazione
 export function esporta() { const c = structuredClone(D); c.imp.chiave = ''; return c; }
 // in ascolto da altre schede dello stesso browser

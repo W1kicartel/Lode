@@ -1,0 +1,7 @@
+{
+  "name": "vuoto",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Un pacchetto vuoto al posto di onnxruntime-node, onnxruntime-web, sharp e @napi-rs/canvas (vedi overrides in package.json): Lode usa solo i file per il browser di transformers.js e pdf.js, che vendor.mjs copia in vendor/. Le parti per Node peserebbero più di 300 MB e non servono.",
+  "license": "MIT"
+}

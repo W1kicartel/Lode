@@ -1,5 +1,5 @@
 <!doctype html><meta charset="utf-8"><script type="module">
-const T = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3');
+const T = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1/dist/transformers.min.js');
 const out = {};
 for (const modello of ['onnx-community/whisper-base', 'onnx-community/whisper-small']) {
   const dev = navigator.gpu ? 'webgpu' : 'wasm';

@@ -1,6 +1,6 @@
 // La pagina sotto la barra: il quadro della carriera a colpo d'occhio. Media, base di laurea, CFU, ore della settimana,
 // i prossimi appelli con il piano, il libretto e i mazzi del ripasso. Tutto il resto si fa dalla barra in alto.
-import { D, VUOTO, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esempio, esc, esporta, fatti, giorniTra, media, minuti, num, obiettivo, oggi, ore, piano, prossimi, salva, serie, settimana, sostituisci, traQuanto } from './dati.js';
+import { D, VUOTO, backupValido, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esempio, esc, esporta, fatti, giorniTra, media, minuti, num, obiettivo, oggi, ore, piano, prossimi, salva, serie, settimana, sostituisci, traQuanto } from './dati.js';
 import { azioni, TASTI } from './lode.js';
 import { conta, tween } from './motore.js';
 import * as AI from './ai.js';
@@ -26,11 +26,11 @@ export function disegna() {
     <div class="suggerimento">Passa sopra la barra in alto, premi <kbd>/</kbd> per scrivere o tieni premuto <kbd>${TASTI}</kbd> per parlare.</div></div>
 
   <div class="stats ${primaVolta ? 'entra' : ''}">
-    <div class="stat"><span class="lbl">Media ponderata</span><b class="v" data-c="${m.ponderata ?? ''}" data-dec="2">${m.ponderata ? '0' : '—'}</b><span class="d">${m.n ? `aritmetica ${num(m.aritmetica, 2)} · ${m.n} ${m.n === 1 ? 'voto' : 'voti'}` : 'segna il primo voto dalla barra'}</span></div>
-    <div class="stat"><span class="lbl">Base di laurea</span><b class="v"><span data-c="${m.base ?? ''}" data-dec="1">${m.base ? '0' : '—'}</span><small>/110</small></b><span class="d">media × 110 / 30</span></div>
-    <div class="stat"><span class="lbl">Crediti</span><b class="v"><span data-c="${cf}" data-dec="0">0</span><small>/${tot}</small></b><div class="barra"><i style="transform:scaleX(0)" data-x="${Math.min(1, cf / tot)}"></i></div><span class="d">${Math.max(0, tot - cf)} CFU alla laurea</span></div>
-    <div class="stat"><span class="lbl">Questa settimana</span><b class="v" style="font-size:28px">${minS ? ore(minS) : '0 min'}</b>
-      <div class="sett" aria-label="Minuti di studio negli ultimi 7 giorni">${sett.map(g => `<span class="${g.oggi ? 'oggi' : ''}" title="${dataLunga(g.g)}: ${ore(g.min)}"><i style="height:${Math.max(2, Math.round(g.min / maxS * 32))}px;transform:scaleY(0)"></i><em>${'DLMMGVS'[new Date(g.g + 'T12:00').getDay()]}</em></span>`).join('')}</div></div>
+    <div class="stat"><span class="lbl">Media ponderata</span><b class="v" data-c="${esc(m.ponderata ?? '')}" data-dec="2">${m.ponderata ? '0' : '—'}</b><span class="d">${m.n ? `aritmetica ${esc(num(m.aritmetica, 2))} · ${esc(m.n)} ${m.n === 1 ? 'voto' : 'voti'}` : 'segna il primo voto dalla barra'}</span></div>
+    <div class="stat"><span class="lbl">Base di laurea</span><b class="v"><span data-c="${esc(m.base ?? '')}" data-dec="1">${m.base ? '0' : '—'}</span><small>/110</small></b><span class="d">media × 110 / 30</span></div>
+    <div class="stat"><span class="lbl">Crediti</span><b class="v"><span data-c="${esc(cf)}" data-dec="0">0</span><small>/${esc(tot)}</small></b><div class="barra"><i style="transform:scaleX(0)" data-x="${esc(Math.min(1, cf / tot))}"></i></div><span class="d">${esc(Math.max(0, tot - cf))} CFU alla laurea</span></div>
+    <div class="stat"><span class="lbl">Questa settimana</span><b class="v" style="font-size:28px">${minS ? esc(ore(minS)) : '0 min'}</b>
+      <div class="sett" aria-label="Minuti di studio negli ultimi 7 giorni">${sett.map(g => `<span class="${g.oggi ? 'oggi' : ''}" title="${esc(dataLunga(g.g))}: ${esc(ore(g.min))}"><i style="height:${Math.max(2, Math.round(g.min / maxS * 32))}px;transform:scaleY(0)"></i><em>${'DLMMGVS'[new Date(g.g + 'T12:00').getDay()]}</em></span>`).join('')}</div></div>
   </div>
 
   <section><div class="capo"><h2>Prossimi esami</h2><div class="az"><button class="btn small" data-a="nuovoEsame">Nuovo esame</button></div></div>
@@ -51,11 +51,11 @@ export function disegna() {
 function cartaEsame(e) {
   const pi = piano(e), g = e.data ? giorniTra(oggi(), e.data) : null, nc = D.carte.filter(c => c.esameId === e.id).length, nd = daRipassare(e.id).length;
   return `<article class="esame${g != null && g <= 7 ? ' vicino' : ''}">
-    <div class="r1"><div><h3>${esc(e.nome)}</h3><div class="quando">${e.data ? cap(dataLunga(e.data)) : 'Data da decidere'} · ${e.cfu} CFU</div></div>
-      ${g != null ? `<div class="g">${g === 0 ? 'oggi' : g}${g ? `<small>${g === 1 ? 'GIORNO' : 'GIORNI'}</small>` : ''}</div>` : ''}</div>
-    <div class="avanza"><div class="riga"><span>${pi.fatte < .05 ? '0' : num(pi.fatte, pi.fatte < 10 ? 1 : 0)} di ${pi.tot} h studiate</span><span>${e.data ? (pi.oggi >= .1 ? `<b>${num(pi.oggi)} h</b> oggi` : 'oggi in pari') : ''}</span></div><div class="q"><i style="transform:scaleX(0)" data-x="${pi.quota}"></i></div></div>
-    <div class="az"><button class="btn small primary" data-a="focus" data-e="${e.id}">Focus</button><button class="btn small" data-a="ripassaE" data-e="${e.id}"${nc ? '' : ' disabled'}>Ripassa${nd ? ' ' + nd : ''}</button><button class="btn small" data-a="interroga" data-e="${e.id}">Interrogami</button></div>
-    <button class="modifica" data-a="modifica" data-e="${e.id}">Modifica · Segna voto</button>
+    <div class="r1"><div><h3>${esc(e.nome)}</h3><div class="quando">${e.data ? esc(cap(dataLunga(e.data))) : 'Data da decidere'} · ${esc(e.cfu)} CFU</div></div>
+      ${g != null ? `<div class="g">${g === 0 ? 'oggi' : esc(g)}${g ? `<small>${g === 1 ? 'GIORNO' : 'GIORNI'}</small>` : ''}</div>` : ''}</div>
+    <div class="avanza"><div class="riga"><span>${pi.fatte < .05 ? '0' : esc(num(pi.fatte, pi.fatte < 10 ? 1 : 0))} di ${esc(pi.tot)} h studiate</span><span>${e.data ? (pi.oggi >= .1 ? `<b>${esc(num(pi.oggi))} h</b> oggi` : 'oggi in pari') : ''}</span></div><div class="q"><i style="transform:scaleX(0)" data-x="${esc(pi.quota)}"></i></div></div>
+    <div class="az"><button class="btn small primary" data-a="focus" data-e="${esc(e.id)}">Focus</button><button class="btn small" data-a="ripassaE" data-e="${esc(e.id)}"${nc ? '' : ' disabled'}>Ripassa${nd ? ' ' + nd : ''}</button><button class="btn small" data-a="interroga" data-e="${esc(e.id)}">Interrogami</button></div>
+    <button class="modifica" data-a="modifica" data-e="${esc(e.id)}">Modifica · Segna voto</button>
   </article>`;
 }
 function libretto() {
@@ -63,13 +63,13 @@ function libretto() {
   if (!lista.length) return `<p style="margin:0;padding:18px 16px;color:var(--muted);font-size:14px">Nessun esame dato. Scrivi nella barra <kbd>ho preso 28 in fisica</kbd>.</p>`;
   const m = media();
   return `<table><thead><tr><th>Esame</th><th class="num">CFU</th><th class="num">Voto</th><th class="num">Data</th><th></th></tr></thead><tbody>
-    ${lista.map(e => `<tr><td>${esc(e.nome)}</td><td class="num">${e.cfu}</td><td class="num"><span class="voto">${e.idoneita ? '<span class="tenue">idoneo</span>' : e.voto + (e.lode ? 'L' : '')}</span></td><td class="num tenue">${e.data ? dataBreve(e.data) : ''}</td><td class="num"><button class="x" data-a="modifica" data-e="${e.id}" aria-label="Modifica ${esc(e.nome)}">⋯</button></td></tr>`).join('')}
-  </tbody></table><div class="tbl-piede"><span>${lista.length} esami · ${cfuFatti()} CFU</span><span>media <b>${m.ponderata ? num(m.ponderata, 2) : '—'}</b> · base <b>${m.base ? num(m.base, 1) : '—'}</b></span></div>`;
+    ${lista.map(e => `<tr><td>${esc(e.nome)}</td><td class="num">${esc(e.cfu)}</td><td class="num"><span class="voto">${e.idoneita ? '<span class="tenue">idoneo</span>' : esc(e.voto + (e.lode ? 'L' : ''))}</span></td><td class="num tenue">${e.data ? esc(dataBreve(e.data)) : ''}</td><td class="num"><button class="x" data-a="modifica" data-e="${esc(e.id)}" aria-label="Modifica ${esc(e.nome)}">⋯</button></td></tr>`).join('')}
+  </tbody></table><div class="tbl-piede"><span>${esc(lista.length)} esami · ${esc(cfuFatti())} CFU</span><span>media <b>${m.ponderata ? esc(num(m.ponderata, 2)) : '—'}</b> · base <b>${m.base ? esc(num(m.base, 1)) : '—'}</b></span></div>`;
 }
 function mazzi() {
   const gruppi = new Map(); D.carte.forEach(c => { const k = c.esameId || ''; gruppi.set(k, (gruppi.get(k) || 0) + 1); });
   if (!gruppi.size) return `<p style="margin:0;padding:18px 16px;color:var(--muted);font-size:14px">Ancora nessuna carta. Scrivi <kbd>carta: domanda = risposta</kbd> o trascina un PDF sulla finestra.</p>`;
-  return [...gruppi].sort((a, b) => b[1] - a[1]).map(([k, n]) => { const d = daRipassare(k || undefined).filter(c => (c.esameId || '') === k).length; return `<div class="mazzo"><div><b>${esc(k ? esame(k)?.nome || 'Esame tolto' : 'Senza esame')}</b><span>${n} ${n === 1 ? 'carta' : 'carte'}</span></div><span class="n${d ? '' : ' zero'}" title="da ripassare oggi">${d}</span><button class="btn small" data-a="ripassaE" data-e="${k}"${d ? '' : ' disabled'}>Ripassa</button></div>`; }).join('');
+  return [...gruppi].sort((a, b) => b[1] - a[1]).map(([k, n]) => { const d = daRipassare(k || undefined).filter(c => (c.esameId || '') === k).length; return `<div class="mazzo"><div><b>${esc(k ? esame(k)?.nome || 'Esame tolto' : 'Senza esame')}</b><span>${esc(n)} ${n === 1 ? 'carta' : 'carte'}</span></div><span class="n${d ? '' : ' zero'}" title="da ripassare oggi">${esc(d)}</span><button class="btn small" data-a="ripassaE" data-e="${esc(k)}"${d ? '' : ' disabled'}>Ripassa</button></div>`; }).join('');
 }
 // la prima volta i numeri salgono e le barre crescono; agli aggiornamenti successivi cambiano e basta
 function anima(r, prima) {
@@ -89,10 +89,10 @@ function finestraEsame(id) {
   const e = id ? esame(id) : null;
   finestra(`<h2>${e ? esc(e.nome) : 'Nuovo esame'}</h2><p>${e ? 'Correggi i dati o segna il voto.' : 'Puoi anche scriverlo nella barra: «esame fisica 2 il 20 febbraio 6 cfu».'}</p>
     <div class="campi"><label class="tutta">Nome<input name="nome" required value="${esc(e?.nome || '')}" placeholder="Analisi 2"></label>
-      <label>CFU<input name="cfu" type="number" min="1" max="30" value="${e?.cfu || 6}"></label>
-      <label>${e?.fatto ? 'Data' : 'Data dell\'appello'}<input name="data" type="date" value="${e?.data || ''}"></label>
+      <label>CFU<input name="cfu" type="number" min="1" max="30" value="${esc(e?.cfu || 6)}"></label>
+      <label>${e?.fatto ? 'Data' : 'Data dell\'appello'}<input name="data" type="date" value="${esc(e?.data || '')}"></label>
       <label>Voto <small>vuoto se non l'hai ancora dato</small><select name="voto"><option value="">—</option>${Array.from({ length: 13 }, (_, i) => 18 + i).map(v => `<option${e?.voto === v ? ' selected' : ''}>${v}</option>`).join('')}<option value="L"${e?.lode ? ' selected' : ''}>30 e lode</option><option value="I"${e?.idoneita ? ' selected' : ''}>Idoneità</option></select></label>
-      <label>Ore di studio previste <small>per il piano</small><input name="ore" type="number" min="1" max="500" value="${e ? obiettivo(e) : ''}" placeholder="10 × CFU"></label></div>
+      <label>Ore di studio previste <small>per il piano</small><input name="ore" type="number" min="1" max="500" value="${esc(e ? obiettivo(e) : '')}" placeholder="10 × CFU"></label></div>
     <div class="piedi">${e ? '<button class="btn piano" value="elimina">Elimina</button>' : ''}<div class="dx"><button class="btn piano" value="annulla" formnovalidate>Annulla</button><button class="btn primary" value="salva">Salva</button></div></div>`,
   (f, azione) => {
     if (azione === 'elimina') { if (!confirm(`Eliminare ${e.nome}? Le sue ore e le carte restano, senza esame.`)) return false; D.esami = D.esami.filter(x => x.id !== e.id); salva(); toast('Esame eliminato'); return; }
@@ -109,23 +109,27 @@ function finestraImpostazioni() {
       <label>Corso di laurea<input name="corso" value="${esc(D.profilo.corso)}" placeholder="Ingegneria informatica"></label>
       <label>CFU della laurea<select name="cfuTotali">${[180, 120, 300, 360].map(v => `<option${D.profilo.cfuTotali === v ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
       <label>La lode vale<select name="lode">${[30, 31, 32, 33].map(v => `<option${D.profilo.lode === v ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
-      <label>Focus (minuti)<input name="focus" type="number" min="5" max="180" value="${D.imp.focus}"></label>
-      <label>Pausa (minuti)<input name="pausa" type="number" min="1" max="60" value="${D.imp.pausa}"></label>
+      <label>Focus (minuti)<input name="focus" type="number" min="5" max="180" value="${esc(D.imp.focus)}"></label>
+      <label>Pausa (minuti)<input name="pausa" type="number" min="1" max="60" value="${esc(D.imp.pausa)}"></label>
       <label class="spunta tutta"><input type="checkbox" name="suoni"${D.imp.suoni ? ' checked' : ''}>Rintocco alla fine del focus</label>
       <label class="spunta tutta"><input type="checkbox" name="chiaro"${D.imp.aspetto === 'chiaro' ? ' checked' : ''}>Aspetto chiaro</label></div>
     <hr>
-    <div class="campi"><label>La tua AI <small>facoltativa, a consumo: paghi tu il servizio</small><select name="fornitore"><option value="">Solo il cervello locale (gratis)</option>${Object.entries(AI.FORNITORI).map(([k, f]) => `<option value="${k}"${AI.fornitore() === k ? ' selected' : ''}>${f.nome} · ${f.ditta}</option>`).join('')}</select></label>
+    <div class="campi"><label>La tua AI <small>facoltativa, a consumo: paghi tu il servizio</small><select name="fornitore"><option value="">Solo il cervello locale (gratis)</option>${Object.entries(AI.FORNITORI).map(([k, f]) => `<option value="${esc(k)}"${AI.fornitore() === k ? ' selected' : ''}>${esc(f.nome)} · ${esc(f.ditta)}</option>`).join('')}</select></label>
       <label>Chiave <small>si crea sul sito del servizio</small><input name="chiave" type="password" autocomplete="off" value="${esc(D.imp.chiave)}" placeholder="incolla la chiave"></label>
       <label class="spunta tutta"><input type="checkbox" name="voceAlta"${D.imp.voceAlta ? ' checked' : ''}>Leggi le risposte ad alta voce</label></div>
-    <p class="stato-ai" style="margin:10px 0 0">${D.imp.chiave ? `AI <b>attiva</b>: ${AI.FORNITORI[AI.fornitore()].nome}.` : 'Senza chiave Lode funziona lo stesso: comandi, timer, libretto e ripasso sono tutti locali; nell\'app c\'è anche il cervello locale gratis.'}</p>
+    <p class="stato-ai" style="margin:10px 0 0">${D.imp.chiave ? `AI <b>attiva</b>: ${esc(AI.FORNITORI[AI.fornitore()].nome)}.` : 'Senza chiave Lode funziona lo stesso: comandi, timer, libretto e ripasso sono tutti locali; nell\'app c\'è anche il cervello locale gratis.'}</p>
     <div class="piedi"><button class="btn piano" value="azzera">Cancella tutto</button><div class="dx"><button class="btn piano" value="annulla" formnovalidate>Annulla</button><button class="btn primary" value="salva">Salva</button></div></div>`,
   (f, azione, dlg) => {
-    if (azione === 'azzera') { if (!confirm('Cancellare tutti i dati di Lode da questo browser? Prima conviene esportarli.')) return false; sostituisci(VUOTO()); toast('Dati cancellati'); return; }
+    // «Cancella tutto» cancella anche le chiavi: prima si scollega (D.imp.chiave vuota, via 'lode:chiavi'; senza chiave
+    // tolta resta undefined), poi sostituisci() tiene la chiave di D, ormai vuota, e salva() toglie anche 'lode:chiave'
+    if (azione === 'azzera') { if (!confirm('Cancellare tutti i dati di Lode da questo browser? Prima conviene esportarli.')) return false;
+      const tolta = AI.FORNITORI[AI.scollegaFornitore()]; sostituisci(VUOTO());
+      toast(tolta ? `Dati cancellati, anche la chiave di ${tolta.nome}: revocala anche nel tuo account (${tolta.sito})` : 'Dati cancellati'); return; }
     Object.assign(D.profilo, { nome: String(f.get('nome')).trim(), corso: String(f.get('corso')).trim(), cfuTotali: +f.get('cfuTotali'), lode: +f.get('lode') });
     const chiave = String(f.get('chiave')).trim(), forn = String(f.get('fornitore') || '');
     Object.assign(D.imp, { focus: Math.max(5, +f.get('focus') || 25), pausa: Math.max(1, +f.get('pausa') || 5), suoni: !!f.get('suoni'), voceAlta: !!f.get('voceAlta'), aspetto: f.get('chiaro') ? 'chiaro' : 'scuro' });
-    if (!forn || !chiave) AI.scollegaFornitore();
-    salva(); applicaAspetto(); toast('Impostazioni salvate');
+    const tolta = !forn || !chiave ? AI.FORNITORI[AI.scollegaFornitore()] : null;   // la chiave si cancella davvero da qui
+    salva(); applicaAspetto(); toast(tolta ? `Chiave di ${tolta.nome} cancellata da qui: revocala anche nel tuo account (${tolta.sito})` : 'Impostazioni salvate');
     if (forn && chiave) AI.provaFornitore(forn, chiave).then(r => { AI.collegaFornitore(forn, chiave, r.modello); salva(); toast(`${AI.FORNITORI[forn].nome} collegata${r.modello ? ' · ' + r.modello : ''}`); })
       .catch(e => toast(e.status === 401 || e.status === 403 ? 'La chiave non è valida' : 'Non riesco a verificare la chiave adesso'));
   });
@@ -141,7 +145,7 @@ function scarica() {
 function importa() {
   const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json';
   i.addEventListener('change', async () => {
-    try { const d = JSON.parse(await i.files[0].text()); if (d?.v !== 1 || !Array.isArray(d.esami)) throw 0; if (!confirm('Sostituire i dati attuali con questo backup?')) return; sostituisci(d); toast('Backup importato'); }
+    try { const d = JSON.parse(await i.files[0].text()); if (!backupValido(d)) throw 0; if (!confirm('Sostituire i dati attuali con questo backup?')) return; sostituisci(d); toast('Backup importato'); }
     catch { toast('Questo file non è un backup di Lode'); }
   }); i.click();
 }

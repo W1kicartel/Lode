@@ -402,7 +402,7 @@ Tutto finisce in un registro onesto nel tuo vault, scritto per te. Gratis, offli
 **Generali**
 - Il README dice che Lode non è mai stato provato su un PC Windows vero.
 - Git c'è solo per chi installa dal codice. Per questo l'MVP non usa git.
-- Andrebbe fissata la versione dei moduli caricati da jsdelivr (`@anthropic-ai/sdk` senza versione, `transformers@3`, `pdfjs-dist@4`). È un lavoro separato.
+- Le librerie della barra hanno la versione esatta: nell'app sono file locali (`desktop/vendor.mjs`, `js/librerie.js`), Claude si chiama con `fetch` senza SDK.
 
 ---
 

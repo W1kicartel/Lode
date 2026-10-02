@@ -164,10 +164,24 @@ Il workflow passa a ogni macchina solo i segreti del suo sistema: quelli di Appl
    ```
    La prima riga deve dire `Authority=Developer ID Application: Nome Cognome (…)`; la seconda `accepted` e `source=Notarized Developer ID`.
 3. **Controlla Windows**: tasto destro sul `.exe` › **Proprietà** › scheda **Firme digitali**: deve esserci il tuo nome.
-4. **Pubblica una versione**: cambia `version` in `desktop/package.json` (per esempio `0.4.0`), fai il commit, poi:
+4. **Pubblica una versione**: cambia `version` in `desktop/package.json` (per esempio `0.4.0`), fai il commit e `git push`, poi:
    ```bash
    git tag v0.4.0 && git push --tags
    ```
-   Il tag deve dire la stessa versione di `package.json`: se non combaciano, il workflow si ferma (gli aggiornamenti confrontano proprio quel numero). Un tag con il trattino, per esempio `v0.4.0-beta.1` (con `0.4.0-beta.1` in `package.json`), esce come *prerelease*: gli aggiornamenti non la propongono a chi ha una versione finale.
+   Il tag deve dire la stessa versione di `package.json`: se non combaciano, il workflow si ferma (gli aggiornamenti confrontano proprio quel numero). Deve anche stare su un commit che è già su `main`: se hai spinto solo il tag, il workflow si ferma prima di pubblicare; fai `git push` e poi, nella pagina del workflow, **Re-run failed jobs** (gli installer già costruiti non si rifanno). Un tag con il trattino, per esempio `v0.4.0-beta.1` (con `0.4.0-beta.1` in `package.json`), esce come *prerelease*: gli aggiornamenti non la propongono a chi ha una versione finale.
+
+   La Release nasce come bozza, riceve tutti i file e solo alla fine diventa pubblica. Una Release già pubblicata il workflow non la sovrascrive mai: se un installer è sbagliato, esce una versione nuova: due installer diversi con lo stesso numero confonderebbero gli aggiornamenti e chi controlla l'impronta.
 
 Nella pagina della Release, accanto agli installer, ci sono `latest.yml`, `latest-mac.yml`, `latest-linux.yml` e alcuni `.blockmap` (e il `.zip` del Mac firmato). Non vanno tolti: sono quelli che l'app legge per aggiornarsi.
+
+C'è anche `SHA256SUMS.txt`: le impronte SHA-256 di tutti i file, calcolate dal workflow su quelli che carica. Chi scarica può confrontarle con il file che ha (il README, alla voce «Installa», dice come). Per controllarle tutte insieme, nella cartella con i file scaricati: `shasum -a 256 -c SHA256SUMS.txt --ignore-missing` sul Mac, `sha256sum -c SHA256SUMS.txt --ignore-missing` su Linux.
+
+---
+
+## Proteggere le Release (impostazioni di GitHub, una volta)
+
+Il workflow è già pronto; queste tre cose si attivano solo dalle impostazioni del repository **W1kicartel/Lode**, e servono a far sì che un tag spostato o un token rubato non possano cambiare installer già scaricati dagli studenti.
+
+1. **Release immutabili**: **Settings › General**, sezione **Releases**, spunta **Enable release immutability**. Da lì in poi, una Release pubblicata non cambia più: né i file né il tag. Il workflow carica tutto mentre la Release è ancora una bozza, quindi funziona anche così. Vale solo per le Release pubblicate dopo averla attivata: la 0.3.0 resta modificabile, la prima protetta è la versione successiva.
+2. **Regole per i tag `v*`**: **Settings › Rules › Rulesets › New ruleset › New tag ruleset**. Destinazione: i tag che corrispondono a `v*`. Regole: **Restrict creations**, **Restrict updates**, **Restrict deletions**. Nella lista di chi può scavalcarle (*Bypass list*) metti **Repository admin**, cioè tu. Così solo tu crei, sposti o cancelli i tag che pubblicano.
+3. **Regole per `main`**: **New branch ruleset** sul ramo predefinito, con **Block force pushes** e **Restrict deletions**. Non attivare «Require a pull request» se non metti anche te nella *Bypass list*: oggi i commit vanno direttamente su `main` e resterebbero bloccati.
