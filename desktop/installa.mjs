@@ -60,8 +60,12 @@ async function verificaFirma(chi, percorso) {
   if (!WIN) return;
   // il percorso passa da una variabile d'ambiente, non dentro il comando: niente da interpretare per PowerShell
   const ps = join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+  // PSModulePath si toglie: se Lode è partita da PowerShell 7 (un terminale, o le prove su GitHub) quella variabile punta ai
+  // moduli di PowerShell 7 e il PowerShell di Windows non carica più Get-AuthenticodeSignature: uscita vuota, «nessuna firma»
+  const env = { ...process.env, FILE_DA_VERIFICARE: percorso }; delete env.PSModulePath;
   let out = '';
-  try { out = await esegui(ps, ['-NoProfile', '-NonInteractive', '-Command', '$s = Get-AuthenticodeSignature -LiteralPath $env:FILE_DA_VERIFICARE; "$($s.Status)|$($s.SignerCertificate.Subject)"'], { env: { ...process.env, FILE_DA_VERIFICARE: percorso }, windowsHide: true, timeout: 120e3 }); } catch { }
+  try { out = await esegui(ps, ['-NoProfile', '-NonInteractive', '-Command', '$s = Get-AuthenticodeSignature -LiteralPath $env:FILE_DA_VERIFICARE; "$($s.Status)|$($s.SignerCertificate.Subject)"'], { env, windowsHide: true, timeout: 120e3 }); }
+  catch (e) { console.warn(`Lode: verifica della firma di ${f.nome} non riuscita: ${String(e.message).slice(0, 300)}`); }
   const [stato, soggetto] = out.trim().split('|');
   if (stato !== 'Valid' || nomeComune(soggetto) !== f.editore) { console.warn(`Lode: firma di ${f.nome} non valida (${stato || 'nessuna'} · ${soggetto || '—'})`); throw nonFirmato(f.nome); }
 }
