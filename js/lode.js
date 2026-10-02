@@ -1322,7 +1322,7 @@ function fineAscolto(annulla = false) { if (!Voce.attivo()) { modo('riposo'); re
 
 /* ---------- collegamenti ---------- */
 function collega() {
-  shell.addEventListener('pointerenter', e => { if (e.pointerType !== 'mouse') return; A.chiudiTra?.(); A.chiudiTra = null; if (!A.aperto) A.apriTra = dopo(70, () => apri()); });
+  shell.addEventListener('pointerenter', e => { if (e.pointerType !== 'mouse') return; A.chiudiTra?.(); A.chiudiTra = null; if (!A.aperto && !A.proposta) A.apriTra = dopo(70, () => apri()); });   // sulla proposta il mouse deve poter premere «Gioca» o «Dopo»
   shell.addEventListener('pointerleave', e => {
     if (e.pointerType !== 'mouse') return; A.apriTra?.(); A.apriTra = null;
     if (A.aperto && !A.fisso && !shell.contains(document.activeElement) && !Voce.attivo()) A.chiudiTra = dopo(380, () => { A.chiudiTra = null; if (!A.fisso) chiudi(); });
