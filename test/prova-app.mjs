@@ -7,15 +7,20 @@
 // Copre comandi, aula (★, definizioni, domande nella nota Obsidian), focus, libretto, ripasso, giochi, orario, note,
 // indietro/Esc, voce (Whisper locale), trascrizione di una lezione con formule, riordino e definizioni col modello
 // locale, domanda all'AI. L'audio va direttamente al motore: niente altoparlanti, niente microfono.
+// Informatica, senza AI: «Cosa stampa?», un laboratorio di C seguito in una cartella temporanea (LODE_PROGETTO, niente
+// dialogo; LODE_CONFERMA_AUTO salta la finestra di conferma, solo nelle prove), le prove .in/.out se c'è un compilatore C
+// (altrimenti la scheda «manca il compilatore»), un errore del compilatore spiegato in italiano, il diario nel vault.
+// I file del laboratorio li scrive questo processo quando la barra lo chiede (i segnali LODE-SCRIVI e LODE-DIARIO nell'uscita).
 // L'uscita di Electron si vede dal vivo; dopo LODE_LIMITE_MIN minuti (100: GitHub ferma tutto a 120) Electron si ferma e
 // il resoconto arriva lo stesso, con l'ultimo passo finito.
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, readdirSync, existsSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { trovaCompilatore } from '../desktop/esegui.mjs';
 
 const QUI = dirname(fileURLToPath(import.meta.url)), DESKTOP = join(QUI, '..', 'desktop');
 const DIR = mkdtempSync(join(tmpdir(), 'lode-prova-')), VAULT = join(DIR, 'Vault');
@@ -69,6 +74,23 @@ Il limite per x che tende a zero di seno di x fratto x è uguale a uno, questo a
 Definiamo infine la funzione integrale come l'integrale da a a x di f di t in d t.`, 'lezione');
 
 if (process.env.LODE_SOLO_AUDIO) { console.log('audio di prova salvati in', AUDIO); process.exit(0); }
+
+// informatica: un laboratorio di C minuscolo (somma di due numeri, due prove .in/.out). Prima com'è, poi con una funzione
+// nuova (lo «scrive» questo processo, come farebbe lo studente o un agente), poi con un errore del compilatore
+const LAB = join(DIR, 'lab-somma'), CC = await trovaCompilatore();
+const C_INIZIO = '#include <stdio.h>\n\nint main(void) {\n    int a, b;\n    if (scanf("%d %d", &a, &b) != 2) return 1;\n    printf("%d\\n", a + b);\n    return 0;\n}\n';
+const C_FUNZIONE = '#include <stdio.h>\n\nint somma(int a, int b) {\n    return a + b;\n}\n\nint main(void) {\n    int a, b;\n    if (scanf("%d %d", &a, &b) != 2) return 1;\n    printf("%d\\n", somma(a, b));\n    return 0;\n}\n';
+// riga 4: manca il «;». È un errore meccanico: la correzione ci sarebbe, ma il progetto è segnato «valutato» e non si mostra
+const C_ROTTO = C_FUNZIONE.replace('return a + b;', 'return a + b');
+mkdirSync(join(LAB, 'test'), { recursive: true });
+writeFileSync(join(LAB, 'somma.c'), C_INIZIO);
+writeFileSync(join(LAB, 'test', '01.in'), '2 3\n'); writeFileSync(join(LAB, 'test', '01.out'), '5\n');
+writeFileSync(join(LAB, 'test', '02.in'), '-4 1\n'); writeFileSync(join(LAB, 'test', '02.out'), '-3\n');
+console.log('Laboratorio di prova:', LAB, '· compilatore C:', CC ? CC.versione : 'nessuno (si aspetta «manca il compilatore»)');
+const GCC_ERRORE = "lista.c: In function 'main':\nlista.c:42:5: error: 'nodo' undeclared (first use in this function)\n   42 |     nodo->valore = 3;\n      |     ^~~~\n";
+// un errore meccanico copiato dal terminale (clang): con un progetto «valutato» seguito, niente correzione
+const CLANG_PUNTO = "pv.c:3:14: error: expected ';' at end of declaration\n    3 |     int x = 5\n      |              ^\n      |              ;\n1 error generated.\n";
+const due = n => String(n).padStart(2, '0'), oggiLocale = (x => `${x.getFullYear()}-${due(x.getMonth() + 1)}-${due(x.getDate())}`)(new Date());
 
 const d = new Date(), hh = d.getHours();
 const lezioneOra = `lezione analisi 2 ${['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'][d.getDay()]} dalle ${hh} alle ${Math.min(23, hh + 2)} aula 7`;
@@ -131,6 +153,75 @@ const passi = [
   { nome: 'la tua AI: carte con risposta strutturata', pesante: true, js: `(async()=>{ const c = await __lode.AI.carteDa([{ type: 'text', text: 'Il gradiente di f è il vettore delle derivate parziali e punta nella direzione di massima crescita. Un punto stazionario è un punto dove il gradiente si annulla. La matrice hessiana raccoglie le derivate seconde.' }]); return c.length + ' carte: ' + c.map(x => x.fronte).join(' | ') })()`, atteso: 'carte' },
   { nome: 'la tua AI: appunti sul computer', js: `(async()=>{ __lode.AI.impostaUso('pesante'); const r = __lode.AI.motore() + '/' + __lode.AI.motore('testo'); __lode.AI.impostaUso('tutto'); return r })()`, atteso: 'cloud/locale' },
   { nome: 'la tua AI: torna al locale', js: `(async()=>{ __lode.AI.scollegaFornitore(); return __lode.AI.motore() + '/' + __lode.AI.motore('testo') })()`, atteso: 'locale/locale' },
+  // ---------- informatica (docs/PROGETTO-INFORMATICA.md), tutto senza AI ----------
+  { nome: 'informatica: esame di Programmazione 1, compare «Codice»', js: `(async()=>{ await __lode.indietro(); const D = __lode.D(), g = new Date().getDay(); D.orario.forEach(o => { o.giorni = o.giorni.filter(x => x !== g); }); dispatchEvent(new CustomEvent('lode:dati')); const r = await T.di('esame programmazione 1 tra 20 giorni 12 cfu'); await __lode.indietro(); await new Promise(r=>setTimeout(r,500)); return r.slice(-60).replace(/\\n/g,' ') + ' | strumenti: ' + [...document.querySelectorAll('.ld-strumenti [data-ld-strumento]')].map(x => x.innerText.trim()).join(', ') })()`, atteso: 'Codice' },
+  { nome: 'cosa stampa: un giro di 5, risposte calcolate da Lode', ...(FOTO ? { foto: 'cosa-stampa.png' } : {}), js: `(async()=>{ await __lode.indietro(); await __lode.invia('cosa stampa'); const esiti = []; let prima = null;
+    for (let k = 0; k < 5; k++) {
+      const u = await T.aspetta(() => { const x = __lode.ST.ultima(); return x && x !== prima && document.querySelector('.ld-stampa .manche .ld-codice') && x; }, 20);
+      if (!u) { esiti.push('nessuna domanda'); break; }
+      prima = u; const s = [...document.querySelectorAll('.ld-stampa')].pop();
+      if (u.scrivi) { s.querySelector('.ld-scrivi input').value = u.giusta; s.querySelector('[data-controlla]').click(); } else s.querySelectorAll('[data-o]')[u.indice - 1].click();
+      const sp = await T.aspetta(() => { const x = s.querySelector('.ld-spiega'); return x && !x.hidden && x.innerText; }, 10);
+      esiti.push(u.modello + ': ' + String(sp).split('\\n')[0]);
+    }
+    const fine = await T.aspetta(() => [...document.querySelectorAll('.ld-stampa')].pop()?.querySelector('.ld-esito')?.innerText, 15);
+    return esiti.join(' | ') + ' || ' + String(fine).replace(/\\n/g, ' ') })()`, atteso: 'Tutte giuste. Le risposte le ha calcolate Lode' },
+  { nome: 'segui progetto: la cartella del laboratorio', js: `(async()=>{ await __lode.indietro(); __lode.invia('segui progetto');
+    const capito = await T.aspetta(() => document.querySelector('.ld-pcapito [data-capito]:not([disabled])'), 15); if (capito) capito.click();
+    const si = await T.aspetta(() => document.querySelector('.ld-psegui [data-si]:not([disabled])'), 15);
+    if (!si) return 'nessuna scheda: ' + document.querySelector('.ld-filo').innerText.slice(-200);
+    const corso = document.querySelector('.ld-psegui select').value, val = document.querySelector('.ld-psegui [data-valutato]'); val.click();
+    const valutato = val.getAttribute('aria-checked'); si.click();
+    const f = await T.aspetta(() => document.querySelector('.ld-filo').innerText.includes('Seguo lab-somma.') && document.querySelector('.ld-filo').innerText, 15);
+    return 'corso: ' + corso + ' | valutato: ' + valutato + ' | ' + String(f).slice(-100).replace(/\\n/g, ' ') + ' | LODE-SCRIVI:funzione' })()`, atteso: 'corso: Programmazione 1 | valutato: true | ' },
+  { nome: 'segui progetto: «Fatto. In parole semplici» e «non provato»', ...(FOTO ? { foto: 'progetto-fatto.png' } : {}), js: `(async()=>{ const pp = await T.aspetta(() => { const x = __lode.PR.pillola(); return x && x.testo.includes('non provato') && x.testo; }, 40);
+    await __lode.indietro(); await new Promise(r=>setTimeout(r,600));
+    const riga = [...document.querySelectorAll('.ld-home .ld-riga')].find(x => x.innerText.includes('non provato'));
+    if (!riga) return 'pillola: ' + pp + ' | nessuna riga in Oggi: ' + document.querySelector('.ld-home').innerText.slice(0, 300).replace(/\\n/g, ' ');
+    riga.querySelector('[data-ld-riga]').click();
+    const f = String(await T.aspetta(() => document.querySelector('.ld-pfatto')?.innerText, 10));
+    const ok = String(pp).includes('lab-somma · fatto · non provato') && /fatto\\. in parole semplici/i.test(f) && f.includes('somma') && f.includes('Non so chi ha scritto');
+    return (ok ? 'Fatto e non provato' : 'NO') + ' | pillola: ' + pp + ' | ' + f.replace(/\\n/g, ' ').slice(0, 400) })()`, atteso: 'Fatto e non provato' },
+  { nome: CC ? 'prova il progetto: le prove .in/.out' : 'prova il progetto: manca il compilatore', ...(FOTO ? { foto: 'progetto-prova.png' } : {}), js: `(async()=>{ await __lode.indietro(); __lode.invia('prova il progetto');
+    const b = await T.aspetta(() => document.querySelector('.ld-pcomando [data-usa]:not([disabled]), .ld-pcomando [data-riprova]:not([disabled])'), 30);
+    if (!b) return 'nessuna proposta: ' + document.querySelector('.ld-filo').innerText.slice(-300).replace(/\\n/g, ' ');
+    const c = b.closest('.ld-pcomando'), h = c.querySelector('h3').innerText, testo = (c.querySelector('.ld-ptesto')?.innerText || '').slice(0, 200);
+    if (b.dataset.riprova !== undefined) return h + ' | ' + testo;
+    b.click();
+    const e = await T.aspetta(() => [...document.querySelectorAll('.ld-pesito')].pop()?.querySelector('.ld-esito')?.innerText, 90);
+    return h + ' | ' + testo + ' | ' + String(e).replace(/\\n/g, ' ') + ' | LODE-SCRIVI:rotto' })()`, atteso: CC ? 'Compila e passa tutte le 2 prove' : 'manca il compilatore' },
+  ...(CC ? [{ nome: 'prova il progetto: l\'errore del compilatore spiegato in italiano', ...(FOTO ? { foto: 'errore-spiegato.png' } : {}), js: `(async()=>{ const cambiato = await T.aspetta(() => { const p = [...__lode.PR.stato().values()].find(x => x.nome === 'lab-somma'); return p && p.vecchio && p.ultimaProva && p.ultimaCodice > p.ultimaProva.quando; }, 30);
+    await __lode.indietro(); __lode.invia('prova il progetto');
+    const s = await T.aspetta(() => [...document.querySelectorAll('.ld-scheda.ld-err')].pop(), 90);
+    if (!s) return 'cambiato: ' + !!cambiato + ' | nessuna scheda «Errore»: ' + document.querySelector('.ld-filo').innerText.slice(-300).replace(/\\n/g, ' ');
+    s.querySelector('[data-passo=dove] summary')?.click(); await new Promise(r => setTimeout(r, 400));
+    const t = s.innerText.replace(/\\n/g, ' '), ok = /somma\\.c, riga [45]/.test(t) && /manca un ;/.test(t) && !s.querySelector('[data-passo=correzione]') && !!s.querySelector('[data-valutato]');
+    return (ok ? 'valutato: manca ; spiegato, niente correzione' : 'NO') + ' | ' + [...document.querySelectorAll('.ld-pesito')].pop()?.querySelector('.ld-esito')?.innerText.replace(/\\n/g, ' ') + ' | ' + t.slice(0, 500) })()`, atteso: 'valutato: manca ; spiegato, niente correzione' }] : []),
+  // l'errore di gcc incollato nel campo (una riga sola): le righe vere arrivano lo stesso a «spiegami l'errore»
+  { nome: 'spiegami l\'errore: testo incollato, in italiano', js: `(async()=>{ await __lode.indietro(); const n = document.querySelectorAll('.ld-scheda.ld-err').length, i = document.querySelector('.ld-campo input');
+    i.focus(); i.value = "spiegami l'errore: "; i.setSelectionRange(i.value.length, i.value.length);
+    const dt = new DataTransfer(); dt.setData('text/plain', ${A(GCC_ERRORE)}); i.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    const riga = i.value; i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    const s = await T.aspetta(() => document.querySelectorAll('.ld-scheda.ld-err').length > n && [...document.querySelectorAll('.ld-scheda.ld-err')].pop(), 10);
+    return 'nel campo: ' + riga.slice(0, 70) + '… | ' + (s ? s.innerText.replace(/\\n/g, ' ').slice(0, 300) : document.querySelector('.ld-filo').innerText.slice(-200)) })()`, atteso: 'lista.c, riga 42: usi nodo ma non è dichiarat' },
+  // spec F3 e §5: con un progetto «valutato» seguito, anche l'errore copiato a mano non mostra «Fammi vedere la correzione»
+  { nome: 'spiegami l\'errore: con un progetto valutato niente correzione', js: `(async()=>{ await __lode.indietro(); const n = document.querySelectorAll('.ld-scheda.ld-err').length;
+    __lode.invia("spiegami l'errore: " + ${A(CLANG_PUNTO)});
+    const s = await T.aspetta(() => document.querySelectorAll('.ld-scheda.ld-err').length > n && [...document.querySelectorAll('.ld-scheda.ld-err')].pop(), 10);
+    if (!s) return 'nessuna scheda: ' + document.querySelector('.ld-filo').innerText.slice(-200);
+    const t = s.innerText.replace(/\\n/g, ' '), ok = /pv\\.c, riga 3/.test(t) && !s.querySelector('[data-passo=correzione]') && /progetto valutato/i.test(s.querySelector('[data-valutato]')?.innerText || '');
+    return (ok ? 'niente correzione, con la nota' : 'NO') + ' | ' + t.slice(0, 300) })()`, atteso: 'niente correzione, con la nota' },
+  { nome: 'diario del progetto: nel vault, con quello che Lode ha visto', js: `(async()=>{ await __lode.indietro(); const r = await T.di('diario del progetto'); const x = __lode.DI.diarioDaAprire(__lode.D().codice, {}); if (!x) return 'nessun diario: ' + r;
+    let t = ''; for (let k = 0; k < 30 && !${CC ? '/Prova: ✗ non compila/' : '/Lode segue/'}.test(t); k++) { await new Promise(r => setTimeout(r, 500)); t = await window.lodeDesktop.invoca('vault:leggi', { file: x.file }).catch(() => ''); }
+    return r.slice(-60).replace(/\\n/g, ' ') + ' | ' + (t.match(/- \\d\\d:\\d\\d · [^\\n]*/g) || []).join(' / ') + ' | LODE-DIARIO:' + x.file })()`, atteso: CC ? 'Prova: ✓ compila · 2/2 prove' : 'Lode segue lab-somma' },
+  { nome: 'diario: «Cosa ho capito» resta dello studente', js: `(async()=>{ await new Promise(r => setTimeout(r, 1500)); await __lode.indietro(); __lode.invia('smetti di seguire lab-somma');
+    const b = await T.aspetta(() => [...document.querySelectorAll('.ld-progetto [data-si]:not([disabled])')].pop(), 15); if (!b) return 'nessuna conferma: ' + document.querySelector('.ld-filo').innerText.slice(-200);
+    b.click(); await T.aspetta(() => document.querySelector('.ld-filo').innerText.includes('Non seguo più lab-somma'), 15);
+    const f = __lode.DI.diarioDaAprire(__lode.D().codice, { progetto: 'lab-somma' })?.file; let t = '';
+    for (let k = 0; k < 30 && !/smette di seguire/.test(t); k++) { await new Promise(r => setTimeout(r, 500)); t = await window.lodeDesktop.invoca('vault:leggi', { file: f }).catch(() => ''); }
+    return (/## Cosa ho capito[\\s\\S]*prova mia/.test(t) && /smette di seguire/.test(t) ? 'la parte dello studente resta' : 'NO') + ' | ' + t.slice(-260).replace(/\\n/g, ' ') })()`, atteso: 'la parte dello studente resta' },
+  { nome: 'Cosa so davvero: la pagina del corso e la Memoria', js: `(async()=>{ await new Promise(r => setTimeout(r, 1500)); const t = await window.lodeDesktop.invoca('vault:leggi', { file: 'Corsi/Programmazione 1.md' }).catch(e => 'ERRORE ' + e.message); const m = await window.lodeDesktop.invoca('vault:leggi', { file: 'Lode/Memoria.md' }).catch(() => '');
+    return (t.match(/## Cosa so davvero[\\s\\S]{0,240}/)?.[0] || t.slice(0, 200)).replace(/\\n/g, ' ') + ' | memoria: ' + (m.match(/## Informatica[^#]*/)?.[0] || 'manca').replace(/\\n/g, ' ') })()`, atteso: '| Esercizi | Al primo colpo |' },
   { nome: 'configurazione: si apre', js: `(()=>{ location.href = location.href.split('?')[0] + '?benvenuto=1'; return 1 })()`, attesa: 500, atteso: '1' },
   { nome: 'configurazione: nome e dati di esempio', attesa: 3500, js: `(async()=>{ const w = ms => new Promise(r => setTimeout(r, ms)); const av = () => document.querySelector('[data-bv=avanti]').click(); av(); await w(900); const i = document.querySelector('#bv-nome'); i.value = 'Marco'; i.dispatchEvent(new Event('input')); const pulisci = !!document.querySelector('#bv-pulisci'); av(); await w(900); return document.querySelector('h1').innerText + ' | esempio da togliere: ' + pulisci })()`, atteso: 'Prepariamo il tuo computer. | esempio da togliere: true' },
   { nome: 'configurazione: installazioni', js: `(async()=>{ const w = ms => new Promise(r => setTimeout(r, ms)); document.querySelector('[data-bv=avanti]').click(); for (let k = 0; k < 120; k++) { await w(1000); if (document.querySelectorAll('.bv-riga.ok').length === 3) break; } return [...document.querySelectorAll('.bv-riga')].map(r => r.dataset.k + ':' + (r.classList.contains('ok') ? 'pronto' : r.querySelector('.d').textContent)).join(' | ') })()`, atteso: 'obsidian:pronto | cervello:pronto | voce:pronto' },
@@ -140,14 +231,25 @@ const passi = [
 // sulla macchina Windows di GitHub (niente scheda video) i passi pesanti col modello di prova si saltano: verificano il
 // formato delle chiamate ai servizi esterni, che non dipende dal sistema ed è provato sul Mac
 if (CI) for (let i = passi.length - 1; i >= 0; i--) if (passi[i].pesante) { console.log('saltato su questa macchina:', passi[i].nome); passi.splice(i, 1); }
+// LODE_SOLO=<espressione> (per chi sviluppa): solo i passi col nome che corrisponde, per esempio LODE_SOLO='informatica|stampa|progetto|errore|diario|davvero'
+const SOLO = process.env.LODE_SOLO ? new RegExp(process.env.LODE_SOLO, 'i') : null;
+if (SOLO) for (let i = passi.length - 1; i >= 0; i--) if (passi[i].nome && !SOLO.test(passi[i].nome)) passi.splice(i, 1);
 writeFileSync(join(DIR, 'passi.json'), JSON.stringify(passi));
 console.log('Vault di prova:', VAULT);
 const LIMITE = +process.env.LODE_LIMITE_MIN || 100;
 
 const out = await new Promise(ok => {
-  const p = spawn(ELECTRON, ['.'], { cwd: DESKTOP, env: { ...process.env, LODE_DATI: join(DIR, 'dati'), LODE_VAULT: VAULT, LODE_OBSIDIAN_DIR: join(DIR, 'obsidian'), LODE_NON_APRIRE: '1', LODE_PROVA: join(DIR, 'passi.json'), LODE_ESCI: '1', ...(FOTO ? { LODE_FOTO: FOTO } : {}) } });
+  const p = spawn(ELECTRON, ['.'], { cwd: DESKTOP, env: { ...process.env, LODE_DATI: join(DIR, 'dati'), LODE_VAULT: VAULT, LODE_OBSIDIAN_DIR: join(DIR, 'obsidian'), LODE_NON_APRIRE: '1', LODE_PROVA: join(DIR, 'passi.json'), LODE_ESCI: '1', ...(FOTO ? { LODE_FOTO: FOTO } : {}),
+    LODE_PROGETTO: LAB, LODE_CONFERMA_AUTO: '1', LODE_QUIETE_MS: '1500', LODE_FATTO_MS: '2000' } });
   let s = '', fatto = false;
-  const eco = x => { s += x; process.stdout.write(x); }, fine = () => { if (!fatto) { fatto = true; clearTimeout(cane); ok(s); } };
+  // i segnali della barra: scrivere il laboratorio (come lo studente o un agente) e la parte dello studente nel diario
+  const fatti = new Set(), segnali = () => {
+    if (s.includes('LODE-SCRIVI:funzione') && !fatti.has('funzione')) { fatti.add('funzione'); writeFileSync(join(LAB, 'somma.c'), C_FUNZIONE); }
+    if (s.includes('LODE-SCRIVI:rotto') && !fatti.has('rotto')) { fatti.add('rotto'); if (CC) writeFileSync(join(LAB, 'somma.c'), C_ROTTO); }
+    const d = s.match(/LODE-DIARIO:(Progetti\/[^"|\\]+?\.md)/);
+    if (d && !fatti.has('diario')) { fatti.add('diario'); const f = join(VAULT, ...d[1].split('/')); try { writeFileSync(f, readFileSync(f, 'utf8').trimEnd() + '\nprova mia: la funzione somma va scritta prima di main.\n'); } catch (e) { console.log('diario non trovato:', e.message); } }
+  };
+  const eco = x => { s += x; process.stdout.write(x); segnali(); }, fine = () => { if (!fatto) { fatto = true; clearTimeout(cane); ok(s); } };
   p.stdout.on('data', eco); p.stderr.on('data', eco);
   const cane = setTimeout(() => {
     eco(`\nCANE DA GUARDIA: Electron fermato dopo ${LIMITE} minuti (ultimo passo finito: ${[...s.matchAll(/^passo (\d+)/gm)].pop()?.[1] ?? 'nessuno'})\n`);
@@ -188,7 +290,23 @@ verifica.push(
   ['configurazione: libretto ed esami salvati', dati.esami?.some(e => /analisi matematica i/i.test(e.nome) && e.voto === 28 && e.cfu === 9) && dati.esami?.some(e => e.nome === 'Geometria 2' && e.data === '2026-12-15')],
   ['configurazione: segnata come fatta', !!conf.benvenuto],
 );
-for (const [n, v] of verifica) { v ? ok++ : ko++; console.log(`${v ? '✓' : '✗'} ${n}`); }
+// informatica: il registro nel vault, e i percorsi dei progetti mai nei dati del vault (che si sincronizzano)
+const leggi = f => existsSync(f) ? readFileSync(f, 'utf8') : '';
+const diario = leggi(join(VAULT, 'Progetti', 'lab-somma', `${oggiLocale}.md`)), corsoProg = leggi(join(VAULT, 'Corsi', 'Programmazione 1.md')), memoria = leggi(join(VAULT, 'Lode', 'Memoria.md'));
+verifica.push(
+  ['diario: Progetti/lab-somma/<oggi>.md con il riquadro di Lode', /%% lode:diario %%\n- \d\d:\d\d · Lode segue lab-somma[\s\S]*%% \/lode:diario %%/.test(diario)],
+  [CC ? 'diario: le righe «Prova» (✓ e poi ✗ con l\'errore in italiano)' : 'diario: il cambio, senza prove (manca il compilatore)', CC ? /· Prova: ✓ compila · 2\/2 prove/.test(diario) && /· Prova: ✗ non compila, somma\.c:[45] «manca ;»/.test(diario) : /· Cambiato 1 file \(\+\d+ −\d+\): nuova `somma`/.test(diario)],
+  ['diario: «Cosa ho capito» dello studente intatto', /## Cosa ho capito[\s\S]*prova mia: la funzione somma/.test(diario) && diario.split('%% lode:diario %%').length === 2],
+  ['corso: «Cosa so davvero» in Corsi/Programmazione 1.md', /%% lode:informatica %%\n## Cosa so davvero/.test(corsoProg) && /\| sicuro \|/.test(corsoProg)],
+  ['memoria: sezione «Informatica» prima di «Note per Lode»', /## Informatica\n[\s\S]*## Note per Lode/.test(memoria)],
+  // il main salva il percorso vero (realpath, su Windows in forma lunga: tmpdir() può dare la forma corta RUNNER~1): si cercano
+  // tutte le forme, scritte normali e come in JSON, più il nome della cartella temporanea, che è unico
+  ['privacy: il percorso del laboratorio non è nei dati del vault', (() => {
+    const datiVault = leggi(join(VAULT, '.lode', 'dati.json')), vero = (() => { try { return realpathSync.native(LAB); } catch { return LAB; } })();
+    return !!datiVault && ![LAB, vero].flatMap(x => [x, x.replaceAll('\\', '\\\\'), x.replaceAll('\\', '/')]).some(x => datiVault.includes(x)) && !datiVault.includes(basename(DIR));
+  })()],
+);
+for (const [n, v] of verifica) { if (SOLO && !SOLO.test(n)) continue; v ? ok++ : ko++; console.log(`${v ? '✓' : '✗'} ${n}`); }
 if (process.env.LODE_RISULTATI) writeFileSync(process.env.LODE_RISULTATI, JSON.stringify({
   sistema: `${process.platform} ${process.arch}`, ok, ko,
   passi: passi.map((p, i) => p.nome && { nome: p.nome, passa: (ris[i] ?? '').toLowerCase().includes(p.atteso.toLowerCase()), risposta: (ris[i] ?? '(nessuna risposta)').slice(0, 1500) }).filter(Boolean),

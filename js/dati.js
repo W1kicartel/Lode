@@ -12,13 +12,16 @@ export const VUOTO = () => ({
   orario: [],     // {id, corso, giorni:[0-6], inizio:'09:00', fine:'11:00', aula}
   lezioni: [],    // solo nel browser: {id, corso, data, inizio, fine, aula, definizioni:[{t,d}], stelle:[], domande:[]} (nell'app stanno nel vault)
   memoria: {},    // definizioni ripassate: chiave → {ease, int, rip, scad, giuste, sbagliate, ultima}
+  // informatica (js/codice/): esercizi «Cosa stampa?» (SM-2 a parte), errori contati, eventi per il diario, opzioni dei progetti.
+  // Una chiave a sé: pulisciEsempio() in benvenuto.js azzera D.memoria, non questa. I percorsi dei progetti qui non ci sono mai.
+  codice: { memoria: {}, errori: {}, eventi: [], diari: {}, opzioni: {} },
   imp: { focus: 25, pausa: 5, voceAlta: false, chiave: '', aspetto: 'scuro', suoni: true, suggerimenti: true, ultimoSuggerimento: 0 },
   benvenuto: false,
 });
 
 export const DESKTOP = typeof window !== 'undefined' && !!window.lodeDesktop;
 const chiaveLocale = () => { try { return localStorage.getItem('lode:chiave') || ''; } catch { return ''; } };
-function unisci(d) { return d && d.v === 1 ? { ...VUOTO(), ...d, profilo: { ...VUOTO().profilo, ...d.profilo }, imp: { ...VUOTO().imp, ...d.imp } } : null; }
+function unisci(d) { return d && d.v === 1 ? { ...VUOTO(), ...d, profilo: { ...VUOTO().profilo, ...d.profilo }, imp: { ...VUOTO().imp, ...d.imp }, codice: { ...VUOTO().codice, ...d.codice } } : null; }
 // i dati non si sono potuti leggere (non «non ci sono»: OneDrive offline, file bloccato): Lode lo dice e non li sovrascrive
 export let datiIllegibili = null;
 function carica() {
@@ -41,7 +44,7 @@ export function salva() {
 }
 // un'altra finestra dell'app (o un altro computer, via vault sincronizzato) ha cambiato i dati
 if (DESKTOP) window.lodeDesktop.su('dati:cambiati', d => { const n = unisci(d); if (!n) return; n.imp.chiave = D.imp.chiave; D = n; datiIllegibili = null; dispatchEvent(new CustomEvent('lode:dati')); });
-export function sostituisci(nuovi) { D = { ...VUOTO(), ...nuovi, profilo: { ...VUOTO().profilo, ...nuovi.profilo }, imp: { ...VUOTO().imp, ...nuovi.imp, chiave: D.imp.chiave } }; salva(); }
+export function sostituisci(nuovi) { D = { ...VUOTO(), ...nuovi, profilo: { ...VUOTO().profilo, ...nuovi.profilo }, imp: { ...VUOTO().imp, ...nuovi.imp, chiave: D.imp.chiave }, codice: { ...VUOTO().codice, ...nuovi.codice } }; salva(); }
 // la chiave AI non esce mai in un'esportazione
 export function esporta() { const c = structuredClone(D); c.imp.chiave = ''; return c; }
 // in ascolto da altre schede dello stesso browser
@@ -242,8 +245,9 @@ export function daGiocare(n = 6, corso) {
   pronte.sort((a, b) => b.data.localeCompare(a.data) || (b.stella - a.stella) || (forza(a) - forza(b)));
   return { scelte: pronte.slice(0, n), tutte };
 }
-export function ricorda(k, ok, q = ok ? 4 : 0) {
-  const m = D.memoria[k] ||= { ease: 2.5, int: 0, rip: 0, scad: oggi(), giuste: 0, sbagliate: 0, ultima: null };
+// mappa: dove tenere i conti. Le definizioni in D.memoria; gli esercizi di «Cosa stampa?» in D.codice.memoria
+export function ricorda(k, ok, q = ok ? 4 : 0, mappa = D.memoria) {
+  const m = mappa[k] ||= { ease: 2.5, int: 0, rip: 0, scad: oggi(), giuste: 0, sbagliate: 0, ultima: null };
   const finta = { ...m };
   if (ok) { m.giuste++; m.int = prossimoIntervallo(finta, q); m.rip++; m.scad = piuGiorni(oggi(), m.int); }
   else { m.sbagliate++; m.rip = 0; m.int = 0; m.scad = piuGiorni(oggi(), 1); }

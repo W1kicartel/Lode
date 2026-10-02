@@ -14,9 +14,9 @@ export function crea({ binario, avanza }) {
   function avvia() {
     if (pronto) return pronto;
     pronto = new Promise((ok, ko) => {
-      proc = spawn(binario, [], { stdio: ['pipe', 'pipe', 'pipe'] });
-      proc.stderr.on('data', () => { });   // i log di FluidAudio
-      proc.stdout.on('data', b => {
+      const p = proc = spawn(binario, [], { stdio: ['pipe', 'pipe', 'pipe'] });
+      p.stderr.on('data', () => { });   // i log di FluidAudio
+      p.stdout.on('data', b => {
         resto += b.toString(); let i;
         while ((i = resto.indexOf('\n')) >= 0) {
           const riga = resto.slice(0, i); resto = resto.slice(i + 1);
@@ -27,9 +27,10 @@ export function crea({ binario, avanza }) {
           else if (j.id && attese.has(j.id)) { const a = attese.get(j.id); attese.delete(j.id); j.errore ? a.ko(new Error(j.errore)) : a.ok(j.testo || ''); }
         }
       });
-      proc.on('exit', c => {
+      p.on('exit', c => {
         const e = new Error('lode-voce si è chiuso (' + c + ')'); ko(e);
-        for (const a of attese.values()) a.ko(e); attese.clear(); proc = null; pronto = null;
+        if (proc !== p) return;   // chiuso a riposo: ne è già partito un altro
+        for (const a of attese.values()) a.ko(e); attese.clear(); proc = null; pronto = null; resto = '';
       });
     });
     return pronto;
@@ -41,6 +42,7 @@ export function crea({ binario, avanza }) {
     writeFileSync(file, Buffer.from(f.buffer, f.byteOffset, f.byteLength));
     return new Promise((ok, ko) => { attese.set(id, { ok, ko }); proc.stdin.write(JSON.stringify({ id, file }) + '\n'); });
   }
-  const chiudi = () => { try { proc?.stdin.end(); proc?.kill(); } catch { } };
+  // a riposo o all'uscita: il processo si chiude subito e la prossima trascrizione ne avvia uno nuovo
+  const chiudi = () => { const p = proc; proc = null; pronto = null; resto = ''; for (const a of attese.values()) a.ko(new Error('lode-voce chiuso')); attese.clear(); try { p?.stdin.end(); p?.kill(); } catch { } };
   return { disponibile, avvia, trascrivi, chiudi };
 }

@@ -166,9 +166,12 @@ export async function scaricaModello(nome, avanza) {
   return true;
 }
 // una chat col modello locale, in streaming: i pezzi arrivano a chi chiama
+// quanto resta in memoria il modello dopo l'ultima risposta: su un portatile da 8 GB (il modello ne prende 4) si libera
+// presto, così il resto del computer non va in swap; ricaricarlo dal disco costa 2-4 secondi alla prima domanda dopo
+export const CALDO = totalmem() <= 9 * 2 ** 30 ? '4m' : '15m';
 export async function chatLocale({ modello, messaggi, formato, segnale, pezzo }) {
   await avviaOllama();
-  const r = await fetch(OLLAMA + '/api/chat', { method: 'POST', signal: segnale, body: JSON.stringify({ model: modello, messages: messaggi, stream: true, ...(formato ? { format: formato } : {}), ...(/^qwen3/.test(modello) ? { think: false } : {}), options: { temperature: formato ? 0.2 : 0.6, num_ctx: 8192, num_predict: 4096 }, keep_alive: '15m' }) });
+  const r = await fetch(OLLAMA + '/api/chat', { method: 'POST', signal: segnale, body: JSON.stringify({ model: modello, messages: messaggi, stream: true, ...(formato ? { format: formato } : {}), ...(/^qwen3/.test(modello) ? { think: false } : {}), options: { temperature: formato ? 0.2 : 0.6, num_ctx: 8192, num_predict: 4096 }, keep_alive: CALDO }) });
   if (!r.ok || !r.body) throw new Error(r.status === 404 ? `Il modello ${modello} non è installato` : 'Il modello locale non risponde');
   const lettore = r.body.getReader(), dec = new TextDecoder(); let resto = '', tutto = '';
   for (; ;) {

@@ -27,6 +27,20 @@ jobs:
         with:
           node-version: 22
       - run: node --experimental-vm-modules test/unita.mjs
+      # informatica (docs/PROGETTO-INFORMATICA.md): «Cosa stampa?», «Segui il progetto», errori spiegati, registro nel vault
+      - name: Cosa stampa? (albero del C, modelli, mutanti)
+        run: node test/codice.mjs
+      - name: Cosa stampa? contro il compilatore vero
+        # su Linux e macOS il compilatore c'è sempre: se manca è un errore. Su Windows, senza gcc, salta con un messaggio
+        env:
+          LODE_CC_OBBLIGATORIO: ${{ runner.os != 'Windows' && '1' || '0' }}
+        run: node test/verifica-c.mjs
+      - name: Segui il progetto
+        run: node --experimental-vm-modules test/progetto.mjs
+      - name: Errori spiegati in italiano
+        run: node test/errori.mjs
+      - name: Registro nel vault
+        run: node --experimental-vm-modules test/diario.mjs
 
   app-windows:
     name: App completa su Windows

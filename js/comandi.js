@@ -2,6 +2,8 @@
 // «quanto mi serve per 110», «se prendo 30 in analisi 2», «ripassa analisi», «carta: teorema di Green = …».
 // Se la frase non è un comando, ritorna null e (se c'è la chiave) ci pensa l'AI.
 import { D, MESI, GIORNI, isoGiorno, norm, oggi, piuGiorni, trovaEsame } from './dati.js';
+import { interpreta as interpretaProgetto } from './codice/progetto.js';
+import { analizza as analizzaErrore } from './errori.js';
 
 const NUM = { un: 1, uno: 1, una: 1, due: 2, tre: 3, quattro: 4, cinque: 5, sei: 6, sette: 7, otto: 8, nove: 9, dieci: 10, dodici: 12, quindici: 15, venti: 20, trenta: 30, quaranta: 40, cinquanta: 50, novanta: 90 };
 const n = s => (s in NUM ? NUM[s] : Number(s));
@@ -63,6 +65,18 @@ export const numeri = t => t.replace(/\b[a-zà]+\b/g, w => SENTITO[w.toLowerCase
 
 export function interpreta(frase) {
   const grezzo0 = String(frase || '').trim(); if (!grezzo0) return null;
+  // informatica. «spiegami l'errore», anche con l'errore incollato dopo (su più righe: qui le righe restano com'erano).
+  // Solo se dopo «errore» non c'è niente, ci sono i due punti o un a capo, o c'è davvero un errore del compilatore:
+  // «cosa vuol dire errore standard» o «spiegami l'errore relativo» restano domande per l'AI
+  let e0;
+  if ((e0 = grezzo0.match(/^(?:spiegami|spiega(?:mi)?|cosa vuol dire|che vuol dire) (?:l['’]|quest['’]|questo |il mio )?errore\b([\s\S]*)$/i))) {
+    const dopo = e0[1].replace(/^[ \t]+/, ''), testo = dopo.replace(/^:/, '').trim();
+    const solo = !testo || /^[?.!]+$/.test(testo) || /^(?:del compilatore|di compilazione|del programma|che ho copiato|copiato)[?.!]*$/i.test(testo);
+    if (solo) return { tipo: 'errore', testo: null };
+    if (/^[:\n]/.test(dopo) || analizzaErrore(testo).length) return { tipo: 'errore', testo };
+  }
+  // «segui progetto», «cosa è cambiato», «provato?», «prova il progetto», «compila», «smetti di seguire …»
+  const pr = interpretaProgetto(grezzo0); if (pr) return pr;
   // la voce aggiunge maiuscole e un punto finale; i numeri arrivano a parole
   const grezzo = numeri(grezzo0.replace(/[.!]+$/, '').replace(/^(\w)/, c => c));
   const t = grezzo.toLowerCase().replace(/[’`]/g, "'").replace(/\s+/g, ' ').replace(/[?!.]+$/, '').trim();
@@ -83,6 +97,8 @@ export function interpreta(frase) {
     const o = leggiOrario(m[1]); if (o) return { tipo: 'orario', ...o };
   }
   if (/^(?:orario|il mio orario|le mie lezioni|lezioni|quando ho lezione|che lezione ho)$/.test(t)) return { tipo: 'vediOrario' };
+  // «Cosa stampa?»: esercizi di C con la risposta calcolata da Lode (prima del gioco: «allenami» da solo resta il gioco)
+  if (/^(?:cosa stampa(?: questo (?:codice|programma))?|esercizio? (?:di )?(?:c|programmazione)|allenami (?:su|in) c)$/.test(t)) return { tipo: 'stampa' };
   if ((m = t.match(/^(?:gioca(?:mo)?|gioco|giochino|memory|allenami|allenamento|fissa(?:mi)? le definizioni|definizioni)\b\s*(.*)$/))) {
     const r = pulisci(m[1] || ''); return { tipo: 'gioco', corso: r || null };
   }
@@ -103,6 +119,9 @@ export function interpreta(frase) {
     const m = t.match(/^(?:(?:la )?mia ai|ai|intelligenza artificiale|chiave(?: api)?|api ?key|(?:collega|usa|imposta|aggiungi|metti)(?: la chiave(?: di)?| la mia)? (claude|anthropic|chatgpt|openai|gpt|gemini|google|mistral|groq|openrouter|deepseek|ai|la mia ai|una chiave|chiave))$/);
     if (m) return { tipo: 'ai', fornitore: FORN[m[1]] || null }; }
   if (/^(?:prepara|configura|installa|setup)\b/.test(t)) return { tipo: 'prepara', cosa: /obsidian/.test(t) ? 'obsidian' : /modello|cervello|ollama|gemma|qwen|ai/.test(t) ? 'cervello' : null };
+  // il diario del progetto nel vault: aprirlo, spegnerlo, riaccenderlo
+  if ((m = t.match(/^(spegni|non scrivere|accendi|riaccendi|scrivi) (?:il |più il )?diario(?: (?:del|di) (?:progetto)?\s*(.*))?$/))) return { tipo: 'diarioOpz', diario: /accendi|^scrivi/.test(m[1]), progetto: m[2] ? pulisci(m[2]) : null };
+  if ((m = t.match(/^(?:apri (?:il )?)?diario (?:del|di) progetto(?: (.+))?$/))) return { tipo: 'diario', progetto: m[1] ? pulisci(m[1]) : null };
   if ((m = t.match(/^(?:apri|vai a|vai su|vai alla?|portami a|mostrami|nota|pagina)\s+(.+)$/)) && !/^(?:il |la )?(?:focus|timer)/.test(m[1])) return { tipo: 'naviga', q: pulisci(m[1]) };
   if (/^(?:note|pagine|home|indice)$/.test(t)) return { tipo: 'naviga', q: t === 'home' ? 'home' : '' };
 
@@ -207,5 +226,11 @@ export const ESEMPI = [
   ['chiudi lezione', 'definizioni e ★ estratte dagli appunti (AI)'],
   ['apri glossario', 'salta a una pagina del vault'],
   ['interrogami su basi di dati', 'simula l\'orale (con l\'AI)'],
+  ['cosa stampa', 'esercizi di C: la risposta la calcola Lode, non un\'AI'],
+  ['segui progetto', 'guarda la cartella del laboratorio: cosa cambia e se l\'hai provato'],
+  ['prova il progetto', 'compila e lancia le prove .in/.out, dopo la tua conferma'],
+  ['spiegami l\'errore', 'copia l\'errore dal terminale: te lo spiego in italiano, un passo alla volta'],
+  ['diario del progetto', 'apre in Obsidian il diario di oggi'],
+  ['smetti di seguire', 'Lode non guarda più la cartella e toglie le sue copie'],
 ];
 export { D };

@@ -4,6 +4,8 @@
 // Nel browser (senza app) le stesse cose restano nei dati locali, così giochi e ripasso funzionano lo stesso.
 import { D, DESKTOP, definizioni, esame, id, impostaLezioniVault, lezioneOra, lezioni, oggi, salva, serie, minuti, ultimaLezioneFinita, dataLunga, dataBreve, norm, trovaEsame, prossimi, fatti, daFare, media, num, piano, giorniTra, cfuFatti, daRipassare, prossimaLezione } from './dati.js';
 import { SEZIONI, GIORNI_BREVI, fileCorso, fileLezione, notaCorso, notaLezione, orarioMd, pulito } from './markdown.js';
+import { aggiornaDiario, sezioneMemoria } from './codice/diario.js';
+import { CONCETTI } from './codice/modelli.js';
 
 const L = DESKTOP ? window.lodeDesktop : null;
 export const attivo = DESKTOP;
@@ -46,12 +48,11 @@ export async function apri(l) {
   const x = l || lezioneDaAnnotare();
   try { return await L.invoca('vault:apri', { file: x.file || fileLezione(x), nuovo: x.file ? undefined : notaLezione(x) }); } catch (e) { return { esito: 'errore', errore: e.message }; }
 }
-export const apriFile = file => L?.invoca('vault:apri', { file });
 export const apriVault = () => L?.invoca('vault:apri', { file: 'Benvenuto.md' });
 export function scriviOrario() { if (L) L.invoca('vault:scrivi', { file: 'Orario.md', testo: orarioMd(D.orario) }); }
 
 // le proposte dell'allenatore che funzionano (quelle accettate più spesso)
-const NOMI_PROP = { gioco: 'giochi', ripasso: 'ripasso delle carte', stelle: 'rileggere le ★', orale: 'domande lampo', focus: 'focus' };
+const NOMI_PROP = { gioco: 'giochi', ripasso: 'ripasso delle carte', stelle: 'rileggere le ★', orale: 'domande lampo', focus: 'focus', stampa: 'cosa stampa' };
 function proposte() {
   const per = {}; for (const x of D.allenatore?.storia || []) { per[x.tipo] ||= { si: 0, tot: 0 }; per[x.tipo].tot++; if (x.esito === 'accettata') per[x.tipo].si++; }
   const k = Object.entries(per).filter(([, v]) => v.tot >= 2).sort((a, b) => b[1].si / b[1].tot - a[1].si / a[1].tot);
@@ -88,7 +89,7 @@ ${sicure.slice(0, 40).map(d => `- ${d.t} (${d.corso})`).join('\n') || '- Ancora 
 ## ★ Da esame, le ultime
 ${lez.flatMap(l => (l.stelle || []).map(s => `- ${s.replace(/^\d\d:\d\d\s*/, '')} (${l.file ? `[[${l.file.replace(/\.md$/, '').split('/').pop()}]]` : l.corso})`)).slice(0, 15).join('\n') || '- Ancora nessuna.'}
 
-## Note per Lode
+${sezioneMemoria(D.codice, OPZ_DIARIO)}## Note per Lode
 %% Scrivi qui come vuoi essere aiutato: «spiegami con esempi pratici», «sono dislessico, frasi brevi», «l'orale di Analisi è con Rossi, molto teorico». %%
 `;
   L.invoca('vault:memoria', { testo });
@@ -166,8 +167,19 @@ export function aggiornaPagine() {
         await b(l.file, 'nav', `[[Home]] · [[${pulito(l.corso)}]]${prima ? ` · ← [[${nomeNota(prima.file)}|${dataBreve(prima.data)}]]` : ''}${dopo ? ` · [[${nomeNota(dopo.file)}|${dataBreve(dopo.data)}]] →` : ''}`, { dove: 'titolo' });
       }
     }
+    // informatica: il diario dei progetti (oggi e ieri) e «Cosa so davvero» sulla pagina dei corsi di programmazione
+    (await scriviDiario()).filter(x => x.errore).forEach(x => console.warn('Lode:', x.file, x.errore));
   }, 900);
 }
+// il registro onesto (js/codice/diario.js): solo conti, scritti dentro i segni di Lode. Gli argomenti di «Cosa stampa?»
+// sono tutti quelli di modelli.js, così nella tabella compaiono anche quelli «mai fatti»
+const OPZ_DIARIO = { concetti: Object.keys(CONCETTI), nomi: CONCETTI };
+const scrittore = { blocco: x => L.invoca('vault:blocco', x) };
+export const scriviDiario = () => L ? aggiornaDiario(scrittore, D, OPZ_DIARIO) : Promise.resolve([]);
+export const apriDiario = x => L?.invoca('vault:apri', { file: x.file, nuovo: x.nuovo });
+// una volta al giorno si riscrive tutto anche senza novità: «Ultima volta: 9 giorni fa» e «da rifare» dipendono dalla data
+let giornoScritto = oggi();
+if (L) setInterval(() => { if (oggi() !== giornoScritto) { giornoScritto = oggi(); aggiornaPagine(); scriviMemoria(); } }, 10 * 60e3);
 export const note = () => L ? L.invoca('vault:note') : Promise.resolve([]);
 export const stato = () => L ? L.invoca('installa:stato') : Promise.resolve(null);
 export const installa = cosa => L.invoca(cosa === 'obsidian' ? 'installa:obsidian' : 'installa:cervello');

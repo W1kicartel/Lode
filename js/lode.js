@@ -19,6 +19,12 @@ import * as SB from './sbobina.js';
 import * as AL from './allenatore.js';
 import { parlatoInFormule } from './formule.js';
 import { pulito } from './markdown.js';
+// informatica (docs/PROGETTO-INFORMATICA.md): «Cosa stampa?», «Segui il progetto», gli errori spiegati, il registro nel vault
+import * as ST from './codice/stampa.js';
+import * as PR from './codice/progetto.js';
+import * as DI from './codice/diario.js';
+import { ERRORI } from './codice/modelli.js';
+import * as ER from './errori.js';
 const BRIDGE = DESKTOP ? window.lodeDesktop : null;
 
 const segnala = (evento, x = {}) => dispatchEvent(new CustomEvent('lode', { detail: { evento, ...x } }));
@@ -45,6 +51,7 @@ const IC = {
   orario: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   appunti: '<path d="M12 3l7 4v10l-7 4-7-4V7z"/><path d="M12 3v18"/><path d="M5 7l7 4 7-4"/>',
   doc: '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 12h5M10 15h5M10 18h3"/>',
+  codice: '<path d="M8 8l-4 4 4 4"/><path d="M16 8l4 4-4 4"/><path d="M13.5 5l-3 14"/>',
 };
 const ico = k => `<svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${IC[k]}</svg>`;
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -118,6 +125,7 @@ function righeOggi() {
   if (datiIllegibili) r.push({ cls: 'urg', t: 'Non riesco a leggere i tuoi dati', d: 'Esami, voti e carte sono al sicuro, ma la cartella non risponde (OneDrive offline o file bloccato). Le modifiche di adesso vanno in un file a parte; riprovo da solo.', n: '', b: 'Riprova', f: () => location.reload() });   // ricaricata, la barra rilegge: se ora si legge, torna tutto
   const lo = lezioneOra(), pl = prossimaLezione();
   if (!lo && pl && pl.tra <= 90) r.push({ cls: pl.tra <= 15 ? 'urg' : 'att', t: `${pl.corso} alle ${pl.inizio}`, d: `${pl.aula ? 'Aula ' + pl.aula + ' · ' : ''}tra ${pl.tra} min`, n: '', b: V.attivo ? 'Appunti' : 'Orario', f: () => V.attivo ? apriAppunti(pl) : (nuovoTurno(), schedaOrario()) });
+  const rp = PR.rigaOggi(); if (rp) r.push(rp);   // il progetto seguito: «non provato», l'ultima prova andata male, «sta cambiando»
   if (V.attivo && STATO && (!STATO.obsidian.installato || !STATO.modello) && !D.imp.preparaNascosto) r.push({ cls: 'att', t: 'Completa Lode', d: [!STATO.obsidian.installato && 'Obsidian', !STATO.modello && 'il cervello locale'].filter(Boolean).join(' e ') + ': un clic, gratis', n: '', b: 'Prepara', f: () => { nuovoTurno(); detto(A.turno, 'Prepara Lode'); schedaPrepara(); } });
   const dc = daChiudere();
   if (dc) r.push({ cls: 'att', t: `Chiudi la lezione di ${dc.corso}`, d: `${dc.parole} parole di appunti · estraggo definizioni e ★`, n: '', b: 'Chiudi', f: () => { nuovoTurno(); detto(A.turno, 'Chiudi lezione'); chiudiLezione(dc.corso); } });
@@ -154,23 +162,28 @@ function bloccoTrascrizione() {
     <button type="button" class="btn small" data-ld-tr="${t.inPausa ? 'riprendi' : 'pausa'}">${t.inPausa ? 'Riprendi' : 'Pausa'}</button><button type="button" class="btn small primary" data-ld-tr="fine">Fine</button></div>`;
 }
 function disegnaHome() {
-  const r = righeOggi(), lo = lezioneOra();
+  const r = righeOggi(), lo = lezioneOra(), st = strumenti();
   home._righe = r;
   home.innerHTML = `${lo ? bloccoAula(lo) : ''}${lo && !r.length ? '' : `<section class="ld-oggi"><div class="capo"><span class="ld-lbl">Oggi</span><span>${D.esami.length ? `${cfuFatti()} di ${D.profilo.cfuTotali} CFU` : ''}</span></div>
     ${r.map((x, i) => `<div class="ld-riga ${x.cls}"><i class="ld-seg"></i><div class="t"><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div><span class="n">${esc(x.n)}</span><button type="button" class="btn small${i === 0 && x.cls === 'urg' ? ' primary' : ''}" data-ld-riga="${i}">${x.b}</button></div>`).join('') ||
     `<div class="ld-riga info vuota"><i class="ld-seg"></i><div class="t"><b>Inizia da qui</b><span>Scrivi «lezione analisi 2 lunedì 9-11 aula 7», oppure prova i dati di esempio</span></div><span class="n"></span><button type="button" class="btn small primary" data-ld-esempio>Esempio</button></div>`}</section>`}
-    <div class="ld-strumenti">${STRUMENTI.map(([k, t], i) => `<button type="button" class="btn" data-ld-strumento="${i}">${ico(k)}<span>${t}</span></button>`).join('')}</div>`;
+    <div class="ld-strumenti${st.length === 9 ? ' nove' : ''}">${st.map(([k, t]) => `<button type="button" class="btn" data-ld-strumento="${k}">${ico(k)}<span>${t}</span></button>`).join('')}</div>`;
 }
+// il corso di programmazione (esame da dare, orario o lezione), se c'è: fa comparire «Codice» e dà il nome a «Cosa stampa?»
+const corsoInf = () => ST.corsoProgrammazione([...prossimi().map(e => e.nome), ...daFare().map(e => e.nome), ...D.orario.map(o => o.corso), ...lezioni().map(l => l.corso)]);
 const STRUMENTI = [
   ['focus', 'Focus', () => schedaFocus()],
   ['ripasso', 'Ripasso', () => schedaRipasso()],
   ['gioco', 'Gioco', () => schedaGioco()],
+  ['codice', 'Codice', () => ST.schedaStampa({ corso: corsoInf() })],
   ['orario', 'Orario', () => schedaOrario()],
   ['appunti', 'Note', () => schedaNote()],
   ['orale', 'Interrogami', () => avviaOrale(null)],
   ['libretto', 'Libretto', () => schedaLibretto()],
   ['esami', 'Esami', () => schedaEsami()],
 ];
+// «Codice» solo se c'è un corso di programmazione
+const strumenti = () => STRUMENTI.filter(([k]) => k !== 'codice' || !!corsoInf());
 function aggiornaTesta() {
   testa.querySelector('h2').textContent = saluto();
   const lo = lezioneOra();
@@ -196,12 +209,13 @@ function aggiornaPillola(avviso) {
     pill.setAttribute('aria-label', `${pausa ? 'Pausa' : 'Focus su ' + F.etichetta()}: mancano ${F.mmss(F.restante())}`);
     return;
   }
-  const lo = lezioneOra(), pl = prossimaLezione(), sg = suggerimento(), tr = TR.stato();
+  const lo = lezioneOra(), pl = prossimaLezione(), sg = suggerimento(), tr = TR.stato(), pp = PR.pillola();
   const p = prossimi()[0], c = daRipassare().length;
   let testo, pieno = false;
   if (tr) { testo = `<i class="ld-live rec"></i><b>${esc(tr.lezione.corso)}</b><span class="ld-tenue">${tr.inPausa ? 'trascrizione in pausa' : 'trascrivo'} · ${tr.parole.toLocaleString('it-IT')} parole</span>`; pieno = true; }
   else if (lo) { const st = stelleOggi(lo.corso); testo = `<i class="ld-live"></i><b>${esc(lo.corso)}</b><span class="ld-tenue">fine tra ${lo.mancano} min</span>${st ? `<span class="ld-punto"></span><span class="ld-tenue">★${st}</span>` : ''}${O.attivo() ? '<i class="ld-orecchio" title="Ripeti attivo: gli ultimi 60 secondi in memoria"></i>' : ''}`; pieno = true; }
   else if (pl && pl.tra <= 20) { testo = `<b>${esc(pl.corso)}</b><span class="ld-tenue">${pl.aula ? 'aula ' + esc(pl.aula) + ' · ' : ''}tra ${pl.tra} min</span>`; pieno = true; }
+  else if (pp) { testo = pp.html; pieno = pp.pieno; }   // il progetto seguito: «lab3 · 2 file +41 −7», «lab3 · fatto · non provato»
   else if (sg) testo = `<b>2 minuti</b><span class="ld-tenue">${esc(sg.testo)}</span>`;
   else if (p) { const g = giorniTra(oggi(), p.data); testo = `<b>${esc(p.nome)}</b><span class="ld-tenue">${g === 0 ? 'oggi' : g === 1 ? 'domani' : `tra ${g} g`}</span>${c ? `<span class="ld-punto"></span><span class="ld-tenue">${c} carte</span>` : ''}`; pieno = g <= 7; }
   else if (c) testo = `<b>${c}</b><span class="ld-tenue">carte da ripassare</span>`;
@@ -370,6 +384,9 @@ function detto(t, testo) {
   t.dataset.domanda = testo;
   return p;
 }
+// le formule ($…$) disegnate in MathML (temml, come nella sbobina): prima si vede il testo, poi arrivano le formule;
+// senza rete per temml resta il testo
+function formuleIn(nodo, md) { if (nodo && /\$/.test(md)) SB.corpoHtml(md).then(h => { if (nodo.isConnected) nodo.innerHTML = h; }).catch(() => { }); }
 const mdHtml = t => {
   let s = esc(t).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
   const i = s.lastIndexOf('**'); if (i >= 0) s = s.slice(0, i) + '<b>' + s.slice(i + 2) + '</b>';
@@ -837,6 +854,7 @@ async function usaFile(x, op, { corso, data }) {
     modo('pensa', 'Leggo la foto…'); segnala('pensa');
     const blocco = await AI.bloccoFile(x.file), md = await AI.trascriviFoto({ blocco, corso }); modo('riposo');
     const card = schedaConferma({ titolo: `Mettere negli appunti di ${corso}?`, extra: `<div class="ld-anteprima">${mdHtml(md.slice(0, 1400))}</div>`, nota: 'Insieme alla foto, nella nota della lezione di oggi. Rileggila: l\'ha trascritta ' + AI.nomeMotore('testo') + '.' });
+    formuleIn(card.querySelector('.ld-anteprima'), md.slice(0, 1400));   // le formule disegnate, come in Obsidian
     return attendiDecisione(card, async () => { const r = await allegaFile(x, corso); await V.annota('appunti', md, { lezione: r.l, grezza: true }); await mostraFatto({ testo: 'Lavagna negli appunti.', azione: ['Apri', () => apriAppunti(r.l)] }, card); return {}; });
   }
   // da qui serve il testo del file
@@ -887,6 +905,7 @@ async function accettaProposta() {
   const p = nascondiProposta('accettata'); if (!p) return;
   await apri({ fisso: true }); nuovoTurno(); detto(A.turno, `${p.bottone} · ${p.esame?.nome || p.corso || ''}`);
   if (p.tipo === 'gioco') return schedaGioco(p.esame?.nome || p.corso);
+  if (p.tipo === 'stampa') return ST.schedaStampa({ corso: p.corso, seme: p.seme });   // con lo stesso seme parte dalla domanda annunciata
   if (p.tipo === 'ripasso') return schedaRipasso(p.esame?.id);
   if (p.tipo === 'orale') return avviaOrale(p.esame);
   if (p.tipo === 'focus') return avviaFocus({ esameId: p.esame?.id });
@@ -1213,7 +1232,124 @@ async function esegui(c) {
     case 'pausaTrascrizione': TR.pausa(); return mostraFatto({ testo: 'Trascrizione in pausa.', nota: 'Scrivi «riprendi trascrizione» quando ricomincia.' });
     case 'riprendiTrascrizione': TR.riprendi(); return mostraFatto({ testo: 'Riprendo a trascrivere.' });
     case 'riordina': return riordinaLezione(c.corso);
+    case 'stampa': {   // scritto nel campo: il campo lascia il fuoco, così i tasti 1-4 rispondono subito
+      const s = ST.schedaStampa({ corso: c.corso || corsoInf() });
+      if (s && !ST.ultima()?.scrivi && document.activeElement === campo.querySelector('input')) campo.querySelector('input').blur();
+      return s;
+    }
+    case 'progetto': return PR.esegui(c);
+    case 'errore': return spiegaIncollato(c.testo);
+    case 'diario': return apriDiario(c.progetto);
+    case 'diarioOpz': return opzioneDiario(c);
   }
+}
+
+/* ---------- informatica: gli errori spiegati (F3) e il registro onesto (F4) ---------- */
+const nomeFile = f => f ? String(f).split(/[\\/]/).pop() : null;
+const nomeSicuro = n => typeof n === 'string' && n && !['__proto__', 'constructor', 'prototype'].includes(n);
+// la scheda «Errore»: il primo errore, le righe vere con due prima e due dopo, i passi che si aprono uno alla volta.
+// conta: la prima volta che la scheda si apre per quell'errore (D.codice.errori e l'evento del diario)
+function schedaErrore(r, { progetto = null, corso = null, prova = null, valutato = false, sorgente = null, righeCambiate = null, cambiato = false, conta = true, notaValutato = 'Progetto valutato: la correzione non te la mostro.' } = {}) {
+  // con il file vero spiega() può correggere la voce (uno «scanf senza &» che è un printf): conta quella
+  const d0 = r.primo, sp = ER.spiega(d0, { sorgente, righeCambiate, valutato, cambiato }), d = sp.chiave === d0.chiave ? d0 : { ...d0, chiave: sp.chiave };
+  const chi = { ...(progetto ? { progetto } : {}), ...(corso ? { corso } : {}), voce: d.chiave || null, nome: ER.nomeErrore(d.chiave), titolo: ER.breve(d), file: nomeFile(d.file), riga: d.riga || null };
+  // la correzione di questo errore l'hai già guardata? Allora resta scritto
+  const vista = D.codice.eventi.some(x => x.tipo === 'correzione-vista' && x.voce === chi.voce && x.file === chi.file && x.riga === chi.riga && (prova == null || x.t >= prova));
+  const s = scheda('ld-err', ER.schedaHtml(sp, { conto: r.conto, vista }));
+  s.setAttribute('role', 'group'); s.setAttribute('aria-label', 'Errore spiegato');
+  if (vista) s.querySelector('[data-passo=correzione]')?.setAttribute('data-vista', '1');
+  if (sp.correzioneNascosta) { const n = document.createElement('p'); n.className = 'ld-nota'; n.dataset.valutato = '1'; n.textContent = notaValutato; s.append(n); }
+  if (A.turno) A.turno.dataset.sintesi = ER.perDiario(d);
+  let t0 = null;
+  if (conta) {
+    const k = d.chiave || 'sconosciuto';
+    D.codice.errori[k] = (Number(D.codice.errori[k]) || 0) + 1;
+    t0 = DI.registra(D.codice, { tipo: 'errore', ...chi, ...(prova != null ? { prova } : {}) })?.t ?? null;
+    salva(); V.scriviMemoria();
+  }
+  s.querySelectorAll('details[data-passo]').forEach(det => det.addEventListener('toggle', () => {
+    if (!det.open) return;
+    const passo = det.dataset.passo;
+    if ((passo === 'dove' || passo === 'cosa') && t0 != null) {   // D può essere stato ricaricato: l'evento si cerca per t
+      const ev = D.codice.eventi.find(x => x.tipo === 'errore' && x.t === t0);
+      if (ev && !(ev.passi || []).includes(passo)) { DI.segnaPasso(ev, passo); salva(); }
+    }
+    if (passo === 'correzione' && !det.dataset.vista) {   // resta scritto: la correzione l'hai vista
+      det.dataset.vista = '1';
+      det.querySelector('summary').insertAdjacentHTML('beforeend', '<span class="ld-err-vista">correzione vista</span>');
+      DI.registra(D.codice, { tipo: 'correzione-vista', ...chi }); salva();
+    }
+  }));
+  return s;
+}
+// i percorsi che il compilatore scrive (relativi alla cartella, o assoluti, o con «\» su Windows) → quelli del progetto
+function percorsiPossibili(file) {
+  const f = String(file || '').split('\\').join('/').replace(/^\.\//, '');
+  if (!/^(?:\/|[A-Za-z]:\/)/.test(f)) return [f];
+  const p = f.split('/').filter(Boolean);
+  return [4, 3, 2, 1].filter(n => n <= p.length).map(n => p.slice(-n).join('/'));
+}
+// dopo una prova che non compila o che si ferma: l'errore in italiano, con le righe vere del file seguito
+const spiegati = new Set();
+async function spiegaEsito(e) {
+  let lista = [];
+  if (e.esito === 'non-compila') lista = ER.analizza(`${e.compilazione?.stderr || ''}\n${e.compilazione?.stdout || ''}`);
+  else { const c = (e.casi || []).find(x => x.crash || x.scaduto); if (c) lista = ER.analizzaUscita({ codice: c.codice, segnale: c.segnale, stderr: c.stderr, tempoScaduto: !!c.scaduto }); }
+  const r = ER.riassunto(lista); if (!r.primo) return null;
+  const d = r.primo; let sorgente = null, cambiato = false;
+  if (BRIDGE && d.file && d.riga) {
+    const da = d.chiave === 'include-mancante' ? 1 : Math.max(1, d.riga - 150), a = d.riga + 3;
+    for (const rel of percorsiPossibili(d.file)) {
+      const x = await BRIDGE.invoca('progetto:righe', { id: e.id, rel, da, a }).catch(() => null);
+      if (x && !x.errore) { sorgente = x; cambiato = !!x.impronta && !!e.impronta && x.impronta !== e.impronta; break; }
+    }
+  }
+  const righeCambiate = (e.dopoRiuscita || []).flatMap(f => (f.intervalli || []).map(([da, a]) => ({ file: f.rel, da, a })));
+  const k = `${e.id}|${e.quando}`, conta = !spiegati.has(k); spiegati.add(k);
+  return schedaErrore(r, { progetto: e.nome, corso: PR.stato().get(e.id)?.corso || null, prova: e.quando, valutato: !!e.valutato, sorgente, righeCambiate: righeCambiate.length ? righeCambiate : null, cambiato, conta });
+}
+// segui almeno un progetto «valutato»? Un errore copiato a mano non dice da quale progetto viene: niente correzione
+async function seguoValutato() {
+  let seguiti = [...PR.stato().values()];
+  if (!seguiti.length && BRIDGE) seguiti = (await BRIDGE.invoca('progetto:stato').catch(() => null))?.progetti || [];
+  return seguiti.some(p => p?.valutato);
+}
+// «spiegami l'errore»: il testo scritto dopo, se no quello copiato negli appunti (letto dal main, solo se è un errore)
+async function spiegaIncollato(testo) {
+  if (!testo && BRIDGE) testo = (await BRIDGE.invoca('appunti:errore').catch(() => null))?.testo || null;
+  if (!testo) return rispostaFissa(BRIDGE ? 'Copia l\'errore dal terminale (o dall\'IDE) e riscrivi «spiegami l\'errore».' : 'Incolla l\'errore dopo i due punti: «spiegami l\'errore: …».');
+  const r = ER.riassunto(ER.analizza(testo));
+  if (!r.primo) return rispostaFissa('In questo testo non trovo un errore del compilatore o del programma. Copia tutto, dalla riga con il nome del file, e riprova.');
+  return schedaErrore(r, { valutato: await seguoValutato(), notaValutato: 'Segui un progetto valutato: la correzione non te la mostro.' });
+}
+// gli eventi di «Segui il progetto» nel registro (D.codice.eventi → diario del progetto). Mai il percorso: solo il nome
+function eventoProgetto(x) {
+  if (!nomeSicuro(x?.nome)) return;
+  if (x.tipo === 'segui') D.codice.opzioni[x.nome] = { ...DI.opzioniProgetto(D.codice, x.nome), diario: x.diario !== false, valutato: !!x.valutato };
+  if (x.tipo === 'prova' && x.primo && x.stderr) { const d = ER.riassunto(ER.analizza(x.stderr)).primo; if (d) x = { ...x, primo: { ...x.primo, titolo: ER.breve(d) } }; }
+  const ev = DI.daProgetto(x, { corso: x.corso || PR.stato().get(x.id)?.corso || null });
+  if (ev) DI.registra(D.codice, ev);
+  salva();
+}
+// «diario del progetto»: la nota di oggi in Obsidian (Progetti/<nome>/<giorno>.md)
+async function apriDiario(progetto) {
+  if (!V.attivo) return rispostaFissa('Il diario sta nel vault: serve l\'**app desktop** di Lode.');
+  await V.scriviDiario();
+  const x = DI.diarioDaAprire(D.codice, { progetto });
+  if (!x) return rispostaFissa(progetto ? `Non trovo un progetto che si chiama «${progetto}».` : 'Non seguo ancora nessun progetto. Scrivi **segui progetto** e scegli la cartella del laboratorio.');
+  if (x.spento) return rispostaFissa(`Per **${x.progetto}** il diario è spento: nel vault non scrivo niente. Lo riaccendi con «accendi il diario di ${x.progetto}».`);
+  const r = await V.apriDiario(x).catch(e => ({ esito: 'errore', errore: e.message }));
+  if (r?.esito === 'errore') return rispostaFissa('Non riesco ad aprire il diario: ' + r.errore, { errore: true });
+  return mostraFatto({ testo: `Diario di ${x.progetto}.`, nota: r?.esito === 'manca' ? 'Aperto con l\'editor di sistema: con Obsidian è più comodo.' : `${x.file} · aperto in Obsidian.`, sintesi: `diario di ${x.progetto}` });
+}
+// l'interruttore «non scrivere il diario di questo progetto» (e il contrario)
+function opzioneDiario(c) {
+  const seguiti = [...PR.stato().values()].map(p => p.nome).filter(Boolean);
+  const nome = DI.diarioDaAprire(D.codice, { progetto: c.progetto })?.progetto || seguiti.find(n => !c.progetto || norm(n).includes(norm(c.progetto)));
+  if (!nomeSicuro(nome)) return rispostaFissa(c.progetto ? `Non trovo un progetto che si chiama «${c.progetto}».` : 'Non seguo ancora nessun progetto.');
+  D.codice.opzioni[nome] = { ...DI.opzioniProgetto(D.codice, nome), diario: c.diario }; salva(); aggiornaTutto();
+  return mostraFatto(c.diario ? { testo: `Diario di ${nome} acceso.`, nota: 'Scrivo nel vault quello che vedo: cosa cambia e le prove. Non so chi scrive le righe.' }
+    : { testo: `Diario di ${nome} spento.`, nota: 'Da adesso nel vault non scrivo niente di questo progetto. Le note già scritte restano: puoi toglierle da Obsidian.' });
 }
 
 /* ---------- AI ---------- */
@@ -1459,15 +1595,25 @@ function collega() {
   corpo.addEventListener('pointerdown', () => { A.fisso = true; });
   document.addEventListener('pointerdown', e => { if (A.aperto && !shell.contains(e.target) && !e.target.closest('.ld-drop')) chiudi(); });
   const inp = campo.querySelector('input');
+  // il campo è su una riga sola: un errore incollato su più righe si vede in una riga, ma «spiegami l'errore» riceve le righe vere
+  let incollato = null;
+  inp.addEventListener('paste', e => {
+    const t = e.clipboardData?.getData('text/plain') || '';
+    if (!/\n/.test(t.trim())) return;
+    e.preventDefault();
+    const piatto = t.trim().replace(/\s*\r?\n\s*/g, ' ');
+    inp.setRangeText(piatto, inp.selectionStart ?? inp.value.length, inp.selectionEnd ?? inp.value.length, 'end');
+    incollato = { piatto, vero: t.replace(/\r\n?/g, '\n').trim() };
+  });
   inp.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); invia(inp.value); return; }
+    if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); const v = incollato && inp.value.includes(incollato.piatto) ? inp.value.replace(incollato.piatto, () => incollato.vero) : inp.value; incollato = null; invia(v); return; }
     if (Voce.attivo() && e.key.length === 1 && !pttAttivo) fineAscolto(true);   // si mette a scrivere: smetto di ascoltare
   });
   inp.addEventListener('focus', () => { A.fisso = true; });
   campo.querySelector('.ld-mic').addEventListener('click', () => { Voce.attivo() ? fineAscolto() : iniziaAscolto(); });
   home.addEventListener('click', e => {
     const r = e.target.closest('[data-ld-riga]'); if (r) { premi(r); home._righe[+r.dataset.ldRiga]?.f(); return; }
-    const s = e.target.closest('[data-ld-strumento]'); if (s) { premi(s); const [, nome, f] = STRUMENTI[+s.dataset.ldStrumento]; if (nome !== 'Carte da file') { nuovoTurno(); detto(A.turno, nome); } f(); return; }
+    const s = e.target.closest('[data-ld-strumento]'); if (s) { premi(s); const x = STRUMENTI.find(([k]) => k === s.dataset.ldStrumento); if (!x) return; const [, nome, f] = x; if (nome !== 'Carte da file') { nuovoTurno(); detto(A.turno, nome); } f(); return; }
     if (e.target.closest('[data-ld-esempio]')) dispatchEvent(new CustomEvent('lode:esempio'));
     const c = e.target.closest('[data-ld-cattura]'); if (c) { premi(c); cattura(c.dataset.ldCattura); return; }
     if (e.target.closest('[data-ld-appunti]')) apriAppunti();
@@ -1518,6 +1664,7 @@ function collega() {
     aggiornaTutto();
   });
   addEventListener('lode:dati', () => { if (!A.avviso) aggiornaPillola(); if (A.aperto && A.home) { disegnaHome(); aggiornaTesta(); } });
+  addEventListener('lode:progetto', () => { if (A.aperto && A.home) disegnaHome(); });   // il progetto seguito cambia: la riga in «Oggi»
   addEventListener('resize', () => { if (A.aperto) { forma.w.t = Math.min(560, innerWidth - 16); molla(); } });
   let tTr = 0;
   addEventListener('lode:trascrizione', () => { if (!A.avviso) aggiornaPillola(); clearTimeout(tTr); tTr = setTimeout(() => { if (A.aperto && A.home && !shell.contains(document.activeElement)) disegnaHome(); }, 300); });
@@ -1557,6 +1704,17 @@ function collegaDesktop() {
 
 export function avvia() {
   A = nuovoStato(); costruisci(); collega();
+  // «Cosa stampa?» e «Segui il progetto» usano gli attrezzi di questo file (scheda, molle, conferme)
+  ST.collega({ scheda, segnala, entra, tween, dopo, rispostaFissa, errori: ERRORI,
+    ricorda: (k, ok, q) => ricorda(k, ok, q, D.codice.memoria),   // SM-2 a parte: D.memoria è delle definizioni
+    codice: () => D.codice,                                        // una funzione: D viene riassegnato quando i dati cambiano
+    registra: ev => DI.registra(D.codice, ev),
+    allaFine: () => { salva(); V.scriviMemoria(); aggiornaTutto(); },   // salva() → lode:dati → aggiornaPagine: diario e «Cosa so davvero»
+    ricomincia: t => { nuovoTurno(); detto(A.turno, t); },
+    aperto: () => A.aperto });
+  PR.collega({ scheda, segnala, entra, dopo, premi, rispostaFissa, mostraFatto, nuovoTurno, detto: t => detto(A.turno, t), corsiPossibili,
+    aggiornaPillola: () => { if (!A.avviso && !F.stato()) aggiornaPillola(); },
+    evento: eventoProgetto, spiegaErrore: e => { spiegaEsito(e).catch(x => console.error('Lode: errore non spiegato', x)); } });
   addEventListener('lode:voce', e => { const x = e.detail; document.querySelectorAll('.ld-prepara').forEach(s => mostraAvanzamento(s, 'voce', x.fase === 'pronta' ? { fase: 'fatto', p: 1, testo: Voce.NOME_VOCE + ' in locale · tieni premuto ' + TASTI + ' e parla' } : x.fase === 'errore' ? { fase: 'errore', testo: x.testo } : { p: x.p, testo: `Scarico ${Voce.NOME_VOCE} · ${Math.round((x.p || 0) * 100)}%` })); if (A.modo === 'ascolto' && x.fase === 'scarico') campo.querySelector('.stato.ascolto .lbl').textContent = `Ti ascolto · preparo la voce ${Math.round((x.p || 0) * 100)}%`; if (x.fase === 'pronta' && A.modo === 'ascolto') campo.querySelector('.stato.ascolto .lbl').textContent = 'Ti ascolto'; });
   // la voce già preparata si carica in silenzio dopo l'avvio: così il primo ⌥ Spazio è immediato
   try { if (DESKTOP && localStorage.getItem('lode:voce')) setTimeout(() => Voce.prepara().catch(() => { }), 4000); } catch { }
@@ -1568,7 +1726,7 @@ export function avvia() {
 }
 // la pagina sotto chiede a Lode di fare cose (ripassa, interroga, focus) dal suo pannello
 // per le prove automatiche (test/): accesso ai motori della barra
-window.__lode = { D: () => D, AI, invia, provaAllenatore, AL, riceviFile, O, ripeti, condividiLezione, indietro, TR, Voce, avviaTrascrizione, fermaTrascrizione, riordinaLezione, stato: () => A };
+window.__lode = { D: () => D, AI, invia, provaAllenatore, AL, riceviFile, O, ripeti, condividiLezione, indietro, TR, Voce, avviaTrascrizione, fermaTrascrizione, riordinaLezione, stato: () => A, ST, PR, ER, DI };
 export const azioni = {
   focus: esameId => avviaFocus({ esameId }),
   ripassa: esameId => { apri({ fisso: true }); nuovoTurno(); detto(A.turno, esameId ? 'Ripassa ' + esame(esameId)?.nome : 'Ripasso'); schedaRipasso(esameId); },

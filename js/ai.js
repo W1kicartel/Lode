@@ -361,9 +361,9 @@ export async function carteDa(blocchi) {
 const SCHEMA_DOMANDA = { type: 'object', additionalProperties: false, required: ['domanda', 'argomento'], properties: { domanda: { type: 'string' }, argomento: { type: 'string' } } };
 // esito prima del giudizio: provato col modello locale, il giudizio scritto prima rende un modello piccolo pignolo
 // (trova sempre «qualcosa che manca», anche nelle risposte giuste)
+const SCHEMA_VERIFICA = { type: 'object', additionalProperties: false, required: ['detta', 'citazione'], properties: { detta: { type: 'boolean' }, citazione: { type: 'string' } } };
 const SCHEMA_GIUDIZIO = { type: 'object', additionalProperties: false, required: ['esito', 'giudizio', 'mancava'], properties: {
   esito: { type: 'string', enum: ['giusta', 'parziale', 'sbagliata', 'fuori tema', 'non so'] }, giudizio: { type: 'string' }, mancava: { type: 'string' } } };
-const SCHEMA_RIPASSO = { type: 'object', additionalProperties: false, required: ['ripassa'], properties: { ripassa: { type: 'array', items: { type: 'string' } } } };
 const materialeOrale = m => m ? `Materiale dello studente (basati su questo):\n${String(m).slice(0, 12000)}` : `Dati dello studente:\n${contesto()}`;
 export async function domandaOrale({ nome, materiale, fatte = [] }) {
   const r = await strutturato(`Sei un docente universitario italiano all'esame orale di «${nome}». Fai UNA sola domanda d'orale, come la farebbe un prof: chiara, su un concetto importante del materiale qui sopra, a cui si risponde a voce in 3-4 frasi.${fatte.length ? ` Non ripetere questi argomenti, già chiesti: ${fatte.join('; ')}.` : ' È la prima domanda: un argomento centrale del corso.'}
@@ -382,17 +382,82 @@ Giudica SOLO questa risposta a QUESTA domanda:
 - mancava: la cosa più importante che mancava o andava corretta, massimo 20 parole, SOLO se è scritta nel materiale qui sopra; altrimenti stringa vuota.
 Usa il materiale qui sopra come riferimento. Non inventare ipotesi o condizioni di cui non sei sicuro: meglio dire meno.`, materialeOrale(materiale), SCHEMA_GIUDIZIO, 'chat');
   let esito = ['giusta', 'parziale', 'sbagliata', 'fuori tema', 'non so'].includes(r.esito) ? r.esito : 'parziale';
-  // l'esito non può contraddire il giudizio scritto: un errore non è «parziale», una mancanza non è «giusta»
-  const g = String(r.giudizio || '').toLowerCase();
-  if (esito === 'parziale' && /\b(hai sbagliato|sbagliat\w*|errat\w*|è falso|non è corrett\w*)\b/.test(g)) esito = 'sbagliata';
-  else if (esito === 'giusta' && /\b(sbagliat\w*|errat\w*|hai dimenticato|dimenticat\w*|manca\w*)\b/.test(g)) esito = 'parziale';
-  // senza materiale dello studente il «mancava» sarebbe a memoria del modello (e un modello piccolo sbaglia): non si mostra
-  return { esito, giudizio: String(r.giudizio || '').trim(), mancava: materiale ? String(r.mancava || '').trim() : '' };
+  const base = { esito, giudizio: r.giudizio, mancava: r.mancava, risposta };
+  let c = correggiGiudizio(base);
+  // le mancanze rimaste si controllano una per una con una domanda stretta («l'ha già detto? copia le sue parole»);
+  // il «sì» del modello vale solo se la frase copiata c'è davvero nella risposta e parla della stessa cosa
+  const smentite = [];
+  for (const x of [...mancanze(c.giudizio), c.mancava].filter(Boolean).slice(0, 2)) {
+    try {
+      const v = await strutturato(`Domanda dell'orale: «${domanda}»
+Risposta dello studente: «${risposta}»
+Il correttore ha scritto che nella risposta manca: «${x}».
+Controlla solo questo: lo studente l'ha già detto, anche con parole diverse? Se sì, in citazione copia IDENTICHE le parole della sua risposta che lo dicono; se no, citazione vuota.`, [], SCHEMA_VERIFICA, 'chat');
+      if (v.detta && citazioneValida(v.citazione, x, risposta)) smentite.push(x);
+    } catch { }
+  }
+  if (smentite.length) c = correggiGiudizio({ ...base, smentite });
+  // il «mancava» si mostra solo se viene dal materiale dello studente (le sue parole piene ci sono quasi tutte): senza
+  // materiale, o se il modello lo scrive a memoria, un modello piccolo sbaglia («continuità delle derivate seconde» per Green)
+  return { esito: c.esito, giudizio: c.giudizio, mancava: materiale && coperte(c.mancava, materiale) >= .6 ? c.mancava : '' };
 }
-export async function ripassoOrale({ nome, storico }) {
-  const r = await strutturato(`Uno studente ha appena fatto la simulazione dell'orale di «${nome}». Qui sopra domande, esiti e cosa mancava. Indica al massimo 3 cose concrete da ripassare prima dell'appello (ognuna massimo 12 parole), partendo dalle risposte peggiori. Niente frasi generiche.`,
-    storico.map((x, i) => `${i + 1}. ${x.domanda}\nEsito: ${x.esito}. ${x.mancava ? 'Mancava: ' + x.mancava : ''}`).join('\n'), SCHEMA_RIPASSO, 'chat');
-  return (r.ripassa || []).map(x => String(x).trim()).filter(Boolean).slice(0, 3);
+// Le correzioni del codice al giudizio del modello (provate con Qwen3.5 4B, che a volte scrive «hai omesso i casi
+// semidefiniti» a chi li ha appena nominati):
+// 1. una mancanza che lo studente ha detto davvero (le sue parole sono nella risposta) si toglie dal giudizio e dal «mancava»;
+//    se era l'unico motivo del «parziale», la risposta è giusta;
+// 2. l'esito non può contraddire il giudizio scritto: un errore non è «parziale», una mancanza vera non è «giusta».
+const VUOTE = new Set('della delle dello degli nella nelle nello negli sulla sulle sullo dalla dalle alla alle allo agli questo questa questi queste quello quella quelli anche come quando perche molto sempre tutto tutti tutte ogni caso casi cosa cose ruolo fatto modo parte solo loro sono essere dire detto niente nulla importante proprio bene specificare precisare menzionare citare indicare spiegare'.split(' '));
+const piana = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const radice = w => w.length <= 5 ? w : w.slice(0, Math.max(5, Math.ceil(w.length * .6)));
+// la cosa che «manca» è già nella risposta? (almeno 3 parole piene su 4 ci sono, con la radice: semidefiniti ~ semidefinita)
+const piene = s => piana(s).split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !VUOTE.has(w));
+const coperte = (cosa, testo) => { const p = piene(cosa), t = piana(testo); return p.length ? p.filter(w => t.includes(radice(w))).length / p.length : 0; };
+export function giaDetto(cosa, risposta) { return coperte(cosa, risposta) >= .75; }
+// la frase copiata dal modello è davvero dello studente (almeno 4 parole di fila, o tutta se è più corta) e parla della
+// cosa che «manca» (almeno metà delle sue parole piene): il modello piccolo dice «sì» a tutto e cita frasi a caso
+const parolePiane = s => piana(s).split(/[^a-z0-9]+/).filter(Boolean);
+export function citazioneValida(cit, cosa, risposta) {
+  const c = parolePiane(cit), r = ' ' + parolePiane(risposta).join(' ') + ' ', k = Math.min(4, c.length);
+  if (c.length < 3) return false;
+  let vera = false; for (let i = 0; i + k <= c.length && !vera; i++) vera = r.includes(' ' + c.slice(i, i + k).join(' ') + ' ');
+  return vera && coperte(cosa, cit) >= .5;
+}
+// le cose che il giudizio dice mancanti («hai omesso X», «manca X»)
+export const mancanze = g => [...String(g || '').matchAll(MANCANZA)].map(m => m[1].trim());
+const MANCANZA = /(?:hai omesso(?: di (?:menzionare|dire|citare|parlare d\w*|spiegare))?|non hai (?:menzionato|detto|citato|spiegato|parlato d\w*)|hai dimenticato(?: di (?:menzionare|dire|citare|spiegare))?|(?:ti )?manca(?:va|no|vano)?)\s+([^.;]+)/gi;
+const CONNETTIVI = /(,?\s+)(?=(?:ma|però|solo che|anche se|tuttavia|eccetto|tranne)\s)/i;
+const NIENTE = /\bnon (?:ti )?manca(?:va)? (?:niente|nulla)\b|\bniente da (?:correggere|aggiungere)\b|\bnessun errore\b/g;
+const NEGATIVO = /\b(sbagliat\w*|errat\w*|hai dimenticato|dimenticat\w*|manca\w*|omess\w*|non hai (?:menzionato|detto|citato|spiegato)|incomplet\w*|vag[ao]|impreci\w*|però|dovresti|avresti)\b/;
+export function correggiGiudizio({ esito, giudizio, mancava, risposta, smentite = [] }) {
+  let tolte = 0;
+  const sm = new Set(smentite.map(x => piana(x).trim())), falsa = x => giaDetto(x, risposta) || sm.has(piana(x).trim());
+  const frasi = String(giudizio || '').trim().split(/(?<=[.;!?])\s+/).map(f => {
+    // pezzi della frase con i loro separatori («, ma», « però»…): si toglie il pezzo falso col separatore che lo precede
+    const t = f.split(CONNETTIVI); let s = '';
+    for (let i = 0; i < t.length; i += 2) {
+      const m = [...t[i].matchAll(MANCANZA)];
+      if (m.length > 0 && m.every(x => falsa(x[1]))) { tolte++; continue; }
+      s += (s ? t[i - 1] : '') + (s ? t[i] : t[i].replace(/^(?:ma|però|solo che|anche se|tuttavia|eccetto|tranne)\s+/i, '').replace(/^\p{Ll}/u, c => c.toUpperCase()));
+    }
+    s = s.trim().replace(/[,;:]\s*$/, '');
+    if (s && !/[.!?]$/.test(s)) s += '.';
+    return s;
+  }).filter(Boolean);
+  let g = frasi.join(' ');
+  let m = String(mancava || '').trim(); if (m && falsa(m)) { m = ''; tolte++; }
+  const gl = g.toLowerCase().replace(NIENTE, '');
+  if (esito === 'parziale' && /\b(hai sbagliato|sbagliat\w*|errat\w*|è falso|non è corrett\w*)\b/.test(gl)) esito = 'sbagliata';
+  else if (esito === 'giusta' && NEGATIVO.test(gl)) esito = 'parziale';
+  else if (esito === 'parziale' && tolte && !m && !NEGATIVO.test(gl)) esito = 'giusta';
+  if (!g) g = esito === 'giusta' ? 'Risposta completa e corretta.' : '';
+  return { esito, giudizio: g, mancava: m };
+}
+// cosa ripassare lo decide il codice dagli esiti (prima le risposte peggiori) con le parole del giudizio: niente consigli
+// inventati dal modello («ripassa Green con le divergenze») e il voto arriva subito
+export function ripassoOrale({ storico }) {
+  const peso = { 'non so': 0, sbagliata: 0, 'fuori tema': 1, parziale: 2 };
+  return storico.filter(x => x.esito !== 'giusta').sort((a, b) => (peso[a.esito] ?? 1) - (peso[b.esito] ?? 1)).slice(0, 3)
+    .map(x => (x.argomento || x.domanda) + (x.mancava ? ': ' + x.mancava.replace(/^\p{Lu}/u, c => c.toLowerCase()) : ''));
 }
 // il voto lo calcola il codice dagli esiti: giusta 3, parziale 2, il resto 0 → da 18 a 30 (sotto metà: non superato)
 export function votoOrale(storico) {

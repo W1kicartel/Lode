@@ -1,14 +1,15 @@
 // Lode, l'app desktop. Una finestra trasparente in cima allo schermo, sopra tutte le altre: dentro c'è solo la barra.
 // I clic passano attraverso tranne che sulla barra. Scorciatoie globali per la cattura in aula. Il vault Obsidian in
 // Documenti/Lode è la memoria: dati di Lode in .lode/dati.json, lezioni in Markdown. Icona nella barra dei menu.
-import { app, BrowserWindow, Menu, ShareMenu, Tray, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, powerMonitor, screen, shell } from 'electron';
+import { app, BrowserWindow, Menu, ShareMenu, Tray, clipboard, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, powerMonitor, screen, shell } from 'electron';
 import { existsSync, readFileSync, mkdirSync, writeFileSync, rmSync, renameSync, copyFileSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as V from './vault.mjs';
 import * as I from './installa.mjs';
 import * as VOCE from './voce.mjs';
+import * as PROGETTO from './progetto.mjs';
 
 const QUI = dirname(fileURLToPath(import.meta.url));
 const WEB = existsSync(join(QUI, 'web', 'index.html')) ? join(QUI, 'web') : join(QUI, '..');
@@ -193,9 +194,9 @@ ipcMain.handle('vault:scrivi', (_, { file, testo }) => {
   if (file === 'Orario.md') guardiano?.segnaOrario(testo);
   V.scriviSicuro(V.dentro(vault(), file), testo); return true;
 });
-// le pagine che Lode tiene aggiornate (Home, Esami, Glossario, corsi, navigazione delle lezioni): solo dentro i suoi segni
+// le pagine che Lode tiene aggiornate (Home, Esami, Glossario, corsi, navigazione delle lezioni, diari dei progetti): solo dentro i suoi segni
 ipcMain.handle('vault:blocco', (_, x) => {
-  if (!/^(Home|Esami|Glossario)\.md$|^Corsi\/[^/]+\.md$|^Lezioni\/[^/]+\/[^/]+\.md$/.test(x.file)) throw new Error('file non permesso');
+  if (!/^(Home|Esami|Glossario)\.md$|^Corsi\/[^/]+\.md$|^Lezioni\/[^/]+\/[^/]+\.md$|^Progetti\/[^/]+\/[^/]+\.md$/.test(x.file)) throw new Error('file non permesso');
   return V.blocco(vault(), x);
 });
 ipcMain.handle('vault:note', () => V.note(vault()));
@@ -301,17 +302,30 @@ ipcMain.handle('ai:modelli', async (_, { base, chiave }) => {
   if (!r.ok) return { errore: (await r.text().catch(() => '')).slice(0, 300) || r.statusText, stato: r.status };
   const j = await r.json(); return { modelli: (j.data || j.models || []).map(m => String(m.id || m.name || '').replace(/^models\//, '')).filter(Boolean) };
 });
-ipcMain.handle('locale:scalda', async () => { if (conf.modello) await fetch(I.OLLAMA + '/api/generate', { method: 'POST', body: JSON.stringify({ model: conf.modello, keep_alive: '15m' }) }).catch(() => { }); return true; });
+ipcMain.handle('locale:scalda', async () => { if (conf.modello) await fetch(I.OLLAMA + '/api/generate', { method: 'POST', body: JSON.stringify({ model: conf.modello, keep_alive: I.CALDO }) }).catch(() => { }); return true; });
 ipcMain.handle('locale:stop', (_, { id }) => { chat.get(id)?.abort(); return true; });
 ipcMain.handle('vault:memoria', (_, { testo }) => { V.memoria(vault(), testo); return true; });
 ipcMain.handle('vault:apri', async (_, { file, nuovo }) => {
+  if (!/\.md$/i.test(String(file))) throw new Error('solo note');   // la barra apre solo note: niente altri file con l'app predefinita
   const p = V.dentro(vault(), file);
   if (!existsSync(p) && nuovo) V.scriviSicuro(p, nuovo);
   const l = V.linkObsidian(vault(), file);
+  if (process.env.LODE_NON_APRIRE) return { esito: 'ok', percorso: vault(), prova: true };   // prove: niente finestre sullo schermo
   if (l.url) await I.apriObsidian(l.url); else await shell.openPath(p);
   return { esito: l.esito, percorso: vault() };
 });
 ipcMain.handle('vault:scegli', () => scegliVault());
+/* ---------- informatica ---------- */
+// «spiegami l'errore» senza testo: quello che lo studente ha copiato dal terminale. Letto una volta, mai salvato,
+// restituito solo se errori.js ci trova almeno un errore (altrimenti negli appunti c'è altro: non lo si passa alla barra)
+let ER = null, progetti = null;
+ipcMain.handle('appunti:errore', () => {
+  const tutto = clipboard.readText();
+  if (!ER || !tutto || tutto.length > 200000) return { vuoto: true };
+  const testo = tutto.slice(0, 20000);   // l'inizio basta: il primo errore è lì, e analizza() resta veloce
+  return ER.analizza(testo).length ? { testo } : { vuoto: true };
+});
+app.on('will-quit', () => progetti?.chiudi());
 ipcMain.handle('sistema:inattivo', () => powerMonitor.getSystemIdleTime());
 // la voce sul Mac: Parakeet v3 sul Neural Engine (lode-voce). Altrove, o senza il programma, resta Whisper nella barra.
 const voce = VOCE.crea({ binario: [join(process.resourcesPath || '', 'bin', 'lode-voce'), join(QUI, 'bin', 'lode-voce')].find(existsSync) || join(QUI, 'bin', 'lode-voce'),   // nel pacchetto: Resources/bin
@@ -319,6 +333,7 @@ const voce = VOCE.crea({ binario: [join(process.resourcesPath || '', 'bin', 'lod
 ipcMain.handle('voce:stato', () => ({ parakeet: voce.disponibile() }));
 ipcMain.handle('voce:prepara', () => voce.avvia());
 ipcMain.handle('voce:trascrivi', (_, audio) => voce.trascrivi(audio));
+ipcMain.handle('voce:riposa', () => { voce.chiudi(); return true; });   // a riposo (js/voce.js): il processo esce, torna alla prima frase
 app.on('will-quit', () => voce.chiudi());
 // dopo una cattura veloce il fuoco torna all'app dove lo studente stava scrivendo
 function rilascia() {
@@ -396,7 +411,11 @@ app.whenReady().then(async () => {
     conf.vault = join(documenti, 'Lode'); conf.primoAvvio = Date.now(); salvaConf(); if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: true });
   }
   await V.carica(WEB);
+  try { ER = await import(pathToFileURL(join(WEB, 'js', 'errori.js')).href); } catch (x) { console.error('Lode: errori.js non si carica', x); }
   await apriVault();   // se la cartella è bloccata lo dice, e Lode parte comunque
+  // «Segui il progetto»: gli handler progetto:* e i progetti già seguiti. Ogni comando passa dalla finestra di conferma del sistema
+  // (progetto.mjs); conf.progetti sta in userData/config.json, mai nel vault. conf come funzione: leggiConf() la riassegna
+  try { progetti = PROGETTO.registra({ ipcMain, dialog, app, conf: () => conf, salvaConf, manda }); } catch (x) { console.error('Lode: progetti non avviati', x); }
   creaBarra(); creaTray(); scorciatoie();
   if (!conf.benvenuto && !process.env.LODE_PROVA) apriBenvenuto();
   screen.on('display-metrics-changed', posiziona); screen.on('display-added', posiziona); screen.on('display-removed', posiziona);
