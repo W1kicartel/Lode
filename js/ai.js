@@ -359,6 +359,8 @@ export async function carteDa(blocchi) {
    volta, con risposta strutturata. Così anche un modello piccolo non risponde al posto dello studente, non dà il voto dopo
    una domanda e si accorge di una risposta fuori tema. */
 const SCHEMA_DOMANDA = { type: 'object', additionalProperties: false, required: ['domanda', 'argomento'], properties: { domanda: { type: 'string' }, argomento: { type: 'string' } } };
+// esito prima del giudizio: provato col modello locale, il giudizio scritto prima rende un modello piccolo pignolo
+// (trova sempre «qualcosa che manca», anche nelle risposte giuste)
 const SCHEMA_GIUDIZIO = { type: 'object', additionalProperties: false, required: ['esito', 'giudizio', 'mancava'], properties: {
   esito: { type: 'string', enum: ['giusta', 'parziale', 'sbagliata', 'fuori tema', 'non so'] }, giudizio: { type: 'string' }, mancava: { type: 'string' } } };
 const SCHEMA_RIPASSO = { type: 'object', additionalProperties: false, required: ['ripassa'], properties: { ripassa: { type: 'array', items: { type: 'string' } } } };
@@ -378,7 +380,11 @@ Giudica SOLO questa risposta a QUESTA domanda:
 - giudizio: una frase rivolta allo studente (dagli del tu), massimo 25 parole, concreta: cosa era giusto, cosa no;
 - mancava: la cosa più importante che mancava o andava corretta, massimo 20 parole, SOLO se è scritta nel materiale qui sopra; altrimenti stringa vuota.
 Usa il materiale qui sopra come riferimento. Non inventare ipotesi o condizioni di cui non sei sicuro: meglio dire meno.`, materialeOrale(materiale), SCHEMA_GIUDIZIO, 'chat');
-  const esito = ['giusta', 'parziale', 'sbagliata', 'fuori tema', 'non so'].includes(r.esito) ? r.esito : 'parziale';
+  let esito = ['giusta', 'parziale', 'sbagliata', 'fuori tema', 'non so'].includes(r.esito) ? r.esito : 'parziale';
+  // l'esito non può contraddire il giudizio scritto: un errore non è «parziale», una mancanza non è «giusta»
+  const g = String(r.giudizio || '').toLowerCase();
+  if (esito === 'parziale' && /\b(hai sbagliato|sbagliat\w*|errat\w*|è falso|non è corrett\w*)\b/.test(g)) esito = 'sbagliata';
+  else if (esito === 'giusta' && /\b(sbagliat\w*|errat\w*|hai dimenticato|dimenticat\w*|manca\w*)\b/.test(g)) esito = 'parziale';
   // senza materiale dello studente il «mancava» sarebbe a memoria del modello (e un modello piccolo sbaglia): non si mostra
   return { esito, giudizio: String(r.giudizio || '').trim(), mancava: materiale ? String(r.mancava || '').trim() : '' };
 }
