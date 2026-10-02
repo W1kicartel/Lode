@@ -1,0 +1,3 @@
+# Chi deve guardare le modifiche prima che entrino in main: per ora tutto passa da @W1kicartel.
+# Vale come controllo solo con la regola «Require review from Code Owners» attiva sul ramo main (impostazioni di GitHub).
+* @W1kicartel

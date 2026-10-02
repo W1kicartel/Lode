@@ -7,7 +7,9 @@ const OUT = ['vault:info', 'vault:lezioni', 'vault:annota', 'vault:apri', 'vault
   'progetto:scegli', 'progetto:segui', 'progetto:smetti', 'progetto:stato', 'progetto:diff', 'progetto:righe', 'progetto:rileva', 'progetto:conferma', 'progetto:prova', 'progetto:visto', 'appunti:errore',
   // le versioni nuove di Lode (desktop/aggiorna.mjs): la barra chiede solo azioni, gli URL li decide il main
   'aggiorna:stato', 'aggiorna:imposta', 'aggiorna:riavvia', 'aggiorna:scarica'];
-contextBridge.exposeInMainWorld('lodeDesktop', {
+// il ponte solo nelle pagine di Lode, che arrivano da file:// (la cartella dell'app). Se una finestra finisse su un'altra
+// pagina (main.mjs lo impedisce già, restaLode), quella pagina riceverebbe lo stesso preload: così non trova il ponte
+if (location.protocol === 'file:') contextBridge.exposeInMainWorld('lodeDesktop', {
   piattaforma: process.platform,
   arch: process.arch,
   leggiDati: () => ipcRenderer.sendSync('dati:leggi'),

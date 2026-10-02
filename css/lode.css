@@ -19,7 +19,7 @@
 .ld *,.ld *::before,.ld *::after{box-sizing:border-box}
 /* nell'aspetto chiaro il vetro resta nero: più pieno, perché sotto c'è il bianco */
 :root[data-aspetto="chiaro"] .ld{--ld-vetro:rgba(12,12,12,.9)}
-/* luce che segue il cursore, come le superfici di movimento.js: alone dentro e filo che si accende */
+/* luce che segue il cursore sulle superfici (js/motore.js): alone dentro e filo che si accende */
 .ld::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:3;opacity:0;transition:opacity .5s var(--morbido);
   background:radial-gradient(520px circle at var(--mx,50%) var(--my,0%),rgba(255,255,255,.06),transparent 46%)}
 .ld::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;z-index:4;opacity:0;transition:opacity .5s var(--morbido);
@@ -315,7 +315,7 @@
 .ld-es-cmd:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
 .ld-aiuto .ld-nota{margin-top:8px}
 
-/* stessi pulsanti del gestionale, ridefiniti dentro il vetro */
+/* pulsanti ridefiniti dentro il vetro */
 .ld .btn{display:inline-flex;align-items:center;gap:7px;border:0;cursor:pointer;font:600 13.5px var(--sans);color:var(--ink);background:var(--tasto);box-shadow:var(--tasto-luce),inset 0 0 0 1px var(--ld-filo);padding:0 13px;height:36px;border-radius:9px;white-space:nowrap;transition:box-shadow .3s var(--morbido),background-color .3s}
 .ld .btn:hover{box-shadow:var(--tasto-luce),inset 0 0 0 1px rgba(255,255,255,.28)}
 .ld .btn.small{height:30px;padding:0 11px;font-size:12.5px}

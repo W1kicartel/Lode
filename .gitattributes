@@ -1,0 +1,3 @@
+# Fine riga LF per tutti i file di testo, anche nei checkout su Windows (core.autocrlf): le build e le prove non
+# dipendono dalla configurazione di Git della macchina (desktop/prepara.mjs, test/*.mjs). I binari Git li riconosce da solo
+* text=auto eol=lf

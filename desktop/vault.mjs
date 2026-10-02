@@ -29,6 +29,16 @@ const scriviSicuro = (f, testo) => {
   } finally { try { rmSync(t, { force: true }); } catch { } }
 };
 const seManca = (f, testo) => { if (!existsSync(f)) scriviSicuro(f, testo); };
+// un percorso relativo chiesto dalla barra, normalizzato prima di ogni controllo sulle cartelle: barre in «/», niente
+// percorsi assoluti (C:\, /, \\server), niente segmenti «..» e niente cartelle o file che cominciano col punto (.obsidian,
+// .lode, .git): lì Lode non scrive e non legge mai per conto della barra. «./» e le barre doppie si tolgono
+export function relativo(rel) {
+  const s = String(rel ?? '').replace(/\\/g, '/');
+  if (!s || s.startsWith('/') || /^[a-z]:/i.test(s) || s.includes('\0')) throw new Error('percorso non permesso');
+  const parti = s.split('/').filter(x => x && x !== '.');
+  if (!parti.length || parti.some(x => x.startsWith('.'))) throw new Error('percorso non permesso');
+  return parti.join('/');
+}
 // ogni percorso chiesto dalla barra deve restare dentro il vault (anche se il vault è la radice di un disco, E:\ o \\server\share)
 export function dentro(vault, rel) {
   const base = resolve(vault), p = resolve(base, String(rel || '').replace(/^[/\\]+/, '')), r = relative(base, p);

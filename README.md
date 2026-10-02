@@ -6,7 +6,7 @@ Lode è una piccola pillola di vetro nero in cima allo schermo. Mentre sei a lez
 
 ![«Ripeti»: gli ultimi 60 secondi del prof, con l'ultima frase in evidenza](docs/immagini/ripeti.jpg)
 
-> **Stato: beta.** Funziona su **Windows, macOS e Linux**, ma finora è stato provato a fondo solo su un Mac con chip Apple. Il codice per Windows c'è tutto (installazione di Obsidian e dell'AI, scorciatoie, voce), però non l'abbiamo ancora provato su un PC vero: se lo provi, [raccontaci com'è andata](https://github.com/W1kicartel/Lode/issues).
+> **Stato: beta.** Funziona su **Windows, macOS e Linux**, ma finora è stato provato a fondo solo su un Mac con chip Apple. Il codice per Windows c'è tutto (installazione di Obsidian e dell'AI, scorciatoie, voce), però non l'abbiamo ancora provato su un PC vero: se lo provi, [raccontaci com'è andata](https://github.com/W1kicartel/Lode/issues/new/choose) (prima togli dal messaggio il tuo nome, le chiavi e i percorsi: il modulo te lo ricorda).
 
 **[⬇ Scarica Lode](https://github.com/W1kicartel/Lode/releases/latest)** per Mac, Windows o Linux, poi segui i [tre passi del primo avvio](#installa).
 
@@ -91,6 +91,12 @@ smetti di seguire lab3
 ### Installa
 
 Il modo più semplice: scarica l'installer dalla pagina **[Release](https://github.com/W1kicartel/Lode/releases/latest)** (in fondo, alla voce «Assets»). Ti servono circa **5 GB liberi**: Obsidian circa 300 MB, l'AI locale circa 3,5 GB, la voce dai 200 ai 600 MB. Al primo avvio Lode ti chiede il nome e, con un clic, installa Obsidian, l'AI locale e la voce.
+
+**Controlla che sia quello vero.** Scarica Lode solo dalla pagina Release di questo repository: un «Lode» passato in un gruppo o preso da un altro sito può avere lo stesso aspetto ed essere un'altra cosa. Accanto a ogni file GitHub mostra la sua impronta SHA-256 (`sha256:…`); dalle versioni dopo la 0.3.0 le stesse impronte sono anche nel file `SHA256SUMS.txt` della Release. Prima di aprirlo, calcola quella del file che hai scaricato e confrontale: devono avere le stesse lettere e cifre (Windows le scrive in maiuscolo). Se sono diverse, non aprirlo.
+
+- **Mac** (Terminale): `shasum -a 256 ~/Downloads/Lode-*.dmg`
+- **Windows** (PowerShell): `Get-FileHash $HOME\Downloads\Lode-*.exe`
+- **Linux**: `sha256sum Lode-*.AppImage`, nella cartella dove l'hai scaricato
 
 Gli installer non sono firmati con un certificato a pagamento (costa ogni anno e Lode è gratis), quindi **la prima volta** il sistema chiede una conferma:
 
@@ -236,9 +242,9 @@ Sul Mac, dopo l'aggiornamento, rilancia anche `bash desktop/voce-mac/compila.sh`
 
 **Solo nel browser, senza installare.** Per provare libretto, conti, timer, ripasso e giochi, dalla cartella `Lode`:
 ```bash
-npx --yes http-server -p 5173
+npx --yes http-server@14.1.1 -a 127.0.0.1 -p 5173
 ```
-poi apri http://localhost:5173: segui la configurazione oppure, per vederlo pieno in un attimo, premi «Esempio» nella barra. Voce, trascrizione, Ripeti, Obsidian e AI locale sono solo nell'app.
+(`-a 127.0.0.1`: lo vede solo questo computer, non chi è sul tuo stesso Wi-Fi; `@14.1.1`: sempre la stessa versione, non l'ultima pubblicata) poi apri http://localhost:5173: segui la configurazione oppure, per vederlo pieno in un attimo, premi «Esempio» nella barra. Voce, trascrizione, Ripeti, Obsidian e AI locale sono solo nell'app.
 
 ## L'AI: gratis di base, potenziabile con la tua chiave
 
@@ -274,7 +280,7 @@ Paghi direttamente il servizio, a consumo, di solito pochi centesimi a sessione:
 | Motore | **Parakeet TDT v3** di NVIDIA sul Neural Engine, con [FluidAudio](https://github.com/FluidInference/FluidAudio), lo stesso motore dell'app FluidVoice | **Whisper** (base o small), dentro l'app |
 | Un minuto di Ripeti (prova sul Mac di sviluppo) | 0,8 s, quasi senza errori, con la punteggiatura | 3,7 s, con qualche errore |
 
-Tutto offline. L'audio non viene mai salvato su disco.
+Tutto offline. L'audio non resta mai su disco: sul Mac passa a Parakeet in un file temporaneo che si cancella subito (anche se qualcosa va storto).
 
 ## Privacy
 - **Niente account, niente server di Lode, niente pubblicità, niente tracciamento.**
@@ -283,6 +289,9 @@ Tutto offline. L'audio non viene mai salvato su disco.
 - La chiave della tua AI resta su questo computer e parte solo verso il servizio che hai scelto. Non finisce nel vault né nei backup.
 - **Aggiornamenti:** l'app installata chiede a GitHub, poco dopo l'avvio e poi ogni 6 ore, se c'è una versione nuova di Lode, e da lì la scarica. Non manda niente di tuo: né dati, né identificativi, né statistiche. Si spengono da «Prepara Lode» o dal menu dell'icona.
 - **Registrare una lezione** dipende dal regolamento del tuo ateneo e dal docente: chiedi prima.
+
+## Sicurezza
+Hai trovato un problema di sicurezza? Non aprire una issue pubblica: segnalalo in privato, come spiegato in [SECURITY.md](SECURITY.md). Lì c'è anche cosa togliere (nome, chiavi, percorsi, pezzi del vault) prima di incollare un errore o uno screenshot in una issue.
 
 ## Come cresce con te
 Lode non ha un server e non addestra modelli: **la sua memoria è il tuo vault**.
@@ -319,21 +328,41 @@ node --experimental-vm-modules test/progetto.mjs
 node test/errori.mjs
 node --experimental-vm-modules test/diario.mjs
 node test/aggiorna.mjs
+node test/controlla-privacy.mjs
 node test/prova-app.mjs
 ```
-- `test/unita.mjs` controlla comandi, formule, note, conti e il file per Anki: 93 prove.
-- Informatica: `codice.mjs` (135 prove su «Cosa stampa?»), `verifica-c.mjs` (452 programmi confrontati con il compilatore vero; senza compilatore salta), `progetto.mjs` (96, «Segui il progetto»), `errori.mjs` (195, gli errori spiegati), `diario.mjs` (90, il registro nel vault). Su GitHub girano tutte su Windows, Linux e macOS.
-- `test/aggiorna.mjs` (399 prove) controlla gli aggiornamenti senza Electron e senza rete: versioni con le prerelease, l'installer giusto per sistema e architettura, i `latest*.yml`, il Mac senza firma, un finto electron-updater, e che package.json, preload ed entitlements stiano insieme.
+- `test/unita.mjs` controlla comandi, formule, note, conti e il file per Anki, più la sicurezza della barra (librerie con versione esatta, Content-Security-Policy, percorsi, backup, dati del vault, chiavi, finestre che restano su Lode): 125 prove.
+- Informatica: `codice.mjs` (141 prove su «Cosa stampa?»), `verifica-c.mjs` (452 programmi confrontati con il compilatore vero; senza compilatore salta), `progetto.mjs` (119, «Segui il progetto»), `errori.mjs` (218, gli errori spiegati), `diario.mjs` (90, il registro nel vault). Su GitHub girano tutte su Windows, Linux e macOS.
+- `test/aggiorna.mjs` (411 prove) controlla gli aggiornamenti senza Electron e senza rete: versioni con le prerelease, l'installer giusto per sistema e architettura, i `latest*.yml`, il Mac senza firma, un finto electron-updater, e che package.json, preload ed entitlements stiano insieme.
+- `test/controlla-privacy.mjs` guarda i file che finirebbero su GitHub (quelli in git e i nuovi non ignorati) e si ferma se trova chiavi, percorsi con un nome vero (`/Users/<nome>/`, `C:\Users\<nome>\`, `/home/<nome>/`, anche il tuo nome utente), file privati (`.env`, certificati, un vault di prova, foto e risultati delle prove), codice da un CDN o `npx --yes` senza versione esatta, pacchetti di `desktop/package-lock.json` fuori dal registro npm. Lancialo prima di ogni commit: su GitHub gira con le prove unitarie.
 - `test/prova-app.mjs` fa il giro completo dell'app su un vault temporaneo, senza toccare i tuoi dati: 81 prove (80 senza compilatore C). Con `LODE_SOLO='informatica|stampa|progetto|errore|diario|davvero'` fa solo i passi di informatica (2-3 minuti). Con `LODE_SOLO='anki'` solo «Esporta per Anki» (meno di un minuto). Per ora gira solo su macOS (su Windows e Linux manca la voce di sistema per generare l'audio delle prove; contributi benvenuti): le frasi «parlate» le genera la voce di sistema e l'audio va direttamente al motore, senza altoparlanti né microfono.
 
-**Pacchetti** (non firmati): `cd desktop`, poi `npm run dist:mac`, `dist:win` oppure `dist:linux`. Gli installer pubblici li costruisce GitHub da solo (`.github/workflows/rilascio.yml`) quando si pubblica un tag `v…` uguale alla versione di `desktop/package.json`, insieme ai `latest*.yml` per gli aggiornamenti. Se nel repository ci sono i certificati, li firma (e sul Mac li notarizza); se no escono come oggi. Come attivare la firma: [docs/FIRMA.md](docs/FIRMA.md).
+**Provare le modifiche senza rischi** (le tue, e soprattutto quelle degli altri: una pull request, un ramo scaricato):
+- **Mai sul vault vero né con le chiavi vere.** In sviluppo `npm start` usa la stessa configurazione dell'app installata: il vault in `Documenti/Lode`, le chiavi della tua AI, le cartelle che segui. `LODE_DATI` e `LODE_VAULT` spostano tutto in cartelle temporanee, `LODE_OBSIDIAN_DIR` tiene il vault di prova fuori dall'elenco di Obsidian. Dalla cartella `desktop`, su Mac e Linux:
+  ```bash
+  LODE_DATI="$(mktemp -d)" LODE_VAULT="$(mktemp -d)/Vault" LODE_OBSIDIAN_DIR="$(mktemp -d)" npm start
+  ```
+  Su Windows (PowerShell; le variabili restano finché non chiudi la finestra):
+  ```powershell
+  $t = Join-Path $env:TEMP "lode-prova-$(Get-Random)"; New-Item -ItemType Directory "$t\dati", "$t\obsidian" | Out-Null
+  $env:LODE_DATI = "$t\dati"; $env:LODE_VAULT = "$t\Vault"; $env:LODE_OBSIDIAN_DIR = "$t\obsidian"; npm start
+  ```
+  Se serve l'AI, usa quella locale o una chiave fatta apposta per le prove, con un limite di spesa basso, da cancellare dopo.
+- **Prima leggi il diff, poi `npm install` o `npm start`.** Il codice di una PR gira con i tuoi permessi: `desktop/*.mjs` e `test/*.mjs` sono Node completo e leggono tutta la tua cartella utente. Guarda soprattutto `desktop/package.json`, `desktop/package-lock.json` (un pacchetto può puntare a un altro archivio, e `npm install` ne esegue gli script), `desktop/*.mjs` e `.github/workflows/`. Per installare le dipendenze di una PR: `npm ci --ignore-scripts` (esattamente il lockfile, senza script dei pacchetti; a `npm start` basta).
+- **Le cartelle a parte proteggono i tuoi dati da un errore, non da codice scritto apposta**: per quello leggi il diff o usa una macchina virtuale.
+- **Foto e risultati delle prove fuori dal repository**: `LODE_FOTO` e `LODE_RISULTATI` in una cartella temporanea, non dentro `Lode`. Il JSON ha il «registro» dell'app, con i percorsi della tua macchina; le foto mostrano la barra con nome, voti e orario.
+- **Prima di incollare un registro o uno screenshot** (in una issue, in una PR): sostituisci il tuo nome con `<nome>`, anche nei percorsi (`C:\Users\<nome>\…`, `/Users/<nome>/…`, i «Vault di prova:» e «Laboratorio di prova:» di `prova-app.mjs`), togli chiavi e token, copri voti, appunti e il saluto della barra. Dettagli in [SECURITY.md](SECURITY.md).
+
+**Pacchetti** (non firmati): `cd desktop`, poi `npm run dist:mac`, `dist:win` oppure `dist:linux`. Gli installer pubblici li costruisce GitHub da solo (`.github/workflows/rilascio.yml`) quando si pubblica un tag `v…` uguale alla versione di `desktop/package.json`, su un commit già su `main`, insieme ai `latest*.yml` per gli aggiornamenti e a `SHA256SUMS.txt` con le impronte. Se nel repository ci sono i certificati, li firma (e sul Mac li notarizza); se no escono come oggi. Come attivare la firma: [docs/FIRMA.md](docs/FIRMA.md).
 
 | File | Cosa fa |
 |---|---|
 | `js/lode.js` | La barra: pillola, pannello a molla, conversazione, schede, conferme, voce, file trascinati, «La tua AI» |
 | `js/comandi.js` | Capisce l'italiano senza AI: date, voti, minuti, nomi d'esame approssimati |
 | `js/dati.js` | Dati e conti: media, base di laurea, voto che serve, piano, SM-2 |
-| `js/ai.js` | L'AI: locale (Ollama), Claude con gli strumenti, oppure un servizio in formato OpenAI; il prof dell'orale |
+| `js/ai.js` | L'AI: locale (Ollama), Claude con gli strumenti (API chiamata con `fetch`, senza SDK), oppure un servizio in formato OpenAI; il prof dell'orale |
+| `js/fornitori.js` | I servizi della «tua AI», un elenco solo per la barra e per il main (che accetta dalla barra solo l'id del servizio) |
+| `js/librerie.js`, `desktop/vendor.mjs` | Le librerie di altri (pdf.js, Temml, transformers.js) con la versione esatta: nell'app file locali in `vendor/`, copiati da `desktop/node_modules`; nel browser da jsDelivr con l'impronta nell'import map |
 | `js/voce.js` | La voce: Parakeet (Mac) o Whisper, in fila con priorità per Ripeti e i comandi |
 | `js/orecchio.js` | Il microfono condiviso in aula, con gli ultimi 90 secondi solo in memoria |
 | `js/trascrizione.js` | La lezione intera: microfono, pezzi da 20-30 s, voce, formule, nota Obsidian |
@@ -356,6 +385,8 @@ node test/prova-app.mjs
 | `desktop/vault.mjs` | Crea il vault, lo registra in Obsidian, rilegge le lezioni quando cambiano |
 | `desktop/progetto.mjs`, `desktop/esegui.mjs` | Le cartelle seguite: versioni, diff, impronta, e le prove eseguite solo dopo la conferma |
 | `desktop/aggiorna.mjs`, `desktop/verifica-rilascio.mjs` | Gli aggiornamenti: electron-updater su Windows e Linux, avviso e `.dmg` sul Mac senza firma; il controllo dei `latest*.yml` prima di pubblicare |
+
+**Sicurezza della barra.** `index.html` ha una Content-Security-Policy: script solo dalla cartella dell'app (niente script scritti nella pagina, niente `eval`), rete solo verso i servizi della «tua AI» e i modelli della voce (Ollama e gli aggiornamenti da GitHub passano dal main, non dalla pagina), nessun form verso altri indirizzi. Nell'app impacchettata `desktop/prepara.mjs` toglie anche jsDelivr e l'import map. Le finestre dell'app non navigano verso altre pagine: un link https si apre nel browser. Una libreria nuova o una versione nuova: `desktop/package.json` (`npm install`), `js/librerie.js`, import map e CSP in `index.html`; `test/unita.mjs` controlla che coincidano. In sviluppo l'app copia da sola le librerie in `vendor/` (ignorata da git). Le variabili `LODE_*` per le prove valgono solo in sviluppo: l'app installata le ignora.
 
 Design: solo bianco e nero, font [Geist](https://github.com/vercel/geist-font), movimento morbido, `prefers-reduced-motion` rispettato. Le regole per contribuire sono in [CONTRIBUTING.md](CONTRIBUTING.md).
 

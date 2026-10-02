@@ -1,0 +1,65 @@
+# Il modulo per raccontare un problema. Le issue sono pubbliche: la casella in fondo ricorda cosa togliere prima di inviare.
+# I problemi di sicurezza non passano da qui ma dalla segnalazione privata (SECURITY.md, e config.yml qui accanto).
+name: Qualcosa non va
+description: Lode si comporta in modo strano, dà un errore o non parte.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Grazie! Le issue le legge **chiunque**: prima di incollare un errore o uno screenshot togli il tuo nome (anche dai percorsi come `C:\Users\<nome>\…` o `/Users/<nome>/…`), le chiavi dell'AI e i pezzi del vault (appunti, voti, orario).
+        È un problema di **sicurezza**? Non scriverlo qui: segui [SECURITY.md](https://github.com/W1kicartel/Lode/blob/main/SECURITY.md).
+  - type: textarea
+    id: cosa
+    attributes:
+      label: Cosa è successo
+      description: Cosa hai fatto, cosa ti aspettavi e cosa è successo invece.
+      placeholder: Ho trascinato un PDF nella barra e…
+    validations:
+      required: true
+  - type: textarea
+    id: passi
+    attributes:
+      label: Come rifarlo
+      description: I passi, uno per riga. Se succede solo a volte, dillo.
+      placeholder: |
+        1. Apri la barra con ⌥ Spazio
+        2. …
+  - type: dropdown
+    id: sistema
+    attributes:
+      label: Sistema
+      options:
+        - Mac con chip Apple
+        - Mac con Intel
+        - Windows 11
+        - Windows 10
+        - Linux
+    validations:
+      required: true
+  - type: input
+    id: versione
+    attributes:
+      label: Versione di Lode
+      description: È nel nome del file che hai scaricato (`Lode-0.3.0-…`). Se l'hai installato dal codice, scrivi il commit (`git log -1 --oneline`).
+      placeholder: 0.3.0
+  - type: dropdown
+    id: installazione
+    attributes:
+      label: Come l'hai installato
+      options:
+        - Installer dalla pagina Release
+        - Dal codice (npm start)
+        - Solo nel browser
+  - type: textarea
+    id: errore
+    attributes:
+      label: Messaggio d'errore o registro
+      description: Incollalo così com'è, ma prima sostituisci il tuo nome con `<nome>` e taglia i percorsi fino a `Lode/…`.
+      render: text
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Prima di inviare
+      options:
+        - label: Ho tolto nome, chiavi, percorsi e pezzi del vault (anche dagli screenshot).
+          required: true

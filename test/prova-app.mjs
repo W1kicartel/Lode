@@ -235,6 +235,11 @@ const passi = [
     return (/## Cosa ho capito[\\s\\S]*prova mia/.test(t) && /smette di seguire/.test(t) ? 'la parte dello studente resta' : 'NO') + ' | ' + t.slice(-260).replace(/\\n/g, ' ') })()`, atteso: 'la parte dello studente resta' },
   { nome: 'Cosa so davvero: la pagina del corso e la Memoria', js: `(async()=>{ await new Promise(r => setTimeout(r, 1500)); const t = await window.lodeDesktop.invoca('vault:leggi', { file: 'Corsi/Programmazione 1.md' }).catch(e => 'ERRORE ' + e.message); const m = await window.lodeDesktop.invoca('vault:leggi', { file: 'Lode/Memoria.md' }).catch(() => '');
     return (t.match(/## Cosa so davvero[\\s\\S]{0,240}/)?.[0] || t.slice(0, 200)).replace(/\\n/g, ' ') + ' | memoria: ' + (m.match(/## Informatica[^#]*/)?.[0] || 'manca').replace(/\\n/g, ' ') })()`, atteso: '| Esercizi | Al primo colpo |' },
+  // restaLode (main.mjs): un link senza target verso un altro file (qui README.md accanto alla pagina; nel vault sarebbe
+  // lo stesso) non porta via la barra, che resta sulla pagina di Lode col suo ponte. Un link https andrebbe nel browser:
+  // non si prova qui per non aprire finestre. La stessa pagina con un'altra query passa (il passo dopo, ?benvenuto=1)
+  { nome: 'difese: un link non porta la barra su un\'altra pagina', js: `(async()=>{ const prima = location.href, a = document.createElement('a'); a.href = new URL('README.md', location.href).href; document.body.append(a); a.click(); a.remove();
+    await new Promise(r => setTimeout(r, 1500)); return (location.href === prima && !!window.lodeDesktop ? 'resta Lode' : 'NO') + ' | ' + location.pathname.split('/').pop() })()`, atteso: 'resta Lode' },
   { nome: 'configurazione: si apre', js: `(()=>{ location.href = location.href.split('?')[0] + '?benvenuto=1'; return 1 })()`, attesa: 500, atteso: '1' },
   { nome: 'configurazione: nome e dati di esempio', attesa: 3500, js: `(async()=>{ const w = ms => new Promise(r => setTimeout(r, ms)); const av = () => document.querySelector('[data-bv=avanti]').click(); av(); await w(900); const i = document.querySelector('#bv-nome'); i.value = 'Marco'; i.dispatchEvent(new Event('input')); const pulisci = !!document.querySelector('#bv-pulisci'); av(); await w(900); return document.querySelector('h1').innerText + ' | esempio da togliere: ' + pulisci })()`, atteso: 'Prepariamo il tuo computer. | esempio da togliere: true' },
   { nome: 'configurazione: installazioni', js: `(async()=>{ const w = ms => new Promise(r => setTimeout(r, ms)); document.querySelector('[data-bv=avanti]').click(); for (let k = 0; k < 120; k++) { await w(1000); if (document.querySelectorAll('.bv-riga.ok').length === 3) break; } return [...document.querySelectorAll('.bv-riga')].map(r => r.dataset.k + ':' + (r.classList.contains('ok') ? 'pronto' : r.querySelector('.d').textContent)).join(' | ') })()`, atteso: 'obsidian:pronto | cervello:pronto | voce:pronto' },
@@ -253,7 +258,9 @@ const LIMITE = +process.env.LODE_LIMITE_MIN || 100;
 
 const out = await new Promise(ok => {
   const p = spawn(ELECTRON, ['.'], { cwd: DESKTOP, env: { ...process.env, LODE_DATI: join(DIR, 'dati'), LODE_VAULT: VAULT, LODE_OBSIDIAN_DIR: join(DIR, 'obsidian'), LODE_NON_APRIRE: '1', LODE_PROVA: join(DIR, 'passi.json'), LODE_ESCI: '1', ...(FOTO ? { LODE_FOTO: FOTO } : {}),
-    LODE_PROGETTO: LAB, LODE_CONFERMA_AUTO: '1', LODE_QUIETE_MS: '1500', LODE_FATTO_MS: '2000' } });
+    LODE_PROGETTO: LAB, LODE_CONFERMA_AUTO: '1', LODE_QUIETE_MS: '1500', LODE_FATTO_MS: '2000',
+    // «la tua AI» in formato OpenAI: la base la sceglie il main (js/fornitori.js); nelle prove è il server di Ollama
+    LODE_AI_BASE: 'http://127.0.0.1:11434/v1' } });
   let s = '', fatto = false;
   // i segnali della barra: scrivere il laboratorio (come lo studente o un agente) e la parte dello studente nel diario
   const fatti = new Set(), segnali = () => {

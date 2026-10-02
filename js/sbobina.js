@@ -4,6 +4,7 @@
 // trascina sulla sua pillola di Lode e se la ritrova nel vault, con definizioni e ★ pronte per i giochi.
 // Restano fuori gli appunti personali e le domande per il prof.
 import { frontmatter, sezioni, SEZIONI, pulito } from './markdown.js';
+import { libreria } from './librerie.js';
 
 const SEZ_CONDIVISE = [SEZIONI.riordinati, SEZIONI.stella, SEZIONI.definizione, SEZIONI.trascrizione];
 const norm = s => s.replace(/[^\p{L}]/gu, '').toLowerCase();
@@ -30,7 +31,7 @@ ${parti.join('\n\n')}
 /* ---------- la pagina HTML: Markdown essenziale + formule in MathML ---------- */
 let TEMML = null;
 async function formula(tex, blocco) {
-  TEMML ||= (await import('https://cdn.jsdelivr.net/npm/temml@0.11/dist/temml.mjs')).default;
+  TEMML ||= (await import(libreria('temml'))).default;   // versione esatta (js/librerie.js)
   try { return TEMML.renderToString(tex, { displayMode: blocco, throwOnError: false }); } catch { return `<code>${esc(tex)}</code>`; }
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);

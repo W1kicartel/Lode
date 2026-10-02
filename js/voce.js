@@ -4,6 +4,7 @@
 //   la frase finale arriva in mezzo secondo. Il modello (base o small, in base alla memoria) si scarica una volta sola.
 // • Nel browser: il riconoscimento vocale di Chrome/Edge/Safari.
 // Le risposte si possono leggere ad alta voce con la voce italiana del sistema.
+import { libreria } from './librerie.js';
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const DESKTOP = !!window.lodeDesktop;
 export const disponibile = DESKTOP ? !!navigator.mediaDevices?.getUserMedia : !!SR;
@@ -13,7 +14,9 @@ let rec = null, livello = 0;
 const MEM = navigator.deviceMemory || 8;   // Chromium la limita a 8: usiamo anche i core come indizio
 // sul processore (senza una scheda per WebGPU) gira su un filo solo: sempre base, small sarebbe troppo lento
 let CPU = !navigator.gpu;
-const BASE = 'onnx-community/whisper-base', TJS = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
+// transformers.js e i file di onnxruntime (wasm) con la versione esatta, dal disco (vendor/, js/librerie.js): dalla rete
+// arriva solo il modello, da huggingface.co
+const BASE = 'onnx-community/whisper-base', TJS = libreria('transformers');
 export let MODELLO_VOCE = (!CPU && MEM >= 8 && (navigator.hardwareConcurrency || 4) >= 12) ? 'onnx-community/whisper-small' : BASE;
 let T = null, asr = null, caricando = null;
 const avvisa = x => dispatchEvent(new CustomEvent('lode:voce', { detail: x }));
@@ -52,7 +55,7 @@ function preparaWhisper() {
     try { asr = await carica(CPU ? 'wasm' : 'webgpu'); }
     catch (e) {   // la scheda c'è ma WebGPU non parte (driver, shader): si riprova sul processore
       if (CPU || rete(e)) throw e;
-      T = await import(TJS + '?' + Date.now());   // un transformers.js nuovo: quello di prima si ricorda l'errore di WebGPU
+      T = await import(TJS + '?cpu');   // un transformers.js nuovo (un altro indirizzo, sempre lo stesso file): quello di prima si ricorda l'errore di WebGPU
       asr = await carica('wasm'); sulProcessore();
     }
     partita = true; avvisa({ fase: 'pronta' });
@@ -62,6 +65,7 @@ function preparaWhisper() {
 }
 async function carica(dev) {
   T ||= await import(TJS);
+  T.env.backends.onnx.wasm.wasmPaths = libreria('onnx');   // i .wasm di onnxruntime accanto a transformers.js, non dal CDN
   const file = {}, a = await T.pipeline('automatic-speech-recognition', dev === 'wasm' ? BASE : MODELLO_VOCE, {
     device: dev, dtype: dev === 'webgpu' ? { encoder_model: 'fp32', decoder_model_merged: 'q4' } : 'q8',
     progress_callback: p => { if (p.status === 'progress' && p.total && !partita) { file[p.file] = [p.loaded, p.total]; const v = Object.values(file); avvisa({ fase: 'scarico', p: v.reduce((s, x) => s + x[0], 0) / v.reduce((s, x) => s + x[1], 0) }); } },

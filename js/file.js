@@ -1,5 +1,6 @@
 // I file lasciati sulla pillola: che cosa sono e che testo contengono. Senza librerie per Word e PowerPoint (sono zip di
 // XML, aperti con DecompressionStream); il testo dei PDF con pdf.js, solo quando serve.
+import { libreria } from './librerie.js';
 export const ACCETTATI = 'PDF e slide (.pptx), foto della lavagna, appunti (.md, .txt, .docx), registrazioni audio, sbobine di Lode, carte di Anki';
 const est = n => (String(n).match(/\.([a-z0-9]+)$/i) || [, ''])[1].toLowerCase();
 
@@ -39,9 +40,9 @@ export async function testoDi(x) {
 }
 let PDFJS = null;
 async function daPdf(f) {
-  PDFJS ||= await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4/build/pdf.min.mjs');
-  PDFJS.GlobalWorkerOptions.workerSrc ||= 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4/build/pdf.worker.min.mjs';
-  const doc = await PDFJS.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise, out = [];
+  PDFJS ||= await import(libreria('pdf'));   // versione esatta: nell'app dal disco (vendor/), nel browser da jsDelivr
+  PDFJS.GlobalWorkerOptions.workerSrc ||= libreria('pdfWorker');
+  const doc = await PDFJS.getDocument({ data: new Uint8Array(await f.arrayBuffer()), isEvalSupported: false }).promise, out = [];   // niente eval in pdf.js: la CSP lo vieta
   for (let i = 1; i <= Math.min(doc.numPages, 300); i++) {
     const c = await (await doc.getPage(i)).getTextContent();
     const t = c.items.map(it => it.str + (it.hasEOL ? '\n' : ' ')).join('').replace(/[ \t]+/g, ' ').trim();

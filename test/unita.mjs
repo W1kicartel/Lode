@@ -178,5 +178,83 @@ if (!AI.errore) {
   prova('orale: da ripassare, prima le peggiori e niente di inventato', JSON.stringify(rip) === '["Dini","Green: la regolarità del bordo"]', JSON.stringify(rip));
 } else console.log('(ai.js non caricabile in Node:', AI.errore.message, ')');
 
+// sicurezza della barra: librerie con versione esatta, Content-Security-Policy, percorsi dal renderer, backup, chiavi
+{
+  const { createHash } = await import('node:crypto');
+  const { existsSync } = await import('node:fs');
+  const radice = new URL('../', import.meta.url), leggi = f => readFileSync(new URL(f, radice), 'utf8');
+  const L = await import('../js/librerie.js'), FO = await import('../js/fornitori.js'), VA = await import('../desktop/vault.mjs');
+  const pkg = JSON.parse(leggi('desktop/package.json'));
+  prova('librerie: versioni esatte come desktop/package.json', Object.entries(L.VERSIONI).every(([n, v]) => /^\d+\.\d+\.\d+$/.test(v) && pkg.devDependencies[n] === v), JSON.stringify(L.VERSIONI));
+  prova('librerie: nel browser da jsDelivr con la versione esatta', L.libreria('pdf') === `https://cdn.jsdelivr.net/npm/pdfjs-dist@${L.VERSIONI['pdfjs-dist']}/build/pdf.min.mjs` && L.libreria('temml').includes('temml@' + L.VERSIONI.temml + '/'));
+  const fuori = moduli.filter(f => f !== 'librerie.js' && /cdn\.jsdelivr|unpkg\.com|esm\.sh|https:\/\/[^'"`\s]+\.m?js['"`]/.test(readFileSync(new URL(f, JS), 'utf8')));
+  prova('librerie: nessun altro modulo carica codice dalla rete', !fuori.length, fuori.join(', '));
+  prova('librerie: niente SDK di Anthropic da un CDN', !/@anthropic-ai\/sdk/.test(leggi('js/ai.js')));
+  const html = leggi('index.html'), csp = html.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/)?.[1] || '';
+  const dir = n => (csp.match(new RegExp('(?:^|;)\\s*' + n + ' ([^;]+)')) || [, ''])[1].split(/\s+/);
+  prova('CSP: c\'è, e senza unsafe-inline o unsafe-eval negli script', csp && !dir('script-src').some(x => /unsafe-inline|unsafe-eval'$/.test(x) && x !== "'wasm-unsafe-eval'") && !dir('script-src').includes("'unsafe-inline'"), csp);
+  prova('CSP: connect-src con ogni servizio della «tua AI» (js/fornitori.js)', FO.originiAI().every(o => dir('connect-src').includes(o)), FO.originiAI().filter(o => !dir('connect-src').includes(o)).join(' '));
+  // Ollama e gli aggiornamenti da GitHub passano dal main: dalla pagina solo i servizi della «tua AI» e i modelli della voce
+  const VOCE = ['https://huggingface.co', 'https://*.huggingface.co', 'https://*.hf.co'];
+  prova('CSP: connect-src solo «tua AI» e modelli della voce (niente Ollama, localhost o GitHub)', VOCE.every(o => dir('connect-src').includes(o)) && dir('connect-src').every(o => o === "'self'" || FO.originiAI().includes(o) || VOCE.includes(o)), dir('connect-src').join(' '));
+  prova('CSP: nessun form va altrove (form-action \'none\')', dir('form-action').join(' ') === "'none'", dir('form-action').join(' '));
+  // la CSP dell'app impacchettata (desktop/prepara.mjs → cspApp): anche con index.html in CRLF, come in un checkout su Windows
+  const VE = await import('../desktop/vendor.mjs'), lf = html.replace(/\r\n/g, '\n'), crlf = lf.replace(/\n/g, '\r\n');
+  const scriptApp = x => { try { const h = VE.cspApp(x); return (h.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/)?.[1].match(/script-src ([^;]+)/)?.[1] || '') + (h.includes('type="importmap"') ? ' +importmap' : ''); } catch (e) { return e.message; } };
+  prova('CSP dell\'app: senza jsDelivr né import map, con fine riga LF e CRLF', scriptApp(lf) === "'self' 'wasm-unsafe-eval'" && scriptApp(crlf) === "'self' 'wasm-unsafe-eval'", scriptApp(lf) + ' / ' + scriptApp(crlf));
+  prova('CSP: da jsDelivr solo i file con la versione esatta', dir('script-src').filter(x => x.includes('jsdelivr')).every(x => x === L.libreria('temml') || L.libreria('pdf').startsWith(x)));
+  const inline = [...html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/g)];
+  prova('CSP: l\'unico script scritto nella pagina è l\'import map, con la sua impronta', inline.length === 1 && /type="importmap"/.test(inline[0][1]) && dir('script-src').includes(`'sha256-${createHash('sha256').update(inline[0][2]).digest('base64')}'`));
+  const mappa = JSON.parse(inline[0]?.[2] || '{}');
+  prova('import map: impronta per pdf.js e Temml', !!mappa.integrity?.[L.libreria('pdf')] && !!mappa.integrity?.[L.libreria('temml')]);
+  const nm = { [L.libreria('pdf')]: 'desktop/node_modules/pdfjs-dist/build/pdf.min.mjs', [L.libreria('temml')]: 'desktop/node_modules/temml/dist/temml.mjs' };
+  if (existsSync(new URL(nm[L.libreria('pdf')], radice))) prova('import map: le impronte sono quelle dei file in node_modules', Object.entries(nm).every(([u, f]) => mappa.integrity[u] === 'sha384-' + createHash('sha384').update(readFileSync(new URL(f, radice))).digest('base64')));
+  // percorsi chiesti dalla barra: normalizzati prima dei controlli sulle cartelle
+  const rel = x => { try { return VA.relativo(x); } catch { return null; } };
+  prova('percorsi: lezioni in sottocartelle e barre di Windows', rel('Lezioni/Corso/Esercitazioni/x.md') === 'Lezioni/Corso/Esercitazioni/x.md' && rel('Lezioni\\A\\b.md') === 'Lezioni/A/b.md' && rel('./Sbobine//a.md') === 'Sbobine/a.md');
+  prova('percorsi: niente «..», cartelle col punto o percorsi assoluti', ['Lezioni/../.obsidian/x.css', 'Anki/../.lode/dati.json', '.obsidian/app.json', 'Sbobine/.x.md', '/etc/passwd', 'C:/x', 'Lezioni/..', ''].every(x => rel(x) === null));
+  // ogni finestra resta sulla pagina di Lode (restaLode, will-navigate) e il ponte c'è solo nelle pagine file:// dell'app;
+  // il comportamento vero lo prova test/prova-app.mjs («difese: un link non porta la barra su un'altra pagina»)
+  const main = leggi('desktop/main.mjs'), finestre = [...main.matchAll(/(\w+) = new BrowserWindow\(/g)].map(m => m[1]);
+  prova('finestre: tutte con restaLode', finestre.length >= 3 && finestre.every(w => main.includes(`restaLode(${w});`)), finestre.join(', '));
+  prova('preload: il ponte solo nelle pagine file://', /if \(location\.protocol === 'file:'\) contextBridge\.exposeInMainWorld/.test(leggi('desktop/preload.cjs')));
+  prova('fornitori: il main sceglie la base solo dall\'elenco', FO.baseDi('openai') === 'https://api.openai.com/v1' && FO.baseDi('anthropic') === null && FO.baseDi('__proto__') === null && FO.baseDi('http://127.0.0.1') === null);
+  // backup: un file preparato ad arte si rifiuta; quello di Lode passa
+  const buono = JSON.parse(JSON.stringify(D.esporta()));
+  prova('backup: quello esportato da Lode è valido', D.backupValido(buono));
+  prova('backup: CFU con HTML rifiutati', !D.backupValido({ ...buono, esami: [{ ...buono.esami[0], cfu: '<img src=x onerror=alert(1)>' }] }));
+  prova('backup: id con HTML rifiutati', !D.backupValido({ ...buono, esami: [{ ...buono.esami[0], id: '"><img src=x>' }] }) && !D.backupValido({ ...buono, carte: [{ id: 'c1', esameId: '"><b>', fronte: 'a', retro: 'b' }] }));
+  prova('backup: CFU e voti tornano numeri', (() => { const prima = D.D; D.sostituisci({ ...buono, esami: [{ ...buono.esami[0], cfu: '9', voto: '28' }] }); const e = D.D.esami[0], r = e.cfu === 9 && e.voto === 28; D.sostituisci(prima); return r; })());
+  // .lode/dati.json di un vault condiviso o sincronizzato: passa da unisci(), non da backupValido(). Un'istanza nuova di
+  // dati.js che legge «dal vault» (window è globalThis, riga 126): l'id con HTML si scarta, le ore tornano un numero
+  {
+    const STRANO = 'x"><a href="https://esempio.invalid/" style="position:fixed;inset:0;z-index:9"></a><b class="';
+    globalThis.lodeDesktop = { leggiDati: () => ({ v: 1, esami: [{ id: STRANO, nome: 'Trappola', cfu: 6 }, { id: 'buono1', nome: 'Analisi', cfu: '9', oreObiettivo: '1"><i>x</i>' }, null, { id: 'buono2', nome: 'Fisica', cfu: 6, oreObiettivo: '40' }] }), salvaDati() { }, su() { } };
+    const DV = await import('../js/dati.js?vault').finally(() => { delete globalThis.lodeDesktop; });
+    const es = DV.D.esami;
+    prova('vault: l\'esame con un id strano si scarta, gli altri restano', DV.DESKTOP && es.length === 2 && es.map(e => e.id).join() === 'buono1,buono2', JSON.stringify(es.map(e => e?.id)));
+    prova('vault: ore previste come numero o niente', es[0]?.oreObiettivo === null && DV.obiettivo(es[0]) === 90 && es[1]?.oreObiettivo === 40, JSON.stringify(es.map(e => e?.oreObiettivo)));
+  }
+  // «Cancella tutto» (pagina.js): prima scollega il servizio, poi svuota i dati; non resta nessuna chiave
+  if (!AI.errore) {
+    const mem = new Map([['lode:chiavi', '{"openai":"sk-prova"}']]), prima = globalThis.localStorage, dati = D.D;
+    globalThis.localStorage = { getItem: k => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, String(v)), removeItem: k => mem.delete(k) };
+    D.D.imp.chiave = 'sk-prova'; D.D.imp.ai = { fornitore: 'openai', modello: 'x', uso: 'tutto' };
+    const tolta = AI.FORNITORI[AI.scollegaFornitore()]; D.sostituisci(D.VUOTO());
+    const pag = readFileSync(new URL('pagina.js', JS), 'utf8').match(/azione === 'azzera'[^\n]*\n[^\n]*/)?.[0] || '';
+    prova('chiavi: «Cancella tutto» toglie anche le chiavi', tolta?.nome === 'ChatGPT' && !D.D.imp.chiave && !mem.has('lode:chiavi') && !(mem.get('lode:v1') || '').includes('sk-prova') && /scollegaFornitore\(\)[^\n]*sostituisci\(VUOTO\(\)\)/.test(pag), [...mem.keys()].join(' '));
+    globalThis.localStorage = prima; D.sostituisci(dati);
+  }
+  // «Usa solo il cervello locale»: le chiavi salvate se ne vanno davvero
+  if (!AI.errore) {
+    const tolte = []; const prima = globalThis.localStorage;
+    globalThis.localStorage = { getItem: () => '{"openai":"sk-prova"}', setItem() { }, removeItem: k => tolte.push(k) };
+    D.D.imp.chiave = 'sk-prova'; D.D.imp.ai = { fornitore: 'openai', modello: 'x', uso: 'tutto' };
+    const f = AI.scollegaFornitore();
+    prova('chiavi: scollegare cancella le chiavi salvate', f === 'openai' && tolte.includes('lode:chiavi') && !D.D.imp.chiave && !AI.fornitore());
+    globalThis.localStorage = prima;
+  }
+}
+
 console.log(`${ok} prove passate, ${ko} fallite`);
 process.exit(ko ? 1 : 0);

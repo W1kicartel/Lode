@@ -147,11 +147,11 @@ function righeOggi() {
 // in aula il pannello si apre sulla cattura veloce: ★ da esame, definizione, domanda
 function bloccoAula(lo) {
   const st = stelleOggi(lo.corso);
-  return `<section class="ld-aula"><div class="capo"><span class="ld-lbl"><i class="ld-live"></i>In aula · ${esc(lo.corso)}</span><span>${lo.aula ? 'aula ' + esc(lo.aula) + ' · ' : ''}finisce tra ${lo.mancano} min</span></div>
+  return `<section class="ld-aula"><div class="capo"><span class="ld-lbl"><i class="ld-live"></i>In aula · ${esc(lo.corso)}</span><span>${lo.aula ? 'aula ' + esc(lo.aula) + ' · ' : ''}finisce tra ${esc(lo.mancano)} min</span></div>
     <div class="ld-cattura">${[['stella', '★ Da esame', 'S'], ['definizione', 'Definizione', 'D'], ['domanda', 'Domanda', 'Q']].map(([k, t, l]) => `<button type="button" class="btn" data-ld-cattura="${k}"><span>${t}</span><kbd>${MAC ? '⌃⌥' : 'Ctrl Alt '}${l}</kbd></button>`).join('')}
       ${V.attivo ? '<button type="button" class="btn primary" data-ld-appunti>Appunti</button>' : ''}</div>
     ${V.attivo ? bloccoTrascrizione() + bloccoRipeti() : ''}
-    ${st ? `<p class="ld-nota">${st} ${st === 1 ? 'cosa segnata' : 'cose segnate'} da esame oggi.</p>` : ''}</section>`;
+    ${st ? `<p class="ld-nota">${esc(st)} ${st === 1 ? 'cosa segnata' : 'cose segnate'} da esame oggi.</p>` : ''}</section>`;
 }
 function bloccoRipeti() {
   if (O.attivo()) return `<div class="ld-ripeti-riga"><i class="ld-orecchio"></i><span>Ripeti attivo · tengo gli ultimi 60 secondi</span><button type="button" class="btn small primary" data-ld-ripeti="si">Ripeti <kbd>${MAC ? '⌃⌥P' : 'Ctrl Alt P'}</kbd></button><button type="button" class="btn small ld-piano" data-ld-ripeti="spegni">Spegni</button></div>`;
@@ -160,13 +160,13 @@ function bloccoRipeti() {
 function bloccoTrascrizione() {
   const t = TR.stato();
   if (!t) return `<button type="button" class="ld-trascrivi" data-ld-trascrivi><i class="ld-rec"></i><span><b>Trascrivi la lezione</b><small>Tutto quello che dice il prof, formule comprese, nella nota Obsidian · ${MAC ? '⌃⌥R' : 'Ctrl Alt R'}</small></span></button>`;
-  return `<div class="ld-trascrivi on"><i class="ld-rec"></i><span><b>${t.inPausa ? 'In pausa' : 'Trascrivo'} · ${t.minuti} min · ${t.parole.toLocaleString('it-IT')} parole</b><small>${t.ultima ? esc(t.ultima.replace(/^\*\*\d\d:\d\d\*\*\s*/, '').slice(-110)) : 'Ascolto: la prima riga arriva fra una ventina di secondi.'}</small></span>
+  return `<div class="ld-trascrivi on"><i class="ld-rec"></i><span><b>${t.inPausa ? 'In pausa' : 'Trascrivo'} · ${esc(t.minuti)} min · ${esc(t.parole.toLocaleString('it-IT'))} parole</b><small>${t.ultima ? esc(t.ultima.replace(/^\*\*\d\d:\d\d\*\*\s*/, '').slice(-110)) : 'Ascolto: la prima riga arriva fra una ventina di secondi.'}</small></span>
     <button type="button" class="btn small" data-ld-tr="${t.inPausa ? 'riprendi' : 'pausa'}">${t.inPausa ? 'Riprendi' : 'Pausa'}</button><button type="button" class="btn small primary" data-ld-tr="fine">Fine</button></div>`;
 }
 function disegnaHome() {
   const r = righeOggi(), lo = lezioneOra(), st = strumenti();
   home._righe = r;
-  home.innerHTML = `${lo ? bloccoAula(lo) : ''}${lo && !r.length ? '' : `<section class="ld-oggi"><div class="capo"><span class="ld-lbl">Oggi</span><span>${D.esami.length ? `${cfuFatti()} di ${D.profilo.cfuTotali} CFU` : ''}</span></div>
+  home.innerHTML = `${lo ? bloccoAula(lo) : ''}${lo && !r.length ? '' : `<section class="ld-oggi"><div class="capo"><span class="ld-lbl">Oggi</span><span>${D.esami.length ? `${esc(cfuFatti())} di ${esc(D.profilo.cfuTotali)} CFU` : ''}</span></div>
     ${r.map((x, i) => `<div class="ld-riga ${x.cls}"><i class="ld-seg"></i><div class="t"><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div><span class="n">${esc(x.n)}</span><button type="button" class="btn small${i === 0 && x.cls === 'urg' ? ' primary' : ''}" data-ld-riga="${i}">${x.b}</button></div>`).join('') ||
     `<div class="ld-riga info vuota"><i class="ld-seg"></i><div class="t"><b>Inizia da qui</b><span>Scrivi «lezione analisi 2 lunedì 9-11 aula 7», oppure prova i dati di esempio</span></div><span class="n"></span><button type="button" class="btn small primary" data-ld-esempio>Esempio</button></div>`}</section>`}
     <div class="ld-strumenti${st.length === 9 ? ' nove' : ''}">${st.map(([k, t]) => `<button type="button" class="btn" data-ld-strumento="${k}">${ico(k)}<span>${t}</span></button>`).join('')}</div>`;
@@ -215,12 +215,12 @@ function aggiornaPillola(avviso) {
   const p = prossimi()[0], c = daRipassare().length;
   let testo, pieno = false;
   if (tr) { testo = `<i class="ld-live rec"></i><b>${esc(tr.lezione.corso)}</b><span class="ld-tenue">${tr.inPausa ? 'trascrizione in pausa' : 'trascrivo'} · ${tr.parole.toLocaleString('it-IT')} parole</span>`; pieno = true; }
-  else if (lo) { const st = stelleOggi(lo.corso); testo = `<i class="ld-live"></i><b>${esc(lo.corso)}</b><span class="ld-tenue">fine tra ${lo.mancano} min</span>${st ? `<span class="ld-punto"></span><span class="ld-tenue">★${st}</span>` : ''}${O.attivo() ? '<i class="ld-orecchio" title="Ripeti attivo: gli ultimi 60 secondi in memoria"></i>' : ''}`; pieno = true; }
-  else if (pl && pl.tra <= 20) { testo = `<b>${esc(pl.corso)}</b><span class="ld-tenue">${pl.aula ? 'aula ' + esc(pl.aula) + ' · ' : ''}tra ${pl.tra} min</span>`; pieno = true; }
+  else if (lo) { const st = stelleOggi(lo.corso); testo = `<i class="ld-live"></i><b>${esc(lo.corso)}</b><span class="ld-tenue">fine tra ${esc(lo.mancano)} min</span>${st ? `<span class="ld-punto"></span><span class="ld-tenue">★${esc(st)}</span>` : ''}${O.attivo() ? '<i class="ld-orecchio" title="Ripeti attivo: gli ultimi 60 secondi in memoria"></i>' : ''}`; pieno = true; }
+  else if (pl && pl.tra <= 20) { testo = `<b>${esc(pl.corso)}</b><span class="ld-tenue">${pl.aula ? 'aula ' + esc(pl.aula) + ' · ' : ''}tra ${esc(pl.tra)} min</span>`; pieno = true; }
   else if (pp) { testo = pp.html; pieno = pp.pieno; }   // il progetto seguito: «lab3 · 2 file +41 −7», «lab3 · fatto · non provato»
   else if (sg) testo = `<b>2 minuti</b><span class="ld-tenue">${esc(sg.testo)}</span>`;
-  else if (p) { const g = giorniTra(oggi(), p.data); testo = `<b>${esc(p.nome)}</b><span class="ld-tenue">${g === 0 ? 'oggi' : g === 1 ? 'domani' : `tra ${g} g`}</span>${c ? `<span class="ld-punto"></span><span class="ld-tenue">${c} carte</span>` : ''}`; pieno = g <= 7; }
-  else if (c) testo = `<b>${c}</b><span class="ld-tenue">carte da ripassare</span>`;
+  else if (p) { const g = giorniTra(oggi(), p.data); testo = `<b>${esc(p.nome)}</b><span class="ld-tenue">${g === 0 ? 'oggi' : g === 1 ? 'domani' : `tra ${esc(g)} g`}</span>${c ? `<span class="ld-punto"></span><span class="ld-tenue">${esc(c)} carte</span>` : ''}`; pieno = g <= 7; }
+  else if (c) testo = `<b>${esc(c)}</b><span class="ld-tenue">carte da ripassare</span>`;
   else testo = `<b>Lode</b><span class="ld-tenue">passa qui sopra</span>`;
   pill.innerHTML = `<i class="ld-rombo${pieno ? '' : ' ld-cavo'}"></i><span class="ld-testo">${testo}</span>`;
   pill.setAttribute('aria-label', `Lode: ${pill.textContent}. Passa sopra o premi ${TASTI}.`);
@@ -480,14 +480,14 @@ const SI = /^(s[iì]|ok(ay)?|conferm[aoi]|confermo|vai|procedi|certo|perfetto|d'
 const NO = /^(no|annulla|lascia (stare|perdere)|aspetta|stop|niente|meglio di no)[\s,.!]*$/i;
 
 /* ---------- gli strumenti ---------- */
-const opzioniEsami = (sel, soloDaFare = true) => (soloDaFare ? daFare() : D.esami).map(e => `<option value="${e.id}"${e.id === sel ? ' selected' : ''}>${esc(e.nome)}</option>`).join('');
+const opzioniEsami = (sel, soloDaFare = true) => (soloDaFare ? daFare() : D.esami).map(e => `<option value="${esc(e.id)}"${e.id === sel ? ' selected' : ''}>${esc(e.nome)}</option>`).join('');
 
 function schedaFocus(esameId) {
   const pross = esameId || prossimi()[0]?.id || '';
   const s = scheda('ld-focus', `<span class="ld-lbl">Focus</span>
     <div class="ld-preset" role="radiogroup" aria-label="Durata">${[25, 50, 90].map(m => `<button type="button" role="radio" class="ld-chip${m === D.imp.focus ? ' on' : ''}" data-min="${m}" aria-checked="${m === D.imp.focus}"><b>${m}</b><span>min</span></button>`).join('')}</div>
     <div class="ld-riga-form"><select aria-label="Su che cosa">${'<option value="">Studio libero</option>' + opzioniEsami(pross)}</select><button type="button" class="btn primary" data-via>Inizia</button></div>
-    <p class="ld-nota">Pausa di ${D.imp.pausa} minuti alla fine. Le ore contano nel piano dell'esame.</p>`);
+    <p class="ld-nota">Pausa di ${esc(D.imp.pausa)} minuti alla fine. Le ore contano nel piano dell'esame.</p>`);
   let min = D.imp.focus;
   s.querySelectorAll('.ld-chip').forEach(b => b.addEventListener('click', () => { min = +b.dataset.min; s.querySelectorAll('.ld-chip').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); }); premi(b); }));
   s.querySelector('[data-via]').addEventListener('click', () => avviaFocus({ min, esameId: s.querySelector('select').value || null, dove: s }));
@@ -506,8 +506,8 @@ function schedaLibretto({ base } = {}) {
   const m = media(), cf = cfuFatti(), tot = D.profilo.cfuTotali, obiettivo = base || (m.base && m.base > 104 ? 110 : m.base ? Math.min(110, Math.floor(m.base / 5) * 5 + 5) : 100);
   const sv = m.n ? serve(obiettivo) : null, df = daFare();
   const s = scheda('ld-libretto', `<div class="ld-kpi">
-      <div><span class="ld-lbl">Media ponderata</span><b class="v" data-v="m">${m.ponderata ? '0' : '—'}</b><span class="d">${m.n ? `aritmetica ${num(m.aritmetica, 2)} · ${m.n} esami` : 'ancora nessun voto'}</span></div>
-      <div><span class="ld-lbl">Base di laurea</span><b class="v" data-v="b">${m.base ? '0' : '—'}<small>/110</small></b><span class="d">${cf} di ${tot} CFU</span></div>
+      <div><span class="ld-lbl">Media ponderata</span><b class="v" data-v="m">${m.ponderata ? '0' : '—'}</b><span class="d">${m.n ? `aritmetica ${esc(num(m.aritmetica, 2))} · ${esc(m.n)} esami` : 'ancora nessun voto'}</span></div>
+      <div><span class="ld-lbl">Base di laurea</span><b class="v" data-v="b">${m.base ? '0' : '—'}<small>/110</small></b><span class="d">${esc(cf)} di ${esc(tot)} CFU</span></div>
     </div>
     <div class="ld-cfu" aria-hidden="true"><i style="transform:scaleX(0)"></i></div>
     ${sv ? `<p class="ld-serve">${sv.gia ? `Per partire da <b>${obiettivo}</b> ti basta passare gli esami che restano.` : sv.possibile ? `Per partire da <b>${obiettivo}</b> ti serve <b>${num(sv.voto, 1)}</b> di media nei ${sv.cfu} CFU che mancano.` : `Partire da <b>${obiettivo}</b> non è più possibile: punta a ${Math.floor(((m.somma + 30 * sv.cfu) / (m.cfuVoto + sv.cfu)) * 110 / 30)}.`}</p>` : ''}
@@ -540,7 +540,7 @@ function schedaSimula({ esame: e, voto, lode, nomeDetto }) {
 function schedaEsami() {
   const p = prossimi(), senza = daFare().filter(e => !e.data);
   const s = scheda('ld-esami', `<span class="ld-lbl">Prossimi appelli · ${p.length}</span>
-    ${p.map(e => { const pi = piano(e), g = giorniTra(oggi(), e.data); return `<div class="ld-es"><div class="t"><b>${esc(e.nome)}</b><span>${dataBreve(e.data)} · ${e.cfu} CFU · ${num(pi.fatte, 0)} di ${pi.tot} h${pi.oggi >= .1 ? ` · <em>${num(pi.oggi)} h oggi</em>` : ''}</span><i class="q"><i style="transform:scaleX(0)" data-q="${pi.quota.toFixed(3)}"></i></i></div><span class="g">${g === 0 ? 'oggi' : g}<small>${g === 0 ? '' : g === 1 ? 'giorno' : 'giorni'}</small></span><button type="button" class="btn small" data-focus="${e.id}">Focus</button></div>`; }).join('') || '<p class="ld-nota">Nessun appello in calendario.</p>'}
+    ${p.map(e => { const pi = piano(e), g = giorniTra(oggi(), e.data); return `<div class="ld-es"><div class="t"><b>${esc(e.nome)}</b><span>${esc(dataBreve(e.data))} · ${esc(e.cfu)} CFU · ${esc(num(pi.fatte, 0))} di ${esc(pi.tot)} h${pi.oggi >= .1 ? ` · <em>${esc(num(pi.oggi))} h oggi</em>` : ''}</span><i class="q"><i style="transform:scaleX(0)" data-q="${esc(pi.quota.toFixed(3))}"></i></i></div><span class="g">${g === 0 ? 'oggi' : esc(g)}<small>${g === 0 ? '' : g === 1 ? 'giorno' : 'giorni'}</small></span><button type="button" class="btn small" data-focus="${esc(e.id)}">Focus</button></div>`; }).join('') || '<p class="ld-nota">Nessun appello in calendario.</p>'}
     ${senza.length ? `<p class="ld-nota">Senza data: ${senza.map(e => esc(e.nome)).join(', ')}.</p>` : ''}
     <form class="ld-riga-form ld-nuovo"><input name="nome" placeholder="Nuovo esame" aria-label="Nome dell'esame" required><input name="cfu" type="number" min="1" max="30" value="6" aria-label="CFU" title="CFU"><input name="data" type="date" aria-label="Data dell'appello"><button class="btn" type="submit">Aggiungi</button></form>`);
   s.querySelectorAll('[data-q]').forEach((x, i) => tween(700, e => { x.style.transform = `scaleX(${(x.dataset.q * e).toFixed(4)})`; }, { ritardo: 150 + i * 70 }));
@@ -618,9 +618,9 @@ function schedaAiuto() {
 /* ---------- orario delle lezioni ---------- */
 function schedaOrario() {
   const corsi = [...new Set([...D.orario.map(o => o.corso), ...daFare().map(e => e.nome)])];
-  const s = scheda('ld-orario', `<span class="ld-lbl">Orario · ${D.orario.length} ${D.orario.length === 1 ? 'lezione' : 'lezioni'} a settimana</span>
-    <div class="ld-sett">${[1, 2, 3, 4, 5, 6].map(g => { const del = D.orario.filter(o => o.giorni.includes(g)).sort((a, b) => a.inizio.localeCompare(b.inizio)); return `<div class="ld-giorno${new Date().getDay() === g ? ' oggi' : ''}"><b>${GIORNI_BREVI[g]}</b>${del.map(o => `<span title="${esc(o.corso)}${o.aula ? ' · aula ' + esc(o.aula) : ''}"><em>${o.inizio}</em>${esc(o.corso)}</span>`).join('') || '<span class="vuoto">—</span>'}</div>`; }).join('')}</div>
-    ${D.orario.length ? `<div class="ld-orari">${D.orario.map(o => `<div class="ld-or"><span class="t"><b>${esc(o.corso)}</b><span>${o.giorni.map(g => GIORNI_BREVI[g]).join(', ')} · ${o.inizio}–${o.fine}${o.aula ? ' · aula ' + esc(o.aula) : ''}</span></span><button type="button" class="ld-x" data-via="${o.id}" aria-label="Togli ${esc(o.corso)}">${IC.chiudi}</button></div>`).join('')}</div>` : ''}
+  const s = scheda('ld-orario', `<span class="ld-lbl">Orario · ${esc(D.orario.length)} ${D.orario.length === 1 ? 'lezione' : 'lezioni'} a settimana</span>
+    <div class="ld-sett">${[1, 2, 3, 4, 5, 6].map(g => { const del = D.orario.filter(o => o.giorni.includes(g)).sort((a, b) => a.inizio.localeCompare(b.inizio)); return `<div class="ld-giorno${new Date().getDay() === g ? ' oggi' : ''}"><b>${GIORNI_BREVI[g]}</b>${del.map(o => `<span title="${esc(o.corso)}${o.aula ? ' · aula ' + esc(o.aula) : ''}"><em>${esc(o.inizio)}</em>${esc(o.corso)}</span>`).join('') || '<span class="vuoto">—</span>'}</div>`; }).join('')}</div>
+    ${D.orario.length ? `<div class="ld-orari">${D.orario.map(o => `<div class="ld-or"><span class="t"><b>${esc(o.corso)}</b><span>${esc(o.giorni.map(g => GIORNI_BREVI[g]).join(', '))} · ${esc(o.inizio)}–${esc(o.fine)}${o.aula ? ' · aula ' + esc(o.aula) : ''}</span></span><button type="button" class="ld-x" data-via="${esc(o.id)}" aria-label="Togli ${esc(o.corso)}">${IC.chiudi}</button></div>`).join('')}</div>` : ''}
     <form class="ld-or-form"><input name="corso" list="ld-corsi" placeholder="Corso" aria-label="Corso" required><datalist id="ld-corsi">${corsi.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
       <div class="ld-giorni" role="group" aria-label="Giorni">${[1, 2, 3, 4, 5, 6].map(g => `<label><input type="checkbox" name="g" value="${g}"><span>${GIORNI_BREVI[g].slice(0, 2)}</span></label>`).join('')}</div>
       <input name="inizio" type="time" value="09:00" aria-label="Inizio" required><input name="fine" type="time" value="11:00" aria-label="Fine" required><input name="aula" placeholder="Aula" aria-label="Aula"><button class="btn" type="submit">Aggiungi</button></form>
@@ -746,7 +746,7 @@ async function ripeti(sec = 60) {
   modo('riposo');
   if (!testo) return rispostaFissa('Negli ultimi 60 secondi non ho sentito parlare.');
   const f = parlatoInFormule(testo), hh = `${String(quando.getHours()).padStart(2, '0')}:${String(quando.getMinutes()).padStart(2, '0')}`;
-  const s = scheda('ld-ripeti', `<span class="ld-lbl">Gli ultimi ${Math.round(Math.min(sec, audio.length / 16000))} secondi · ${hh}</span><p class="ld-detto-prof">${dettoProf(f)}</p>
+  const s = scheda('ld-ripeti', `<span class="ld-lbl">Gli ultimi ${esc(Math.round(Math.min(sec, audio.length / 16000)))} secondi · ${esc(hh)}</span><p class="ld-detto-prof">${dettoProf(f)}</p>
     <div class="az"><button type="button" class="btn primary" data-r="appunti">Agli appunti</button><button type="button" class="btn" data-r="stella">★ Da esame</button><button type="button" class="btn" data-r="copia">Copia</button></div>`);
   s.querySelector('[data-r=copia]').addEventListener('click', e => { navigator.clipboard.writeText(f).then(() => { e.target.textContent = 'Copiato'; }); });
   s.querySelector('[data-r=appunti]').addEventListener('click', async e => { e.target.disabled = true; const l = await V.annota('appunti', `- **${hh}** ${f}`, { grezza: true }); mostraFatto({ testo: `Negli appunti di ${l.corso}.` }); });
@@ -998,7 +998,10 @@ function schedaAI(preferito) {
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); collega(); } });
   s.querySelector('.ld-ai-modello select')?.addEventListener('change', e => { AI.collegaFornitore(AI.fornitore(), D.imp.chiave, e.target.value); salva(); });
   s.querySelector('[data-uso]')?.addEventListener('change', e => { AI.impostaUso(e.target.checked ? 'pesante' : 'tutto'); salva(); });
-  s.querySelector('[data-scollega]')?.addEventListener('click', async e => { AI.scollegaFornitore(); salva(); aggiornaTutto(); e.target.disabled = true; await mostraFatto({ testo: 'Lode usa solo il cervello locale.', nota: 'La chiave resta salvata qui, se vuoi ricollegarla.' }, s); });
+  s.querySelector('[data-scollega]')?.addEventListener('click', async e => {
+    const f = F[AI.scollegaFornitore()]; salva(); aggiornaTutto(); e.target.disabled = true;
+    await mostraFatto({ testo: 'Lode usa solo il cervello locale.', nota: `Ho cancellato la chiave da questo computer. Nel tuo account${f ? ' ' + f.nome : ''} vale ancora: se non ti serve più, revocala anche lì${f?.sito ? ' (' + f.sito + ')' : ''}.` }, s);
+  });
   if (preferito && F[preferito]) scegli(preferito);
   s.querySelectorAll('.ld-op').forEach((b, i) => entra(b, { ritardo: 60 + i * 40, dy: 6, blur: 5, ms: 400 }));
   if (A.turno) A.turno.dataset.sintesi = 'la tua AI';
@@ -1092,7 +1095,7 @@ async function schedaNote(q = '') {
   if (!V.attivo) return apriAppunti();
   const tutte = await V.note(), lo = V.lezioneDaAnnotare(), ultima = lezioni().find(l => l.file);
   const rapide = [['Home', 'Home.md'], [lo.corso === 'Appunti sparsi' ? (ultima ? 'Ultima lezione' : null) : `Lezione di ${lo.corso}`, lo.corso === 'Appunti sparsi' ? ultima?.file : null], ['Orario', 'Orario.md'], ['Esami', 'Esami.md'], ['Glossario', 'Glossario.md'], ['Cosa sa Lode di me', 'Lode/Memoria.md']].filter(x => x[0]);
-  const s = scheda('ld-note', `<span class="ld-lbl">Vai a… · ${tutte.length} note</span>
+  const s = scheda('ld-note', `<span class="ld-lbl">Vai a… · ${esc(tutte.length)} note</span>
     <div class="ld-rapide">${rapide.map(([t, f], i) => `<button type="button" class="ld-chip larga" data-r="${i}"><b>${esc(t)}</b><span>${esc(f ? f.replace(/\.md$/, '').split('/').slice(0, -1).join('/') || 'vault' : 'oggi')}</span></button>`).join('')}</div>
     <input class="ld-cerca-note" placeholder="Cerca una nota: corso, lezione, data…" aria-label="Cerca una nota" value="${esc(q)}"><div class="ld-risultati"></div>`);
   const apriR = i => { const [t, f] = rapide[i]; f ? apriAppunti({ file: f, corso: t }) : apriAppunti(lo); };
@@ -1212,7 +1215,7 @@ function schedaGioco(corso) {
   const fine = () => {
     A.gioco = null; salva(); V.scriviMemoria(); aggiornaTutto();
     const sec = Math.round((Date.now() - t0) / 1000);
-    box.innerHTML = `<div class="ld-esito"><b>${punti}<small>/${tot}</small></b><span>${punti === tot ? 'Tutte giuste. Queste restano.' : `Da rinforzare: ${[...sbagliate].slice(0, 3).map(esc).join(', ')}. Tornano domani.`}</span><small>${sec < 60 ? sec + ' secondi' : Math.round(sec / 60) + ' min'}</small></div>`;
+    box.innerHTML = `<div class="ld-esito"><b>${esc(punti)}<small>/${esc(tot)}</small></b><span>${punti === tot ? 'Tutte giuste. Queste restano.' : `Da rinforzare: ${[...sbagliate].slice(0, 3).map(esc).join(', ')}. Tornano domani.`}</span><small>${sec < 60 ? sec + ' secondi' : Math.round(sec / 60) + ' min'}</small></div>`;
     entra(box, { dy: 8, blur: 6, ms: 480 }); segnala(punti >= tot - 1 ? 'confermato' : 'quiete');
     if (A.turno) A.turno.dataset.sintesi = `${punti} su ${tot}`;
     const ancora = daGiocare(6, corso).scelte.length;
@@ -1485,7 +1488,7 @@ async function avviaOrale(e, nomeDetto, materialeFile) {
     if (nomeDetto) { rispostaFissa(`Non trovo **${nomeDetto}**: ti interrogo comunque su quello.`); e = { id: null, nome: nomeDetto }; }
     else if (lista.length === 1) e = lista[0];
     else {
-      const s = scheda('ld-scegli', `<span class="ld-lbl">Su quale esame?</span><div class="ld-preset">${lista.slice(0, 6).map(x => `<button type="button" class="ld-chip larga" data-e="${x.id}"><b>${esc(x.nome)}</b><span>${x.data ? traQuanto(x.data) : ''}</span></button>`).join('') || '<p class="ld-nota">Aggiungi prima un esame.</p>'}</div>`);
+      const s = scheda('ld-scegli', `<span class="ld-lbl">Su quale esame?</span><div class="ld-preset">${lista.slice(0, 6).map(x => `<button type="button" class="ld-chip larga" data-e="${esc(x.id)}"><b>${esc(x.nome)}</b><span>${x.data ? traQuanto(x.data) : ''}</span></button>`).join('') || '<p class="ld-nota">Aggiungi prima un esame.</p>'}</div>`);
       s.querySelectorAll('[data-e]').forEach(b => b.addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Interrogami su ' + esame(b.dataset.e).nome); avviaOrale(esame(b.dataset.e)); }));
       return;
     }
@@ -1540,7 +1543,7 @@ async function chiudiOrale() {
   modo('pensa', 'Il prof scrive il voto…'); segnala('pensa');
   let rip = []; try { rip = await AI.ripassoOrale({ nome: o.nome, storico: o.storico }); } catch { }
   modo('riposo'); segnala(v.voto >= 27 ? 'confermato' : 'quiete');
-  const s = scheda('ld-voto', `<span class="ld-lbl">Orale · ${esc(o.nome)} · ${o.storico.length} ${o.storico.length === 1 ? 'domanda' : 'domande'}</span>
+  const s = scheda('ld-voto', `<span class="ld-lbl">Orale · ${esc(o.nome)} · ${esc(o.storico.length)} ${o.storico.length === 1 ? 'domanda' : 'domande'}</span>
     <div class="ld-voto-n">${esc(v.testo)}</div>
     <div class="ld-esiti">${o.storico.map((x, i) => `<div class="ld-esito-r e-${x.esito.replace(' ', '-')}"><span class="n">${i + 1}</span><b>${esc(x.argomento || x.domanda)}</b><em>${esc(x.esito)}</em></div>`).join('')}</div>
     ${rip.length ? `<span class="ld-lbl">Da ripassare</span><ul class="ld-ripassa">${rip.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
@@ -1584,7 +1587,7 @@ export async function invia(testo) {
 /* ---------- file ---------- */
 function chipFile(file, togli = true) {
   const tipo = /pdf$/i.test(file.name) ? 'PDF' : file.type.startsWith('image/') ? 'foto' : (file.name.split('.').pop() || 'file').toUpperCase();
-  const c = h('span', 'ld-file', `${ico('doc')}<span>${esc(file.name)}</span><small>${tipo}</small>`);
+  const c = h('span', 'ld-file', `${ico('doc')}<span>${esc(file.name)}</span><small>${esc(tipo)}</small>`);
   if (togli) { const b = h('button', '', IC.chiudi); b.type = 'button'; b.setAttribute('aria-label', 'Togli ' + file.name); b.addEventListener('click', () => { A.allegati = A.allegati.filter(x => x.file !== file); c.remove(); }); c.append(b); }
   return c;
 }
@@ -1613,7 +1616,7 @@ async function importaSenzaAI() {
   A.allegati = []; allegatiBox.innerHTML = ''; campo.querySelector('input').placeholder = 'Chiedi o scrivi un comando…';
   if (!carte.length) return rispostaFissa('Senza AI leggo solo file di testo con una carta per riga (domanda, poi Tab o «;» o « = », poi risposta), come l\'export di Anki. Per PDF e foto serve il cervello locale o la tua AI (scrivi «AI»).');
   const e = prossimi()[0];
-  const card = schedaConferma({ titolo: `Importare ${carte.length} carte?`, extra: `<ol class="ld-proposte">${carte.slice(0, 8).map(c => `<li><b>${esc(c.fronte)}</b><span>${esc(c.retro)}</span></li>`).join('')}${carte.length > 8 ? `<li class="altre">e altre ${carte.length - 8}</li>` : ''}</ol>`, nota: e ? `Le metto in ${e.nome}: lo cambi dalla pagina.` : '' });
+  const card = schedaConferma({ titolo: `Importare ${carte.length} carte?`, extra: `<ol class="ld-proposte">${carte.slice(0, 8).map(c => `<li><b>${esc(c.fronte)}</b><span>${esc(c.retro)}</span></li>`).join('')}${carte.length > 8 ? `<li class="altre">e altre ${esc(carte.length - 8)}</li>` : ''}</ol>`, nota: e ? `Le metto in ${e.nome}: lo cambi dalla pagina.` : '' });
   await attendiDecisione(card, async () => { carte.forEach(c => aggiungiCarta({ ...c, esameId: e?.id || null })); salva(); aggiornaTutto(); await mostraFatto({ testo: `${carte.length} carte importate.`, azione: ['Ripassa ora', () => { nuovoTurno(); schedaRipasso(e?.id); }] }, card); return {}; });
 }
 

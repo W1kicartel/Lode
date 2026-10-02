@@ -18,8 +18,17 @@
     "electron-updater": "6.8.10"
   },
   "devDependencies": {
+    "@huggingface/transformers": "3.8.1",
     "electron": "44.4.5",
-    "electron-builder": "26.15.3"
+    "electron-builder": "26.15.3",
+    "pdfjs-dist": "4.10.38",
+    "temml": "0.11.11"
+  },
+  "overrides": {
+    "onnxruntime-node": "file:./vuoto",
+    "onnxruntime-web": "file:./vuoto",
+    "sharp": "file:./vuoto",
+    "@napi-rs/canvas": "file:./vuoto"
   },
   "build": {
     "appId": "it.lode.app",
@@ -49,6 +58,11 @@
       "package.json",
       "build/tray*.png"
     ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false
+    },
     "mac": {
       "category": "public.app-category.education",
       "extraResources": [
@@ -70,7 +84,7 @@
       ],
       "extendInfo": {
         "LSUIElement": true,
-        "NSMicrophoneUsageDescription": "Lode usa il microfono quando parli con lui, per «Ripeti» in aula e per trascrivere le lezioni che scegli. L'audio non viene mai salvato."
+        "NSMicrophoneUsageDescription": "Lode usa il microfono quando parli con lui, per «Ripeti» in aula e per trascrivere le lezioni che scegli. L'audio non resta mai sul computer."
       },
       "hardenedRuntime": true,
       "entitlements": "build/entitlements.mac.plist",

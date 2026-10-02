@@ -3,15 +3,24 @@
 # - la prova completa dell'app desktop su Windows (a richiesta: «Run workflow» o «[windows]» nel messaggio del commit):
 #   installa davvero Obsidian, Ollama + il modello e la voce con gli installer di Lode, poi usa la barra come uno studente.
 #   Risultati e foto della barra vanno nel ramo «risultati-windows».
+# Il token di GitHub qui può solo leggere: questi job eseguono codice di altri (npm ci, gli installer di Ollama e Obsidian
+# scaricati dalla prova) e con un token che scrive potrebbero cambiare main, i tag e le Release. Può scrivere solo
+# «risultati-windows», che non esegue niente del progetto: prende i file della prova e li spinge nel suo ramo.
+# Il checkout non lascia il token in .git/config (persist-credentials: false).
+# Sulle pull request girano solo le prove unitarie (la prova completa e il ramo dei risultati restano fermi), con il token
+# che legge e senza segreti. Sempre «pull_request», mai «pull_request_target»: quello darebbe al codice della PR i permessi
+# e i segreti del repository.
 name: Prove
 
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   unita:
@@ -23,6 +32,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -44,6 +55,11 @@ jobs:
       # aggiornamenti (desktop/aggiorna.mjs): versioni, installer giusto, latest*.yml, Mac senza firma, finto electron-updater
       - name: Aggiornamenti
         run: node test/aggiorna.mjs
+      # cosa finirebbe in pubblico (test/controlla-privacy.mjs): niente chiavi, percorsi con un nome vero, file privati,
+      # codice da CDN senza versione esatta, pacchetti fuori dal registro npm. Gira anche quando una prova sopra è fallita
+      - name: Privacy (chiavi, nomi, versioni esatte)
+        if: ${{ !cancelled() }}
+        run: node test/controlla-privacy.mjs
 
   app-windows:
     name: App completa su Windows
@@ -53,6 +69,8 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -67,24 +85,16 @@ jobs:
           LODE_FOTO: ${{ runner.temp }}\out\foto
           LODE_RISULTATI: ${{ runner.temp }}\out\risultati.json
         run: node test/prova-app.mjs
-      - name: Risultati nel ramo risultati-windows
+      # risultati e foto passano a «risultati-windows» (qui sotto) come artifact: questo job ha eseguito l'app, Ollama e gli
+      # installer scaricati, che restano accesi fino alla fine e non devono vedere un token che scrive
+      - name: Risultati per il ramo risultati-windows
         if: always()
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          $out = Join-Path $env:RUNNER_TEMP 'out'
-          New-Item -Force -ItemType Directory $out | Out-Null
-          if (!(Test-Path (Join-Path $out 'risultati.json'))) { '{"errore":"nessun risultato: la prova non è arrivata in fondo"}' | Set-Content (Join-Path $out 'risultati.json') }
-          "commit: $env:GITHUB_SHA`nrun: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID" | Set-Content (Join-Path $out 'LEGGIMI.txt')
-          Set-Location $out
-          git init -q
-          git checkout -q -b risultati-windows
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -qm "Risultati della prova su Windows ($env:GITHUB_SHA)"
-          git push -q -f "https://x-access-token:$env:GH_TOKEN@github.com/$env:GITHUB_REPOSITORY.git" risultati-windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: risultati-windows
+          path: ${{ runner.temp }}/out
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Riepilogo
         if: always()
         shell: pwsh
@@ -96,3 +106,37 @@ jobs:
             foreach ($p in $r.passi) { "- $(if ($p.passa) { '✓' } else { '✗' }) $($p.nome)" | Out-File -Append $env:GITHUB_STEP_SUMMARY }
             foreach ($p in $r.verifica) { "- $(if ($p.passa) { '✓' } else { '✗' }) $($p.nome)" | Out-File -Append $env:GITHUB_STEP_SUMMARY }
           }
+
+  risultati-windows:
+    name: Risultati nel ramo risultati-windows
+    needs: app-windows
+    # anche quando la prova fallisce; non quando app-windows è saltato (cioè a ogni push normale su main): sovrascriverebbe
+    # il ramo con «nessun risultato»
+    if: ${{ always() && needs.app-windows.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # l'unico job che scrive nel repository: niente checkout, niente npm, niente codice del progetto
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        # la prova può fermarsi prima di scrivere qualcosa: allora nel ramo va «nessun risultato»
+        continue-on-error: true
+        with:
+          name: risultati-windows
+          path: out
+      - name: Push nel ramo risultati-windows
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p out && cd out
+          [ -f risultati.json ] || echo '{"errore":"nessun risultato: la prova non è arrivata in fondo"}' > risultati.json
+          printf 'commit: %s\nrun: %s\n' "$GITHUB_SHA" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > LEGGIMI.txt
+          git init -q
+          git checkout -q -b risultati-windows
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Risultati della prova su Windows ($GITHUB_SHA)"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" risultati-windows

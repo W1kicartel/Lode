@@ -3,13 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- Content-Security-Policy: script solo da questa cartella (nell'app anche le librerie, in vendor/; nel browser le stesse
+     versioni esatte da jsDelivr, con l'impronta nell'import map qui sotto); rete solo verso i servizi della «tua AI»
+     (js/fornitori.js) e i modelli della voce (huggingface.co). Ollama e gli aggiornamenti da GitHub passano dal main, mai
+     dalla pagina: le loro origini qui non servono. Nessun form va altrove (form-action). Nell'app impacchettata
+     desktop/prepara.mjs toglie jsDelivr e l'import map. Va tenuta allineata: test/unita.mjs controlla origini, versioni e impronte -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-pjQsDqPF7cTqboVcQIO/MmeLXueDBo6d20LK8VV0tfA=' https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/ https://cdn.jsdelivr.net/npm/temml@0.11.11/dist/temml.mjs; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob: data:; connect-src 'self' https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://api.mistral.ai https://api.groq.com https://openrouter.ai https://api.deepseek.com https://huggingface.co https://*.huggingface.co https://*.hf.co; object-src 'none'; base-uri 'none'; form-action 'none'">
+<script type="importmap">{"integrity":{"https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs":"sha384-+0ti2moQlmLN7WZHE2RHIf5lV8hHxhxEalN0il3YZceG26fUPyOkR0hp9daxk1i7","https://cdn.jsdelivr.net/npm/temml@0.11.11/dist/temml.mjs":"sha384-QZEvRHbhBx33zfw0g7xPTi/zP6pnR+xtP+r1+hCkRRoannEQMBUULtsqgriY/0Tn"}}</script>
 <title>Lode</title>
 <meta name="description" content="Lode è l'assistente di studio open source per chi fa l'università: media e base di laurea, piano per gli appelli, timer di concentrazione, ripasso a intervalli e interrogazione con l'AI. I dati restano sul tuo computer.">
 <meta name="theme-color" content="#0A0A0A">
 <link rel="icon" href="icone/icona.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preload" href="fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<script>if (window.lodeDesktop && !/quadro|benvenuto/.test(location.search)) document.documentElement.classList.add('barra')</script>
+<script src="js/inizio.js"></script>
 <link rel="stylesheet" href="css/stile.css">
 <link rel="stylesheet" href="css/lode.css">
 </head>

@@ -35,6 +35,37 @@ async function scarica(url, dest, avanza) {
   avanza(1, fatto);
 }
 
+/* ---------- chi ha firmato gli installer ---------- */
+// Prima di installare, il file scaricato deve essere firmato proprio da chi fa Obsidian o Ollama: una firma valida
+// qualunque (ad hoc, o di un altro sviluppatore) non basta. Se la verifica non passa non si installa niente e lo studente
+// legge perché. Protegge da un file sostituito lungo la strada (release compromessa, proxy o antivirus che ispeziona HTTPS).
+// • Mac: il Team ID dello sviluppatore nel requisito di codesign. Il «=» subito dopo -R dice che il requisito è un testo:
+//   senza, codesign lo prenderebbe per il percorso di un file e la verifica fallirebbe sempre.
+// • Windows: Get-AuthenticodeSignature, firma «Valid» e il nome dell'editore (CN del certificato).
+// • Linux: l'AppImage di Obsidian non ha una firma da controllare; arriva in HTTPS dalle release ufficiali su GitHub.
+// Letti il 2 ottobre 2026 dagli installer ufficiali: Mac con codesign -dv --verbose=4 sulle app, Windows dalla tabella dei
+// certificati degli .exe (Obsidian 1.13.7, OllamaSetup.exe). Se un giorno cambiano, la verifica fallisce col messaggio qui
+// sotto: si ricontrollano allo stesso modo e si aggiornano qui.
+export const FIRME = {
+  obsidian: { nome: 'Obsidian', team: '6JSW4SJWN9', editore: 'Dynalist Inc' },   // Dynalist Inc., chi fa Obsidian
+  ollama: { nome: 'Ollama', team: '3MU9H2V9Y9', editore: 'Ollama Inc.' },       // sul Mac il team è Infra Technologies, Inc
+};
+export const requisitoMac = team => `=anchor apple generic and certificate leaf[subject.OU] = "${team}"`;
+// dal soggetto del certificato (come lo scrive PowerShell: «CN=Ollama Inc., O=Ollama Inc., L=Toronto, …») il nome comune
+export const nomeComune = soggetto => String(soggetto || '').match(/(?:^|,\s*)CN=(?:"([^"]+)"|([^,]+))/)?.slice(1).find(Boolean)?.trim() || '';
+const nonFirmato = nome => new Error(`L'installer di ${nome} non ha la firma ufficiale di ${nome}, quindi non l'ho installato. Riprova più tardi, oppure scaricalo tu dal sito ufficiale.`);
+async function verificaFirma(chi, percorso) {
+  const f = FIRME[chi];
+  if (MAC) { try { await esegui('codesign', ['--verify', '--deep', '--strict', '-R', requisitoMac(f.team), percorso]); } catch { throw nonFirmato(f.nome); } return; }
+  if (!WIN) return;
+  // il percorso passa da una variabile d'ambiente, non dentro il comando: niente da interpretare per PowerShell
+  const ps = join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+  let out = '';
+  try { out = await esegui(ps, ['-NoProfile', '-NonInteractive', '-Command', '$s = Get-AuthenticodeSignature -LiteralPath $env:FILE_DA_VERIFICARE; "$($s.Status)|$($s.SignerCertificate.Subject)"'], { env: { ...process.env, FILE_DA_VERIFICARE: percorso }, windowsHide: true, timeout: 120e3 }); } catch { }
+  const [stato, soggetto] = out.trim().split('|');
+  if (stato !== 'Valid' || nomeComune(soggetto) !== f.editore) { console.warn(`Lode: firma di ${f.nome} non valida (${stato || 'nessuna'} · ${soggetto || '—'})`); throw nonFirmato(f.nome); }
+}
+
 /* ---------- Obsidian ---------- */
 export function percorsiObsidian() {
   if (MAC) return ['/Applications/Obsidian.app', join(homedir(), 'Applications', 'Obsidian.app'), ...(process.env.LODE_APPS ? [join(process.env.LODE_APPS, 'Obsidian.app')] : [])];
@@ -69,12 +100,13 @@ export async function installaObsidian({ vault, confObsidian, avanza }) {
       const mnt = join(tmp, 'mnt');
       await esegui('hdiutil', ['attach', '-nobrowse', '-noautoopen', '-readonly', '-mountpoint', mnt, file]);
       try {
-        await esegui('codesign', ['--verify', '--deep', '--strict', join(mnt, 'Obsidian.app')]);   // è davvero l'app firmata da Obsidian
+        await verificaFirma('obsidian', join(mnt, 'Obsidian.app'));   // firmata da chi fa Obsidian (Team ID), non da uno qualunque
         const dest = join(cartellaApp(), 'Obsidian.app');
         rmSync(dest, { recursive: true, force: true });
         await esegui('ditto', [join(mnt, 'Obsidian.app'), dest]);
       } finally { await esegui('hdiutil', ['detach', mnt, '-quiet']).catch(() => { }); }
     } else if (WIN) {
+      await verificaFirma('obsidian', file);   // prima la firma (Dynalist Inc), poi l'installazione
       await esegui(file, ['/S']);   // installer NSIS di Obsidian, per l'utente (niente amministratore)
     } else {
       const dest = join(homedir(), 'Applications', 'Obsidian.AppImage'); mkdirSync(join(homedir(), 'Applications'), { recursive: true });
@@ -137,10 +169,10 @@ export async function installaOllama({ avanza }) {
     avanza({ fase: 'installo', testo: 'Installo Ollama' });
     if (MAC) {
       await esegui('ditto', ['-x', '-k', file, tmp]);
-      await esegui('codesign', ['--verify', '--deep', '--strict', join(tmp, 'Ollama.app')]);
+      await verificaFirma('ollama', join(tmp, 'Ollama.app'));   // firmata da chi fa Ollama (Team ID), non da uno qualunque
       const dest = join(cartellaApp(), 'Ollama.app'); rmSync(dest, { recursive: true, force: true });
       await esegui('ditto', [join(tmp, 'Ollama.app'), dest]);
-    } else await esegui(file, ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART']);
+    } else { await verificaFirma('ollama', file); await esegui(file, ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART']); }   // prima la firma (Ollama Inc.)
     avanza({ fase: 'avvio', testo: 'Avvio Ollama' });
     await (WIN ? aspettaOllama(20).catch(() => avviaOllama()) : avviaOllama());   // su Windows lo avvia già l'installer: non ne apriamo un secondo
     return true;
