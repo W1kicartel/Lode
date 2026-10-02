@@ -23,6 +23,8 @@ import { fileURLToPath } from 'node:url';
 import { trovaCompilatore } from '../desktop/esegui.mjs';
 
 const QUI = dirname(fileURLToPath(import.meta.url)), DESKTOP = join(QUI, '..', 'desktop');
+// la versione dell'app (cambia a ogni Release, FIRMA.md): il passo degli aggiornamenti la legge da qui, non la scrive a mano
+const VERSIONE = JSON.parse(readFileSync(join(DESKTOP, 'package.json'), 'utf8')).version;
 const DIR = mkdtempSync(join(tmpdir(), 'lode-prova-')), VAULT = join(DIR, 'Vault');
 // il binario di Electron, su qualunque sistema (su Windows .bin/electron è uno script .cmd)
 let ELECTRON; try { ELECTRON = createRequire(join(DESKTOP, 'package.json'))('electron'); } catch { }
@@ -141,6 +143,17 @@ const passi = [
   { nome: 'PDF → definizioni per i giochi', js: `(async()=>{ await __lode.indietro(); await T.lascia(T.file(${A(DISPENSA)}, 'dispensa-forme.pdf', 'application/pdf')); await T.scegli('definizioni'); const t = await T.conferma(300); await T.calma(30); return t + ' | ' + document.querySelector('.ld-filo').innerText.slice(-150) })()`, atteso: 'Aggiungere a Analisi 2' },
   { nome: 'registrazione audio → trascritta nella lezione', js: `(async()=>{ await __lode.indietro(); await T.lascia(T.file(${A(WAV)}, 'registrazione.wav', 'audio/wav')); await T.scegli('audio'); await T.aspetta(() => document.querySelector('.ld-filo').innerText.includes('Lezione trascritta'), 240); return document.querySelector('.ld-filo').innerText.slice(-200) })()`, atteso: 'Lezione trascritta' },
   { nome: 'ricevi una sbobina', js: `(async()=>{ await __lode.indietro(); const testo = await window.lodeDesktop.invoca('vault:leggi', { file: 'Sbobine/' + (await window.lodeDesktop.invoca('vault:note')).find(n => n.file.startsWith('Sbobine/') && n.file.endsWith('.md')).file.slice(8) }); const md = testo.replace(/corso: "Analisi 2"/, 'corso: "Fisica 2"'); await T.lascia(new File([md], 'sbobina-fisica.md', { type: 'text/markdown' })); await T.scegli('sbobina'); return (await T.calma(30)).slice(-160) })()`, atteso: 'nel tuo vault' },
+  // «Esporta per Anki»: un file nel vault (Anki/…) con un mazzo per corso; «Mostra» nelle prove non apre finestre (LODE_NON_APRIRE)
+  { nome: 'anki: esporta tutti i corsi nel vault', js: `(async()=>{ await __lode.indietro(); const r = await T.di('esporta per anki', 30);
+    const f = [...document.querySelectorAll('.ld-fatto')].pop(), b = f && [...f.querySelectorAll('button')].find(x => x.innerText.trim() === 'Mostra');
+    const file = (r.match(/«(Anki\\/[^»]+)»/) || [])[1], m = file ? await window.lodeDesktop.invoca('vault:mostra', { file }).catch(e => ({ esito: 'ERRORE ' + e.message })) : null;
+    if (b) { b.click(); await new Promise(r => setTimeout(r, 600)); }
+    const rotto = document.querySelector('.ld-filo').innerText.includes('Non riesco a mostrare');
+    return (r.includes('In Anki: File › Importa') && r.includes('«Basilare»') ? 'riga per importare' : 'NO riga') + ' | Mostra: ' + !!b + ' ' + (m?.esito || 'nessun file') + (rotto ? ' ROTTO' : '') + ' | ' + r.slice(-180).replace(/\\n/g, ' ') })()`, atteso: 'riga per importare | Mostra: true prova |', mostra: true },
+  { nome: 'anki: un corso solo', js: `(async()=>{ await __lode.indietro(); return (await T.di('esporta le carte di basi di dati per anki', 30)).slice(-200) })()`, atteso: 'nel mazzo Lode::Basi di dati' },
+  // aggiornamenti (desktop/aggiorna.mjs): nelle prove sono spenti del tutto (niente rete), ma il canale passa dal preload e «Prepara Lode» si apre senza la riga
+  { nome: 'aggiornamenti: spenti nelle prove, canale a posto', js: `(async()=>{ const s = await window.lodeDesktop.invoca('aggiorna:stato'); await __lode.indietro(); await T.di('prepara lode', 20);
+    return 'stato ' + s.possibile + ' ' + s.modo + ' ' + s.fase + ' ' + s.versione + ' · prepara ' + !!document.querySelector('.ld-prepara') + ' · riga ' + !!document.querySelector('.ld-prep[data-k="aggiorna"]') })()`, atteso: `stato false null fermo ${VERSIONE} · prepara true · riga false` },
   { nome: 'esame comunicato a voce', js: `(async()=>{ await __lode.indietro(); return T.di("ho l'esame di fisica 2 tra 5 giorni", 30) })()`, atteso: 'ti propongo' },
   { nome: 'allenatore: la pillola propone', ...(FOTO ? { foto: 'proposta.png' } : {}), js: `(async()=>{ await __lode.indietro(); dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})); await new Promise(r=>setTimeout(r,900)); const r = await __lode.provaAllenatore(true); await new Promise(r=>setTimeout(r,900)); const el = document.querySelector('.ld.propone .ld-proposta'); return r + ' | ' + (el ? el.innerText.replace(/\\n/g,' ') + ' | larga ' + Math.round(document.querySelector('.ld').getBoundingClientRect().width) : 'nessuna proposta visibile') })()`, atteso: 'larga' },
   { nome: 'allenatore: accetta e parte', js: `(async()=>{ document.querySelector('.ld-proposta [data-p=si]').click(); await new Promise(r=>setTimeout(r,2500)); const st = __lode.AL.riepilogo(); return 'accettate ' + Object.values(st).reduce((a, x) => a + x.si, 0) + ' | ' + document.querySelector('.ld-filo').innerText.slice(-160) })()`, atteso: 'accettate 1' },
@@ -305,6 +318,18 @@ verifica.push(
     const datiVault = leggi(join(VAULT, '.lode', 'dati.json')), vero = (() => { try { return realpathSync.native(LAB); } catch { return LAB; } })();
     return !!datiVault && ![LAB, vero].flatMap(x => [x, x.replaceAll('\\', '\\\\'), x.replaceAll('\\', '/')]).some(x => datiVault.includes(x)) && !datiVault.includes(basename(DIR));
   })()],
+);
+// «Esporta per Anki»: il testo d'importazione di Anki, una riga per carta (fronte, retro, tag, mazzo, guid), niente doppioni
+const anki = f => leggi(join(VAULT, 'Anki', f)), righeAnki = t => t.trimEnd().split('\n').filter(r => r && !r.startsWith('#')).map(r => r.split('\t'));
+const ankiTutti = anki(`Lode per Anki ${oggiLocale}.txt`), ankiBD = anki(`Basi di dati per Anki ${oggiLocale}.txt`), rT = righeAnki(ankiTutti), rB = righeAnki(ankiBD);
+// la stessa chiave di js/anki.js: maiuscole, accenti e punteggiatura finale non contano, i simboli sì («i++» e «++i» sono due carte)
+const chiaveAnki = r => r[3] + '|' + r[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').replace(/[\s.?!:;,]+$/, '').trim();
+verifica.push(
+  ['anki: il file con tutti i corsi, le intestazioni di Anki', ankiTutti.startsWith('#separator:tab\n#html:true\n#notetype:Basic\n#tags column:3\n#deck column:4\n#guid column:5\n') && !ankiTutti.includes('\r')],
+  ['anki: una riga per carta, un mazzo per corso, con i tag', rT.length >= 21 && rT.every(r => r.length === 5 && r[0] && r[1] && /^lode [a-z0-9_]+$/.test(r[2]) && r[3].startsWith('Lode::') && r[4].startsWith('lode-'))
+    && rT.filter(r => r[3] === 'Lode::Analisi 2' && r[2] === 'lode analisi_2').length >= 14 && rT.filter(r => r[3] === 'Lode::Basi di dati').length >= 7],
+  ['anki: niente doppioni', rT.length > 0 && new Set(rT.map(chiaveAnki)).size === rT.length && new Set(rT.map(r => r[4])).size === rT.length],
+  ['anki: il file di un corso solo', rB.length >= 7 && rB.every(r => r[3] === 'Lode::Basi di dati' && r[2] === 'lode basi_di_dati')],
 );
 for (const [n, v] of verifica) { if (SOLO && !SOLO.test(n)) continue; v ? ok++ : ko++; console.log(`${v ? '✓' : '✗'} ${n}`); }
 if (process.env.LODE_RISULTATI) writeFileSync(process.env.LODE_RISULTATI, JSON.stringify({

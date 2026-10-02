@@ -37,6 +37,7 @@ Trascina un file sulla pillola, anche chiusa: si allarga e ti chiede *cosa ne fa
 - **Ti allena quando hai due minuti.** Digli quando hai l'esame («ho l'esame di analisi 2 il 15 gennaio»). Quando sei al computer e libero, la pillola si allunga e ti propone una cosa piccola: un gioco sulle definizioni, le carte da ripassare, le ★ da rileggere, tre domande come all'orale. Più l'esame è vicino, più spesso. Mai a lezione o nelle ore di silenzio. Impara cosa ti serve.
 - **Giochi di memoria** sulle definizioni delle tue lezioni: abbina, chi sono?, completa, flash.
 - **Ripasso a intervalli** (SM-2): le carte difficili tornano domani, le facili tra settimane.
+- **Le carte anche in Anki.** Scrivi «esporta per anki» (o «esporta le carte di analisi 2 per anki») e Lode prepara un file con le carte del ripasso e le definizioni delle lezioni, senza doppioni: un mazzo per corso (`Lode::Analisi 2`), con le formule, il codice e il grassetto. Nell'app il file va nella cartella `Anki` del vault, nel browser si scarica. In Anki: **File › Importa**, scegli il file e come tipo di nota **Basilare** (in inglese *Basic*), una volta sola per tutti i corsi. Se lo importi di nuovo, Anki aggiorna le carte che ha già invece di raddoppiarle.
 - **Interrogazione:** un prof d'orale che fa una domanda alla volta, ti corregge e alla fine ti dà un voto onesto.
 - **Libretto e conti:** media ponderata, base di laurea, «quanto mi serve per 110», «se prendo 30 in analisi», ore da fare oggi per arrivare all'appello.
 - **Sbobine da passare ai compagni:** un `.md` per Obsidian e una pagina `.html` che si apre su qualsiasi telefono, con le formule disegnate.
@@ -57,6 +58,7 @@ ripeti
 trascrivi la lezione
 interrogami su analisi 2
 spiegami il teorema di Green
+esporta per anki
 ```
 
 ### Per chi studia informatica
@@ -99,6 +101,8 @@ Gli installer non sono firmati con un certificato a pagamento (costa ogni anno e
 | **Linux** (64 bit) | `Lode-…-linux.AppImage` | Rendilo eseguibile (tasto destro › Proprietà › «Consenti l'esecuzione», oppure `chmod +x Lode-*.AppImage`) e aprilo. |
 
 Lode vive nella barra dei menu (Mac) o nell'area di notifica (Windows): non cercarlo nel Dock. È la pillola nera in cima allo schermo: si apre con un clic, o tenendo premuto **⌥ Spazio** sul Mac e **Ctrl+Shift+Spazio** su Windows e Linux.
+
+**Gli aggiornamenti.** Su Windows e Linux (AppImage) Lode si aggiorna da sola: scarica la versione nuova in background e in «Oggi» compare «Lode X.Y.Z è pronta» con **Riavvia ora**; se non premi niente, si installa quando chiudi Lode. Sul Mac, finché l'app non è firmata con un certificato Apple, la barra ti avvisa che è uscita una versione nuova e con **Scarica** apre il `.dmg`: lo trascini in Applicazioni come la prima volta. Si spengono da «Prepara Lode» o dal menu dell'icona. Gli aggiornamenti ci sono dalle versioni dopo la 0.3.0: chi ha la 0.3.0 o una precedente scarica la nuova una volta, a mano.
 
 ### Dal codice
 
@@ -277,6 +281,7 @@ Tutto offline. L'audio non viene mai salvato su disco.
 - I dati stanno sul tuo computer: nel vault Obsidian (`Documenti/Lode`) e nei file dell'app.
 - Il microfono si accende solo quando lo chiedi: voce, Ripeti in aula se l'hai attivato, trascrizione. Per Ripeti l'audio vive solo in memoria, per 90 secondi.
 - La chiave della tua AI resta su questo computer e parte solo verso il servizio che hai scelto. Non finisce nel vault né nei backup.
+- **Aggiornamenti:** l'app installata chiede a GitHub, poco dopo l'avvio e poi ogni 6 ore, se c'è una versione nuova di Lode, e da lì la scarica. Non manda niente di tuo: né dati, né identificativi, né statistiche. Si spengono da «Prepara Lode» o dal menu dell'icona.
 - **Registrare una lezione** dipende dal regolamento del tuo ateneo e dal docente: chiedi prima.
 
 ## Come cresce con te
@@ -313,13 +318,15 @@ node test/verifica-c.mjs
 node --experimental-vm-modules test/progetto.mjs
 node test/errori.mjs
 node --experimental-vm-modules test/diario.mjs
+node test/aggiorna.mjs
 node test/prova-app.mjs
 ```
-- `test/unita.mjs` controlla comandi, formule, note e conti: 60 prove.
+- `test/unita.mjs` controlla comandi, formule, note, conti e il file per Anki: 93 prove.
 - Informatica: `codice.mjs` (135 prove su «Cosa stampa?»), `verifica-c.mjs` (452 programmi confrontati con il compilatore vero; senza compilatore salta), `progetto.mjs` (96, «Segui il progetto»), `errori.mjs` (195, gli errori spiegati), `diario.mjs` (90, il registro nel vault). Su GitHub girano tutte su Windows, Linux e macOS.
-- `test/prova-app.mjs` fa il giro completo dell'app su un vault temporaneo, senza toccare i tuoi dati: 73 prove (72 senza compilatore C). Con `LODE_SOLO='informatica|stampa|progetto|errore|diario|davvero'` fa solo i passi di informatica (2-3 minuti). Per ora gira solo su macOS (su Windows e Linux manca la voce di sistema per generare l'audio delle prove; contributi benvenuti): le frasi «parlate» le genera la voce di sistema e l'audio va direttamente al motore, senza altoparlanti né microfono.
+- `test/aggiorna.mjs` (399 prove) controlla gli aggiornamenti senza Electron e senza rete: versioni con le prerelease, l'installer giusto per sistema e architettura, i `latest*.yml`, il Mac senza firma, un finto electron-updater, e che package.json, preload ed entitlements stiano insieme.
+- `test/prova-app.mjs` fa il giro completo dell'app su un vault temporaneo, senza toccare i tuoi dati: 81 prove (80 senza compilatore C). Con `LODE_SOLO='informatica|stampa|progetto|errore|diario|davvero'` fa solo i passi di informatica (2-3 minuti). Con `LODE_SOLO='anki'` solo «Esporta per Anki» (meno di un minuto). Per ora gira solo su macOS (su Windows e Linux manca la voce di sistema per generare l'audio delle prove; contributi benvenuti): le frasi «parlate» le genera la voce di sistema e l'audio va direttamente al motore, senza altoparlanti né microfono.
 
-**Pacchetti** (non firmati): `cd desktop`, poi `npm run dist:mac`, `dist:win` oppure `dist:linux`. Gli installer pubblici li costruisce GitHub da solo (`.github/workflows/rilascio.yml`) quando si pubblica un tag `v…`.
+**Pacchetti** (non firmati): `cd desktop`, poi `npm run dist:mac`, `dist:win` oppure `dist:linux`. Gli installer pubblici li costruisce GitHub da solo (`.github/workflows/rilascio.yml`) quando si pubblica un tag `v…` uguale alla versione di `desktop/package.json`, insieme ai `latest*.yml` per gli aggiornamenti. Se nel repository ci sono i certificati, li firma (e sul Mac li notarizza); se no escono come oggi. Come attivare la firma: [docs/FIRMA.md](docs/FIRMA.md).
 
 | File | Cosa fa |
 |---|---|
@@ -333,6 +340,7 @@ node test/prova-app.mjs
 | `js/formule.js` | Le formule dette a voce in LaTeX |
 | `js/file.js` | I file trascinati: tipo, testo di PDF (pdf.js), Word e PowerPoint, audio a 16 kHz |
 | `js/sbobina.js` | Sbobine da condividere (.md + .html con formule) e sbobine ricevute |
+| `js/anki.js` | «Esporta per Anki»: carte e definizioni nel testo d'importazione di Anki, un mazzo per corso, senza doppioni |
 | `js/allenatore.js` | Le proposte a sorpresa: quando, cosa, e cosa impara |
 | `js/benvenuto.js` | La configurazione guidata |
 | `js/codice/albero.js`, `js/codice/modelli.js`, `js/codice/stampa.js` | «Cosa stampa?»: un piccolo C che Lode sa eseguire, i modelli di domanda con i loro errori tipici, la scheda |
@@ -347,14 +355,14 @@ node test/prova-app.mjs
 | `desktop/voce.mjs`, `desktop/voce-mac/` | `lode-voce`: Parakeet v3 via FluidAudio |
 | `desktop/vault.mjs` | Crea il vault, lo registra in Obsidian, rilegge le lezioni quando cambiano |
 | `desktop/progetto.mjs`, `desktop/esegui.mjs` | Le cartelle seguite: versioni, diff, impronta, e le prove eseguite solo dopo la conferma |
+| `desktop/aggiorna.mjs`, `desktop/verifica-rilascio.mjs` | Gli aggiornamenti: electron-updater su Windows e Linux, avviso e `.dmg` sul Mac senza firma; il controllo dei `latest*.yml` prima di pubblicare |
 
 Design: solo bianco e nero, font [Geist](https://github.com/vercel/geist-font), movimento morbido, `prefers-reduced-motion` rispettato. Le regole per contribuire sono in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Cosa manca (cerco mani)
-- [ ] Firma degli installer (certificati Apple e Windows) e aggiornamenti automatici
+- [ ] Firma degli installer: il workflow è pronto, mancano solo i certificati (Apple 99 $ l'anno; per Windows Azure Trusted Signing o SignPath). Cosa comprare e come attivarla: [docs/FIRMA.md](docs/FIRMA.md)
 - [ ] Parakeet anche su Windows e Linux (versione ONNX, gira sul processore)
 - [ ] Sincronizzazione facoltativa fra dispositivi, cifrata
-- [ ] Esportazione dei mazzi per Anki
 - [ ] Riconoscere chi parla (prof o studenti) nella trascrizione
 - [ ] Regole dei singoli atenei per il voto di laurea
 

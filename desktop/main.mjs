@@ -1,7 +1,7 @@
 // Lode, l'app desktop. Una finestra trasparente in cima allo schermo, sopra tutte le altre: dentro c'è solo la barra.
 // I clic passano attraverso tranne che sulla barra. Scorciatoie globali per la cattura in aula. Il vault Obsidian in
 // Documenti/Lode è la memoria: dati di Lode in .lode/dati.json, lezioni in Markdown. Icona nella barra dei menu.
-import { app, BrowserWindow, Menu, ShareMenu, Tray, clipboard, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, powerMonitor, screen, shell } from 'electron';
+import { app, BrowserWindow, Menu, ShareMenu, Tray, clipboard, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, net, powerMonitor, screen, shell } from 'electron';
 import { existsSync, readFileSync, mkdirSync, writeFileSync, rmSync, renameSync, copyFileSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { dirname, join } from 'node:path';
@@ -10,6 +10,7 @@ import * as V from './vault.mjs';
 import * as I from './installa.mjs';
 import * as VOCE from './voce.mjs';
 import * as PROGETTO from './progetto.mjs';
+import * as AGGIORNA from './aggiorna.mjs';
 
 const QUI = dirname(fileURLToPath(import.meta.url));
 const WEB = existsSync(join(QUI, 'web', 'index.html')) ? join(QUI, 'web') : join(QUI, '..');
@@ -200,15 +201,22 @@ ipcMain.handle('vault:blocco', (_, x) => {
   return V.blocco(vault(), x);
 });
 ipcMain.handle('vault:note', () => V.note(vault()));
-// leggere una nota (per le sbobine) e salvare file nel vault: sbobine, allegati, materiali, sbobine ricevute
+// leggere una nota (per le sbobine) e salvare file nel vault: sbobine, allegati, materiali, sbobine ricevute, file per Anki
 ipcMain.handle('vault:leggi', (_, { file }) => { if (!/\.md$/.test(file)) throw new Error('solo note'); return readFileSync(V.dentro(vault(), file), 'utf8'); });
 ipcMain.handle('vault:salvaFile', (_, { file, testo, dati, sostituisci = false }) => {
-  if (!/^(Sbobine|Allegati|Materiali|Lezioni)\//.test(file)) throw new Error('cartella non permessa');
+  if (!/^(Sbobine|Allegati|Materiali|Lezioni|Anki)\//.test(file)) throw new Error('cartella non permessa');
   let p = V.dentro(vault(), file), rel = file;
   if (!sostituisci) for (let k = 2; existsSync(p); k++) { rel = file.replace(/(\.[a-z0-9]+)$/i, ` ${k}$1`); p = V.dentro(vault(), rel); }
   mkdirSync(dirname(p), { recursive: true });
   if (dati) writeFileSync(p, Buffer.from(dati)); else V.scriviSicuro(p, testo);
   return { file: rel, percorso: p };
+});
+// mostrare un file del vault nella sua cartella (il file per Anki): solo dentro il vault, e nelle prove niente finestre
+ipcMain.handle('vault:mostra', (_, { file }) => {
+  const p = V.dentro(vault(), file);
+  if (!existsSync(p)) throw new Error('il file non c\'è più');
+  if (process.env.LODE_NON_APRIRE) return { esito: 'prova', percorso: p };
+  shell.showItemInFolder(p); return { esito: 'cartella' };
 });
 // condividere: il menu Condividi di macOS (AirDrop, Messaggi, Mail, WhatsApp…), altrove la cartella con i file
 ipcMain.handle('condividi', (e, { files }) => {
@@ -318,7 +326,7 @@ ipcMain.handle('vault:scegli', () => scegliVault());
 /* ---------- informatica ---------- */
 // «spiegami l'errore» senza testo: quello che lo studente ha copiato dal terminale. Letto una volta, mai salvato,
 // restituito solo se errori.js ci trova almeno un errore (altrimenti negli appunti c'è altro: non lo si passa alla barra)
-let ER = null, progetti = null;
+let ER = null, progetti = null, aggiorna = null;
 ipcMain.handle('appunti:errore', () => {
   const tutto = clipboard.readText();
   if (!ER || !tutto || tutto.length > 200000) return { vuoto: true };
@@ -383,6 +391,15 @@ function iconaTray() {
   }
   return bianca.isEmpty() ? img : bianca;
 }
+// nel menu dell'icona: accendere o spegnere gli aggiornamenti e, quando c'è, la versione nuova (come la riga in «Oggi»)
+function voceAggiorna() {
+  const s = aggiorna?.stato(); if (!s?.possibile) return [];
+  const v = [{ label: s.modo === 'manuale' ? 'Avvisami delle versioni nuove' : 'Aggiornamenti automatici', type: 'checkbox', checked: s.attivi, click: i => aggiorna.impostaAttivi(i.checked) }];
+  if (!s.attivi) return v;
+  if (s.fase === 'pronta') v.unshift({ label: `Riavvia con Lode ${s.nuova.versione}`, click: () => aggiorna.riavvia() });
+  if (s.fase === 'da_scaricare') v.unshift({ label: `Scarica Lode ${s.nuova.versione}…`, click: () => aggiorna.scarica() });
+  return v;
+}
 function creaTray() {
   tray = new Tray(iconaTray()); tray.setToolTip('Lode');
   if (WIN) nativeTheme.on('updated', () => tray?.setImage(iconaTray()));   // barra delle applicazioni chiara o scura
@@ -396,6 +413,7 @@ function creaTray() {
     { label: 'Usa un altro vault…', click: scegliVault },
     { type: 'separator' },
     { label: 'Avvia Lode all\'accensione', type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin, enabled: app.isPackaged, click: i => app.setLoginItemSettings({ openAtLogin: i.checked }) },
+    ...voceAggiorna(),
     { label: 'Esci da Lode', role: 'quit' },
   ]);
   tray.on('click', () => tray.popUpContextMenu(menu())); tray.on('right-click', () => tray.popUpContextMenu(menu()));
@@ -416,6 +434,14 @@ app.whenReady().then(async () => {
   // «Segui il progetto»: gli handler progetto:* e i progetti già seguiti. Ogni comando passa dalla finestra di conferma del sistema
   // (progetto.mjs); conf.progetti sta in userData/config.json, mai nel vault. conf come funzione: leggiConf() la riassegna
   try { progetti = PROGETTO.registra({ ipcMain, dialog, app, conf: () => conf, salvaConf, manda }); } catch (x) { console.error('Lode: progetti non avviati', x); }
+  // le versioni nuove (aggiorna.mjs): solo nell'app impacchettata e mai nelle prove. Prima di «Riavvia ora» i dati in sospeso
+  // vanno sul disco e la barra smette di rifiutare la chiusura (uscendo), se no l'installazione resterebbe ferma. Se poi
+  // l'installazione non parte e Lode resta aperta (annullaUscita), si torna come prima: Alt+F4 richiude la pillola e basta,
+  // e se la barra era già stata chiusa si riapre
+  try {
+    aggiorna = AGGIORNA.registra({ ipcMain, app, net, shell, conf: () => conf, salvaConf, manda,
+      primaDiUscire: () => { uscendo = true; scriviTutto(); }, annullaUscita: () => { uscendo = false; if (!barra) creaBarra(); } });
+  } catch (x) { console.error('Lode: aggiornamenti non avviati', x); }
   creaBarra(); creaTray(); scorciatoie();
   if (!conf.benvenuto && !process.env.LODE_PROVA) apriBenvenuto();
   screen.on('display-metrics-changed', posiziona); screen.on('display-added', posiziona); screen.on('display-removed', posiziona);
@@ -433,5 +459,5 @@ app.whenReady().then(async () => {
   });
 });
 app.on('second-instance', () => { barra?.show(); barra?.webContents.send('scorciatoia', 'apri'); });
-app.on('will-quit', () => { globalShortcut.unregisterAll(); guardiano?.chiudi(); });
+app.on('will-quit', () => { globalShortcut.unregisterAll(); guardiano?.chiudi(); aggiorna?.ferma(); });
 app.on('window-all-closed', e => e.preventDefault?.());
