@@ -9,7 +9,7 @@
 // - un programma senza casi di prova viene solo compilato e mai eseguito: uno scanf che aspetta non blocca niente.
 import { spawn, execFile } from 'node:child_process';
 import { existsSync, statSync, lstatSync } from 'node:fs';
-import { join, dirname, basename, extname, isAbsolute, delimiter, posix } from 'node:path';
+import { join, dirname, basename, extname, isAbsolute, delimiter, posix, sep } from 'node:path';
 
 const WIN = process.platform === 'win32', MAC = process.platform === 'darwin';
 export const CARTELLA_LODE = '‹cartella di Lode›';   // al posto di userData/progetti/<id>/bin nei testi per lo studente
@@ -272,7 +272,8 @@ export function daTesto(testo, { bin, strumento = null, cartelle = [] } = {}) {
   if (INVISIBILI.test(t)) throw new Error('Nel comando ci sono caratteri invisibili (a capo, controllo o direzione del testo): riscrivilo a mano.');
   // i segnaposto hanno spazi dentro: diventano un segno senza spazi prima di dividere, il valore vero dopo
   const argv = dividiArgv(t.split(CARTELLA_LODE).join('\u0001').split(ETICHETTE[CONTROLLO_PY]).join('\u0002'))
-    .map(a => a === '\u0002' ? CONTROLLO_PY : a.split('\u0001').join(bin));
+    // dopo la cartella di Lode le barre diventano quelle del sistema (su Windows «…\\bin\\es1», non «…\\bin/es1»)
+    .map(a => a === '\u0002' ? CONTROLLO_PY : a.includes('\u0001') ? a.split('\u0001').map((x, i) => i ? x.replace(/[\\/]/g, sep) : x).join(bin) : a);
   if (!argv.length) throw new Error('Il comando è vuoto.');
   if (argv.some(a => /[\0\u0001\u0002]/.test(a) || a.length > 4000)) throw new Error('Il comando non si legge.');
   let p = argv[0];

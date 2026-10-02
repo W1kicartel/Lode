@@ -390,7 +390,8 @@ finally { M.chiudi(); try { rmSync(radice, { recursive: true, force: true }); } 
       prova('conferma: una finestra alla volta', uno.annullato && /già una finestra/.test(due.errore || '') && finestre.length === 2, [uno, due]);
       risposta = 0;
       const si = await chiama('progetto:conferma', { id: sg.id, testo: `${cc2.nome} -std=c11 main.c -o ‹cartella di Lode›/es1` });
-      prova('conferma: «Cambia» → argv nel main, salvato solo dopo il sì', si.ok && conf2.progetti[sg.id].prova.manuale && finestre[2].detail.includes(join(dati2, 'progetti', sg.id, 'bin', 'es1')), si);
+      prova('conferma: «Cambia» → argv nel main, salvato solo dopo il sì', si.ok && conf2.progetti[sg.id].prova.manuale && finestre[2].detail.includes(join(dati2, 'progetti', sg.id, 'bin', 'es1')),
+        { si, manuale: conf2.progetti[sg.id]?.prova?.manuale, dettaglio: finestre[2]?.detail, atteso: join(dati2, 'progetti', sg.id, 'bin', 'es1') });
       const es = await chiama('progetto:prova', { id: sg.id });
       prova('prova via IPC: esito e eventi', es.esito === 'ok' && mandati.includes('progetto:esito'), es.esito);
     }
