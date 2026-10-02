@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  I permessi di Lode quando è firmata con un certificato Developer ID e il «runtime rafforzato» (hardenedRuntime), che
+  Apple chiede per la notarizzazione (docs/FIRMA.md). Valgono per l'app e, come entitlementsInherit, per i programmi
+  dentro il pacchetto: gli helper di Electron e lode-voce (Parakeet). Con la firma ad hoc (hardenedRuntime spento) non contano.
+  - audio-input: il microfono (voce, Ripeti, trascrizione). Senza, col runtime rafforzato macOS non chiede nemmeno il permesso.
+  - allow-jit e allow-unsigned-executable-memory: V8, il motore JavaScript di Electron, scrive codice in memoria mentre gira.
+  - disable-library-validation: lode-voce e i moduli nativi caricano librerie che non hanno la stessa firma dell'app.
+  Niente sandbox: Lode installa Obsidian e Ollama, scrive nel vault e segue le cartelle che lo studente sceglie.
+-->
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.device.audio-input</key>
+  <true/>
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+</dict>
+</plist>

@@ -2,8 +2,22 @@
 # - Mac: .dmg universale (Apple Silicon e Intel), con la voce Parakeet per i Mac con chip Apple;
 # - Windows: .exe (installazione per l'utente, senza permessi di amministratore);
 # - Linux: .AppImage.
-# Non sono firmati con un certificato (costa e Lode è gratis): al primo avvio il sistema chiede conferma, vedi il README.
-# Parte con un tag «v…» (git tag v0.3.0 && git push --tags) o col pulsante «Run workflow» (bozza da controllare).
+# Accanto agli installer vanno latest.yml, latest-mac.yml, latest-linux.yml e i .blockmap: li legge l'app per aggiornarsi
+# da sola (desktop/aggiorna.mjs). Prima di pubblicare si controlla che ogni file citato nei yml ci sia, con lo stesso sha512.
+#
+# La firma è a due strade, scelte dai segreti del repository (Settings › Secrets and variables › Actions, vedi docs/FIRMA.md):
+# - Mac: con CSC_LINK e CSC_KEY_PASSWORD (certificato Developer ID) firma col certificato e il runtime rafforzato, e con
+#   APPLE_API_KEY, APPLE_API_KEY_ID, APPLE_API_ISSUER notarizza; costruisce anche il .zip che serve agli aggiornamenti
+#   automatici del Mac. Senza: firma ad hoc come sempre (-c.mac.identity=- -c.mac.hardenedRuntime=false).
+# - Windows: con i segreti di Azure Trusted Signing firma il .exe mentre electron-builder lo costruisce (quindi prima di
+#   scrivere latest.yml: gli hash combaciano). Senza: non firmato, come sempre.
+# Al primo avvio di un installer non firmato il sistema chiede conferma: vedi il README.
+# Ogni macchina scrive com'è andata la firma (firma/firma-<sistema>.txt, un artifact a parte che non va nella Release):
+# le note della Release dicono «firmato» solo se la build ha firmato davvero.
+# Un tag con il trattino (v0.4.0-beta.1) esce come prerelease: /releases/latest non la dà, e chi ha una versione finale
+# non se la vede proporre.
+# Parte con un tag «v…» uguale alla versione di desktop/package.json (git tag v0.3.0 && git push --tags) o col pulsante
+# «Run workflow» (bozza da controllare).
 name: Rilascio
 
 on:
@@ -21,9 +35,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-latest, nome: mac, comando: 'npx electron-builder --mac --publish never', file: 'desktop/dist/*.dmg' }
-          - { os: windows-latest, nome: windows, comando: 'npx electron-builder --win nsis --publish never', file: 'desktop/dist/*.exe' }
-          - { os: ubuntu-latest, nome: linux, comando: 'npx electron-builder --linux AppImage --publish never', file: 'desktop/dist/*.AppImage' }
+          - { os: macos-latest, nome: mac }
+          - { os: windows-latest, nome: windows }
+          - { os: ubuntu-latest, nome: linux }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
@@ -48,15 +62,106 @@ jobs:
         working-directory: desktop
         shell: bash
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          # ogni sistema vede solo i suoi segreti: CSC_LINK su Windows verrebbe preso per il certificato di Windows
+          CSC_LINK: ${{ matrix.nome == 'mac' && secrets.CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.nome == 'mac' && secrets.CSC_KEY_PASSWORD || '' }}
+          CHIAVE_API_APPLE: ${{ matrix.nome == 'mac' && secrets.APPLE_API_KEY || '' }}   # il contenuto del .p8: qui sotto diventa un file
+          APPLE_API_KEY_ID: ${{ matrix.nome == 'mac' && secrets.APPLE_API_KEY_ID || '' }}
+          APPLE_API_ISSUER: ${{ matrix.nome == 'mac' && secrets.APPLE_API_ISSUER || '' }}
+          AZURE_TENANT_ID: ${{ matrix.nome == 'windows' && secrets.AZURE_TENANT_ID || '' }}
+          AZURE_CLIENT_ID: ${{ matrix.nome == 'windows' && secrets.AZURE_CLIENT_ID || '' }}
+          AZURE_CLIENT_SECRET: ${{ matrix.nome == 'windows' && secrets.AZURE_CLIENT_SECRET || '' }}
+          # questi quattro non sono segreti veri: vanno bene anche come «Variables» del repository
+          AZURE_ENDPOINT: ${{ matrix.nome == 'windows' && (secrets.AZURE_ENDPOINT || vars.AZURE_ENDPOINT) || '' }}
+          AZURE_ACCOUNT: ${{ matrix.nome == 'windows' && (secrets.AZURE_CODE_SIGNING_ACCOUNT || vars.AZURE_CODE_SIGNING_ACCOUNT) || '' }}
+          AZURE_PROFILO: ${{ matrix.nome == 'windows' && (secrets.AZURE_CERT_PROFILE || vars.AZURE_CERT_PROFILE) || '' }}
+          AZURE_EDITORE: ${{ matrix.nome == 'windows' && (secrets.AZURE_PUBLISHER_NAME || vars.AZURE_PUBLISHER_NAME) || '' }}
         run: |
+          set -euo pipefail
           mkdir -p bin
           node prepara.mjs
-          ${{ matrix.comando }}
+          VERSIONE=$(node -p "require('./package.json').version")
+          FIRMA=no   # com'è andata la firma: no, firmato o notarizzato (Mac). La legge «Pubblica la Release» per le note
+          # il tag deve dire la stessa versione dell'app: è quella che gli aggiornamenti confrontano
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME#v}" != "$VERSIONE" ]; then
+            echo "::error::Il tag è ${GITHUB_REF_NAME}, ma desktop/package.json dice ${VERSIONE}: aggiorna la versione e rifai il tag"; exit 1
+          fi
+          # un segreto non ancora aggiunto arriva vuoto: per electron-builder non deve sembrare impostato
+          for v in CSC_LINK CSC_KEY_PASSWORD CHIAVE_API_APPLE APPLE_API_KEY_ID APPLE_API_ISSUER AZURE_TENANT_ID AZURE_CLIENT_ID AZURE_CLIENT_SECRET AZURE_ENDPOINT AZURE_ACCOUNT AZURE_PROFILO AZURE_EDITORE; do
+            [ -n "${!v:-}" ] || unset "$v"
+          done
+          case "${{ matrix.nome }}" in
+            mac)
+              if [ -n "${CSC_LINK:-}" ] && [ -n "${CSC_KEY_PASSWORD:-}" ]; then
+                echo "Mac: firma con il certificato Developer ID e runtime rafforzato"
+                if [ -n "${CHIAVE_API_APPLE:-}" ] && [ -n "${APPLE_API_KEY_ID:-}" ] && [ -n "${APPLE_API_ISSUER:-}" ]; then
+                  # electron-builder (@electron/notarize) vuole in APPLE_API_KEY il percorso del file .p8, non il contenuto
+                  export APPLE_API_KEY="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
+                  printf '%s\n' "$CHIAVE_API_APPLE" > "$APPLE_API_KEY"
+                  trap 'rm -f "$APPLE_API_KEY"' EXIT
+                  echo "Mac: notarizzazione con la chiave API di App Store Connect"
+                else
+                  unset APPLE_API_KEY_ID APPLE_API_ISSUER
+                  echo "::warning::Mac firmato ma non notarizzato: mancano APPLE_API_KEY, APPLE_API_KEY_ID o APPLE_API_ISSUER (docs/FIRMA.md). macOS lo bloccherà lo stesso."
+                fi
+                FIRMA=$([ -n "${APPLE_API_KEY:-}" ] && echo notarizzato || echo firmato)
+                unset CHIAVE_API_APPLE
+                # anche il .zip: serve a Squirrel.Mac, cioè agli aggiornamenti automatici del Mac firmato
+                npx electron-builder --mac dmg zip --universal --publish never
+              else
+                # uno solo dei due (aggiunti uno alla volta): si firma ad hoc, ma lo si dice
+                if [ -n "${CSC_LINK:-}" ] || [ -n "${CSC_KEY_PASSWORD:-}" ]; then
+                  echo "::warning::C'è solo uno fra CSC_LINK e CSC_KEY_PASSWORD (servono tutti e due, docs/FIRMA.md): il Mac esce firmato ad hoc."
+                fi
+                echo "Mac: firma ad hoc (nessun certificato nei segreti)"
+                # anche CSC_LINK: con il .p12 ancora esportato electron-builder lo aprirebbe senza password e la build si fermerebbe
+                unset CSC_LINK CSC_KEY_PASSWORD CHIAVE_API_APPLE APPLE_API_KEY_ID APPLE_API_ISSUER
+                export CSC_IDENTITY_AUTO_DISCOVERY=false
+                npx electron-builder --mac --publish never -c.mac.identity=- -c.mac.hardenedRuntime=false -c.mac.notarize=false
+              fi ;;
+            windows)
+              if [ -n "${AZURE_TENANT_ID:-}" ] && [ -n "${AZURE_CLIENT_ID:-}" ] && [ -n "${AZURE_CLIENT_SECRET:-}" ] && [ -n "${AZURE_ENDPOINT:-}" ] && [ -n "${AZURE_ACCOUNT:-}" ] && [ -n "${AZURE_PROFILO:-}" ] && [ -n "${AZURE_EDITORE:-}" ]; then
+                echo "Windows: firma con Azure Trusted Signing"
+                # AZURE_TENANT_ID, AZURE_CLIENT_ID e AZURE_CLIENT_SECRET li legge da sé il modulo TrustedSigning di PowerShell
+                npx electron-builder --win nsis --publish never \
+                  -c.win.azureSignOptions.endpoint="$AZURE_ENDPOINT" \
+                  -c.win.azureSignOptions.codeSigningAccountName="$AZURE_ACCOUNT" \
+                  -c.win.azureSignOptions.certificateProfileName="$AZURE_PROFILO" \
+                  -c.win.azureSignOptions.publisherName="$AZURE_EDITORE"
+                FIRMA=firmato
+              else
+                # qualcuno c'è ma non tutti e sette: non firmato, ma lo si dice (e le note della Release non dicono «firmato»)
+                for v in AZURE_TENANT_ID AZURE_CLIENT_ID AZURE_CLIENT_SECRET AZURE_ENDPOINT AZURE_ACCOUNT AZURE_PROFILO AZURE_EDITORE; do
+                  if [ -n "${!v:-}" ]; then echo "::warning::Ci sono solo alcuni dei sette segreti AZURE_* (servono tutti, docs/FIRMA.md): il .exe esce non firmato."; break; fi
+                done
+                echo "Windows: non firmato (nessun segreto di Azure Trusted Signing)"
+                export CSC_IDENTITY_AUTO_DISCOVERY=false
+                npx electron-builder --win nsis --publish never
+              fi ;;
+            linux)
+              npx electron-builder --linux AppImage --publish never ;;
+          esac
+          # i yml scritti da electron-builder citano installer che ci sono, con lo stesso sha512
+          node verifica-rilascio.mjs dist "$VERSIONE"
+          ls -la dist
+          mkdir -p ../firma && echo "$FIRMA" > "../firma/firma-${{ matrix.nome }}.txt"
       - uses: actions/upload-artifact@v4
         with:
           name: lode-${{ matrix.nome }}
-          path: ${{ matrix.file }}
+          # installer, aggiornamenti (latest*.yml) e .blockmap (si scaricano solo i pezzi cambiati)
+          path: |
+            desktop/dist/*.dmg
+            desktop/dist/*.zip
+            desktop/dist/*.exe
+            desktop/dist/*.AppImage
+            desktop/dist/*.blockmap
+            desktop/dist/latest*.yml
+          if-no-files-found: error
+      # com'è andata la firma: un artifact a parte, così non finisce fra i file della Release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firma-${{ matrix.nome }}
+          path: firma/firma-*.txt
           if-no-files-found: error
 
   pubblica:
@@ -64,26 +169,64 @@ jobs:
     needs: pacchetti
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            desktop/aggiorna.mjs
+            desktop/verifica-rilascio.mjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - uses: actions/download-artifact@v4
         with:
+          pattern: lode-*
           path: installer
           merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: firma-*
+          path: firma
+          merge-multiple: true
+      - name: Controllo dei file per gli aggiornamenti
+        run: |
+          ls -la installer
+          # dopo il viaggio fra le macchine: ci sono i tre yml, e ogni file che citano c'è, con lo stesso nome e sha512
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then node desktop/verifica-rilascio.mjs installer "${GITHUB_REF_NAME#v}" --tutti
+          else node desktop/verifica-rilascio.mjs installer "" --tutti; fi
       - name: Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          ls -la installer
+          # quello che le build hanno fatto davvero, non quali segreti ci sono: il Mac conta solo se notarizzato
+          FIRMA_MAC=$([ "$(cat firma/firma-mac.txt 2>/dev/null)" = notarizzato ] && echo si || true)
+          FIRMA_WINDOWS=$([ "$(cat firma/firma-windows.txt 2>/dev/null)" = firmato ] && echo si || true)
+          echo "Firma: Mac ${FIRMA_MAC:-no}, Windows ${FIRMA_WINDOWS:-no}"
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             TAG="${GITHUB_REF_NAME}"
-            gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Lode ${TAG#v}" --notes-file - <<'NOTE'
-          Scarica l'installer per il tuo computer qui sotto (Assets):
-          - **Mac** (chip Apple e Intel): `Lode-…-mac.dmg`
-          - **Windows**: `Lode-…-windows.exe`
-          - **Linux**: `Lode-…-linux.AppImage`
-
-          Non sono firmati con un certificato a pagamento: al primo avvio il sistema chiede una conferma. Come fare, passo per passo: https://github.com/W1kicartel/Lode#installa
-          NOTE
+            {
+              echo "Scarica l'installer per il tuo computer qui sotto (Assets):"
+              echo "- **Mac** (chip Apple e Intel): \`Lode-…-mac.dmg\`"
+              echo "- **Windows**: \`Lode-…-windows.exe\`"
+              echo "- **Linux**: \`Lode-…-linux.AppImage\`"
+              echo
+              # la 0.3.0 e quelle prima non hanno gli aggiornamenti (desktop/aggiorna.mjs): chi le ha deve scaricare una volta a mano
+              echo "Hai Lode 0.3.0 o una versione precedente? Scarica questa una volta, a mano: da qui in poi si aggiorna da sola."
+              echo "Hai una versione più nuova? Non serve: si aggiorna da sola (sul Mac la barra ti propone di scaricare la versione nuova)."
+              echo "I file \`latest*.yml\`, \`.blockmap\` e \`.zip\` servono agli aggiornamenti automatici: non vanno scaricati."
+              echo
+              if [ -n "$FIRMA_MAC" ] && [ -n "$FIRMA_WINDOWS" ]; then
+                echo "Gli installer di Mac e Windows sono firmati: si aprono senza avvisi."
+              else
+                if [ -n "$FIRMA_MAC" ]; then echo "L'installer del Mac è firmato e notarizzato da Apple."; fi
+                if [ -n "$FIRMA_WINDOWS" ]; then echo "L'installer di Windows è firmato."; fi
+                echo "Quelli non firmati con un certificato a pagamento al primo avvio chiedono una conferma. Come fare, passo per passo: https://github.com/W1kicartel/Lode#installa"
+              fi
+            } > note.md
+            # v0.4.0-beta.1 e simili: prerelease, così /releases/latest (e quindi gli aggiornamenti) resta sulle versioni finali
+            PRE=; case "$TAG" in *-*) PRE=--prerelease ;; esac
+            gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" $PRE --title "Lode ${TAG#v}" --notes-file note.md
             gh release upload "$TAG" installer/* --clobber
           else
             # dal pulsante: una bozza, da controllare prima di pubblicarla

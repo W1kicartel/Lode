@@ -86,6 +86,18 @@ export function interpreta(frase) {
   if (/^(stop|ferma|fermati|basta|interrompi|fine|termina)(?: (?:il |la )?(?:focus|timer|pomodoro|sessione|pausa))?$/.test(t)) return { tipo: 'ferma' };
   if (/^(sospendi|metti in pausa|pausa timer)$/.test(t)) return { tipo: 'sospendi' };
   if (/^(riprendi|continua|vai avanti)$/.test(t)) return { tipo: 'riprendi' };
+  // Anki: «esporta per anki», «anki», «esporta le carte di analisi 2 per anki», «anki fisica 2», «mazzi per anki».
+  // Serve un verbo per portare fuori, oppure la frase che comincia da «anki» o dalle carte: «come importo in anki» resta all'AI.
+  // Senza corso (o «tutte», «tutto») = tutti i corsi, in un file solo con un mazzo per corso (js/anki.js).
+  // Restano all'AI anche le domande che cominciano da «anki» («anki come si usa», «anki funziona con lode?», «anki è aperto?»)
+  // e «scarica anki» o «installa anki» da soli: vogliono il programma, non le carte («scarica le carte per anki» esporta)
+  if (/\banki\b/.test(t) && (m = t.match(/^(?:(?:esporta(?:mi)?|manda|porta|passa|metti|salva|prepara|crea|scarica)\b\s*)?(.*)$/)) && (m[0] !== m[1] || /^(?:anki\b|(?:tutt[ei] )?(?:le |i |gli |il |la )?(?:mie |miei |mio )?(?:carte|flashcard|mazz[oi]|definizioni)\b)/.test(m[1]))) {
+    const r = pulisci(m[1].replace(/(?:\b(?:per|in|su|verso|a|ad|nel|dentro) )?\banki\b/, ' ').trim().replace(/^(?:tutt[ei] )?(?:le |i |gli |il |la |un |uno |una )?(?:mie |miei |mio |nuov[oi] )?(?:carte|flashcard|mazz[oi]|definizioni)\b\s*/, '').replace(/\s+/g, ' '));
+    // (\b non vale dopo «è» o «perché», che per le regex non sono lettere: qui serve uno spazio, un apostrofo o la fine)
+    const domanda = m[0] === m[1] && r && (/\?\s*$/.test(grezzo0) || /^(?:come|cos|cosa|che|perch\S*|dove|quando|quanto|funziona|è|e|o|si|non|serve|posso|devo|va)(?=[\s']|$)/.test(r));
+    const programma = /^scarica\b/.test(t) && /^anki$/.test(m[1].trim());
+    if (!domanda && !programma) return { tipo: 'anki', corso: r && !/^(?:tutt[eio]|tutti i corsi|ogni corso)$/.test(r) ? r : null };
+  }
 
   // in aula: ★ da esame, definizione, domanda per il prof
   if ((m = grezzo.match(/^(?:★|\*{1,2}|!|da esame\s*:?|importante\s*:|stella\s*:?|segna(?: che)?(?: è)? da esame\s*:?|questo è da esame\s*:?)\s*(.+)$/i))) return { tipo: 'stella', testo: m[1].trim() };
@@ -214,6 +226,7 @@ export const ESEMPI = [
   ['se prendo 30 in analisi 2', 'simula la media'],
   ['ripassa analisi 2', 'le carte di oggi'],
   ['carta: teorema di Green = …', 'una carta al volo'],
+  ['esporta per anki', 'carte e definizioni in un file per Anki, un mazzo per corso'],
   ['lezione analisi 2 lunedì e mercoledì 9-11 aula 7', 'l\'orario: Lode sa quando sei in aula'],
   ['★ il teorema di Green lo chiede sempre', 'in aula: segna cosa è da esame'],
   ['def: gradiente = vettore delle derivate parziali', 'in aula: una definizione nella nota'],

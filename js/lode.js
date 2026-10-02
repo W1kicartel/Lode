@@ -2,7 +2,7 @@
 // o il timer che scorre. Passandoci sopra si apre a molla in un pannello: «Oggi», sei strumenti e il campo
 // «Chiedi o scrivi un comando…». Si parla tenendo premuto ⌥ Spazio. I file trascinati diventano carte del ripasso.
 // Senza AI capisce i comandi in italiano (comandi.js); con il cervello locale (gratis) o la tua AI preferita spiega, crea carte e interroga come all'orale.
-import { datiIllegibili, piuGiorni, norm, D, DESKTOP, lezioneOra, prossimaLezione, daGiocare, ricorda, aggiungiOrario, lezioni, RISPOSTE, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esc, fatti, media, minuti, num, oggi, ore, piano, prossimi, prossimoIntervallo, registraVoto, rispondi, salva, serie, serve, simula, sostituisci, traQuanto, trovaEsame, intervalloTesto, giorniTra } from './dati.js';
+import { datiIllegibili, piuGiorni, norm, D, DESKTOP, lezioneOra, prossimaLezione, daGiocare, ricorda, aggiungiOrario, lezioni, RISPOSTE, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esc, fatti, media, minuti, num, oggi, ore, piano, prossimi, prossimoIntervallo, registraVoto, rispondi, salva, serie, serve, simula, sostituisci, traQuanto, trovaEsame, intervalloTesto, giorniTra, definizioni } from './dati.js';
 import { RIDOTTO, attendi, comprimi, conta, dopo, entra, h, lineare, morbido, ogni, premi, tween } from './motore.js';
 import { ESEMPI, interpreta } from './comandi.js';
 import * as F from './focus.js';
@@ -19,6 +19,7 @@ import * as SB from './sbobina.js';
 import * as AL from './allenatore.js';
 import { parlatoInFormule } from './formule.js';
 import { pulito } from './markdown.js';
+import { preparaAnki, testoAnki, nomeFileAnki, mazzo } from './anki.js';
 // informatica (docs/PROGETTO-INFORMATICA.md): «Cosa stampa?», «Segui il progetto», gli errori spiegati, il registro nel vault
 import * as ST from './codice/stampa.js';
 import * as PR from './codice/progetto.js';
@@ -127,6 +128,7 @@ function righeOggi() {
   if (!lo && pl && pl.tra <= 90) r.push({ cls: pl.tra <= 15 ? 'urg' : 'att', t: `${pl.corso} alle ${pl.inizio}`, d: `${pl.aula ? 'Aula ' + pl.aula + ' · ' : ''}tra ${pl.tra} min`, n: '', b: V.attivo ? 'Appunti' : 'Orario', f: () => V.attivo ? apriAppunti(pl) : (nuovoTurno(), schedaOrario()) });
   const rp = PR.rigaOggi(); if (rp) r.push(rp);   // il progetto seguito: «non provato», l'ultima prova andata male, «sta cambiando»
   if (V.attivo && STATO && (!STATO.obsidian.installato || !STATO.modello) && !D.imp.preparaNascosto) r.push({ cls: 'att', t: 'Completa Lode', d: [!STATO.obsidian.installato && 'Obsidian', !STATO.modello && 'il cervello locale'].filter(Boolean).join(' e ') + ': un clic, gratis', n: '', b: 'Prepara', f: () => { nuovoTurno(); detto(A.turno, 'Prepara Lode'); schedaPrepara(); } });
+  const ag = rigaAggiornamento(); if (ag) r.push(ag);   // Lode nuova: pronta da installare, o (Mac senza firma) da scaricare
   const dc = daChiudere();
   if (dc) r.push({ cls: 'att', t: `Chiudi la lezione di ${dc.corso}`, d: `${dc.parole} parole di appunti · estraggo definizioni e ★`, n: '', b: 'Chiudi', f: () => { nuovoTurno(); detto(A.turno, 'Chiudi lezione'); chiudiLezione(dc.corso); } });
   if (A.propostaAperta) { const p = A.propostaAperta; r.push({ cls: 'urg', t: p.titolo, d: p.testo, n: '', b: p.bottone, f: () => { A.propostaAperta = null; A.proposta = p; accettaProposta(); } }); }
@@ -766,6 +768,29 @@ async function condividiLezione(corso) {
   } catch (e) { modo('riposo'); return rispostaFissa('Non riesco a preparare la sbobina: ' + e.message, { errore: true }); }
 }
 
+/* ---------- esportare per Anki (js/anki.js) ---------- */
+// le carte del ripasso e le definizioni delle lezioni, senza doppioni, in un file solo con un mazzo per corso (Lode::<Corso>):
+// in Anki basta un'importazione. Nell'app il file va nel vault (Anki/…) e si mostra nella cartella; nel browser si scarica.
+// La nota dice di scegliere il tipo «Basilare»: #notetype:Basic vale solo nell'Anki in inglese (js/anki.js)
+function scaricaTesto(nome, testo) {
+  const u = URL.createObjectURL(new Blob([testo], { type: 'text/plain;charset=utf-8' })), a = h('a');
+  a.href = u; a.download = nome; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60e3);
+}
+async function esportaAnki(corsoDetto) {
+  // il corso detto vale col suo nome e con quello dell'esame che gli somiglia («analisi 2» → «Analisi 2»), niente di più largo
+  const e = corsoDetto ? trovaEsame(corsoDetto) : null, nomi = new Set([norm(corsoDetto), norm(e?.nome)].filter(Boolean));
+  const carte = D.carte.map(c => ({ id: c.id, fronte: c.fronte, retro: c.retro, corso: esame(c.esameId)?.nome || 'Varie' }));
+  const p = preparaAnki({ carte, definizioni: definizioni({ giorni: 3650 }), corso: corsoDetto ? n => nomi.has(norm(n)) : null });
+  if (!p.totale) return rispostaFissa(corsoDetto ? `Non trovo carte né definizioni di **${e?.nome || corsoDetto}** da esportare.` : 'Non ho ancora carte né definizioni da esportare: segna qualche definizione a lezione («def: gradiente = …») o crea delle carte da un PDF.');
+  const nome = nomeFileAnki(corsoDetto ? p.mazzi[0].corso : null, oggi()), testo = testoAnki(p.mazzi);
+  const quante = `${p.totale} ${p.totale === 1 ? 'carta' : 'carte'} per Anki${p.mazzi.length > 1 ? `, ${p.mazzi.length} mazzi` : ` nel mazzo ${mazzo(p.mazzi[0].corso)}`}.${p.doppioni ? ` ${p.doppioni} ${p.doppioni === 1 ? 'doppione saltato' : 'doppioni saltati'}.` : ''}`;
+  if (!V.attivo) { scaricaTesto(nome, testo); return mostraFatto({ testo: quante, nota: `In Anki: File › Importa, scegli «${nome}» (è tra i download) e come tipo di nota «Basilare» («Basic» in inglese).`, azione: ['Scarica', () => scaricaTesto(nome, testo)], sintesi: 'carte per Anki' }); }
+  try {
+    const r = await V.salvaFile(`Anki/${nome}`, { testo, sostituisci: true });
+    return mostraFatto({ testo: quante, nota: `In Anki: File › Importa, scegli «${r.file}» nel vault e come tipo di nota «Basilare» («Basic» in inglese).`, azione: ['Mostra', () => V.mostra(r.file).catch(x => rispostaFissa('Non riesco a mostrare il file: ' + x.message, { errore: true }))], sintesi: 'carte per Anki' });
+  } catch (x) { return rispostaFissa('Non riesco a salvare il file per Anki: ' + x.message, { errore: true }); }
+}
+
 /* ---------- i file lasciati sulla pillola ---------- */
 const ICONA_FILE = { pdf: 'doc', slide: 'doc', word: 'doc', testo: 'doc', sbobina: 'appunti', carte: 'ripasso', foto: 'foto', audio: 'audio', altro: 'doc' };
 const NOME_TIPO = { pdf: 'PDF', slide: 'slide PowerPoint', word: 'documento Word', testo: 'testo', sbobina: 'sbobina di Lode', carte: 'carte (Anki/CSV)', foto: 'foto', audio: 'registrazione audio', altro: 'file' };
@@ -981,6 +1006,41 @@ function schedaAI(preferito) {
 
 /* ---------- preparare il computer: Obsidian e il cervello locale ---------- */
 let STATO = null;
+// le versioni nuove di Lode (desktop/aggiorna.mjs). AGG è lo stato che manda il main: { attivi, possibile, modo, fase, versione, nuova, p }.
+// La barra chiede solo azioni (riavvia, scarica, accendi/spegni): cosa scaricare e da dove lo decide il main, da GitHub
+let AGG = null;
+const azioneAgg = async canale => { const r = await BRIDGE.invoca(canale).catch(e => ({ errore: e.message })); if (r?.errore) rispostaFissa(r.errore, { errore: true }); };
+function rigaAggiornamento() {
+  if (!AGG?.nuova || !AGG.attivi) return null;   // spenti: niente righe (la versione nuova è su GitHub)
+  // errore con 'pronta': «Riavvia ora» non ha installato (aggiorna.mjs, nonEsce); resta pronta e si installa all'uscita
+  if (AGG.fase === 'pronta') return { cls: 'info', t: `Lode ${AGG.nuova.versione} è pronta`, d: AGG.errore || 'Si installa da sola quando chiudi Lode', n: '', b: 'Riavvia ora', f: () => azioneAgg('aggiorna:riavvia') };
+  if (AGG.fase === 'da_scaricare') return { cls: 'info', t: `È uscita Lode ${AGG.nuova.versione}`, d: MAC ? 'Scarica il .dmg e trascina Lode in Applicazioni' : 'Scarica la versione nuova da GitHub', n: '', b: 'Scarica', f: () => azioneAgg('aggiorna:scarica') };
+  return null;
+}
+function testoAggiornamenti() {
+  const v = AGG.nuova?.versione;
+  if (!AGG.attivi) return `Lode ${AGG.versione} · spenti: le versioni nuove sono su GitHub, nella pagina Release`;
+  if (AGG.fase === 'scarico' && v) return `Scarico Lode ${v} · ${Math.round((AGG.p || 0) * 100)}%`;
+  if (AGG.fase === 'pronta' && v) return `Lode ${v} è pronta · si installa da sola quando chiudi Lode`;
+  if (AGG.fase === 'da_scaricare' && v) return `È uscita Lode ${v} · ${MAC ? 'scarica il .dmg e trascina Lode in Applicazioni' : 'scaricala da GitHub'}`;
+  return AGG.modo === 'manuale' ? `Lode ${AGG.versione} · ti avviso quando ne esce una nuova (da GitHub, ogni 6 ore)` : `Lode ${AGG.versione} · si aggiorna da sola da GitHub, controlla ogni 6 ore`;
+}
+// la riga «Aggiornamenti» di «Prepara Lode», aggiornata sul posto: testo, avanzamento del download e bottoni
+function mostraAggiornamenti(s) {
+  const r = s?.querySelector('.ld-prep[data-k="aggiorna"]'); if (!r || !AGG) return;
+  r.classList.toggle('ok', !!AGG.attivi); r.classList.toggle('va', AGG.attivi && AGG.fase === 'scarico');
+  r.querySelector('.d').textContent = testoAggiornamenti();
+  r.querySelector('.ld-prog i').style.transform = `scaleX(${(AGG.p || 0).toFixed(3)})`;
+  const az = r.querySelector('.ld-agg-az'), ora = rigaAggiornamento();
+  az.innerHTML = `${ora ? `<button type="button" class="btn small primary" data-agg-ora>${ora.b}</button>` : ''}<button type="button" class="btn small" data-agg-interruttore>${AGG.attivi ? 'Spegni' : 'Accendi'}</button>`;
+  az.querySelector('[data-agg-ora]')?.addEventListener('click', () => ora.f());
+  az.querySelector('[data-agg-interruttore]').addEventListener('click', async e => {
+    e.currentTarget.disabled = true;
+    const x = await BRIDGE.invoca('aggiorna:imposta', { attivi: !AGG.attivi }).catch(() => null);
+    if (x && !x.errore) AGG = x;
+    mostraAggiornamenti(s);
+  });
+}
 async function aggiornaStato() { if (!V.attivo) return; try { STATO = await V.stato(); AI.impostaLocale(STATO.modello); } catch { } if (A?.aperto && A.home) disegnaHome(); }
 const avanzamenti = {};
 function schedaPrepara(cosa) {
@@ -993,8 +1053,10 @@ function schedaPrepara(cosa) {
     ${riga('cervello', 'Cervello locale', !!st?.modello, st?.modello ? `${esc(st.modello)} · gira sul computer, senza internet` : `Ollama + ${esc(m?.etichetta || 'Qwen3.5')}, ${esc(m?.perche || '')} · circa ${m ? String(m.gb + 0.2).replace('.', ',') : '3,5'} GB`, st?.modello ? '<span class="ld-spunta">pronto</span>' : '<button type="button" class="btn small primary" data-installa="cervello">Installa</button>')}
     ${riga('voce', 'Voce', Voce.pronta(), Voce.pronta() ? Voce.NOME_VOCE + ' in locale · tieni premuto ' + TASTI + ' e parla' : `${Voce.MAC_ARM ? 'Parakeet v3 sul Neural Engine' : 'Whisper ' + (Voce.MODELLO_VOCE.endsWith('small') ? 'small' : 'base')} in locale, in italiano · circa ${Voce.PESO_VOCE} MB, una volta sola`, Voce.pronta() ? '<span class="ld-spunta">pronta</span>' : '<button type="button" class="btn small primary" data-voce>Prepara</button>')}
     ${riga('tuaai', 'La tua AI <small>facoltativa</small>', !!AI.fornitore(), AI.fornitore() ? `${esc(AI.FORNITORI[AI.fornitore()].nome)} collegata · paghi tu a consumo, direttamente al servizio` : 'Claude, ChatGPT, Gemini, Mistral…: più potente, a consumo con la tua chiave', `<button type="button" class="btn small" data-tuaai>${AI.fornitore() ? 'Cambia' : 'Collega'}</button>`)}
+    ${AGG?.possibile ? riga('aggiorna', 'Aggiornamenti', AGG.attivi, esc(testoAggiornamenti()), '<span class="ld-agg-az" style="display:flex;gap:6px"></span>') : ''}
     <p class="ld-nota">Il cervello locale è gratis e lavora offline: estrae definizioni, crea carte, spiega e interroga. La tua AI è un potenziamento facoltativo: Lode non vede né incassa niente.</p>`);
   s.querySelector('[data-tuaai]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'La mia AI'); schedaAI(); });
+  mostraAggiornamenti(s);
   s.querySelectorAll('[data-apri]').forEach(b => b.addEventListener('click', () => apriAppunti({ file: 'Home.md', corso: 'Home' })));
   s.querySelectorAll('[data-installa]').forEach(b => b.addEventListener('click', () => chiediInstalla(b.dataset.installa, s)));
   s.querySelector('[data-voce]')?.addEventListener('click', () => { mostraAvanzamento(s, 'voce', { testo: `Scarico ${Voce.NOME_VOCE}…`, p: 0 }); Voce.prepara().then(() => { try { localStorage.setItem('lode:voce', '1'); } catch { } }).catch(() => { }); });
@@ -1228,6 +1290,7 @@ async function esegui(c) {
     case 'ripeti': return ripeti(c.sec || 60);
     case 'spegniRipeti': return spegniRipeti();
     case 'condividi': return condividiLezione(c.corso);
+    case 'anki': return esportaAnki(c.corso);
     case 'fineTrascrizione': return fermaTrascrizione();
     case 'pausaTrascrizione': TR.pausa(); return mostraFatto({ testo: 'Trascrizione in pausa.', nota: 'Scrivi «riprendi trascrizione» quando ricomincia.' });
     case 'riprendiTrascrizione': TR.riprendi(); return mostraFatto({ testo: 'Riprendo a trascrivere.' });
@@ -1720,6 +1783,15 @@ export function avvia() {
   try { if (DESKTOP && localStorage.getItem('lode:voce')) setTimeout(() => Voce.prepara().catch(() => { }), 4000); } catch { }
   if (V.attivo) {
     aggiornaStato(); setInterval(aggiornaStato, 5 * 60e3);
+    // uno stato ha sempre la fase; { errore } senza fase è l'IPC che non ha risposto (uno stato può avere anche errore)
+    BRIDGE.invoca('aggiorna:stato').then(s => { if (s?.fase) AGG = s; }).catch(() => { });
+    BRIDGE.su('aggiorna:cambiato', s => {
+      const prima = AGG?.fase, erroreDiPrima = AGG?.errore ?? null; AGG = s;
+      document.querySelectorAll('.ld-prepara').forEach(mostraAggiornamenti);
+      if (prima === s.fase && erroreDiPrima === (s.errore ?? null)) return;
+      if (A.aperto && A.home && !shell.contains(document.activeElement)) disegnaHome();
+      if (prima !== s.fase && !A.aperto && (s.fase === 'pronta' || s.fase === 'da_scaricare')) mostraAvviso(s.fase === 'pronta' ? `Lode ${s.nuova.versione} è pronta` : `È uscita Lode ${s.nuova.versione}`, true);
+    });
     V.suProgresso(x => { avanzamenti[x.cosa] = x; if (x.fase === 'fatto' || x.fase === 'errore') { delete avanzamenti[x.cosa]; aggiornaStato(); } document.querySelectorAll('.ld-prepara').forEach(s => mostraAvanzamento(s, x.cosa, x)); if (!A.aperto && x.fase !== 'fatto' && x.fase !== 'errore' && x.p != null) mostraAvviso(`${x.cosa === 'obsidian' ? 'Obsidian' : 'Cervello locale'} · ${Math.round(x.p * 100)}%`, true); });
   }
   if (F.stato()?.fase === 'focus' && !F.stato().fermo) setTimeout(() => segnala('focus'), 600);

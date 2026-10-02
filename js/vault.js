@@ -189,3 +189,5 @@ if (L) { addEventListener('lode:lezioni', aggiornaPagine); addEventListener('lod
 export const leggiNota = file => L.invoca('vault:leggi', { file });
 export const salvaFile = (file, { testo, dati, sostituisci } = {}) => L.invoca('vault:salvaFile', { file, testo, dati, sostituisci });
 export const condividi = files => L.invoca('condividi', { files });
+// mostra un file del vault nella sua cartella (Finder, Esplora risorse): per esempio il file per Anki
+export const mostra = file => L.invoca('vault:mostra', { file });

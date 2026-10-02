@@ -10,9 +10,12 @@
   "scripts": {
     "prepara": "node prepara.mjs",
     "start": "electron .",
-    "dist:mac": "node prepara.mjs && electron-builder --mac --publish never",
+    "dist:mac": "node prepara.mjs && electron-builder --mac --publish never -c.mac.identity=- -c.mac.hardenedRuntime=false",
     "dist:win": "node prepara.mjs && electron-builder --win nsis --publish never",
     "dist:linux": "node prepara.mjs && electron-builder --linux AppImage --publish never"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.10"
   },
   "devDependencies": {
     "electron": "44.4.5",
@@ -25,6 +28,14 @@
       "output": "dist",
       "buildResources": "build"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "W1kicartel",
+        "repo": "Lode",
+        "releaseType": "release"
+      }
+    ],
     "files": [
       "main.mjs",
       "preload.cjs",
@@ -33,6 +44,7 @@
       "voce.mjs",
       "progetto.mjs",
       "esegui.mjs",
+      "aggiorna.mjs",
       "web/**",
       "package.json",
       "build/tray*.png"
@@ -60,8 +72,9 @@
         "LSUIElement": true,
         "NSMicrophoneUsageDescription": "Lode usa il microfono quando parli con lui, per «Ripeti» in aula e per trascrivere le lezioni che scegli. L'audio non viene mai salvato."
       },
-      "identity": "-",
-      "hardenedRuntime": false,
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
       "artifactName": "Lode-${version}-mac.${ext}",
       "x64ArchFiles": "Contents/Resources/bin/lode-voce"
     },
