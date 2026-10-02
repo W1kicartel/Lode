@@ -1,5 +1,6 @@
 # Le prove di Lode sulle macchine di GitHub (gratis per i repository pubblici):
 # - prove unitarie su Windows, Linux e macOS;
+# - la voce Parakeet ONNX su Windows e Linux con il modello vero (a richiesta: «Run workflow» o «[voce]» nel messaggio);
 # - la prova completa dell'app desktop su Windows (a richiesta: «Run workflow» o «[windows]» nel messaggio del commit):
 #   installa davvero Obsidian, Ollama + il modello e la voce con gli installer di Lode, poi usa la barra come uno studente.
 #   Risultati e foto della barra vanno nel ramo «risultati-windows».
@@ -60,6 +61,46 @@ jobs:
       - name: Privacy (chiavi, nomi, versioni esatte)
         if: ${{ !cancelled() }}
         run: node test/controlla-privacy.mjs
+
+  voce-onnx:
+    name: Voce Parakeet (ONNX) (${{ matrix.os }})
+    # la voce Parakeet ONNX (desktop/voce-onnx.mjs) con il modello vero: trascrive le frasi di test/audio, misura un minuto
+    # di audio, prova fila, riposo e ripieghi (test/voce-onnx.mjs). Solo a richiesta: «Run workflow» o «[voce]» nel
+    # messaggio del commit. Il modello (~640 MB) si scarica con il codice dell'app (commit fisso, SHA256) la prima volta e
+    # poi arriva dalla cache: la chiave contiene l'inizio delle 4 impronte di MODELLO, se cambiano si riscarica
+    # (test/unita.mjs controlla che coincidano). Codice di altri (npm ci, l'addon, il modello): token che può solo leggere
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[voce]')
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      # esattamente il lockfile, senza gli script dei pacchetti (Electron non serve: il motore gira in un Node figlio)
+      - name: Dipendenze (sherpa-onnx con l'addon per il sistema)
+        working-directory: desktop
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Modello Parakeet dalla cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/modello-voce-onnx
+          key: parakeet-tdt-0.6b-v3-int8-acfc2b445637-179e50c43d1a-3164c13fc282-d58544679ea4
+      - name: Prova del motore
+        env:
+          LODE_MODELLO_ONNX: ${{ runner.temp }}/modello-voce-onnx
+          LODE_VOCE_OBBLIGATORIA: '1'
+        run: node test/voce-onnx.mjs --scarica
 
   app-windows:
     name: App completa su Windows
