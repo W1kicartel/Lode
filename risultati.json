@@ -1,0 +1,392 @@
+{
+ "sistema": "win32 x64",
+ "ok": 81,
+ "ko": 0,
+ "passi": [
+  {
+   "nome": "installa: AI locale (Ollama + modello, installer di Lode)",
+   "passa": true,
+   "risposta": "\"ok · qwen3.5:4b\""
+  },
+  {
+   "nome": "orario: lezione adesso",
+   "passa": true,
+   "risposta": "\"lezione analisi 2 venerdì dalle 21 alle 23 aula 7\\n\\nAnalisi 2 in orario.\\nven · 21:00–23:00 · aula 7\\n\\nQuando sei a lezione la barra lo sa: si apre sulla cattura veloce (★ da esame, definizioni, domande) e a casa ti propone due minuti di gioco su quello che hai appena fatto.\""
+  },
+  {
+   "nome": "pillola in aula",
+   "passa": true,
+   "risposta": "\"Analisi 2\\nfine tra 103 min\\n★2\""
+  },
+  {
+   "nome": "★ da esame",
+   "passa": true,
+   "risposta": "\"★ il teorema di Green all'esame lo chiede sempre\\n\\n★ Segnato in Analisi 2.\\nNella nota della lezione.\\nApri\""
+  },
+  {
+   "nome": "definizione",
+   "passa": true,
+   "risposta": "\"★ il teorema di Green all'esame lo chiede sempre\\n→\\n★ Segnato in Analisi 2.\\n\\ndef: gradiente = vettore delle derivate parziali\\n\\n«Gradiente» in Analisi 2.\\nNella nota della lezione.\\nApri\""
+  },
+  {
+   "nome": "domanda per il prof",
+   "passa": true,
+   "risposta": "\"★ il teorema di Green all'esame lo chiede sempre\\n→\\n★ Segnato in Analisi 2.\\ndef: gradiente = vettore delle derivate parziali\\n→\\n«Gradiente» in Analisi 2.\\n\\n? perché serve la continuità delle derivate\\n\\nDomanda salvata in Analisi 2.\\nNella nota della lezione.\\nApri\""
+  },
+  {
+   "nome": "focus",
+   "passa": true,
+   "risposta": "\"24:57\\nAnalisi 2\""
+  },
+  {
+   "nome": "voto",
+   "passa": true,
+   "risposta": "\"focus 25 su analisi 2\\n→\\nfocus 25 min\\nstop\\n→\\ntimer fermato\\n\\nho preso 28 in fisica 2\\n\\n28 in Fisica 2.\\nMedia 27,40 (+0,09)\\nAnnulla\\n\\nBel colpo. Respira oggi, domani si riparte.\\n\\nMEDIA PONDERATA\\n27,40\\naritmetica 27,33 · 6 esami\\nBASE DI LAUREA\\n100,5/110\\n48 di 180 CFU\\n\\nPer partire da 105 ti serve 29,1 di media nei 126 CFU che mancano.\\n\\nE SE…\\nAnalisi 2\\nBasi di dati\\n28\\n\\nMedia 27,50 +0,10 · base 100,8\""
+  },
+  {
+   "nome": "quanto mi serve",
+   "passa": true,
+   "risposta": "\"stop\\n→\\ntimer fermato\\nho preso 28 in fisica 2\\n→\\nmedia 27,40, base 100,5\\n\\nquanto mi serve per 105\\n\\nMEDIA PONDERATA\\n27,40\\naritmetica 27,33 · 6 esami\\nBASE DI LAUREA\\n100,5/110\\n48 di 180 CFU\\n\\nPer partire da 105 ti serve 29,1 di media nei 126 CFU che mancano.\\n\\nE SE…\\nAnalisi 2\\nBasi di dati\\n28\\n\\nMedia 27,50 +0,10 · base 100,8\""
+  },
+  {
+   "nome": "simulazione",
+   "passa": true,
+   "risposta": "\"ho preso 28 in fisica 2\\n→\\nmedia 27,40, base 100,5\\nquanto mi serve per 105\\n→\\nmedia 27,40, base 100,5\\n\\nse prendo 30 in basi di dati\\n\\nCon 30 in Basi di dati la media passa da 27,40 a 27,83 (+0,43): base di laurea 102,1.\""
+  },
+  {
+   "nome": "ripasso",
+   "passa": true,
+   "risposta": "\"2 di 6\""
+  },
+  {
+   "nome": "gioco",
+   "passa": true,
+   "risposta": "\"GIOCO · ANALISI 2\\n1 di 5\\n\\nABBINA OGNI TERMINE ALLA SUA DEFIN\""
+  },
+  {
+   "nome": "orario scheda",
+   "passa": true,
+   "risposta": "\"ORARIO · 4 LEZIONI A SETTIMANA\\nLUN\\n09:00\\nAnalisi 2\\nMAR\\n14:00\\nBasi di dati\\nMER\\n09\""
+  },
+  {
+   "nome": "note del vault",
+   "passa": true,
+   "risposta": "\"VAI A… · 16 NOTE\\nHome\\nvault\\nLezione di Analisi 2\\noggi\\nOrario\\nvault\\nEsami\\nvault\\nGlossario\\nvault\\nCosa sa Lode di me\\nLode\\n2026-10-02 Analisi 2\\nLezioni / Analisi 2\""
+  },
+  {
+   "nome": "indietro",
+   "passa": true,
+   "risposta": "\"true flex\""
+  },
+  {
+   "nome": "Esc: indietro poi chiudi",
+   "passa": true,
+   "risposta": "\"1 home / 0\""
+  },
+  {
+   "nome": "voce: voto detto",
+   "passa": true,
+   "risposta": "\"Ho preso 28 in fisica 2. → Ho preso 28 in fisica 2.\\n\\n28 in Fisica 2.\\nMedia 27,40 (+0,00)\\nAnnulla\\n\\nBel colpo. Respira oggi, domani si riparte.\\n\\nMEDIA PONDERATA\\n27,40\\naritmetica 27,33 · 6 esami\\nBASE DI LAUREA\\n100,5/110\\n48 di 180 CFU\\n\\nPer partire da 105 ti serve 29,1 di media nei 126 CFU che mancano.\\n\\nE SE…\\nAnalisi 2\\nBasi di dati\\n28\\n\\nMedia 27,50 +0,10 · base 100,8\""
+  },
+  {
+   "nome": "voce: definizione detta",
+   "passa": true,
+   "risposta": "\"Definizione elettrofilo uguale specie povera di elettroni. → Ho preso 28 in fisica 2.\\n→\\nmedia 27,40, base 100,5\\n\\nDefinizione elettrofilo uguale specie povera di elettroni.\\n\\n«Elettrofilo» in Analisi 2.\\nNella nota della lezione.\\nApri\""
+  },
+  {
+   "nome": "trascrizione della lezione",
+   "passa": true,
+   "risposta": "\"la nota della lezione.\\nApri\\nD'accordo.\\nTrascrivo la lezione di Analisi 2.\\nLe righe arrivano nella nota ogni 20-30 secondi.\\nApri in Obsidian\\nLezione trascritta: 107 parole.\\nÈ tutto nella nota.\\nRiordina\""
+  },
+  {
+   "nome": "riordina col modello locale",
+   "passa": true,
+   "risposta": "\"Salvare gli appunti riordinati di Analisi 2? | Aggiungere a Analisi 2 · 2 ott?\""
+  },
+  {
+   "nome": "ripeti: gli ultimi 60 secondi",
+   "passa": true,
+   "risposta": "\"GLI ULTIMI 2 SECONDI · 21:20\\n\\nHo preso 28 in fisica 2.\\n\\nAgli appunti\\n★ Da esame\\nCopia\""
+  },
+  {
+   "nome": "voce: motore",
+   "passa": true,
+   "risposta": "\"Parakeet v3 (ONNX, processore)\""
+  },
+  {
+   "nome": "ripeti: un minuto intero, ultima frase in chiaro",
+   "passa": true,
+   "risposta": "\"7575 ms · ULTIMA: Prima però una domanda: chi si ricorda la definizione di forma differenziale esatta, una forma esatta se ammette un potenziale, e attenzione, il teorema di Green all'esame lo chiedo sempre, con la dimostrazione. · TUTTO: Ho preso 28 in fisica 2. Allora, ragazzi, riprendiamo da dove eravamo rimasti la volta scorsa. Oggi parliamo del teorema di Green, che lega l'integrale di linea lungo il bordo di un dominio all'integrale doppio sul dominio stesso. Perché valga, il dominio deve essere regolare e il bordo va percorso in senso anti-orario. Le funzioni P e Q devono avere derivate parziali continue. Una conseguenza importante riguarda il calcolo delle aree, l'area di un dominio si può ottenere con un integrale di linea lungo il suo bordo. Vediamo un esempio con il cerchio di ragio 1, che conoscete bene dal corso di analisi 1. Prima però una domanda: chi si ricorda la definizione di forma differenziale esatta, una forma esatta se ammette un potenziale, e attenzione, il teorema di Green all'esame lo chiedo sempre, con la dimostrazione.\""
+  },
+  {
+   "nome": "ripeti: agli appunti",
+   "passa": true,
+   "risposta": "\"ma di Green all'esame lo chiedo sempre, con la dimostrazione.\\n\\nAgli appunti\\n★ Da esame\\nCopia\\nNegli appunti di Analisi 2.\""
+  },
+  {
+   "nome": "condividi la sbobina",
+   "passa": true,
+   "risposta": "\"condividi la sbobina di analisi 2\\n\\nSbobina di Analisi 2 pronta.\\nÈ nella cartella Sbobine del vault.\\nMostra\""
+  },
+  {
+   "nome": "trascina: la pillola si allarga",
+   "passa": true,
+   "risposta": "\"larga 470 · Carte del ripasso | Domande e risposte per il ripasso a intervalli | Riassunto in Obsidian | Appunti ordinati con formule, in una nota nuova | Definizioni per i giochi | Le aggiungo alla lezione: diventano giochi di memoria | Interrogami su questo | Un prof d'orale con domande su questo materiale | \""
+  },
+  {
+   "nome": "file di testo → carte (modello locale)",
+   "passa": true,
+   "risposta": "\"Salvare 9 carte di Analisi 2?\""
+  },
+  {
+   "nome": "PDF → definizioni per i giochi",
+   "passa": true,
+   "risposta": "\"Aggiungere a Analisi 2 · 2 ott? | \\nAllega alla lezione\\nSalvo il file con il link nella nota\\nPER\\nAnalisi 2\\nBasi di dati\\nFisica 2\\nLezione chiusa.\\n2 definizioni pronte per i giochi.\\nGioca\""
+  },
+  {
+   "nome": "registrazione audio → trascritta nella lezione",
+   "passa": true,
+   "risposta": "\"PER\\nAnalisi 2\\nBasi di dati\\nFisica 2\\nTrascrivo «registrazione.wav» nella lezione di Analisi 2.\\nPuoi chiudere il pannello: ti avviso alla fine.\\nLezione trascritta: 6 parole.\\nÈ tutto nella nota.\\nRiordina\""
+  },
+  {
+   "nome": "ricevi una sbobina",
+   "passa": true,
+   "risposta": "\"bsidian: definizioni e ★ entrano nei giochi\\nAllega soltanto\\nSalvo il file negli allegati della lezione\\nSbobina di Fisica 2 nel tuo vault.\\n2 ott · da Giulia\\nApri\""
+  },
+  {
+   "nome": "anki: esporta tutti i corsi nel vault",
+   "passa": true,
+   "risposta": "\"riga per importare | Mostra: true prova | orta per anki  37 carte per Anki, 3 mazzi. In Anki: File › Importa, scegli «Anki/Lode per Anki 2026-10-02.txt» nel vault e come tipo di nota «Basilare» («Basic» in inglese). Mostra\""
+  },
+  {
+   "nome": "anki: un corso solo",
+   "passa": true,
+   "risposta": "\"r anki\\n\\n7 carte per Anki nel mazzo Lode::Basi di dati.\\nIn Anki: File › Importa, scegli «Anki/Basi di dati per Anki 2026-10-02.txt» nel vault e come tipo di nota «Basilare» («Basic» in inglese).\\nMostra\""
+  },
+  {
+   "nome": "aggiornamenti: spenti nelle prove, canale a posto",
+   "passa": true,
+   "risposta": "\"stato false null fermo 0.3.0 · prepara true · riga false\""
+  },
+  {
+   "nome": "esame comunicato a voce",
+   "passa": true,
+   "risposta": "\"ho l'esame di fisica 2 tra 5 giorni\\n\\nFisica 2 aggiunto.\\nMercoledì 7 ottobre · 6 CFU (cambiali se sono di più)\\nAnnulla\\n\\nPer arrivarci pronto: circa 12,0 h al giorno (60 h in tutto). Da adesso, quando sei al computer e libero, ti propongo giochi, ripassi e domande su Fisica 2, sempre più spesso man mano che si avvicina.\""
+  },
+  {
+   "nome": "allenatore: la pillola propone",
+   "passa": true,
+   "risposta": "\"orale: Tre domande lampo, come all'orale? | Fisica 2 · tra 5 giorni Tre domande lampo, come all'orale? Interrogami Dopo | larga 520\""
+  },
+  {
+   "nome": "allenatore: accetta e parte",
+   "passa": true,
+   "risposta": "\"accettate 1 | Interrogami · Fisica 2\\n\\nOrale · Fisica 2\\nEsci\""
+  },
+  {
+   "nome": "allenatore: «Dopo» rimanda",
+   "passa": true,
+   "risposta": "\"rimandata\""
+  },
+  {
+   "nome": "domanda all'AI locale",
+   "passa": true,
+   "risposta": "\"spiegami in una frase cos'è un integrale definito\\n\\nL'integrale definito è l'area geometrica sottesa alla curva di una funzione su un intervallo chiuso, calcolata come il limite delle somme di Riemann.\""
+  },
+  {
+   "nome": "la tua AI: la scheda",
+   "passa": true,
+   "risposta": "\"anthropic,openai,google,mistral,groq,openrouter,deepseek\""
+  },
+  {
+   "nome": "la tua AI: collega un servizio in formato OpenAI",
+   "passa": true,
+   "risposta": "\"cloud · {\\\"fornitore\\\":\\\"openai\\\",\\\"modello\\\":\\\"qwen3.5:4b\\\",\\\"uso\\\":\\\"tutto\\\",\\\"locale\\\":\\\"qwen3.5:4b\\\"} · AI\\n\\nChatGPT collegata.\\nModello qwen3.5:4b. Spiegazioni, orale, carte e riordino usano la tua AI.\""
+  },
+  {
+   "nome": "la tua AI: appunti sul computer",
+   "passa": true,
+   "risposta": "\"cloud/locale\""
+  },
+  {
+   "nome": "la tua AI: torna al locale",
+   "passa": true,
+   "risposta": "\"locale/locale\""
+  },
+  {
+   "nome": "informatica: esame di Programmazione 1, compare «Codice»",
+   "passa": true,
+   "risposta": "\", ti propongo giochi, ripassi e domande su Programmazione 1. | strumenti: Focus, Ripasso, Gioco, Codice, Orario, Note, Interrogami, Libretto, Esami\""
+  },
+  {
+   "nome": "cosa stampa: un giro di 5, risposte calcolate da Lode",
+   "passa": true,
+   "risposta": "\"do-while: Giusto · calcolato da Lode | for-minore: Giusto · calcolato da Lode | resto-negativi: Giusto · calcolato da Lode | annidati-conta: Giusto · calcolato da Lode | valore-e-indirizzo: Giusto · calcolato da Lode || 5/5 Tutte giuste. Le risposte le ha calcolate Lode. 6 secondi Ancora una\""
+  },
+  {
+   "nome": "segui progetto: la cartella del laboratorio",
+   "passa": true,
+   "risposta": "\"corso: Programmazione 1 | valutato: true | eguo lab-somma. Ti dico cosa cambia e se l'hai provato. Le versioni le tengo nella cartella di Lode. | LODE-SCRIVI:funzione\""
+  },
+  {
+   "nome": "segui progetto: «Fatto. In parole semplici» e «non provato»",
+   "passa": true,
+   "risposta": "\"Fatto e non provato | pillola: lab-somma · fatto · non provato | FATTO. IN PAROLE SEMPLICI lab-somma  Alle 21:25 è cambiato 1 file (+5 −1).  somma.c: nuova funzione somma, cambiata main.  Provato? No: dopo l'ultima modifica (21:25) nessuno ha compilato con Lode.  Non so chi ha scritto queste righe.  Prova adesso Vedi le modifiche Visto\""
+  },
+  {
+   "nome": "prova il progetto: le prove .in/.out",
+   "passa": true,
+   "risposta": "\"Come provo lab-somma? | Per provare userei gcc -std=c11 -Wall -Wextra -g somma.c -o ‹cartella di Lode›/lab-somma.exe -lm, poi le 2 prove in test/ (file .in → .out atteso). | 2/2 Compila e passa tutte le 2 prove. | LODE-SCRIVI:rotto\""
+  },
+  {
+   "nome": "prova il progetto: l'errore del compilatore spiegato in italiano",
+   "passa": true,
+   "risposta": "\"valutato: manca ; spiegato, niente correzione | ✗ Non compila: somma.c, riga 4. | ERRORE · C  somma.c, riga 4: manca un ;  2 3int somma(int a, int b) { 4    return a + b 5} 6 1 Dove guardare  Guarda la fine della riga 4, colonna 17: lì manca il ;.  2 Cosa vuol dire · Messaggio originale  Progetto valutato: la correzione non te la mostro.\""
+  },
+  {
+   "nome": "spiegami l'errore: testo incollato, in italiano",
+   "passa": true,
+   "risposta": "\"nel campo: spiegami l'errore: lista.c: In function 'main': lista.c:42:5: error: '… | ERRORE · C  lista.c, riga 42: usi nodo ma non è dichiarato  42    nodo->valore = 3; 1 Dove guardare 2 Cosa vuol dire · Messaggio originale\""
+  },
+  {
+   "nome": "spiegami l'errore: con un progetto valutato niente correzione",
+   "passa": true,
+   "risposta": "\"niente correzione, con la nota | ERRORE · C  pv.c, riga 3: manca un ;  3    int x = 5 1 Dove guardare 2 Cosa vuol dire · Messaggio originale  Segui un progetto valutato: la correzione non te la mostro.\""
+  },
+  {
+   "nome": "diario del progetto: nel vault, con quello che Lode ha visto",
+   "passa": true,
+   "risposta": "\"omma. Progetti/lab-somma/2026-10-02.md · aperto in Obsidian. | - 21:25 · Lode segue lab-somma / - 21:25 · Cambiato 1 file (+5 −1): nuova `somma` in somma.c, cambiata `main` in somma.c · chi l'ha scritto: non lo so / - 21:25 · Prova: ✓ compila · 2/2 prove · codice provato / - 21:25 · Cambiato 1 file (+1 −1): cambiata `somma` in somma.c · chi l'ha scritto: non lo so / - 21:25 · Prova: ✗ non compila, somma.c:4 «manca ;» · visto «dove guardare» | LODE-DIARIO:Progetti/lab-somma/2026-10-02.md\""
+  },
+  {
+   "nome": "diario: «Cosa ho capito» resta dello studente",
+   "passa": true,
+   "risposta": "\"la parte dello studente resta | e lab-somma - Oggi: 2 prove, 1 errore, 0 risolti, correzioni viste: 0 %% /lode:diario %%  ## Cosa ho capito %% Questa parte è tua: Lode non la tocca mai. Cosa hai capito oggi, cosa non ti torna ancora. %% prova mia: la funzione somma va scritta prima di main. \""
+  },
+  {
+   "nome": "Cosa so davvero: la pagina del corso e la Memoria",
+   "passa": true,
+   "risposta": "\"## Cosa so davvero  *Conti di Lode sugli esercizi «Cosa stampa?», senza AI. «Da rifare» vuol dire che è ora di ripassarlo.*  | Argomento | Esercizi | Al primo colpo | Ultima volta | Stato | |---|---|---|---|---| | Cicli annidati | 1 | 100% | oggi | sicuro |  | memoria: ## Informatica - «Cosa stampa?»: 6 esercizi, 100% giusti al primo colpo. - Errori che incontri di più: manca `;` (2), nome non dichiarato (1).  \""
+  },
+  {
+   "nome": "difese: un link non porta la barra su un'altra pagina",
+   "passa": true,
+   "risposta": "\"resta Lode | index.html\""
+  },
+  {
+   "nome": "configurazione: si apre",
+   "passa": true,
+   "risposta": "1"
+  },
+  {
+   "nome": "configurazione: nome e dati di esempio",
+   "passa": true,
+   "risposta": "\"Prepariamo il tuo computer. | esempio da togliere: true\""
+  },
+  {
+   "nome": "configurazione: installazioni",
+   "passa": true,
+   "risposta": "\"obsidian:pronto | cervello:pronto | voce:pronto\""
+  },
+  {
+   "nome": "configurazione: setup veloce e fine",
+   "passa": true,
+   "risposta": "\"Fatto, Marco.  Lode ora vive in cima allo schermo. Passaci sopra per aprirla, tieni premuto Ctrl ⇧ Spazio per parlarle, trascinaci sopra un PDF o una foto della lavagna.  Matematica 1 esami nel libretto, 2 da dare · il prossimo è Programmazione 1 0 lezioni a settimana in orario Proposte: normali  Obsidian, il cervello locale e la voce sono pronti.\""
+  }
+ ],
+ "verifica": [
+  {
+   "nome": "nota: ★ salvata",
+   "passa": true
+  },
+  {
+   "nome": "nota: definizione salvata",
+   "passa": true
+  },
+  {
+   "nome": "nota: domanda salvata",
+   "passa": true
+  },
+  {
+   "nome": "nota: trascrizione con formule LaTeX",
+   "passa": true
+  },
+  {
+   "nome": "nota: appunti riordinati",
+   "passa": true
+  },
+  {
+   "nome": "nota: «Ripeti» negli appunti",
+   "passa": true
+  },
+  {
+   "nome": "vault: sbobina .md e .html",
+   "passa": true
+  },
+  {
+   "nome": "vault: sbobina ricevuta come lezione",
+   "passa": true
+  },
+  {
+   "nome": "vault: sbobina html con formule MathML",
+   "passa": true
+  },
+  {
+   "nome": "vault: Home, Glossario, Orario, Memoria",
+   "passa": true
+  },
+  {
+   "nome": "configurazione: nome salvato, «Giulia» tolta",
+   "passa": true
+  },
+  {
+   "nome": "configurazione: libretto ed esami salvati",
+   "passa": true
+  },
+  {
+   "nome": "configurazione: segnata come fatta",
+   "passa": true
+  },
+  {
+   "nome": "diario: Progetti/lab-somma/<oggi>.md con il riquadro di Lode",
+   "passa": true
+  },
+  {
+   "nome": "diario: le righe «Prova» (✓ e poi ✗ con l'errore in italiano)",
+   "passa": true
+  },
+  {
+   "nome": "diario: «Cosa ho capito» dello studente intatto",
+   "passa": true
+  },
+  {
+   "nome": "corso: «Cosa so davvero» in Corsi/Programmazione 1.md",
+   "passa": true
+  },
+  {
+   "nome": "memoria: sezione «Informatica» prima di «Note per Lode»",
+   "passa": true
+  },
+  {
+   "nome": "privacy: il percorso del laboratorio non è nei dati del vault",
+   "passa": true
+  },
+  {
+   "nome": "anki: il file con tutti i corsi, le intestazioni di Anki",
+   "passa": true
+  },
+  {
+   "nome": "anki: una riga per carta, un mazzo per corso, con i tag",
+   "passa": true
+  },
+  {
+   "nome": "anki: niente doppioni",
+   "passa": true
+  },
+  {
+   "nome": "anki: il file di un corso solo",
+   "passa": true
+  }
+ ],
+ "registro": "\r\nLode: librerie della barra copiate in vendor/\npasso 0: \"pronto\"\npasso 1: \"ok · qwen3.5:4b\"\npasso 2: \"lezione analisi 2 venerdì dalle 21 alle 23 aula 7\\n\\nAnalisi 2 in orario.\\nven · 21:00–23:00 · aula 7\\n\\nQuando sei a lezione la barra lo sa: si apre sulla cattura veloce (★ da esame, definizioni, domande) e a casa ti propone due minuti di gioco su quello che hai appena fatto.\"\npasso 3: \"Analisi 2\\nfine tra 103 min\\n★2\"\npasso 4: \"★ il teorema di Green all'esame lo chiede sempre\\n\\n★ Segnato in Analisi 2.\\nNella nota della lezione.\\nApri\"\npasso 5: \"★ il teorema di Green all'esame lo chiede sempre\\n→\\n★ Segnato in Analisi 2.\\n\\ndef: gradiente = vettore delle derivate parziali\\n\\n«Gradiente» in Analisi 2.\\nNella nota della lezione.\\nApri\"\npasso 6: \"★ il teorema di Green all'esame lo chiede sempre\\n→\\n★ Segnato in Analisi 2.\\ndef: gradiente = vettore delle derivate parziali\\n→\\n«Gradiente» in Analisi 2.\\n\\n? perché serve la continuità delle derivate\\n\\nDomanda salvata in Analisi 2.\\nNella nota della lezione.\\nApri\"\npasso 7: \"24:57\\nAnalisi 2\"\npasso 8: \"focus 25 su analisi 2\\n→\\nfocus 25 min\\nstop\\n→\\ntimer fermato\\n\\nho preso 28 in fisica 2\\n\\n28 in Fisica 2.\\nMedia 27,40 (+0,09)\\nAnnulla\\n\\nBel colpo. Respira oggi, domani si riparte.\\n\\nMEDIA PONDERATA\\n27,40\\naritmetica 27,33 · 6 esami\\nBASE DI LAUREA\\n100,5/110\\n48 di 180 CFU\\n\\nPer partire da 105 ti serve 29,1 di media nei 126 CFU che mancano.\\n\\nE SE…\\nAnalisi 2\\nBasi di dati\\n28\\n\\nMedia 27,50 +0,10 · base 100,8\"\npasso 9: \"stop\\n→\\ntimer fermato\\nho preso 28 in fisica 2\\n→\\nmedia 27,40, base 100,5\\n\\nquanto mi serve per 105\\n\\nMEDIA PONDERATA\\n27,40\\naritmetica 27,33 · 6 esami\\nBASE DI LAUREA\\n100,5/110\\n48 di 180 CFU\\n\\nPer partire da 105 ti serve 29,1 di media nei 126 CFU che mancano.\\n\\nE SE…\\nAnalisi 2\\nBasi di dati\\n28\\n\\nMedia 27,50 +0,10 · base 100,8\"\npasso 10: \"ho preso 28 in fisica 2\\n→\\nmedia 27,40, base 100,5\\nquanto mi serve per 105\\n→\\nmedia 27,40, base 100,5\\n\\nse prendo 30 in basi di dati\\n\\nCon 30 in Basi di dati la media passa da 27,40 a 27,83 (+0,43): base di laurea 102,1.\"\npasso 11: \"2 di 6\"\npasso 12: \"GIOCO · ANALISI 2\\n1 di 5\\n\\nABBINA OGNI TERMINE ALLA SUA DEFIN\"\npasso 13: \"ORARIO · 4 LEZIONI A SETTIMANA\\nLUN\\n09:00\\nAnalisi 2\\nMAR\\n14:00\\nBasi di dati\\nMER\\n09\"\npasso 14: \"VAI A… · 16 NOTE\\nHome\\nvault\\nLezione di Analisi 2\\noggi\\nOrario\\nvault\\nEsami\\nvault\\nGlossario\\nvault\\nCosa sa Lode di me\\nLode\\n2026-10-02 Analisi 2\\nLezioni / Analisi 2\"\npasso 15: \"true flex\"\npasso 16: \"1 home / 0\"\npasso 17: \"Ho preso 28 in fisica 2. → Ho preso 28 in fisica 2.\\n\\n28 in Fisica 2.\\nMedia 27,40 (+0,00)\\nAnnulla\\n\\nBel colpo. Respira oggi, domani si riparte.\\n\\nMEDIA PONDERATA\\n27,40\\naritmetica 27,33 · 6 esami\\nBASE DI LAUREA\\n100,5/110\\n48 di 180 CFU\\n\\nPer partire da 105 ti serve 29,1 di media nei 126 CFU che mancano.\\n\\nE SE…\\nAnalisi 2\\nBasi di dati\\n28\\n\\nMedia 27,50 +0,10 · base 100,8\"\npasso 18: \"Definizione elettrofilo uguale specie povera di elettroni. → Ho preso 28 in fisica 2.\\n→\\nmedia 27,40, base 100,5\\n\\nDefinizione elettrofilo uguale specie povera di elettroni.\\n\\n«Elettrofilo» in Analisi 2.\\nNella nota della lezione.\\nApri\"\npasso 19: \"la nota della lezione.\\nApri\\nD'accordo.\\nTrascrivo la lezione di Analisi 2.\\nLe righe arrivano nella nota ogni 20-30 secondi.\\nApri in Obsidian\\nLezione trascritta: 107 parole.\\nÈ tutto nella nota.\\nRiordina\"\npasso 20: \"Salvare gli appunti riordinati di Analisi 2? | Aggiungere a Analisi 2 · 2 ott?\"\npasso 21: \"GLI ULTIMI 2 SECONDI · 21:20\\n\\nHo preso 28 in fisica 2.\\n\\nAgli appunti\\n★ Da esame\\nCopia\"\npasso 22: \"Parakeet v3 (ONNX, processore)\"\npasso 23: \"7575 ms · ULTIMA: Prima però una domanda: chi si ricorda la definizione di forma differenziale esatta, una forma esatta se ammette un potenziale, e attenzione, il teorema di Green all'esame lo chiedo sempre, con la dimostrazione. · TUTTO: Ho preso 28 in fisica 2. Allora, ragazzi, riprendiamo da dove eravamo rimasti la volta scorsa. Oggi parliamo del teorema di Green, che lega l'integrale di linea lungo il bordo di un dominio all'integrale doppio sul dominio stesso. Perché valga, il dominio deve essere regolare e il bordo va percorso in senso anti-orario. Le funzioni P e Q devono avere derivate parziali continue. Una conseguenza importante riguarda il calcolo delle aree, l'area di un dominio si può ottenere con un integrale di linea lungo il suo bordo. Vediamo un esempio con il cerchio di ragio 1, che conoscete bene dal corso di analisi 1. Prima però una domanda: chi si ricorda la definizione di forma differenziale esatta, una forma esatta se ammette un potenziale, e attenzione, il teorema di Green all'esame lo chiedo sempre, con la dimostrazione.\"\npasso 24: \"ma di Green all'esame lo chiedo sempre, con la dimostrazione.\\n\\nAgli appunti\\n★ Da esame\\nCopia\\nNegli appunti di Analisi 2.\"\npasso 25: \"condividi la sbobina di analisi 2\\n\\nSbobina di Analisi 2 pronta.\\nÈ nella cartella Sbobine del vault.\\nMostra\"\npasso 26: \"larga 470 · Carte del ripasso | Domande e risposte per il ripasso a intervalli | Riassunto in Obsidian | Appunti ordinati con formule, in una nota nuova | Definizioni per i giochi | Le aggiungo alla lezione: diventano giochi di memoria | Interrogami su questo | Un prof d'orale con domande su questo materiale | \"\npasso 27: \"Salvare 9 carte di Analisi 2?\"\npasso 28: \"Aggiungere a Analisi 2 · 2 ott? | \\nAllega alla lezione\\nSalvo il file con il link nella nota\\nPER\\nAnalisi 2\\nBasi di dati\\nFisica 2\\nLezione chiusa.\\n2 definizioni pronte per i giochi.\\nGioca\"\npasso 29: \"PER\\nAnalisi 2\\nBasi di dati\\nFisica 2\\nTrascrivo «registrazione.wav» nella lezione di Analisi 2.\\nPuoi chiudere il pannello: ti avviso alla fine.\\nLezione trascritta: 6 parole.\\nÈ tutto nella nota.\\nRiordina\"\npasso 30: \"bsidian: definizioni e ★ entrano nei giochi\\nAllega soltanto\\nSalvo il file negli allegati della lezione\\nSbobina di Fisica 2 nel tuo vault.\\n2 ott · da Giulia\\nApri\"\npasso 31: \"riga per importare | Mostra: true prova | orta per anki  37 carte per Anki, 3 mazzi. In Anki: File › Importa, scegli «Anki/Lode per Anki 2026-10-02.txt» nel vault e come tipo di nota «Basilare» («Basic» in inglese). Mostra\"\npasso 32: \"r anki\\n\\n7 carte per Anki nel mazzo Lode::Basi di dati.\\nIn Anki: File › Importa, scegli «Anki/Basi di dati per Anki 2026-10-02.txt» nel vault e come tipo di nota «Basilare» («Basic» in inglese).\\nMostra\"\npasso 33: \"stato false null fermo 0.3.0 · prepara true · riga false\"\npasso 34: \"ho l'esame di fisica 2 tra 5 giorni\\n\\nFisica 2 aggiunto.\\nMercoledì 7 ottobre · 6 CFU (cambiali se sono di più)\\nAnnulla\\n\\nPer arrivarci pronto: circa 12,0 h al giorno (60 h in tutto). Da adesso, quando sei al computer e libero, ti propongo giochi, ripassi e domande su Fisica 2, sempre più spesso man mano che si avvicina.\"\npasso 35: \"orale: Tre domande lampo, come all'orale? | Fisica 2 · tra 5 giorni Tre domande lampo, come all'orale? Interrogami Dopo | larga 520\"\npasso 36: \"accettate 1 | Interrogami · Fisica 2\\n\\nOrale · Fisica 2\\nEsci\"\npasso 37: \"rimandata\"\npasso 38: \"spiegami in una frase cos'è un integrale definito\\n\\nL'integrale definito è l'area geometrica sottesa alla curva di una funzione su un intervallo chiuso, calcolata come il limite delle somme di Riemann.\"\npasso 39: \"anthropic,openai,google,mistral,groq,openrouter,deepseek\"\npasso 40: \"cloud · {\\\"fornitore\\\":\\\"openai\\\",\\\"modello\\\":\\\"qwen3.5:4b\\\",\\\"uso\\\":\\\"tutto\\\",\\\"locale\\\":\\\"qwen3.5:4b\\\"} · AI\\n\\nChatGPT collegata.\\nModello qwen3.5:4b. Spiegazioni, orale, carte e riordino usano la tua AI.\"\npasso 41: \"cloud/locale\"\npasso 42: \"locale/locale\"\npasso 43: \", ti propongo giochi, ripassi e domande su Programmazione 1. | strumenti: Focus, Ripasso, Gioco, Codice, Orario, Note, Interrogami, Libretto, Esami\"\npasso 44: \"do-while: Giusto · calcolato da Lode | for-minore: Giusto · calcolato da Lode | resto-negativi: Giusto · calcolato da Lode | annidati-conta: Giusto · calcolato da Lode | valore-e-indirizzo: Giusto · calcolato da Lode || 5/5 Tutte giuste. Le risposte le ha calcolate Lode. 6 secondi Ancora una\"\npasso 45: \"corso: Programmazione 1 | valutato: true | eguo lab-somma. Ti dico cosa cambia e se l'hai provato. Le versioni le tengo nella cartella di Lode. | LODE-SCRIVI:funzione\"\npasso 46: \"Fatto e non provato | pillola: lab-somma · fatto · non provato | FATTO. IN PAROLE SEMPLICI lab-somma  Alle 21:25 è cambiato 1 file (+5 −1).  somma.c: nuova funzione somma, cambiata main.  Provato? No: dopo l'ultima modifica (21:25) nessuno ha compilato con Lode.  Non so chi ha scritto queste righe.  Prova adesso Vedi le modifiche Visto\"\npasso 47: \"Come provo lab-somma? | Per provare userei gcc -std=c11 -Wall -Wextra -g somma.c -o ‹cartella di Lode›/lab-somma.exe -lm, poi le 2 prove in test/ (file .in → .out atteso). | 2/2 Compila e passa tutte le 2 prove. | LODE-SCRIVI:rotto\"\npasso 48: \"valutato: manca ; spiegato, niente correzione | ✗ Non compila: somma.c, riga 4. | ERRORE · C  somma.c, riga 4: manca un ;  2 3int somma(int a, int b) { 4    return a + b 5} 6 1 Dove guardare  Guarda la fine della riga 4, colonna 17: lì manca il ;.  2 Cosa vuol dire · Messaggio originale  Progetto valutato: la correzione non te la mostro.\"\npasso 49: \"nel campo: spiegami l'errore: lista.c: In function 'main': lista.c:42:5: error: '… | ERRORE · C  lista.c, riga 42: usi nodo ma non è dichiarato  42    nodo->valore = 3; 1 Dove guardare 2 Cosa vuol dire · Messaggio originale\"\npasso 50: \"niente correzione, con la nota | ERRORE · C  pv.c, riga 3: manca un ;  3    int x = 5 1 Dove guardare 2 Cosa vuol dire · Messaggio originale  Segui un progetto valutato: la correzione non te la mostro.\"\npasso 51: \"omma. Progetti/lab-somma/2026-10-02.md · aperto in Obsidian. | - 21:25 · Lode segue lab-somma / - 21:25 · Cambiato 1 file (+5 −1): nuova `somma` in somma.c, cambiata `main` in somma.c · chi l'ha scritto: non lo so / - 21:25 · Prova: ✓ compila · 2/2 prove · codice provato / - 21:25 · Cambiato 1 file (+1 −1): cambiata `somma` in somma.c · chi l'ha scritto: non lo so / - 21:25 · Prova: ✗ non compila, somma.c:4 «manca ;» · visto «dove guardare» | LODE-DIARIO:Progetti/lab-somma/2026-10-02.md\"\npasso 52: \"la parte dello studente resta | e lab-somma - Oggi: 2 prove, 1 errore, 0 risolti, correzioni viste: 0 %% /lode:diario %%  ## Cosa ho capito %% Questa parte è tua: Lode non la tocca mai. Cosa hai capito oggi, cosa non ti torna ancora. %% prova mia: la funzione somma va scritta prima di main. \"\npasso 53: \"## Cosa so davvero  *Conti di Lode sugli esercizi «Cosa stampa?», senza AI. «Da rifare» vuol dire che è ora di ripassarlo.*  | Argomento | Esercizi | Al primo colpo | Ultima volta | Stato | |---|---|---|---|---| | Cicli annidati | 1 | 100% | oggi | sicuro |  | memoria: ## Informatica - «Cosa stampa?»: 6 esercizi, 100% giusti al primo colpo. - Errori che incontri di più: manca `;` (2), nome non dichiarato (1).  \"\npasso 54: \"resta Lode | index.html\"\npasso 55: 1\npasso 56: \"Prepariamo il tuo computer. | esempio da togliere: true\"\npasso 57: \"obsidian:pronto | cervello:pronto | voce:pronto\"\npasso 58: \"Fatto, Marco.  Lode ora vive in cima allo schermo. Passaci sopra per aprirla, tieni premuto Ctrl ⇧ Spazio per parlarle, trascinaci sopra un PDF o una foto della lavagna.  Matematica 1 esami nel libretto, 2 da dare · il prossimo è Programmazione 1 0 lezioni a settimana in orario Proposte: normali  Obsidian, il cervello locale e la voce sono pronti.\"\npasso 59: 1\n"
+}
