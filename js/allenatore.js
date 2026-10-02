@@ -54,11 +54,11 @@ export async function momento({ forza = false } = {}) {
   const liv = D.imp.allenatore || 'normale';
   if (liv === 'mai' && !forza) return { no: 'proposte spente' };
   if (!forza) {
+    const m = mem(), adesso = Date.now();
+    if (adesso < (m.rimandaFino || 0)) return { no: 'rimandata' };   // «Dopo» vale prima di tutto
     if (inSilenzio()) return { no: 'ore di silenzio' };
     if (lezioneOra() || (prossimaLezione()?.tra ?? 99) < 15) return { no: 'lezione' };
     if (F.stato() || TR.attiva()) return { no: 'occupato' };
-    const m = mem(), adesso = Date.now();
-    if (adesso < (m.rimandaFino || 0)) return { no: 'rimandata' };
     const oggiN = m.storia.filter(x => x.giorno === oggi()).length;
     if (oggiN >= MASSIMO[liv]) return { no: 'basta per oggi' };
     const esame = prossimi()[0], g = esame ? giorniTra(oggi(), esame.data) : 99;

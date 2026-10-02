@@ -14,8 +14,28 @@ const MEM = navigator.deviceMemory || 8;   // Chromium la limita a 8: usiamo anc
 export const MODELLO_VOCE = (MEM >= 8 && (navigator.hardwareConcurrency || 4) >= 12) ? 'onnx-community/whisper-small' : 'onnx-community/whisper-base';
 let T = null, asr = null, caricando = null;
 const avvisa = x => dispatchEvent(new CustomEvent('lode:voce', { detail: x }));
-export const pronta = () => !!asr;
-export function prepara() {
+export const pronta = () => !!asr || MAC_PRONTO;
+let MAC_PRONTO = false;
+export async function prepara() {
+  if (await motoreMac()) return preparaMac();
+  return preparaWhisper();
+}
+// Parakeet: il programma si avvia (la prima volta scarica il modello, ~500 MB, e ne manda l'avanzamento)
+let caricaMac = null;
+function preparaMac() {
+  if (MAC_PRONTO) return Promise.resolve(true);
+  caricaMac ||= (async () => {
+    window.lodeDesktop.su('voce:progresso', x => { if (!MAC_PRONTO) avvisa({ fase: 'scarico', p: x.p }); });
+    await window.lodeDesktop.invoca('voce:prepara');
+    MAC_PRONTO = true; avvisa({ fase: 'pronta' }); return true;
+  })().catch(e => { caricaMac = null; avvisa({ fase: 'errore', testo: e.message }); throw e; });
+  return caricaMac;
+}
+// sul Mac con Apple Silicon la voce è Parakeet (testi dell'interfaccia: nome e peso)
+export const MAC_ARM = DESKTOP && window.lodeDesktop.piattaforma === 'darwin' && window.lodeDesktop.arch === 'arm64';
+export const NOME_VOCE = MAC_ARM ? 'Parakeet' : 'Whisper';
+export const PESO_VOCE = MAC_ARM ? '470' : MODELLO_VOCE.endsWith('small') ? '600' : '200';
+function preparaWhisper() {
   if (asr) return Promise.resolve(asr);
   caricando ||= (async () => {
     T ||= await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3');
@@ -31,10 +51,30 @@ export function prepara() {
   })().catch(e => { caricando = null; avvisa({ fase: 'errore', testo: e.message }); throw e; });
   return caricando;
 }
-// una trascrizione alla volta (voce, lezione): il modello è uno solo
-let catena = Promise.resolve();
-export function trascriviAudio(audio) { const p = catena.then(() => prepara()).then(() => trascrivi(audio)).then(t => ALLUCINAZIONI.test(t) ? '' : t); catena = p.catch(() => { }); return p; }
-const trascrivi = async audio => (await asr(audio, { language: 'italian', task: 'transcribe' })).text.trim().replace(/^[\s.…]+|[\s.…]+$/g, '').replace(/\s*\[.*?\]\s*/g, ' ').trim();
+// una trascrizione alla volta (il modello è uno solo), in fila; «Ripeti» passa davanti ai pezzi della lezione
+// ({ subito: true }): lo studente sta aspettando, la trascrizione della lezione può aspettare due secondi.
+// Sul Mac, se c'è, il motore è Parakeet (lode-voce, desktop/voce-mac): più preciso e più veloce di Whisper.
+const fila = []; let lavora = false;
+export function trascriviAudio(audio, { subito = false } = {}) {
+  return new Promise((ok, ko) => { const x = { audio, ok, ko }; subito ? fila.unshift(x) : fila.push(x); gira(); });
+}
+async function gira() {
+  if (lavora) return; lavora = true;
+  while (fila.length) {
+    const { audio, ok, ko } = fila.shift();
+    try { const t = await ((await motoreMac()) ? preparaMac().then(() => parakeet(audio)) : prepara().then(() => trascrivi(audio))); ok(ALLUCINAZIONI.test(t) ? '' : t); } catch (e) { ko(e); }
+  }
+  lavora = false;
+}
+// Whisper legge 30 secondi alla volta: oltre, l'audio va diviso in finestre sovrapposte (senza, di un minuto di
+// «Ripeti» arrivava solo la prima metà, la più vecchia, e mancava proprio l'ultima frase del prof)
+const trascrivi = async audio => (await asr(audio, { language: 'italian', task: 'transcribe', ...(audio.length > 16000 * 29 ? { chunk_length_s: 30, stride_length_s: 5 } : {}) }))
+  .text.trim().replace(/^[\s.…]+|[\s.…]+$/g, '').replace(/\s*\[.*?\]\s*/g, ' ').trim();
+// Parakeet sul Neural Engine (solo Mac con Apple Silicon, quando lode-voce è installato)
+let MAC = null;
+export const motoreMac = () => (MAC ??= DESKTOP ? window.lodeDesktop.invoca('voce:stato').then(s => !!s?.parakeet).catch(() => false) : Promise.resolve(false));
+export const nomeMotore = async () => (await motoreMac()) ? 'Parakeet v3 (Neural Engine)' : 'Whisper ' + MODELLO_VOCE.split('-').pop();
+const parakeet = async audio => String(await window.lodeDesktop.invoca('voce:trascrivi', audio)).replace(/\s+/g, ' ').trim();
 // Whisper sul silenzio a volte «sente» frasi tipiche dei sottotitoli: le scartiamo
 const ALLUCINAZIONI = /^(sottotitoli|grazie (a tutti )?per (la visione|l'attenzione)|grazie\.?|buona visione|amara\.org|iscriviti)/i;
 
@@ -70,8 +110,8 @@ function ascoltaWhisper({ parziale, fine, errore, auto = true }) {
     };
     sorgente.connect(proc); proc.connect(ctx.destination);
     const giro = setInterval(async () => {   // parole mentre parli
-      if (stato.fermo || occupato || !asr || !parlato || campioni < 16000 * .8) return;
-      occupato = true; try { const t = await trascriviAudio(tutto()); if (t && t !== ultimo && !ALLUCINAZIONI.test(t) && !stato.fermo) { ultimo = t; parziale?.(t); } } catch { } occupato = false;
+      if (stato.fermo || occupato || !pronta() || !parlato || campioni < 16000 * .8) return;
+      occupato = true; try { const t = await trascriviAudio(tutto(), { subito: true }); if (t && t !== ultimo && !ALLUCINAZIONI.test(t) && !stato.fermo) { ultimo = t; parziale?.(t); } } catch { } occupato = false;
     }, MODELLO_VOCE.endsWith('small') ? 2000 : 1200);
     async function chiudi() {
       if (stato.chiuso) return; stato.chiuso = stato.fermo = true;
@@ -80,7 +120,7 @@ function ascoltaWhisper({ parziale, fine, errore, auto = true }) {
       if (stato.annullato) return;
       window.__lodeAudio = { n: campioni, sr: ctx.sampleRate, dati: tutto() };   // per le prove
       if (!parlato) return fine?.('');
-      try { while (occupato) await new Promise(r => setTimeout(r, 30)); fine?.(await trascriviAudio(tutto())); }
+      try { while (occupato) await new Promise(r => setTimeout(r, 30)); fine?.(await trascriviAudio(tutto(), { subito: true })); }
       catch (e) { errore?.('La voce non ha funzionato: ' + e.message); }
     }
     stato.chiudi = chiudi;

@@ -7,6 +7,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as V from './vault.mjs';
 import * as I from './installa.mjs';
+import * as VOCE from './voce.mjs';
 
 const QUI = dirname(fileURLToPath(import.meta.url));
 const WEB = existsSync(join(QUI, 'web', 'index.html')) ? join(QUI, 'web') : join(QUI, '..');
@@ -207,6 +208,13 @@ ipcMain.handle('vault:apri', async (_, { file, nuovo }) => {
 });
 ipcMain.handle('vault:scegli', () => scegliVault());
 ipcMain.handle('sistema:inattivo', () => powerMonitor.getSystemIdleTime());
+// la voce sul Mac: Parakeet v3 sul Neural Engine (lode-voce). Altrove, o senza il programma, resta Whisper nella barra.
+const voce = VOCE.crea({ binario: join(QUI, 'bin', 'lode-voce'),
+  avanza: x => { for (const w of BrowserWindow.getAllWindows()) w.webContents.send('voce:progresso', x); } });
+ipcMain.handle('voce:stato', () => ({ parakeet: voce.disponibile() }));
+ipcMain.handle('voce:prepara', () => voce.avvia());
+ipcMain.handle('voce:trascrivi', (_, audio) => voce.trascrivi(audio));
+app.on('will-quit', () => voce.chiudi());
 // dopo una cattura veloce il fuoco torna all'app dove lo studente stava scrivendo
 ipcMain.handle('finestra:rilascia', e => {
   const w = BrowserWindow.fromWebContents(e.sender); if (w !== barra) return;

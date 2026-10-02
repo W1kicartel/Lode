@@ -20,7 +20,7 @@ Niente account, niente server, niente pubblicità. Si apre nel browser, funziona
 ## Al primo avvio
 
 Una finestra di benvenuto in due parti:
-- **Obbligatoria.** Come ti chiami, poi un clic per installare **Obsidian** (l'installer ufficiale), il **cervello locale** (Ollama + Gemma 3, scelto in base alla memoria del computer) e la **voce** (Whisper).
+- **Obbligatoria.** Come ti chiami, poi un clic per installare **Obsidian** (l'installer ufficiale), il **cervello locale** (Ollama + Gemma 3, scelto in base alla memoria del computer) e la **voce**: sui Mac con chip Apple è Parakeet v3 sul Neural Engine, altrove Whisper.
 - **Facoltativa, il setup veloce:**
   - ateneo e corso;
   - il **libretto incollato da Esse3**, letto anche senza AI;
@@ -46,7 +46,7 @@ Rispondi con **Gioca** o con **Dopo**. Più l'esame è vicino, più le proposte 
 L'**app desktop** mette la barra sopra tutte le finestre. Al primo avvio:
 - crea un **vault Obsidian** in `Documenti/Lode`;
 - con un clic da «Prepara Lode» installa **Obsidian** (l'installer ufficiale) e un **cervello locale**: Ollama + Gemma 3, scelto in base alla memoria del computer;
-- prepara la **voce**: Whisper, che gira dentro la barra.
+- prepara la **voce**: sui Mac con chip Apple **Parakeet v3** di NVIDIA sul Neural Engine, con [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache 2.0, lo stesso motore dell'app FluidVoice). Su Windows e Linux c'è Whisper, che gira dentro la barra. Su un minuto di lezione Parakeet trascrive in 0,8 s quasi senza errori e con la punteggiatura, Whisper base in 3,7 s.
 
 Tutto funziona sul computer, senza account e senza internet.
 
@@ -142,7 +142,9 @@ Lode usa Claude Opus 5.5 con la chiave dello studente (si crea su [console.anthr
 | `js/markdown.js` | Le note di Obsidian: modello della lezione, lettura di definizioni/★/domande, inserimento in una sezione, orario come tabella |
 | `js/vault.js` | Il vault visto dalla barra: annota nella lezione giusta, apre Obsidian, scrive la Memoria |
 | `js/giochi.js` | I giochi di memoria: abbina, chi sono?, completa, flash |
-| `js/trascrizione.js` | La lezione intera: microfono → pezzi da 20-30 s → Whisper → formule → nota Obsidian, salvata a ogni pezzo |
+| `js/trascrizione.js` | La lezione intera: microfono → pezzi da 20-30 s → Parakeet o Whisper → formule → nota Obsidian, salvata a ogni pezzo |
+| `desktop/voce-mac/` | `lode-voce`: Parakeet v3 (FluidAudio) sul Neural Engine. Si compila con `desktop/voce-mac/compila.sh`, che aggira due difetti dei Command Line Tools 16.4 |
+| `desktop/voce.mjs` | Avvia `lode-voce` e gli passa l'audio |
 | `js/orecchio.js` | Il microfono condiviso in aula, con gli ultimi 90 secondi solo in memoria (per «Ripeti») |
 | `js/file.js` | I file trascinati: tipo, testo di PDF (pdf.js), Word e PowerPoint (zip di XML), audio a 16 kHz |
 | `js/sbobina.js` | Sbobine da condividere (.md + .html con formule MathML) e sbobine ricevute |
