@@ -7,7 +7,9 @@
 // Copre comandi, aula (★, definizioni, domande nella nota Obsidian), focus, libretto, ripasso, giochi, orario, note,
 // indietro/Esc, voce (Whisper locale), trascrizione di una lezione con formule, riordino e definizioni col modello
 // locale, domanda all'AI. L'audio va direttamente al motore: niente altoparlanti, niente microfono.
-import { execFileSync, spawn } from 'node:child_process';
+// L'uscita di Electron si vede dal vivo; dopo LODE_LIMITE_MIN minuti (100: GitHub ferma tutto a 120) Electron si ferma e
+// il resoconto arriva lo stesso, con l'ultimo passo finito.
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
@@ -140,10 +142,20 @@ const passi = [
 if (CI) for (let i = passi.length - 1; i >= 0; i--) if (passi[i].pesante) { console.log('saltato su questa macchina:', passi[i].nome); passi.splice(i, 1); }
 writeFileSync(join(DIR, 'passi.json'), JSON.stringify(passi));
 console.log('Vault di prova:', VAULT);
+const LIMITE = +process.env.LODE_LIMITE_MIN || 100;
 
 const out = await new Promise(ok => {
   const p = spawn(ELECTRON, ['.'], { cwd: DESKTOP, env: { ...process.env, LODE_DATI: join(DIR, 'dati'), LODE_VAULT: VAULT, LODE_OBSIDIAN_DIR: join(DIR, 'obsidian'), LODE_NON_APRIRE: '1', LODE_PROVA: join(DIR, 'passi.json'), LODE_ESCI: '1', ...(FOTO ? { LODE_FOTO: FOTO } : {}) } });
-  let s = ''; p.stdout.on('data', x => s += x); p.stderr.on('data', x => s += x); p.on('close', () => ok(s));
+  let s = '', fatto = false;
+  const eco = x => { s += x; process.stdout.write(x); }, fine = () => { if (!fatto) { fatto = true; clearTimeout(cane); ok(s); } };
+  p.stdout.on('data', eco); p.stderr.on('data', eco);
+  const cane = setTimeout(() => {
+    eco(`\nCANE DA GUARDIA: Electron fermato dopo ${LIMITE} minuti (ultimo passo finito: ${[...s.matchAll(/^passo (\d+)/gm)].pop()?.[1] ?? 'nessuno'})\n`);
+    if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(p.pid), '/T', '/F'], { stdio: 'ignore' }); else p.kill('SIGKILL');
+    setTimeout(fine, 5000);
+  }, LIMITE * 60e3);
+  // su Windows un processo figlio (Ollama) può tenere aperta l'uscita e 'close' non arrivare: basta 'exit'
+  p.on('close', fine); p.on('exit', () => setTimeout(fine, 5000)); p.on('error', e => { eco(`\nElectron non parte: ${e.message}\n`); fine(); });
 });
 const ris = Object.fromEntries([...out.matchAll(/^passo (\d+)(?: errore)?: (.*)$/gm)].map(m => [+m[1], m[2]]));
 let ok = 0, ko = 0;

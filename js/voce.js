@@ -1,5 +1,5 @@
 // La voce di Lode, in italiano, gratis.
-// • Nell'app desktop: Whisper gira DENTRO la barra (transformers.js su WebGPU), niente server e niente chiavi.
+// • Nell'app desktop: Whisper gira DENTRO la barra (transformers.js su WebGPU, o sul processore se la scheda non c'è), niente server e niente chiavi.
 //   Mentre parli le parole compaiono (ritrascrizione dell'audio ogni ~1,2 s); quando smetti di parlare (o lasci il tasto)
 //   la frase finale arriva in mezzo secondo. Il modello (base o small, in base alla memoria) si scarica una volta sola.
 // • Nel browser: il riconoscimento vocale di Chrome/Edge/Safari.
@@ -11,7 +11,10 @@ let rec = null, livello = 0;
 
 /* ---------- Whisper locale ---------- */
 const MEM = navigator.deviceMemory || 8;   // Chromium la limita a 8: usiamo anche i core come indizio
-export const MODELLO_VOCE = (MEM >= 8 && (navigator.hardwareConcurrency || 4) >= 12) ? 'onnx-community/whisper-small' : 'onnx-community/whisper-base';
+// sul processore (senza una scheda per WebGPU) gira su un filo solo: sempre base, small sarebbe troppo lento
+let CPU = !navigator.gpu;
+const BASE = 'onnx-community/whisper-base', TJS = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
+export let MODELLO_VOCE = (!CPU && MEM >= 8 && (navigator.hardwareConcurrency || 4) >= 12) ? 'onnx-community/whisper-small' : BASE;
 let T = null, asr = null, caricando = null;
 const avvisa = x => dispatchEvent(new CustomEvent('lode:voce', { detail: x }));
 export const pronta = () => !!asr || MAC_PRONTO;
@@ -34,22 +37,35 @@ function preparaMac() {
 // sul Mac con Apple Silicon la voce è Parakeet (testi dell'interfaccia: nome e peso)
 export const MAC_ARM = DESKTOP && window.lodeDesktop.piattaforma === 'darwin' && window.lodeDesktop.arch === 'arm64';
 export const NOME_VOCE = MAC_ARM ? 'Parakeet' : 'Whisper';
-export const PESO_VOCE = MAC_ARM ? '470' : MODELLO_VOCE.endsWith('small') ? '600' : '200';
+export let PESO_VOCE = MAC_ARM ? '470' : MODELLO_VOCE.endsWith('small') ? '600' : '200';
+const sulProcessore = () => { CPU = true; MODELLO_VOCE = BASE; if (!MAC_ARM) PESO_VOCE = '200'; };
+const rete = e => /fetch|network|locate/i.test(e?.message) || !navigator.onLine;
 function preparaWhisper() {
   if (asr) return Promise.resolve(asr);
   caricando ||= (async () => {
-    T ||= await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3');
-    const dev = navigator.gpu ? 'webgpu' : 'wasm', file = {};
-    asr = await T.pipeline('automatic-speech-recognition', MODELLO_VOCE, {
-      device: dev, dtype: dev === 'webgpu' ? { encoder_model: 'fp32', decoder_model_merged: 'q4' } : 'q8',
-      progress_callback: p => { if (p.status === 'progress' && p.total) { file[p.file] = [p.loaded, p.total]; const v = Object.values(file); avvisa({ fase: 'scarico', p: v.reduce((s, x) => s + x[0], 0) / v.reduce((s, x) => s + x[1], 0) }); } },
-    });
-    // un giro a vuoto: la prima trascrizione vera non paga la compilazione degli shader
-    await asr(new Float32Array(16000), { language: 'italian', task: 'transcribe' });
+    // WebGPU solo con una scheda vera: su Windows navigator.gpu c'è anche senza (VM, driver in lista nera)
+    const ad = CPU ? null : await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' }).catch(() => null);
+    if (!ad || (ad.info?.isFallbackAdapter ?? ad.isFallbackAdapter)) sulProcessore();
+    try { asr = await carica(CPU ? 'wasm' : 'webgpu'); }
+    catch (e) {   // la scheda c'è ma WebGPU non parte (driver, shader): si riprova sul processore
+      if (CPU || rete(e)) throw e;
+      T = await import(TJS + '?' + Date.now());   // un transformers.js nuovo: quello di prima si ricorda l'errore di WebGPU
+      asr = await carica('wasm'); sulProcessore();
+    }
     avvisa({ fase: 'pronta' });
     return asr;
-  })().catch(e => { caricando = null; avvisa({ fase: 'errore', testo: e.message }); throw e; });
+  })().catch(e => { caricando = null; console.warn(e); avvisa({ fase: 'errore', testo: rete(e) ? 'Non riesco a scaricare la voce: controlla la connessione e riprova.' : 'La voce non riesce a partire su questo computer.' }); throw e; });
   return caricando;
+}
+async function carica(dev) {
+  T ||= await import(TJS);
+  const file = {}, a = await T.pipeline('automatic-speech-recognition', dev === 'wasm' ? BASE : MODELLO_VOCE, {
+    device: dev, dtype: dev === 'webgpu' ? { encoder_model: 'fp32', decoder_model_merged: 'q4' } : 'q8',
+    progress_callback: p => { if (p.status === 'progress' && p.total) { file[p.file] = [p.loaded, p.total]; const v = Object.values(file); avvisa({ fase: 'scarico', p: v.reduce((s, x) => s + x[0], 0) / v.reduce((s, x) => s + x[1], 0) }); } },
+  });
+  // un giro a vuoto: la prima trascrizione vera non paga la compilazione degli shader (e se la scheda non regge, si vede qui)
+  await a(new Float32Array(16000), { language: 'italian', task: 'transcribe' });
+  return a;
 }
 // una trascrizione alla volta (il modello è uno solo), in fila; «Ripeti» passa davanti ai pezzi della lezione
 // ({ subito: true }): lo studente sta aspettando, la trascrizione della lezione può aspettare due secondi.
@@ -84,7 +100,7 @@ function ascoltaWhisper({ parziale, fine, errore, auto = true }) {
   (async () => {
     let flusso;
     try { flusso = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
-    catch { rec = null; return errore?.('Serve il permesso del microfono: Impostazioni di sistema > Privacy > Microfono > Lode.'); }
+    catch (e) { rec = null; return errore?.(erroreMicrofono(e)); }
     if (stato.annullato) { flusso.getTracks().forEach(t => t.stop()); return; }
     const ctx = new AudioContext({ sampleRate: 16000 }), sorgente = ctx.createMediaStreamSource(flusso);
     if (ctx.state === 'suspended') await ctx.resume().catch(() => { });   // aperta con la scorciatoia: nessun clic nella pagina
@@ -112,7 +128,7 @@ function ascoltaWhisper({ parziale, fine, errore, auto = true }) {
     const giro = setInterval(async () => {   // parole mentre parli
       if (stato.fermo || occupato || !pronta() || !parlato || campioni < 16000 * .8) return;
       occupato = true; try { const t = await trascriviAudio(tutto(), { subito: true }); if (t && t !== ultimo && !ALLUCINAZIONI.test(t) && !stato.fermo) { ultimo = t; parziale?.(t); } } catch { } occupato = false;
-    }, MODELLO_VOCE.endsWith('small') ? 2000 : 1200);
+    }, MODELLO_VOCE.endsWith('small') || CPU ? 2000 : 1200);
     async function chiudi() {
       if (stato.chiuso) return; stato.chiuso = stato.fermo = true;
       clearInterval(giro); proc.disconnect(); sorgente.disconnect(); flusso.getTracks().forEach(t => t.stop()); ctx.close();
@@ -128,6 +144,14 @@ function ascoltaWhisper({ parziale, fine, errore, auto = true }) {
   })();
   prepara().catch(() => { });
   return stato;
+}
+
+// il microfono che non si apre: cosa fare, detto per il sistema giusto (su Windows c'è un interruttore per le app desktop)
+export function erroreMicrofono(e) {
+  const win = window.lodeDesktop?.piattaforma === 'win32';
+  if (/NotFound|Overconstrained/.test(e?.name)) return win ? 'Non trovo un microfono: collegalo o sceglilo in Impostazioni > Sistema > Audio > Input.' : 'Non trovo un microfono: collegane uno e riprova.';
+  if (win) return 'Il microfono non si apre: in Impostazioni > Privacy e sicurezza > Microfono attiva «Accesso al microfono» e «Consenti alle app desktop di accedere al microfono». Se lo sta usando un\'altra app (Teams, Zoom), chiudila.';
+  return 'Serve il permesso del microfono: Impostazioni di sistema > Privacy > Microfono > Lode.';
 }
 
 /* ---------- riconoscimento del browser ---------- */

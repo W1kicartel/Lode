@@ -12,6 +12,8 @@ import { leggiOrario as orarioDaFrase, leggiData } from './comandi.js';
 import { GIORNI_BREVI } from './markdown.js';
 
 const L = DESKTOP ? window.lodeDesktop : null;
+// la scorciatoia per parlare, come nella barra (su Windows ⌥ Spazio è il menu della finestra)
+const TASTI = () => (L ? L.piattaforma === 'darwin' : /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)) ? '⌥ Spazio' : 'Ctrl ⇧ Spazio';
 const GEMMA = '<svg viewBox="-50 -50 100 100" aria-hidden="true"><path d="M0,-44 Q4,-44 7,-41 L41,-7 Q44,-4 44,0 Q44,4 41,7 L7,41 Q4,44 0,44 Q-4,44 -7,41 L-41,7 Q-44,4 -44,0 Q-44,-4 -41,-7 L-7,-41 Q-4,-44 0,-44 Z" fill="#fff"/><path d="M0,-44 L44,0 L0,44 Z" fill="#E9E9E9"/><ellipse class="o" cx="-13" cy="-2" rx="5.2" ry="8.5" fill="#0A0A0A"/><ellipse class="o" cx="13" cy="-2" rx="5.2" ry="8.5" fill="#0A0A0A"/></svg>';
 const ATENEI = ['Politecnico di Milano', 'Politecnico di Torino', 'Politecnico di Bari', 'Alma Mater Studiorum – Università di Bologna', 'Sapienza Università di Roma', 'Università di Roma Tor Vergata', 'Università Roma Tre', 'Università di Padova', 'Università degli Studi di Milano (Statale)', 'Università di Milano-Bicocca', 'Università Cattolica del Sacro Cuore', 'Università Bocconi', 'Università di Torino', 'Università di Pisa', 'Università di Napoli Federico II', 'Università della Campania Vanvitelli', 'Università di Firenze', 'Università di Pavia', 'Università di Genova', 'Università di Trento', 'Università di Bari Aldo Moro', 'Università di Palermo', 'Università di Catania', 'Università di Messina', 'Università di Verona', 'Università Ca\' Foscari Venezia', 'IUAV di Venezia', 'Università di Trieste', 'Università di Udine', 'Università di Parma', 'Università di Modena e Reggio Emilia', 'Università di Ferrara', 'Università di Siena', 'Università di Perugia', 'Università di Cagliari', 'Università di Sassari', 'Università di Salerno', 'Università della Calabria', 'Università di Brescia', 'Università di Bergamo', 'Università Politecnica delle Marche', 'Università dell\'Insubria', 'Università del Piemonte Orientale', 'Università del Salento', 'Università di Chieti-Pescara', 'Università dell\'Aquila', 'LUISS Guido Carli', 'IULM'];
 const NOMI_ESEMPIO = ['Analisi 1', 'Fondamenti di informatica', 'Geometria e algebra lineare', 'Fisica 1', 'Lingua inglese B2', 'Programmazione a oggetti', 'Analisi 2', 'Basi di dati', 'Fisica 2'];
@@ -28,7 +30,7 @@ export function avvia() {
   main = document.querySelector('main'); main.innerHTML = '';
   S.nome = (D.profilo.nome && D.profilo.nome !== 'Giulia') ? D.profilo.nome : '';
   S.esempio = D.profilo.nome === 'Giulia' || D.esami.some(e => NOMI_ESEMPIO.includes(e.nome) && e.id);
-  if (L) L.su('installa:progresso', x => { S.installa[x.cosa] = x; aggiornaInstalla(); });
+  if (L) { L.su('installa:progresso', x => { S.installa[x.cosa] = x; aggiornaInstalla(); }); Voce.motoreMac().then(m => { S.voceMac = m; }); }
   addEventListener('lode:voce', e => { S.installa.voce = e.detail.fase === 'pronta' ? { fase: 'fatto', p: 1, testo: `${Voce.NOME_VOCE} è pronto` } : e.detail.fase === 'errore' ? { fase: 'errore', testo: e.detail.testo } : { fase: 'scarico', p: e.detail.p, testo: `Scarico la voce · ${Math.round((e.detail.p || 0) * 100)}%` }; aggiornaInstalla(); });
   disegna();
 }
@@ -104,7 +106,8 @@ function installa() {
       if (st.modello) S.installa.cervello = { fase: 'fatto', p: 1, testo: `${st.modello} è già pronto` }; else L.invoca('installa:cervello');
       aggiornaInstalla();
     });
-    if (Voce.pronta()) S.installa.voce = { fase: 'fatto', p: 1, testo: 'Già pronta' }; else Voce.prepara().then(() => { try { localStorage.setItem('lode:voce', '1'); } catch { } }).catch(() => { });
+    // il segno si mette subito: Whisper si scarica in questa finestra e, se si chiude prima, la barra riprende da sola
+    if (Voce.pronta()) S.installa.voce = { fase: 'fatto', p: 1, testo: 'Già pronta' }; else { try { localStorage.setItem('lode:voce', '1'); } catch { } Voce.prepara().catch(() => { }); }
     aggiornaInstalla();
     return false;
   };
@@ -124,7 +127,9 @@ const statoDownload = () => {
   if (!L) return '';
   const k = ['obsidian', 'cervello', 'voce'], mancano = k.filter(x => S.installa[x]?.fase !== 'fatto');
   if (!mancano.length) return 'Obsidian, il cervello locale e la voce sono pronti.';
-  return `Sto ancora scaricando: ${mancano.map(x => ({ obsidian: 'Obsidian', cervello: 'il cervello locale', voce: 'la voce' })[x] + (S.installa[x]?.p ? ` ${Math.round(S.installa[x].p * 100)}%` : '')).join(', ')}. Continua da solo, anche a finestra chiusa.`;
+  // Whisper si scarica in questa finestra (Parakeet no, va avanti nel programma): chiusa lei, lo riprende la barra
+  const voceQui = mancano.includes('voce') && !S.voceMac, altri = mancano.length > (voceQui ? 1 : 0);
+  return `Sto ancora scaricando: ${mancano.map(x => ({ obsidian: 'Obsidian', cervello: 'il cervello locale', voce: 'la voce' })[x] + (S.installa[x]?.p ? ` ${Math.round(S.installa[x].p * 100)}%` : '')).join(', ')}. ${altri ? 'Continua da solo, anche a finestra chiusa' + (voceQui ? '; la voce riprende nella barra appena apri Lode.' : '.') : 'La voce riprende nella barra appena apri Lode.'}`;
 };
 
 /* ---------- facoltativo: il setup veloce ---------- */
@@ -290,7 +295,7 @@ function abitudini() {
 function fine() {
   const p = D.esami.filter(e => !e.fatto && e.data).sort((a, b) => a.data.localeCompare(b.data))[0];
   guscio(`<h1>Fatto, ${esc(D.profilo.nome || S.nome)}.</h1>
-    <p class="bv-sub">Lode ora vive in cima allo schermo. Passaci sopra per aprirla, tieni premuto <b>⌥ Spazio</b> per parlarle, trascinaci sopra un PDF o una foto della lavagna.</p>
+    <p class="bv-sub">Lode ora vive in cima allo schermo. Passaci sopra per aprirla, tieni premuto <b>${TASTI()}</b> per parlarle, trascinaci sopra un PDF o una foto della lavagna.</p>
     <ul class="bv-lista">${D.profilo.corso ? `<li>${esc(D.profilo.corso)}${D.profilo.ateneo ? ' · ' + esc(D.profilo.ateneo) : ''}</li>` : ''}<li>${D.esami.filter(e => e.fatto).length} esami nel libretto, ${D.esami.filter(e => !e.fatto).length} da dare${p ? ` · il prossimo è ${esc(p.nome)}` : ''}</li><li>${D.orario.length} lezioni a settimana in orario</li><li>Proposte: ${({ mai: 'mai', poco: 'poche', normale: 'normali', spesso: 'tante' })[D.imp.allenatore || 'normale']}</li></ul>
     <p class="bv-nota bv-attesa">${statoDownload()}</p>`, { avanti: 'Apri Lode', indietro: true });
   P('fine').salva = () => { D.imp.benvenuto = oggi(); D.benvenuto = true; salva(); V.scriviOrario(); L ? L.invoca('benvenuto:fatto') : location.reload(); return false; };

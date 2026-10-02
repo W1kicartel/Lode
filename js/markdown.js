@@ -7,8 +7,10 @@ const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'lug
 const GIORNI = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
 export const GIORNI_BREVI = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
 
-// nomi di file sicuri su Mac, Windows e Linux
-export const pulito = s => String(s || '').replace(/[\\/:*?"<>|#^[\]]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Senza nome';
+// nomi di file sicuri su Mac, Windows e Linux: su Windows niente punti o spazi in fondo e niente nomi riservati
+// (CON, NUL, COM1…), se no Esplora risorse non apre né cancella la cartella
+export const pulito = s => String(s || '').replace(/[\x00-\x1f\\/:*?"<>|#^[\]]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80).replace(/[. ]+$/, '')
+  .replace(/^(con|prn|aux|nul|com[\d¹²³]|lpt[\d¹²³])(?= *(\.|$))/i, '$1_') || 'Senza nome';
 export const fileLezione = ({ corso, data }) => `Lezioni/${pulito(corso)}/${data} ${pulito(corso)}.md`;
 export const fileCorso = corso => `Corsi/${pulito(corso)}.md`;
 const dataLunga = iso => { const d = new Date(iso + 'T12:00'); return `${GIORNI[d.getDay()]} ${d.getDate()} ${MESI[d.getMonth()]}`; };

@@ -2,7 +2,7 @@
 // o il timer che scorre. Passandoci sopra si apre a molla in un pannello: «Oggi», sei strumenti e il campo
 // «Chiedi o scrivi un comando…». Si parla tenendo premuto ⌥ Spazio. I file trascinati diventano carte del ripasso.
 // Senza AI capisce i comandi in italiano (comandi.js); con il cervello locale (gratis) o la tua AI preferita spiega, crea carte e interroga come all'orale.
-import { piuGiorni, norm, D, DESKTOP, lezioneOra, prossimaLezione, daGiocare, ricorda, aggiungiOrario, lezioni, RISPOSTE, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esc, fatti, media, minuti, num, oggi, ore, piano, prossimi, prossimoIntervallo, registraVoto, rispondi, salva, serie, serve, simula, sostituisci, traQuanto, trovaEsame, intervalloTesto, giorniTra } from './dati.js';
+import { datiIllegibili, piuGiorni, norm, D, DESKTOP, lezioneOra, prossimaLezione, daGiocare, ricorda, aggiungiOrario, lezioni, RISPOSTE, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esc, fatti, media, minuti, num, oggi, ore, piano, prossimi, prossimoIntervallo, registraVoto, rispondi, salva, serie, serve, simula, sostituisci, traQuanto, trovaEsame, intervalloTesto, giorniTra } from './dati.js';
 import { RIDOTTO, attendi, comprimi, conta, dopo, entra, h, lineare, morbido, ogni, premi, tween } from './motore.js';
 import { ESEMPI, interpreta } from './comandi.js';
 import * as F from './focus.js';
@@ -115,6 +115,7 @@ function suggerimento() {
 const stelleOggi = corso => (lezioni().find(l => l.corso === corso && l.data === oggi())?.stelle || []).length;
 function righeOggi() {
   const r = [];
+  if (datiIllegibili) r.push({ cls: 'urg', t: 'Non riesco a leggere i tuoi dati', d: 'Esami, voti e carte sono al sicuro, ma la cartella non risponde (OneDrive offline o file bloccato). Le modifiche di adesso vanno in un file a parte; riprovo da solo.', n: '', b: 'Riprova', f: () => location.reload() });   // ricaricata, la barra rilegge: se ora si legge, torna tutto
   const lo = lezioneOra(), pl = prossimaLezione();
   if (!lo && pl && pl.tra <= 90) r.push({ cls: pl.tra <= 15 ? 'urg' : 'att', t: `${pl.corso} alle ${pl.inizio}`, d: `${pl.aula ? 'Aula ' + pl.aula + ' · ' : ''}tra ${pl.tra} min`, n: '', b: V.attivo ? 'Appunti' : 'Orario', f: () => V.attivo ? apriAppunti(pl) : (nuovoTurno(), schedaOrario()) });
   if (V.attivo && STATO && (!STATO.obsidian.installato || !STATO.modello) && !D.imp.preparaNascosto) r.push({ cls: 'att', t: 'Completa Lode', d: [!STATO.obsidian.installato && 'Obsidian', !STATO.modello && 'il cervello locale'].filter(Boolean).join(' e ') + ': un clic, gratis', n: '', b: 'Prepara', f: () => { nuovoTurno(); detto(A.turno, 'Prepara Lode'); schedaPrepara(); } });
@@ -655,13 +656,13 @@ async function avviaTrascrizione(opz = {}) {
     await mostraFatto({ testo: `Trascrivo ${l.corso === 'Appunti sparsi' ? 'gli appunti sparsi' : 'la lezione di ' + l.corso}.`, nota: 'Le righe arrivano nella nota ogni 20-30 secondi.', azione: ['Apri in Obsidian', () => apriAppunti(l)], sintesi: 'trascrizione avviata' });
     segnala('focus'); aggiornaTutto();
     if (!opz.audioProva) dopo(1200, () => { if (A.aperto && !A.attesa) chiudi('Trascrivo la lezione'); });
-  } catch (e) { modo('riposo'); rispostaFissa('Non riesco a trascrivere: ' + (/Permission|NotAllowed/i.test(e.name + e.message) ? 'serve il permesso del microfono (Impostazioni di sistema > Privacy > Microfono).' : e.message), { errore: true }); }
+  } catch (e) { modo('riposo'); rispostaFissa('Non riesco a trascrivere: ' + (/Permission|NotAllowed|NotFound|NotReadable/i.test(e.name + e.message) ? Voce.erroreMicrofono(e) : e.message), { errore: true }); }
 }
 async function fermaTrascrizione() {
   if (!TR.attiva()) return rispostaFissa('Non sto trascrivendo niente.');
   modo('pensa', 'Trascrivo gli ultimi secondi…');
   const l = TR.stato().lezione, r = await TR.ferma(); modo('riposo'); segnala('fatto'); aggiornaTutto();
-  await mostraFatto({ testo: `Lezione trascritta: ${r.parole.toLocaleString('it-IT')} parole.`, nota: 'È tutto nella nota.', azione: AI.attiva() ? ['Riordina', () => { nuovoTurno(); detto(A.turno, 'Riordina la lezione'); riordinaLezione(null, l); }] : ['Condividi', () => { nuovoTurno(); detto(A.turno, 'Condividi la sbobina'); condividiLezione(l.corso); }], sintesi: `${r.parole} parole trascritte` });
+  await mostraFatto({ testo: `Lezione trascritta: ${r.parole.toLocaleString('it-IT')} parole.`, nota: r.sospese ? `${r.sospese} ${r.sospese === 1 ? 'riga non è ancora' : 'righe non sono ancora'} nella nota (la cartella non risponde): le scrivo appena posso, tienimi aperto.` : 'È tutto nella nota.', azione: AI.attiva() ? ['Riordina', () => { nuovoTurno(); detto(A.turno, 'Riordina la lezione'); riordinaLezione(null, l); }] : ['Condividi', () => { nuovoTurno(); detto(A.turno, 'Condividi la sbobina'); condividiLezione(l.corso); }], sintesi: `${r.parole} parole trascritte` });
   if (!(D.imp.ripetiInAula && lezioneOra())) O.spegni();   // il microfono resta acceso solo se serve a «Ripeti» in aula
   if (!AI.attiva()) rispostaFissa('Con il **cervello locale** (da «Prepara Lode») la trascrizione diventa appunti ordinati, definizioni e ★ con un clic.');
 }
@@ -699,7 +700,7 @@ async function accendiRipeti() {
   if (!V.attivo) return rispostaFissa('«Ripeti» è nell\'**app desktop** di Lode.');
   if (!(await consensoAula())) return;
   try { await O.accendi(); D.imp.ripetiInAula = true; salva(); Voce.prepara().catch(() => { }); aggiornaTutto(); }
-  catch (e) { return rispostaFissa('Serve il permesso del microfono: Impostazioni di sistema > Privacy > Microfono.', { errore: true }); }
+  catch (e) { return rispostaFissa(Voce.erroreMicrofono(e), { errore: true }); }
   return mostraFatto({ testo: 'Ripeti è attivo.', nota: `Tengo gli ultimi 60 secondi. Ti sei perso qualcosa? ${MAC ? '⌃⌥P' : 'Ctrl Alt P'} o «ripeti».`, sintesi: 'ripeti attivo' });
 }
 function spegniRipeti() { D.imp.ripetiInAula = false; salva(); if (!TR.attiva()) O.spegni(); aggiornaTutto(); return mostraFatto({ testo: 'Ripeti spento.', nota: 'Il microfono è chiuso.' }); }
@@ -1399,7 +1400,7 @@ async function importaSenzaAI() {
   const carte = [];
   for (const { file } of A.allegati) {
     if (!/^text\/|\.(txt|csv|tsv|md)$/i.test(file.type + ' ' + file.name)) continue;
-    for (const riga of (await file.text()).split(/\r?\n/)) {
+    for (const riga of (await FILE.leggiTesto(file)).split(/\r?\n/)) {
       if (!riga.trim() || riga.startsWith('#')) continue;
       const p = riga.split(/\t| = | → |;(?=[^;]*$)/); if (p.length >= 2 && p[0].trim() && p[1].trim()) carte.push({ fronte: p[0].trim().replace(/^"|"$/g, ''), retro: p.slice(1).join(' ').trim().replace(/^"|"$/g, '') });
     }
@@ -1448,6 +1449,7 @@ function collega() {
   // l'allenatore guarda ogni minuto (con un po' di caso dentro): niente proposte se la barra è aperta
   setTimeout(() => setInterval(() => { if (!A.aperto && !A.zona && !A.proposta) provaAllenatore().catch(() => { }); }, 60e3), Math.random() * 30e3);
   pill.addEventListener('click', () => { apri({ fisso: true }).then(() => campo.querySelector('input').focus({ preventScroll: true })); });
+  pill.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') apri({ fisso: true }); });   // dito o penna (touch di Windows): si apre al primo tocco
   corpo.addEventListener('pointerdown', () => { A.fisso = true; });
   document.addEventListener('pointerdown', e => { if (A.aperto && !shell.contains(e.target) && !e.target.closest('.ld-drop')) chiudi(); });
   const inp = campo.querySelector('input');
@@ -1468,18 +1470,22 @@ function collega() {
     const tr = e.target.closest('[data-ld-tr]'); if (tr) { const k = tr.dataset.ldTr; if (k === 'fine') { nuovoTurno(); detto(A.turno, 'Fine trascrizione'); fermaTrascrizione(); } else { k === 'pausa' ? TR.pausa() : TR.riprendi(); disegnaHome(); } }
   });
   addEventListener('keydown', e => {
-    const ptt = (MAC ? e.altKey && !e.ctrlKey : e.ctrlKey && e.shiftKey) && e.code === 'Space';
+    // AltGr su Windows arriva come Ctrl+Alt (la «[» della tastiera italiana è AltGr+è): mai una scorciatoia. Sul Mac ⌥ non conta
+    const altGr = !MAC && (e.getModifierState?.('AltGraph') || (e.ctrlKey && e.altKey));
+    const ptt = (MAC ? e.altKey && !e.ctrlKey : e.ctrlKey && e.shiftKey && !altGr) && e.code === 'Space';
     if (ptt) { e.preventDefault(); if (!e.repeat && !pttAttivo) { pttAttivo = true; iniziaAscolto(); } return; }
     // Esc: prima torna indietro alla home, la seconda volta chiude
     if (e.key === 'Escape') { if (Voce.attivo()) { fineAscolto(true); return; } if (A.cattura) { e.preventDefault(); fineCattura(); chiudi(); return; } if (A.aperto) { e.preventDefault(); A.home ? chiudi() : indietro(); } return; }
-    if (A.aperto && !A.home && (e.metaKey || e.ctrlKey) && (e.key === '[' || e.key === 'ArrowLeft')) { e.preventDefault(); indietro(); return; }
+    // indietro: ⌘[ o ⌘← sul Mac; Ctrl+[ o Ctrl+← altrove, ma solo a campo vuoto (se scrivi, Ctrl+← salta tra le parole)
+    const inCampo = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable;
+    const vuoto = !inCampo || !(document.activeElement.value ?? document.activeElement.textContent);
+    if (A.aperto && !A.home && !altGr && (MAC ? e.metaKey || e.ctrlKey : e.ctrlKey && !e.metaKey && vuoto) && (e.key === '[' || e.key === 'ArrowLeft')) { e.preventDefault(); indietro(); return; }
     const inCampo0 = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName);
     if (A.aperto && A.gioco && !inCampo0 && !e.metaKey && !e.ctrlKey && !e.altKey) {
       if (e.code === 'Space') { e.preventDefault(); A.gioco.gira(); return; }
       if (e.key === '1' || e.key === '2') { e.preventDefault(); A.gioco.vota(e.key); return; }
     }
-    const inCampo = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable;
-    if ((e.key === 'k' && (e.metaKey || e.ctrlKey)) || (e.key === '/' && !inCampo)) { e.preventDefault(); apri({ fisso: true }).then(() => inp.focus()); return; }
+    if ((e.key === 'k' && (e.metaKey || e.ctrlKey) && !altGr) || (e.key === '/' && !inCampo)) { e.preventDefault(); apri({ fisso: true }).then(() => inp.focus()); return; }
     if (A.aperto && A.ripasso && !inCampo && !e.metaKey && !e.ctrlKey && !e.altKey) {
       if (e.code === 'Space' || e.key === 'Enter') { e.preventDefault(); A.ripasso.gira(); }
       const r = RISPOSTE.find(x => x.k === e.key); if (r) { e.preventDefault(); A.ripasso.vota(r.q); }
@@ -1523,13 +1529,18 @@ function collega() {
 function collegaDesktop() {
   let ignora = null;
   const passa = v => { if (v !== ignora) { ignora = v; BRIDGE.mouse(v); } };
-  document.addEventListener('pointermove', e => passa(!(e.target instanceof Element && e.target.closest('.ld'))), { passive: true });
-  document.addEventListener('pointerleave', () => { if (!A.aperto) passa(true); });
+  const fuori = e => !(e.target instanceof Element && e.target.closest('.ld'));
+  document.addEventListener('pointermove', e => passa(fuori(e)), { passive: true });
+  // al tocco non c'è un pointermove prima, e alzare il dito è sempre un pointerleave: decide dove si tocca
+  document.addEventListener('pointerdown', e => passa(fuori(e)), { passive: true, capture: true });
+  document.addEventListener('pointerleave', e => { if (!A.aperto && e.pointerType !== 'touch') passa(true); });
   passa(true);
   addEventListener('blur', () => { setTimeout(() => { if (A.aperto && !document.hasFocus() && !Voce.attivo()) chiudi(); }, 120); });
+  let ultimoApri = 0;
   BRIDGE.su('scorciatoia', nome => {
     // ⌥ Spazio: si apre e ascolta (tieni premuto e parla; lasci o stai zitto e parte). Se inizi a scrivere, smette.
-    if (nome === 'apri') { if (Voce.attivo()) return; pttAttivo = true; apri({ fisso: true }).then(() => campo.querySelector('input').focus({ preventScroll: true })); iniziaAscolto(); }
+    // Su Windows tenere premuto ripete la scorciatoia (ogni 30-400 ms, la prima dopo fino a 1 s): senza un rilascio in mezzo non riapre l'ascolto
+    if (nome === 'apri') { const t = Date.now(), ripetuto = pttAttivo && t - ultimoApri < 1100; ultimoApri = t; if (ripetuto || Voce.attivo()) return; pttAttivo = true; apri({ fisso: true }).then(() => campo.querySelector('input').focus({ preventScroll: true })); iniziaAscolto(); }
     else if (nome === 'scrivi') { apri({ fisso: true }).then(() => campo.querySelector('input').focus()); }
     else if (CATTURE[nome]) cattura(nome);
     else if (nome === 'ripeti') { apri({ fisso: true }); nuovoTurno(); detto(A.turno, 'Ripeti'); ripeti(); }
