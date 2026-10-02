@@ -300,9 +300,7 @@ Design: solo bianco e nero, font [Geist](https://github.com/vercel/geist-font), 
 
 ## Cosa manca (cerco mani)
 - [ ] Installer firmato per macOS e Windows
-- [ ] Prove vere su Windows e Linux, e la prova automatica dell'app anche lì
 - [ ] Parakeet anche su Windows e Linux (versione ONNX, gira sul processore)
-- [ ] Prove in aule vere: rumore, distanza, accenti
 - [ ] Sincronizzazione facoltativa fra dispositivi, cifrata
 - [ ] Esportazione dei mazzi per Anki
 - [ ] Riconoscere chi parla (prof o studenti) nella trascrizione
