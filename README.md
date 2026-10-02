@@ -61,7 +61,7 @@ Tutto funziona sul computer, senza account e senza internet.
   - appunti `.md`, `.txt` e `.docx`;
   - sbobine dei compagni;
   - carte di Anki.
-- **Riordina.** A fine lezione il modello locale (o Claude) trasforma la trascrizione in appunti puliti, con titoli, punti e formule. Poi ne estrae definizioni e ★ da esame.
+- **Riordina.** A fine lezione il modello locale (o la tua AI) trasforma la trascrizione in appunti puliti, con titoli, punti e formule. Poi ne estrae definizioni e ★ da esame.
 - **Cattura veloce senza lasciare gli appunti:** ⌃⌥S **★ Da esame**, ⌃⌥D **Definizione**, ⌃⌥Q **Domanda per il prof**.
 - **Voce:** tieni premuto ⌥ Spazio e parla. Esempi: «ho preso ventotto in fisica due», «definizione nucleofilo uguale specie ricca di elettroni», «spiegami il teorema di Green».
 - **A casa ti allena:** «2 minuti · 6 definizioni di Analisi 2 di stamattina». I giochi sono abbina, chi sono?, completa e flash.
@@ -97,7 +97,7 @@ Lode non ha un server e non addestra un modello: **la sua memoria è il vault Ob
 | **Focus** | Il timer sta nella barra, sempre visibile. A fine sessione un rintocco, la pausa parte da sola, le ore entrano nel piano dell'esame. Serie di giorni di fila. |
 | **Ripasso a intervalli** | Flashcard con l'algoritmo SM-2: Spazio per girare, 1-4 per rispondere. Le difficili tornano domani, le facili tra settimane. Importa i mazzi di Anki (testo con tab). |
 | **Voce** | Tieni premuto ⌥ Spazio (Ctrl ⇧ Spazio su Windows) e parla. Gratis, nel browser. |
-| **AI (facoltativa)** | Con la tua chiave Claude: spiegazioni da tutor, **carte del ripasso da PDF, slide e foto della lavagna** (trascinali sulla finestra), e **l'interrogazione**: un prof d'orale che fa una domanda alla volta, ti corregge e alla fine ti dà un voto onesto. |
+| **AI** | Con il cervello locale (gratis) o la tua AI preferita: spiegazioni da tutor, **carte del ripasso da PDF, slide e foto della lavagna** (trascinali sulla finestra), e **l'interrogazione**: un prof d'orale che fa una domanda alla volta, ti corregge e alla fine ti dà un voto onesto. |
 
 Lode non scrive mai niente da solo: quello che propone l'AI (carte, esami, voti) arriva con **Conferma / Annulla**, e ogni comando si può annullare con un clic.
 
@@ -119,12 +119,26 @@ Scorciatoie: **/** o **⌘K** per scrivere, **⌥ Spazio** tenuto premuto per pa
 ## Privacy
 
 - Tutto sta nel `localStorage` del tuo browser. Da *Esporta* scarichi un backup JSON; da *Importa un backup* lo rimetti, anche su un altro computer.
-- La chiave Claude resta in questo browser e parte solo verso `api.anthropic.com`. Non finisce nei backup.
+- La chiave della tua AI resta su questo computer e parte solo verso il servizio che hai scelto. Non finisce nel vault né nei backup.
 - Senza chiave non esce nessun dato dal computer: comandi, timer, libretto e ripasso sono locali.
 
 ## Quanto costa l'AI
+**Niente, di base.** Il cervello locale (Ollama + Qwen3.5) è gratis, lavora offline e gli appunti non escono dal computer.
 
-Lode usa Claude Opus 5.5 con la chiave dello studente (si crea su [console.anthropic.com](https://console.anthropic.com)). Una spiegazione costa circa due centesimi, un'interrogazione intera una decina, le carte da un PDF di 30 pagine qualche decina. Senza chiave tutto il resto funziona uguale.
+**Se vuoi di più**, scrivi «AI» nella barra e collega la chiave del servizio che preferisci:
+- **Claude** (Anthropic);
+- **ChatGPT** (OpenAI);
+- **Gemini** (Google);
+- **Mistral**;
+- **Groq**;
+- **OpenRouter**;
+- **DeepSeek**.
+
+Paghi direttamente il servizio, a consumo: di solito pochi centesimi a sessione. Lode non vede né incassa niente. La chiave resta su questo computer, mai nel vault né nei backup.
+
+Con l'opzione «Appunti e lezioni restano sul computer» la tua AI fa solo spiegazioni e orale. Carte, definizioni e riordino restano al modello locale.
+
+Con Claude Lode può anche proporre carte, esami e voti da confermare. Con gli altri servizi spiega, interroga, crea carte e riordina gli appunti.
 
 ## Com'è fatto
 
@@ -134,7 +148,7 @@ Lode usa Claude Opus 5.5 con la chiave dello studente (si crea su [console.anthr
 | `js/comandi.js` | Capisce l'italiano senza AI: date («15/1», «lunedì», «tra 10 giorni»), voti, minuti, nomi d'esame approssimati |
 | `js/dati.js` | Dati e conti: media, base di laurea, voto che serve, piano, SM-2 |
 | `js/focus.js` | Il timer: sopravvive al ricaricamento, notifiche, rintocco sintetizzato |
-| `js/ai.js` | Claude in streaming con strumenti (carte, esami, voti, focus) e il prof dell'orale |
+| `js/ai.js` | L'AI: il locale (Ollama), Claude con gli strumenti (carte, esami, voti, focus) o un servizio in formato OpenAI (ChatGPT, Gemini, Mistral, Groq, OpenRouter, DeepSeek); il prof dell'orale |
 | `js/voce.js` | Riconoscimento e lettura ad alta voce del browser, in italiano |
 | `js/mascotte.js` | La gemma con gli occhi: guarda il cursore, ascolta, pensa, legge mentre studi, salta quando finisci |
 | `js/motore.js` | Un solo ciclo di animazione: curve morbide, entrate sfocate, molle senza rimbalzi |

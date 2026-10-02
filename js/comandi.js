@@ -98,6 +98,10 @@ export function interpreta(frase) {
   if (/^riprendi(?: la)? (?:trascrizione|registrazione)/.test(t)) return { tipo: 'riprendiTrascrizione' };
   if (/^(?:riordina|sistema|metti in ordine|pulisci)(?: la| gli)? (?:lezione|appunti|trascrizione)\b/.test(t)) { const r = pulisci(t.replace(/^.*?(lezione|appunti|trascrizione)\s*/, '')); return { tipo: 'riordina', corso: r || null }; }
   if (/^(?:chiudi|finisci)(?: la)? lezione\b|^estrai(?: le)? definizioni/.test(t)) { const r = pulisci(t.replace(/^.*?(lezione|definizioni)\s*/, '')); return { tipo: 'chiudiLezione', corso: r || null }; }
+  // la tua AI: «AI», «collega chatgpt», «usa gemini», «la mia chiave»
+  { const FORN = { claude: 'anthropic', anthropic: 'anthropic', chatgpt: 'openai', openai: 'openai', gpt: 'openai', gemini: 'google', google: 'google', mistral: 'mistral', groq: 'groq', openrouter: 'openrouter', deepseek: 'deepseek' };
+    const m = t.match(/^(?:(?:la )?mia ai|ai|intelligenza artificiale|chiave(?: api)?|api ?key|(?:collega|usa|imposta|aggiungi|metti)(?: la chiave(?: di)?| la mia)? (claude|anthropic|chatgpt|openai|gpt|gemini|google|mistral|groq|openrouter|deepseek|ai|la mia ai|una chiave|chiave))$/);
+    if (m) return { tipo: 'ai', fornitore: FORN[m[1]] || null }; }
   if (/^(?:prepara|configura|installa|setup)\b/.test(t)) return { tipo: 'prepara', cosa: /obsidian/.test(t) ? 'obsidian' : /modello|cervello|ollama|gemma|qwen|ai/.test(t) ? 'cervello' : null };
   if ((m = t.match(/^(?:apri|vai a|vai su|vai alla?|portami a|mostrami|nota|pagina)\s+(.+)$/)) && !/^(?:il |la )?(?:focus|timer)/.test(m[1])) return { tipo: 'naviga', q: pulisci(m[1]) };
   if (/^(?:note|pagine|home|indice)$/.test(t)) return { tipo: 'naviga', q: t === 'home' ? 'home' : '' };
@@ -198,6 +202,7 @@ export const ESEMPI = [
   ['trascrivi la lezione', 'in aula: tutta la lezione in appunti, formule comprese, salvata in Obsidian'],
   ['riordina la lezione', 'dalla trascrizione ad appunti puliti (AI)'],
   ['ripeti', 'in aula: cosa ha detto il prof negli ultimi 60 secondi'],
+  ['AI', 'collega la tua AI preferita (Claude, ChatGPT, Gemini, Mistral…), a consumo'],
   ['condividi la sbobina', 'la lezione ai compagni: AirDrop, WhatsApp, mail'],
   ['chiudi lezione', 'definizioni e ★ estratte dagli appunti (AI)'],
   ['apri glossario', 'salta a una pagina del vault'],

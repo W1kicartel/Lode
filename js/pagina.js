@@ -104,7 +104,7 @@ function finestraEsame(id) {
   });
 }
 function finestraImpostazioni() {
-  const d = finestra(`<h2>Impostazioni</h2><p>Tutto resta in questo browser. La chiave AI non lascia mai il tuo computer, se non verso Anthropic.</p>
+  const d = finestra(`<h2>Impostazioni</h2><p>Tutto resta su questo computer. La chiave della tua AI va solo al servizio che scegli.</p>
     <div class="campi"><label>Il tuo nome<input name="nome" value="${esc(D.profilo.nome)}" placeholder="Giulia"></label>
       <label>Corso di laurea<input name="corso" value="${esc(D.profilo.corso)}" placeholder="Ingegneria informatica"></label>
       <label>CFU della laurea<select name="cfuTotali">${[180, 120, 300, 360].map(v => `<option${D.profilo.cfuTotali === v ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
@@ -114,17 +114,20 @@ function finestraImpostazioni() {
       <label class="spunta tutta"><input type="checkbox" name="suoni"${D.imp.suoni ? ' checked' : ''}>Rintocco alla fine del focus</label>
       <label class="spunta tutta"><input type="checkbox" name="chiaro"${D.imp.aspetto === 'chiaro' ? ' checked' : ''}>Aspetto chiaro</label></div>
     <hr>
-    <div class="campi"><label class="tutta">Chiave Claude <small>facoltativa: spiegazioni, carte dai PDF, interrogazione. Si crea su console.anthropic.com</small><input name="chiave" type="password" autocomplete="off" value="${esc(D.imp.chiave)}" placeholder="sk-ant-…"></label>
+    <div class="campi"><label>La tua AI <small>facoltativa, a consumo: paghi tu il servizio</small><select name="fornitore"><option value="">Solo il cervello locale (gratis)</option>${Object.entries(AI.FORNITORI).map(([k, f]) => `<option value="${k}"${AI.fornitore() === k ? ' selected' : ''}>${f.nome} · ${f.ditta}</option>`).join('')}</select></label>
+      <label>Chiave <small>si crea sul sito del servizio</small><input name="chiave" type="password" autocomplete="off" value="${esc(D.imp.chiave)}" placeholder="incolla la chiave"></label>
       <label class="spunta tutta"><input type="checkbox" name="voceAlta"${D.imp.voceAlta ? ' checked' : ''}>Leggi le risposte ad alta voce</label></div>
-    <p class="stato-ai" style="margin:10px 0 0">${D.imp.chiave ? 'AI <b>attiva</b>.' : 'Senza chiave Lode funziona lo stesso: comandi, timer, libretto e ripasso sono tutti locali.'}</p>
+    <p class="stato-ai" style="margin:10px 0 0">${D.imp.chiave ? `AI <b>attiva</b>: ${AI.FORNITORI[AI.fornitore()].nome}.` : 'Senza chiave Lode funziona lo stesso: comandi, timer, libretto e ripasso sono tutti locali; nell\'app c\'è anche il cervello locale gratis.'}</p>
     <div class="piedi"><button class="btn piano" value="azzera">Cancella tutto</button><div class="dx"><button class="btn piano" value="annulla" formnovalidate>Annulla</button><button class="btn primary" value="salva">Salva</button></div></div>`,
   (f, azione, dlg) => {
     if (azione === 'azzera') { if (!confirm('Cancellare tutti i dati di Lode da questo browser? Prima conviene esportarli.')) return false; sostituisci(VUOTO()); toast('Dati cancellati'); return; }
     Object.assign(D.profilo, { nome: String(f.get('nome')).trim(), corso: String(f.get('corso')).trim(), cfuTotali: +f.get('cfuTotali'), lode: +f.get('lode') });
-    const chiave = String(f.get('chiave')).trim();
-    Object.assign(D.imp, { focus: Math.max(5, +f.get('focus') || 25), pausa: Math.max(1, +f.get('pausa') || 5), suoni: !!f.get('suoni'), voceAlta: !!f.get('voceAlta'), aspetto: f.get('chiaro') ? 'chiaro' : 'scuro', chiave });
+    const chiave = String(f.get('chiave')).trim(), forn = String(f.get('fornitore') || '');
+    Object.assign(D.imp, { focus: Math.max(5, +f.get('focus') || 25), pausa: Math.max(1, +f.get('pausa') || 5), suoni: !!f.get('suoni'), voceAlta: !!f.get('voceAlta'), aspetto: f.get('chiaro') ? 'chiaro' : 'scuro' });
+    if (!forn || !chiave) AI.scollegaFornitore();
     salva(); applicaAspetto(); toast('Impostazioni salvate');
-    if (chiave) AI.provaChiave(chiave).then(() => toast('Chiave Claude attiva')).catch(e => toast(e.status === 401 ? 'La chiave non è valida' : 'Non riesco a verificare la chiave adesso'));
+    if (forn && chiave) AI.provaFornitore(forn, chiave).then(r => { AI.collegaFornitore(forn, chiave, r.modello); salva(); toast(`${AI.FORNITORI[forn].nome} collegata${r.modello ? ' · ' + r.modello : ''}`); })
+      .catch(e => toast(e.status === 401 || e.status === 403 ? 'La chiave non è valida' : 'Non riesco a verificare la chiave adesso'));
   });
   d.querySelector('[name=nome]').focus();
 }
