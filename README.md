@@ -78,8 +78,8 @@ spiegami il teorema di Green
 
 3. **Scarica Lode:**
    ```bash
-   git clone https://github.com/<UTENTE>/lode.git
-   cd lode
+   git clone https://github.com/W1kicartel/Lode.git
+   cd Lode
    ```
 
 4. **La voce migliore (consigliato, Mac con chip Apple).** Compila `lode-voce`, il riconoscimento vocale Parakeet sul Neural Engine. Ci vogliono 3-5 minuti la prima volta:
@@ -105,7 +105,7 @@ spiegami il teorema di Green
 
 ### Aggiornare
 ```bash
-cd lode
+cd Lode
 git pull
 bash desktop/voce-mac/compila.sh
 cd desktop
@@ -122,7 +122,7 @@ npm install
 - **L'AI locale è lenta:** con 8 GB di memoria Qwen3.5 4B scrive circa 20 parole al secondo. Le carte da un PDF richiedono circa mezzo minuto.
 
 ### Disinstallare
-Cancella la cartella `lode`. I tuoi appunti restano in `Documenti/Lode`: sono tuoi. Obsidian e Ollama sono app normali, si tolgono dalla cartella Applicazioni. Il modello si toglie con `ollama rm qwen3.5:4b`.
+Cancella la cartella `Lode`. I tuoi appunti restano in `Documenti/Lode`: sono tuoi. Obsidian e Ollama sono app normali, si tolgono dalla cartella Applicazioni. Il modello si toglie con `ollama rm qwen3.5:4b`.
 
 ### Solo nel browser (senza installare)
 Per provare libretto, conti, timer, ripasso e giochi senza installare niente:
