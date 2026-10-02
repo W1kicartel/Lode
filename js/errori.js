@@ -454,7 +454,8 @@ const VOCI = [
   },
   {
     id: 'punto-e-virgola', lingue: ['c', 'java'], meccanica: true,
-    re: [/expected ';'(?!,)/i, /missing ';'/i, /';' expected/i, /(?:atteso|previsto|attesa) ';'|';' (?:atteso|previsto)/i],
+    // gcc dopo una dichiarazione (int x = 5 senza ;) scrive «expected ',' or ';' before …»
+    re: [/expected ';'(?!,)/i, /expected ',' or ';'/i, /missing ';'/i, /';' expected/i, /(?:atteso|previsto|attesa) ';'|';' (?:atteso|previsto)/i],
     etichetta: 'manca `;`', breve: () => 'manca ;',
     frase: () => 'manca un `;`',
     dove: (d, x) => {

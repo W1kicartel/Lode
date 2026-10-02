@@ -96,6 +96,8 @@ const SORGENTI = {
 const SCRITTE = {
   // gcc 13 su Linux, LC_ALL=C
   'gcc-punto-e-virgola': "lista.c: In function 'main':\nlista.c:4:5: error: expected ';' before 'printf'\n    4 |     printf(\"%d\\n\", x);\n      |     ^~~~~~\n",
+  // gcc 13 (Ubuntu 24.04) dopo una dichiarazione senza ;
+  'gcc-dich-punto-e-virgola': "lista.c: In function 'main':\nlista.c:4:5: error: expected ',' or ';' before 'printf'\n    4 |     printf(\"%d\\n\", x);\n      |     ^~~~~~\n",
   'gcc-non-dichiarato': "lista.c: In function 'inserisci':\nlista.c:42:12: error: 'nodo' undeclared (first use in this function)\n   42 |     return nodo;\n      |            ^~~~\nlista.c:42:12: note: each undeclared identifier is reported only once for each function it appears in\n",
   'gcc-include': "main.c: In function 'main':\nmain.c:2:5: warning: implicit declaration of function 'printf' [-Wimplicit-function-declaration]\n    2 |     printf(\"ciao\\n\");\n      |     ^~~~~~\nmain.c:1:1: note: include '<stdio.h>' or provide a declaration of 'printf'\n  +++ |+#include <stdio.h>\n    1 | int main(void) {\nmain.c:2:5: warning: incompatible implicit declaration of built-in function 'printf' [-Wbuiltin-declaration-mismatch]\n",
   'gcc-return': "ret.c: In function 'massimo':\nret.c:4:1: warning: control reaches end of non-void function [-Wreturn-type]\n    4 | }\n      | ^\n",
@@ -222,7 +224,7 @@ prova('python: correzione di = in ==', sp.passi[2]?.righe?.[1]?.testo === 'if x 
 
 // ---------- formati scritti a mano ----------
 const SCR = {
-  'gcc-punto-e-virgola': { chiave: 'punto-e-virgola', riga: 4, funzione: 'main' }, 'gcc-non-dichiarato': { chiave: 'non-dichiarato', riga: 42, nome: 'nodo' },
+  'gcc-punto-e-virgola': { chiave: 'punto-e-virgola', riga: 4, funzione: 'main' }, 'gcc-dich-punto-e-virgola': { chiave: 'punto-e-virgola', riga: 4, funzione: 'main' }, 'gcc-non-dichiarato': { chiave: 'non-dichiarato', riga: 42, nome: 'nodo' },
   'gcc-include': { chiave: 'include-mancante', nome: 'printf', parti: { h: 'stdio.h' } }, 'gcc-return': { chiave: 'return-mancante', funzione: 'massimo' },
   'gcc-uguale': { chiave: 'assegnamento-in-condizione', riga: 4 }, 'gcc-formato': { chiave: 'formato', parti: { atteso: 'int', dato: 'double' } }, 'gcc-scanf': { chiave: 'scanf-e-commerciale' },
   'gcc-fine-file': { chiave: 'graffa', riga: 20 }, 'gcc-header': { chiave: 'header-non-trovato', parti: { h: 'stdoi.h' } }, 'gcc-freccia': { chiave: 'freccia-punto', parti: { usa: '->' } },
