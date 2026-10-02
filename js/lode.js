@@ -1324,6 +1324,12 @@ async function rispostaOrale(testo) {
     o.storico.push({ ...o.corrente, risposta: testo, ...giu }); o.corrente = null; modo('riposo');
     const r = nuovaRisposta(); r.aggiungi(`**${cap(giu.esito)}.** ${giu.giudizio}${giu.mancava ? `\n\nMancava: ${giu.mancava}` : ''}`); await r.fine();
     segnala(giu.esito === 'giusta' ? 'fatto' : 'quiete');
+    // il giudizio è il parere di un modello (piccolo, se locale): se era giusta lo studente lo dice, e il voto ne tiene conto
+    if (giu.esito !== 'giusta') {
+      const x = o.storico.at(-1), b = h('button', 'btn small ld-piano ld-contesta', 'Era giusta'); b.type = 'button';
+      b.addEventListener('click', () => { x.esitoModello = x.esito; x.esito = 'giusta'; x.contestata = true; b.disabled = true; b.textContent = 'Segnata giusta'; });
+      (A.turno || filo).append(b);
+    }
     return o.storico.length >= o.max ? chiudiOrale() : domandaOrale();
   } catch (e) { if (g === GEN) { modo('riposo'); rispostaFissa('Il prof non risponde: ' + e.message, { errore: true }); } }
 }
@@ -1339,7 +1345,7 @@ async function chiudiOrale() {
     <div class="ld-voto-n">${esc(v.testo)}</div>
     <div class="ld-esiti">${o.storico.map((x, i) => `<div class="ld-esito-r e-${x.esito.replace(' ', '-')}"><span class="n">${i + 1}</span><b>${esc(x.argomento || x.domanda)}</b><em>${esc(x.esito)}</em></div>`).join('')}</div>
     ${rip.length ? `<span class="ld-lbl">Da ripassare</span><ul class="ld-ripassa">${rip.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
-    <p class="ld-nota">Il voto lo calcola Lode dalle tue risposte (giusta 3 punti, parziale 2): è un allenamento, non una previsione.</p>`);
+    <p class="ld-nota">Il voto lo calcola Lode dalle tue risposte (giusta 3 punti, parziale 2)${o.storico.some(x => x.contestata) ? `, contando ${o.storico.filter(x => x.contestata).length === 1 ? 'la risposta che hai segnato giusta' : 'le risposte che hai segnato giuste'}` : ''}. I giudizi sono il parere ${AI.motore() === 'locale' ? 'del modello locale: può sbagliare' : 'dell\'AI'}. È un allenamento, non una previsione.</p>`);
   s.querySelectorAll('.ld-esito-r').forEach((x, i) => entra(x, { ritardo: 120 + i * 70, dy: 6, blur: 5, ms: 420 }));
   if (A.turno) A.turno.dataset.sintesi = `orale di ${o.nome}: ${v.testo}`;
 }
