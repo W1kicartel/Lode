@@ -264,8 +264,8 @@ const SCHEMA_LEZIONE = { type: 'object', additionalProperties: false, required: 
   da_esame: { type: 'array', items: { type: 'string' } } } };
 const SCHEMA_CARTE = { type: 'object', additionalProperties: false, required: ['carte'], properties: {
   carte: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['fronte', 'retro'], properties: { fronte: { type: 'string' }, retro: { type: 'string' } } } } } };
-async function strutturato(istruzioni, contenuto, schema) {
-  const m = motore('testo'), parti = [...(Array.isArray(contenuto) ? contenuto : [{ type: 'text', text: contenuto }]), { type: 'text', text: istruzioni }];
+async function strutturato(istruzioni, contenuto, schema, compito = 'testo') {
+  const m = motore(compito), parti = [...(Array.isArray(contenuto) ? contenuto : [{ type: 'text', text: contenuto }]), { type: 'text', text: istruzioni }];
   if (m === 'claude') {
     const c = await cliente();
     const r = await c.messages.create({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low', format: { type: 'json_schema', schema } }, messages: [{ role: 'user', content: parti }] });
@@ -352,6 +352,48 @@ export async function leggiOrario(testo) {
 export async function carteDa(blocchi) {
   const r = await strutturato('Crea da 8 a 20 carte del ripasso da questo materiale: una sola idea per carta, domanda precisa, risposta corta (massimo 2 frasi), in italiano. Solo concetti presenti nel materiale.', blocchi, SCHEMA_CARTE);
   return (r.carte || []).filter(c => c.fronte?.trim() && c.retro?.trim()).slice(0, 30);
+}
+
+/* ---------- l'orale guidato ----------
+   Il filo lo tiene il codice (lode.js): quante domande, quando si giudica, il voto. Il modello fa un compito stretto alla
+   volta, con risposta strutturata. Così anche un modello piccolo non risponde al posto dello studente, non dà il voto dopo
+   una domanda e si accorge di una risposta fuori tema. */
+const SCHEMA_DOMANDA = { type: 'object', additionalProperties: false, required: ['domanda', 'argomento'], properties: { domanda: { type: 'string' }, argomento: { type: 'string' } } };
+const SCHEMA_GIUDIZIO = { type: 'object', additionalProperties: false, required: ['esito', 'giudizio', 'mancava'], properties: {
+  esito: { type: 'string', enum: ['giusta', 'parziale', 'sbagliata', 'fuori tema', 'non so'] }, giudizio: { type: 'string' }, mancava: { type: 'string' } } };
+const SCHEMA_RIPASSO = { type: 'object', additionalProperties: false, required: ['ripassa'], properties: { ripassa: { type: 'array', items: { type: 'string' } } } };
+const materialeOrale = m => m ? `Materiale dello studente (basati su questo):\n${String(m).slice(0, 12000)}` : `Dati dello studente:\n${contesto()}`;
+export async function domandaOrale({ nome, materiale, fatte = [] }) {
+  const r = await strutturato(`Sei un docente universitario italiano all'esame orale di «${nome}». Fai UNA sola domanda d'orale, come la farebbe un prof: chiara, su un concetto importante del materiale qui sopra, a cui si risponde a voce in 3-4 frasi.${fatte.length ? ` Non ripetere questi argomenti, già chiesti: ${fatte.join('; ')}.` : ' È la prima domanda: un argomento centrale del corso.'}
+Rispondi solo con la domanda (massimo 30 parole, dai del tu) e l'argomento in 2-4 parole. Niente saluti, niente giudizi.`, materialeOrale(materiale), SCHEMA_DOMANDA, 'chat');
+  return { domanda: String(r.domanda || '').trim(), argomento: String(r.argomento || '').trim() };
+}
+export async function giudicaRisposta({ nome, domanda, risposta, materiale }) {
+  const r = await strutturato(`Sei un docente universitario italiano all'esame orale di «${nome}», severo ma giusto.
+Domanda che hai fatto: «${domanda}»
+Risposta dello studente: «${risposta}»
+Giudica SOLO questa risposta a QUESTA domanda:
+- esito: «giusta» (completa e corretta), «parziale» (quello che dice è corretto ma è incompleto o vago), «sbagliata» (contiene almeno un'affermazione falsa), «fuori tema» (parla d'altro rispetto alla domanda, anche se quello che dice è vero), «non so» (lo studente non sa o non risponde);
+  se non c'è niente di falso ma manca qualcosa, è «parziale», non «sbagliata»;
+- giudizio: una frase rivolta allo studente (dagli del tu), massimo 25 parole, concreta: cosa era giusto, cosa no;
+- mancava: la cosa più importante che mancava o andava corretta, massimo 20 parole, SOLO se è scritta nel materiale qui sopra; altrimenti stringa vuota.
+Usa il materiale qui sopra come riferimento. Non inventare ipotesi o condizioni di cui non sei sicuro: meglio dire meno.`, materialeOrale(materiale), SCHEMA_GIUDIZIO, 'chat');
+  const esito = ['giusta', 'parziale', 'sbagliata', 'fuori tema', 'non so'].includes(r.esito) ? r.esito : 'parziale';
+  // senza materiale dello studente il «mancava» sarebbe a memoria del modello (e un modello piccolo sbaglia): non si mostra
+  return { esito, giudizio: String(r.giudizio || '').trim(), mancava: materiale ? String(r.mancava || '').trim() : '' };
+}
+export async function ripassoOrale({ nome, storico }) {
+  const r = await strutturato(`Uno studente ha appena fatto la simulazione dell'orale di «${nome}». Qui sopra domande, esiti e cosa mancava. Indica al massimo 3 cose concrete da ripassare prima dell'appello (ognuna massimo 12 parole), partendo dalle risposte peggiori. Niente frasi generiche.`,
+    storico.map((x, i) => `${i + 1}. ${x.domanda}\nEsito: ${x.esito}. ${x.mancava ? 'Mancava: ' + x.mancava : ''}`).join('\n'), SCHEMA_RIPASSO, 'chat');
+  return (r.ripassa || []).map(x => String(x).trim()).filter(Boolean).slice(0, 3);
+}
+// il voto lo calcola il codice dagli esiti: giusta 3, parziale 2, il resto 0 → da 18 a 30 (sotto metà: non superato)
+export function votoOrale(storico) {
+  if (!storico.length) return null;
+  const punti = storico.reduce((s, x) => s + (x.esito === 'giusta' ? 3 : x.esito === 'parziale' ? 2 : 0), 0) / (3 * storico.length);
+  if (punti < .5) return { voto: null, testo: 'Non ancora sufficiente', punti };
+  const v = Math.round(18 + 12 * (punti - .5) / .5);
+  return { voto: v, lode: punti === 1 && storico.length >= 4, testo: punti === 1 && storico.length >= 4 ? '30 e lode' : `${v}/30`, punti };
 }
 
 export async function provaChiave(chiave) {

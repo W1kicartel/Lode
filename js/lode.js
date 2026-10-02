@@ -1290,12 +1290,57 @@ async function avviaOrale(e, nomeDetto, materialeFile) {
       return;
     }
   }
-  A.orale = { esameId: e.id, nome: e.nome }; A.storia = [];
+  // il materiale: il file che hai dato, o le tue carte, o le tue lezioni (definizioni e ★)
+  const carte = D.carte.filter(x => x.esameId === e.id).slice(0, 80), lez = lezioni().filter(l => norm(l.corso) === norm(e.nome)).slice(0, 6);
+  const materiale = materialeFile || [
+    carte.length ? `Carte del ripasso:\n${carte.map(x => `– ${x.fronte} → ${x.retro}`).join('\n')}` : '',
+    lez.length ? `Lezioni:\n${lez.map(l => [...(l.definizioni || []).map(d => `– ${d.t}: ${d.d}`), ...(l.stelle || []).map(x => `– ★ ${x}`)].join('\n')).join('\n')}` : '',
+  ].filter(Boolean).join('\n\n');
+  A.orale = { esameId: e.id, nome: e.nome, materiale, storico: [], corrente: null, max: 5 }; A.storia = [];
   const c = contesto(`Orale · <b>${esc(e.nome)}</b>`); const via = h('button', 'ld-esci', 'Esci'); via.type = 'button'; via.addEventListener('click', esciOrale); c.append(via);
-  const carte = D.carte.filter(x => x.esameId === e.id).slice(0, 80);
-  const materiale = materialeFile ? `\n\nMateriale su cui interrogarmi (dal file che ti ho dato):\n${materialeFile}` : carte.length ? `\n\nMateriale dello studente (sue carte del ripasso):\n${carte.map(x => `– ${x.fronte} → ${x.retro}`).join('\n')}` : '';
   A.turno.dataset.sintesi = `orale di ${e.nome}`;
-  await chiediAI(`Iniziamo. Sono pronto per l'orale di ${e.nome}.${materiale}`, { sistema: AI.SISTEMA_ORALE(e.nome) });
+  return domandaOrale();
+}
+// l'orale guidato dal codice: domanda → risposta dello studente → giudizio → domanda… (5) → voto calcolato da Lode
+async function domandaOrale() {
+  const o = A.orale, g = GEN; if (!o) return;
+  modo('pensa', 'Il prof ci pensa…'); segnala('pensa');
+  try {
+    const d = await AI.domandaOrale({ nome: o.nome, materiale: o.materiale, fatte: o.storico.map(x => x.argomento) });
+    if (g !== GEN || A.orale !== o) return;
+    o.corrente = d; modo('riposo');
+    const r = nuovaRisposta(); r.aggiungi(`**Domanda ${o.storico.length + 1} di ${o.max}.** ${d.domanda}`); await r.fine();
+  } catch (e) { if (g === GEN) { modo('riposo'); rispostaFissa('Il prof non risponde: ' + e.message, { errore: true }); } }
+  finally { if (g === GEN) segnala('quiete'); }
+}
+async function rispostaOrale(testo) {
+  const o = A.orale, g = GEN;
+  if (/^(basta|voto|dammi il voto|ho finito)\b/i.test(testo) || !o.corrente) return chiudiOrale();
+  modo('pensa', 'Il prof ascolta…'); segnala('pensa');
+  try {
+    const giu = await AI.giudicaRisposta({ nome: o.nome, domanda: o.corrente.domanda, risposta: testo, materiale: o.materiale });
+    if (g !== GEN || A.orale !== o) return;
+    o.storico.push({ ...o.corrente, risposta: testo, ...giu }); o.corrente = null; modo('riposo');
+    const r = nuovaRisposta(); r.aggiungi(`**${cap(giu.esito)}.** ${giu.giudizio}${giu.mancava ? `\n\nMancava: ${giu.mancava}` : ''}`); await r.fine();
+    segnala(giu.esito === 'giusta' ? 'fatto' : 'quiete');
+    return o.storico.length >= o.max ? chiudiOrale() : domandaOrale();
+  } catch (e) { if (g === GEN) { modo('riposo'); rispostaFissa('Il prof non risponde: ' + e.message, { errore: true }); } }
+}
+async function chiudiOrale() {
+  const o = A.orale; if (!o) return;
+  if (!o.storico.length) return esciOrale();
+  A.orale = null; nuovoTurno();
+  const v = AI.votoOrale(o.storico);
+  modo('pensa', 'Il prof scrive il voto…'); segnala('pensa');
+  let rip = []; try { rip = await AI.ripassoOrale({ nome: o.nome, storico: o.storico }); } catch { }
+  modo('riposo'); segnala(v.voto >= 27 ? 'confermato' : 'quiete');
+  const s = scheda('ld-voto', `<span class="ld-lbl">Orale · ${esc(o.nome)} · ${o.storico.length} ${o.storico.length === 1 ? 'domanda' : 'domande'}</span>
+    <div class="ld-voto-n">${esc(v.testo)}</div>
+    <div class="ld-esiti">${o.storico.map((x, i) => `<div class="ld-esito-r e-${x.esito.replace(' ', '-')}"><span class="n">${i + 1}</span><b>${esc(x.argomento || x.domanda)}</b><em>${esc(x.esito)}</em></div>`).join('')}</div>
+    ${rip.length ? `<span class="ld-lbl">Da ripassare</span><ul class="ld-ripassa">${rip.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+    <p class="ld-nota">Il voto lo calcola Lode dalle tue risposte (giusta 3 punti, parziale 2): è un allenamento, non una previsione.</p>`);
+  s.querySelectorAll('.ld-esito-r').forEach((x, i) => entra(x, { ritardo: 120 + i * 70, dy: 6, blur: 5, ms: 420 }));
+  if (A.turno) A.turno.dataset.sintesi = `orale di ${o.nome}: ${v.testo}`;
 }
 function esciOrale() { if (!A.orale) return; A.orale = null; A.storia = []; mostraFatto({ testo: 'Orale chiuso.', nota: 'Ripassa le domande dove hai esitato.' }); }
 
@@ -1316,7 +1361,7 @@ export async function invia(testo) {
   if (A.orale) {
     if (/^(esci|basta orale|chiudi( l'orale)?|fine orale)$/i.test(testo)) { nuovoTurno(); detto(A.turno, testo); return esciOrale(); }
     const t = h('article', 'ld-turno'); filo.append(t); A.turno = t; detto(t, testo); requestAnimationFrame(() => { corpo.scrollTop = corpo.scrollHeight; });
-    return chiediAI(testo, { sistema: AI.SISTEMA_ORALE(A.orale.nome) });
+    return rispostaOrale(testo);
   }
   const t = nuovoTurno(); detto(t, testo);
   if (A.allegati.length) {
