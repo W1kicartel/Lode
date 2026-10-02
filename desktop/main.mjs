@@ -242,7 +242,7 @@ ipcMain.handle('vault:apri', async (_, { file, nuovo }) => {
 ipcMain.handle('vault:scegli', () => scegliVault());
 ipcMain.handle('sistema:inattivo', () => powerMonitor.getSystemIdleTime());
 // la voce sul Mac: Parakeet v3 sul Neural Engine (lode-voce). Altrove, o senza il programma, resta Whisper nella barra.
-const voce = VOCE.crea({ binario: join(QUI, 'bin', 'lode-voce'),
+const voce = VOCE.crea({ binario: [join(process.resourcesPath || '', 'bin', 'lode-voce'), join(QUI, 'bin', 'lode-voce')].find(existsSync) || join(QUI, 'bin', 'lode-voce'),   // nel pacchetto: Resources/bin
   avanza: x => { for (const w of BrowserWindow.getAllWindows()) w.webContents.send('voce:progresso', x); } });
 ipcMain.handle('voce:stato', () => ({ parakeet: voce.disponibile() }));
 ipcMain.handle('voce:prepara', () => voce.avvia());
