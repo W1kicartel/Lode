@@ -256,5 +256,156 @@ if (!AI.errore) {
   }
 }
 
+// la voce Parakeet ONNX (desktop/voce-onnx.mjs, voce-onnx-motore.mjs): le parti che non hanno bisogno del modello vero.
+// Scelta del motore, versioni esatte, URL e impronte, download con ripresa e impronta sbagliata (una rete finta e un
+// «modello» di pochi byte), il contratto della fila con un processo finto che usa la logica vera del motore, e il ripiego
+// su Whisper nella barra. Il modello vero lo prova test/voce-onnx.mjs
+{
+  const { createHash } = await import('node:crypto');
+  const { mkdtempSync, writeFileSync, existsSync, readdirSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const VO = await import('../desktop/voce-onnx.mjs'), MO = await import('../desktop/voce-onnx-motore.mjs');
+  const radice = new URL('../', import.meta.url), leggi = f => readFileSync(new URL(f, radice), 'utf8');
+  const GB = 2 ** 30, sc = x => VO.scegliMotore({ memoria: 16 * GB, ...x });
+  prova('voce: Mac con chip Apple e lode-voce → Neural Engine, come prima', sc({ piattaforma: 'darwin', arch: 'arm64', lodeVoce: true, sherpa: true }) === 'mac');
+  prova('voce: Windows e Linux con l\'addon e memoria → Parakeet ONNX', sc({ piattaforma: 'win32', arch: 'x64', sherpa: true }) === 'onnx' && sc({ piattaforma: 'linux', arch: 'x64', sherpa: true, memoria: 8 * GB - 300e6 }) === 'onnx');
+  prova('voce: poca memoria, niente addon o addon guasto → Whisper', sc({ piattaforma: 'win32', arch: 'x64', sherpa: true, memoria: 4 * GB }) === 'whisper' && sc({ piattaforma: 'linux', arch: 'x64' }) === 'whisper' && sc({ piattaforma: 'win32', arch: 'x64', sherpa: true, guasta: 'addon' }) === 'whisper');
+  prova('voce: Mac Intel del pacchetto (senza sherpa) → Whisper; Mac di sviluppo senza lode-voce → ONNX', sc({ piattaforma: 'darwin', arch: 'x64' }) === 'whisper' && sc({ piattaforma: 'darwin', arch: 'arm64', sherpa: true }) === 'onnx');
+  prova('voce: il pacchetto dell\'addon per sistema', VO.pacchettoAddon('win32', 'x64') === 'sherpa-onnx-win-x64' && VO.pacchettoAddon('linux', 'arm64') === 'sherpa-onnx-linux-arm64' && VO.pacchettoAddon('win32', 'arm64') === null && VO.pacchettoAddon('freebsd', 'x64') === null);
+  prova('voce: sherpaPresente senza addon per il sistema → false, senza caricarlo', VO.sherpaPresente({ piattaforma: 'freebsd', arch: 'x64' }) === false && VO.sherpaPresente({ piattaforma: 'win32', arch: 'x64', moduli: tmpdir() }) === false);
+  prova('voce: fili per onnxruntime da 1 a 4', VO.fili(1) === 1 && VO.fili(4) === 2 && VO.fili(32) === 4);
+  // versioni esatte: package.json (dipendenza e overrides per ogni addon), package-lock e il codice
+  const pkg = JSON.parse(leggi('desktop/package.json')), lock = JSON.parse(leggi('desktop/package-lock.json')), V = VO.VERSIONE_SHERPA;
+  const addon = ['darwin-arm64', 'darwin-x64', 'linux-x64', 'linux-arm64', 'win-x64', 'win-ia32'].map(a => 'sherpa-onnx-' + a);
+  prova('voce: sherpa-onnx-node con la versione esatta in package.json, overrides e package-lock', /^\d+\.\d+\.\d+$/.test(V) && pkg.dependencies['sherpa-onnx-node'] === V && addon.every(a => pkg.overrides[a] === V)
+    && ['sherpa-onnx-node', ...addon].every(a => lock.packages['node_modules/' + a]?.version === V && lock.packages['node_modules/' + a]?.resolved?.startsWith('https://registry.npmjs.org/')), JSON.stringify(addon.map(a => lock.packages['node_modules/' + a]?.version)));
+  prova('voce: nessuno script d\'installazione nei pacchetti di sherpa-onnx', ['sherpa-onnx-node', ...addon].every(a => !lock.packages['node_modules/' + a]?.hasInstallScript));
+  const B = pkg.build;
+  prova('voce: i due moduli nel pacchetto, l\'addon fuori dall\'asar, il Mac universale senza sherpa', ['voce-onnx.mjs', 'voce-onnx-motore.mjs'].every(f => B.files.includes(f)) && ['win', 'linux'].every(s => B.asarUnpack?.includes(`node_modules/sherpa-onnx-${s}-*/**`)) && B.files.includes('!node_modules/sherpa-onnx-darwin-*{,/**}') && !B.mac.files && B.mac.x64ArchFiles === 'Contents/Resources/bin/lode-voce');
+  prova('voce: modello da un commit preciso (mai main o latest), impronte SHA256 complete', /\/resolve\/[0-9a-f]{40}\/$/.test(VO.MODELLO.base) && !/\/(main|latest)\//.test(VO.MODELLO.base) && VO.MODELLO.file.length === 4 && VO.MODELLO.file.every(f => /^[0-9a-f]{64}$/.test(f.sha256) && f.byte > 0));
+  prova('voce: il peso detto all\'interfaccia è quello dei file', Math.abs(VO.MODELLO.file.reduce((s, f) => s + f.byte, 0) / 2 ** 20 - VO.PESO_MB) < 10);
+  // il job della CI con la cache del modello: la chiave contiene le impronte (cambiano → si riscarica)
+  const yml = leggi('.github/workflows/prove.yml'), job = yml.slice(yml.indexOf('  voce-onnx:'));
+  prova('voce: job «Voce Parakeet (ONNX)» a richiesta, Windows e Linux, sola lettura, senza credenziali, cache con le impronte', yml.includes('  voce-onnx:') && /name: Voce Parakeet \(ONNX\)/.test(job) && /\[voce\]/.test(job) && /windows-latest/.test(job) && /ubuntu-latest/.test(job)
+    && /persist-credentials: false/.test(job) && /contents: read/.test(job) && VO.MODELLO.file.every(f => job.includes(f.sha256.slice(0, 12))) && /actions\/cache@/.test(job), job.slice(0, 200));
+  // impronta e download: un «modello» di due file piccoli, una rete finta che sa riprendere (Range) o no
+  const dir = mkdtempSync(join(tmpdir(), 'lode-voce-onnx-')), sha = b => createHash('sha256').update(b).digest('hex');
+  const A = Buffer.alloc(300000, 7), T = Buffer.from('ciao 0\nmondo 1\n');
+  for (let i = 0; i < A.length; i++) A[i] = (i * 31) % 251;
+  const finto = { base: 'https://esempio.invalid/m/', file: [{ nome: 'a.onnx', byte: A.length, sha256: sha(A) }, { nome: 'tokens.txt', byte: T.length, sha256: sha(T) }] };
+  writeFileSync(join(dir, 'x.bin'), A);
+  prova('voce: impronta SHA256 di un file', await VO.impronta(join(dir, 'x.bin')) === sha(A));
+  const contenuti = { 'a.onnx': A, 'tokens.txt': T }; let chieste = [];
+  const rete = ({ guasta = {}, senzaRange = false } = {}) => async (url, opz) => {
+    const nome = url.split('/').pop(), b = guasta[nome] || contenuti[nome], r = opz?.headers?.Range; chieste.push(nome + (r ? ' ' + r : ''));
+    if (r && !senzaRange) { const da = +r.match(/bytes=(\d+)-/)[1]; return new Response(b.subarray(da), { status: 206, headers: { 'content-range': `bytes ${da}-${b.length - 1}/${b.length}` } }); }
+    return new Response(b, { status: 200 });
+  };
+  const m1 = join(dir, 'm1'), p = []; chieste = [];
+  await VO.scaricaModello({ cartella: m1, modello: finto, rete: rete(), avanza: x => p.push(x) });
+  prova('voce: download completo, verificato, senza .parziale, avanzamento fino a 1', readFileSync(join(m1, 'a.onnx')).equals(A) && readFileSync(join(m1, 'tokens.txt')).equals(T) && !readdirSync(m1).some(f => f.endsWith('.parziale')) && !existsSync(join(m1, 'verificato.json')) && p.at(-1) === 1 && p.every((x, i) => !i || x >= p[i - 1]) && VO.statoModello(m1, finto).pronto, JSON.stringify({ p: p.slice(-3), f: readdirSync(m1) }));
+  chieste = []; const r2 = await VO.scaricaModello({ cartella: m1, modello: finto, rete: rete() });
+  prova('voce: modello già verificato in questa sessione → niente rete', r2.scaricati === 0 && !chieste.length, chieste.join());
+  const r2b = await VO.scaricaModello({ cartella: m1, modello: finto, rete: rete(), verificati: new Map() });
+  prova('voce: a un altro avvio di Lode il modello sano si rilegge, senza rete', r2b.scaricati === 0 && !chieste.length);
+  const m2 = join(dir, 'm2'); (await import('node:fs')).mkdirSync(m2); writeFileSync(join(m2, 'a.onnx.parziale'), A.subarray(0, 120000)); chieste = [];
+  await VO.scaricaModello({ cartella: m2, modello: finto, rete: rete() });
+  prova('voce: download ripreso da dove era rimasto (Range)', chieste.includes('a.onnx bytes=120000-') && readFileSync(join(m2, 'a.onnx')).equals(A), chieste.join());
+  const m3 = join(dir, 'm3'); (await import('node:fs')).mkdirSync(m3); writeFileSync(join(m3, 'a.onnx.parziale'), A.subarray(0, 50000));
+  await VO.scaricaModello({ cartella: m3, modello: finto, rete: rete({ senzaRange: true }) });
+  prova('voce: server che non riprende (200) → il file ricomincia da capo, giusto', readFileSync(join(m3, 'a.onnx')).equals(A));
+  const m4 = join(dir, 'm4'), rotto = Buffer.from(A); rotto[1234] ^= 1; let e4 = null;
+  try { await VO.scaricaModello({ cartella: m4, modello: finto, rete: rete({ guasta: { 'a.onnx': rotto } }) }); } catch (e) { e4 = e; }
+  prova('voce: impronta diversa → errore «impronta» (ripiego), file cancellato', e4?.codice === 'impronta' && VO.RIPIEGO.includes('impronta') && !readdirSync(m4).some(f => f.startsWith('a.onnx')), e4?.message);
+  writeFileSync(join(m1, 'tokens.txt'), 'cambiato\n'); chieste = [];
+  await VO.scaricaModello({ cartella: m1, modello: finto, rete: rete() });
+  prova('voce: un file cambiato sul disco si ricontrolla e si riscarica', chieste.join() === 'tokens.txt' && readFileSync(join(m1, 'tokens.txt')).equals(T) && !VO.statoModello(m4, finto).pronto, chieste.join());
+  // stessa dimensione e stessa data di modifica, contenuto diverso (una lettera cambiata, la data rimessa com'era come
+  // con touch -r): si vede sia nella stessa sessione (la data di cambio, ctime, non torna indietro) sia a un altro avvio
+  const { statSync, utimesSync } = await import('node:fs');
+  const tk = join(m1, 'tokens.txt'), T2 = Buffer.from(T); T2[0] ^= 0x20;
+  utimesSync(tk, 1.7e9, 1.7e9); await VO.scaricaModello({ cartella: m1, modello: finto, rete: rete() }); const prima = statSync(tk);
+  for (const [nome, verificati] of [['nella stessa sessione', undefined], ['a un altro avvio di Lode', new Map()]]) {
+    writeFileSync(tk, T2); utimesSync(tk, 1.7e9, 1.7e9); chieste = [];
+    const st = statSync(tk), uguale = st.size === prima.size && st.mtimeMs === prima.mtimeMs;
+    await VO.scaricaModello({ cartella: m1, modello: finto, rete: rete(), ...(verificati ? { verificati } : {}) });
+    prova(`voce: stessa dimensione e stessa data, contenuto diverso → si riscarica (${nome})`, uguale && chieste.join() === 'tokens.txt' && readFileSync(tk).equals(T), chieste.join());
+  }
+  let e5 = null; chieste = [];
+  try { await VO.scaricaModello({ cartella: join(dir, 'm5'), modello: finto, rete: rete(), libero: () => 1000 }); } catch (e) { e5 = e; }
+  prova('voce: spazio che non basta → errore «spazio» prima di scaricare, in MB da 2^20 come il peso detto all\'interfaccia', e5?.codice === 'spazio' && !chieste.length && / circa 96 MB liberi/.test(e5.message), e5?.message);
+  let e6 = null;
+  try { await VO.scaricaModello({ cartella: join(dir, 'm6'), modello: finto, rete: async () => { throw new Error('offline'); } }); } catch (e) { e6 = e; }
+  prova('voce: rete che manca → errore «rete», niente ripiego (si riprova la volta dopo)', e6?.codice === 'rete' && !VO.RIPIEGO.includes('rete'));
+  // il contratto della fila: un processo finto nello stesso Node, con la logica vera di voce-onnx-motore.mjs (servi) e un
+  // riconoscitore finto che ci mette un po'. I messaggi passano dal clone strutturato, come fra processi
+  let processi = 0, uccisi = 0, insieme = 0, maxInsieme = 0, ultimo = null, ricevuto = null;
+  const riconoscitore = { createStream: () => ({ acceptWaveform(o) { this.o = o; } }), async decodeAsync(s) { insieme++; maxInsieme = Math.max(maxInsieme, insieme); ricevuto = s.o.samples; await new Promise(r => setTimeout(r, 15)); insieme--; return { text: 'n' + s.o.samples.length }; } };
+  // esce: come un processo vero, ucciso manda anche l'evento d'uscita (codice null)
+  const processoFinto = ({ addon = () => ({ version: 'finta' }), carica = async () => riconoscitore, esce = false } = {}) => () => {
+    processi++; const su = { messaggio: [], uscita: [] }; let vivo = true;
+    const ricevi = MO.servi({ manda: m => setImmediate(() => vivo && su.messaggio.forEach(f => f(structuredClone(m)))), addon, carica });
+    return ultimo = { manda: m => { if (!vivo) throw new Error('morto'); setImmediate(() => vivo && ricevi(structuredClone(m))); }, su: (ev, f) => su[ev].push(f), uccidi: () => { if (vivo) { vivo = false; uccisi++; if (esce) setImmediate(() => su.uscita.forEach(f => f(null))); } }, crash: () => { vivo = false; su.uscita.forEach(f => f(134)); }, pid: () => 1 };
+  };
+  // l'audio lungo (Ripeti fino a 90 s) a finestre di al massimo 30 s, tagliate nella pausa: la memoria resta quella di 30 s
+  const lungo = new Float32Array(90 * 16000).fill(.2); lungo.fill(0, 24 * 16000, 24 * 16000 + 3200);   // una pausa a 24 s
+  const fw = MO.finestre(lungo.length, lungo);
+  prova('voce: audio oltre 30 s a finestre di al massimo 30 s, la prima tagliata nella pausa, senza buchi', fw.length === 4 && fw.every(([a, b]) => b - a <= 30 * 16000 && b - a > 0) && fw[0][0] === 0 && fw.at(-1)[1] === lungo.length && fw.every(([a], i) => !i || a === fw[i - 1][1]) && fw[0][1] >= 24 * 16000 && fw[0][1] <= 24 * 16000 + 3200, JSON.stringify(fw));
+  prova('voce: fino a 30 s un pezzo solo', JSON.stringify(MO.finestre(30 * 16000, new Float32Array(30 * 16000))) === '[[0,480000]]' && MO.finestre(1000, new Float32Array(1000)).length === 1);
+  const mf = VO.crea({ cartella: m1, modello: finto, rete: rete(), avvia: processoFinto() });
+  prova('voce: avvio pigro (nessun processo prima della prima frase)', processi === 0 && !mf.attivo());
+  const audio = n => new Float32Array(n).fill(.25);
+  const ris = await Promise.all([mf.trascrivi(audio(16000)), mf.trascrivi(audio(800)), mf.trascrivi(audio(32000))]);
+  prova('voce: fila, una alla volta, risposte nell\'ordine giusto', ris.join() === 'n16000,n800,n32000' && maxInsieme === 1 && processi === 1, ris.join() + ' max ' + maxInsieme);
+  prova('voce: l\'audio arriva intero (Float32Array in memoria)', ricevuto instanceof Float32Array && ricevuto.length === 32000 && ricevuto[31999] === .25);
+  const sospesa = mf.trascrivi(audio(1000)); await new Promise(r => setTimeout(r, 1)); mf.chiudi();
+  const es = await sospesa.then(() => null, e => e);
+  prova('voce: a riposo il processo esce e la richiesta in attesa finisce', uccisi === 1 && !mf.attivo() && es?.codice === 'chiusa', es?.message);
+  const dopo = await mf.trascrivi(audio(500));
+  prova('voce: dopo il riposo riparte da sola', dopo === 'n500' && processi === 2);
+  maxInsieme = 0; const lunga = await mf.trascrivi(lungo), pezzi = lunga.split(' ').map(x => +x.slice(1));
+  prova('voce: 90 s al motore → una finestra alla volta, i testi uniti in ordine', pezzi.length === fw.length && pezzi.every((x, i) => x === fw[i][1] - fw[i][0]) && maxInsieme === 1, lunga);
+  const inCorso = mf.trascrivi(audio(2000)); await new Promise(r => setTimeout(r, 2)); ultimo.crash();
+  const ec = await inCorso.then(() => null, e => e);
+  prova('voce: crash del processo → errore «crash» (ripiego), poi riparte', ec?.codice === 'crash' && VO.RIPIEGO.includes('crash') && await mf.trascrivi(audio(10)) === 'n10' && processi === 3, ec?.message);
+  mf.chiudi(); chieste = [];
+  const senzaAddon = VO.crea({ cartella: join(dir, 'm7'), modello: finto, rete: rete(), avvia: processoFinto({ addon: () => { throw new Error('Could not find sherpa-onnx-node'); } }) });
+  const ea = await senzaAddon.trascrivi(audio(10)).then(() => null, e => e);
+  prova('voce: addon che non si carica → errore «addon» prima di scaricare il modello, in italiano (il dettaglio a parte)', ea?.codice === 'addon' && !chieste.length && !existsSync(join(dir, 'm7', 'a.onnx')) && !senzaAddon.attivo() && !/Could not/.test(ea.message) && /Could not find/.test(ea.dettaglio), ea?.message);
+  const verificatoPrima = VO.statoModello(m1, finto).pronto;
+  const modelloRotto = VO.crea({ cartella: m1, modello: finto, rete: rete(), avvia: processoFinto({ carica: async () => { throw new Error(`Load model from ${join(m1, 'a.onnx')} failed:Protobuf parsing failed.`); } }) });
+  const em = await modelloRotto.avvia().then(() => null, e => e);
+  prova('voce: modello che non si carica → errore «modello» (ripiego), senza percorso né inglese per lo studente', em?.codice === 'modello' && VO.RIPIEGO.includes('modello') && !em.message.includes(m1) && !/Protobuf|failed/.test(em.message) && /Protobuf/.test(em.dettaglio), em?.message);
+  prova('voce: modello che non si carica → il controllo si dimentica, al prossimo avvio si rileggono le impronte', verificatoPrima && !VO.statoModello(m1, finto).pronto);
+  // chiudi() mentre il motore parte (un riposo, l'uscita): «chiusa», mai «crash» (il crash porta a Whisper per la sessione)
+  const vc = VO.crea({ cartella: m1, modello: finto, rete: rete(), avvia: processoFinto({ esce: true }) });
+  const pa = vc.avvia(), occupatoAvvio = vc.occupato(); vc.chiudi();
+  const eAddon = await pa.then(() => null, e => e);
+  let partito; const caricaPartita = new Promise(r => { partito = r; });
+  const vc2 = VO.crea({ cartella: m1, modello: finto, rete: rete(), avvia: processoFinto({ esce: true, carica: async () => { partito(); await new Promise(r => setTimeout(r, 40)); return riconoscitore; } }) });
+  const pb = vc2.avvia(); await caricaPartita; vc2.chiudi();
+  const eCarica = await pb.then(() => null, e => e); await new Promise(r => setTimeout(r, 60));
+  prova('voce: chiudi durante l\'avvio (addon o modello) → codice «chiusa», non «crash»', occupatoAvvio && eAddon?.codice === 'chiusa' && eCarica?.codice === 'chiusa' && !vc.occupato() && !vc2.attivo() && VO.statoModello(m1, finto).pronto, [eAddon?.codice, eCarica?.codice].join());
+  rmSync(dir, { recursive: true, force: true });
+  // nella barra (js/voce.js): il ripiego su Whisper con lo stesso audio, e i testi dell'interfaccia per ogni motore
+  globalThis.window ??= globalThis;
+  const VC = await import('../js/voce.js');
+  const pezzo = new Float32Array(3); let aWhisper = null, ripiegato = 0;
+  const t1 = await VC.conRipiego(pezzo, { nativo: async () => { throw Object.assign(new Error('addon'), { ripiego: true }); }, whisper: async a => { aWhisper = a; return 'da whisper'; }, ripiega: () => ripiegato++ });
+  prova('voce: ripiego → lo stesso audio passa a Whisper', t1 === 'da whisper' && aWhisper === pezzo && ripiegato === 1);
+  const e7 = await VC.conRipiego(pezzo, { nativo: async () => { throw new Error('rete'); }, whisper: async () => 'no', ripiega: () => ripiegato++ }).then(() => null, e => e);
+  prova('voce: un errore senza ripiego resta un errore', e7?.message === 'rete' && ripiegato === 1);
+  let e8 = null; try { VC.risposta({ errore: 'addon mancante', ripiego: true }); } catch (e) { e8 = e; }
+  prova('voce: la risposta del main { errore, ripiego } diventa un errore', e8?.ripiego === true && e8.message === 'addon mancante' && VC.risposta('testo') === 'testo');
+  VC.testiVoce('onnx', 640); const onnx = [VC.NOME_VOCE, VC.PESO_VOCE, VC.descrizioneVoce()].join('|');
+  VC.testiVoce('mac'); const mac = [VC.NOME_VOCE, VC.PESO_VOCE, VC.descrizioneVoce()].join('|');
+  VC.testiVoce('whisper'); const wh = [VC.NOME_VOCE, VC.PESO_VOCE, VC.descrizioneVoce()].join('|');
+  prova('voce: testi per motore (nome, MB, descrizione)', onnx === 'Parakeet|640|Parakeet v3 sul processore' && mac === 'Parakeet|470|Parakeet v3 sul Neural Engine del Mac' && /^Whisper\|(200|600)\|Whisper (base|small)$/.test(wh), [onnx, mac, wh].join(' / '));
+  // il main: voce:prepara e voce:trascrivi passano da suOnnx (ripiego), riposo e uscita chiudono tutti e due i motori
+  const main = leggi('desktop/main.mjs');
+  prova('voce: main.mjs instrada ONNX con il ripiego e lo chiude a riposo e all\'uscita', /voce:prepara[^\n]*suOnnx\(\(\) => voceOnnx\.avvia\(\)\)/.test(main) && /voce:trascrivi[^\n]*suOnnx\(\(\) => voceOnnx\.trascrivi\(audio\)\)/.test(main) && /voce:riposa[^\n]*if \(!voceOnnx\.occupato\(\)\) voceOnnx\.chiudi\(\)/.test(main) && /will-quit[^\n]*voceOnnx\.chiudi\(\)/.test(main) && /processoElectron\(utilityProcess\)/.test(main));
+}
+
 console.log(`${ok} prove passate, ${ko} fallite`);
 process.exit(ko ? 1 : 0);

@@ -90,7 +90,7 @@ smetti di seguire lab3
 
 ### Installa
 
-Il modo più semplice: scarica l'installer dalla pagina **[Release](https://github.com/W1kicartel/Lode/releases/latest)** (in fondo, alla voce «Assets»). Ti servono circa **5 GB liberi**: Obsidian circa 300 MB, l'AI locale circa 3,5 GB, la voce dai 200 ai 600 MB. Al primo avvio Lode ti chiede il nome e, con un clic, installa Obsidian, l'AI locale e la voce.
+Il modo più semplice: scarica l'installer dalla pagina **[Release](https://github.com/W1kicartel/Lode/releases/latest)** (in fondo, alla voce «Assets»). Ti servono circa **5 GB liberi**: Obsidian circa 300 MB, l'AI locale circa 3,5 GB, la voce dai 200 ai 640 MB. Al primo avvio Lode ti chiede il nome e, con un clic, installa Obsidian, l'AI locale e la voce.
 
 **Controlla che sia quello vero.** Scarica Lode solo dalla pagina Release di questo repository: un «Lode» passato in un gruppo o preso da un altro sito può avere lo stesso aspetto ed essere un'altra cosa. Accanto a ogni file GitHub mostra la sua impronta SHA-256 (`sha256:…`); dalle versioni dopo la 0.3.0 le stesse impronte sono anche nel file `SHA256SUMS.txt` della Release. Prima di aprirlo, calcola quella del file che hai scaricato e confrontale: devono avere le stesse lettere e cifre (Windows le scrive in maiuscolo). Se sono diverse, non aprirlo.
 
@@ -143,7 +143,7 @@ Se vuoi l'ultima versione, o modificare Lode, si installa dal codice in pochi mi
    npm start
    ```
 
-4. **La configurazione guidata** si apre da sola. Ti chiede come ti chiami e con un clic installa **Obsidian**, l'**AI locale** (Ollama + Qwen3.5) e la **voce** (Whisper). Il vault con i tuoi appunti nasce in `Documenti\Lode`. La pillola compare in cima allo schermo; l'icona di Lode è vicino all'orologio, nell'area di notifica.
+4. **La configurazione guidata** si apre da sola. Ti chiede come ti chiami e con un clic installa **Obsidian**, l'**AI locale** (Ollama + Qwen3.5) e la **voce** (Parakeet, o Whisper se il computer ha meno di 6 GB di memoria). Il vault con i tuoi appunti nasce in `Documenti\Lode`. La pillola compare in cima allo schermo; l'icona di Lode è vicino all'orologio, nell'area di notifica.
 
 5. **Il microfono.** Se la voce non sente niente: *Impostazioni → Privacy e sicurezza → Microfono* e attiva «Consenti alle app desktop di accedere al microfono».
 
@@ -151,7 +151,7 @@ Se vuoi l'ultima versione, o modificare Lode, si installa dal codice in pochi mi
 
 | | Windows |
 |---|---|
-| Voce, Ripeti, trascrizione | **Whisper** (base o small, in base al computer), dentro l'app. Parakeet per ora è solo su Mac. |
+| Voce, Ripeti, trascrizione | **Parakeet v3** sul processore (con [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)), se il computer ha almeno 6 GB di memoria; altrimenti **Whisper** (base o small), dentro l'app. Vedi [La voce](#la-voce). |
 | Scorciatoie | **Ctrl+Shift+Spazio** tenuto premuto per parlare. Poi Ctrl+Alt+P Ripeti, Ctrl+Alt+R trascrivi, Ctrl+Alt+S/D/Q cattura. |
 | AI locale | Va bene con una scheda video NVIDIA o AMD. Senza scheda video funziona lo stesso, ma è lenta: le carte da un PDF possono richiedere qualche minuto (intanto puoi chiudere il pannello e continuare). Se il computer è debole, puoi collegare la tua AI (vedi sotto). |
 | Condividere una sbobina | Lode apre la cartella con i file, da mandare come vuoi (WhatsApp Web, Drive, mail). Sul Mac c'è il menu Condividi. |
@@ -167,7 +167,7 @@ Se vuoi l'ultima versione, o modificare Lode, si installa dal codice in pochi mi
 
 ### Mac
 
-**Cosa serve:** macOS con chip Apple (M1 o successivi) e almeno 8 GB di memoria. Funziona anche sui Mac Intel, con Whisper al posto di Parakeet.
+**Cosa serve:** macOS con chip Apple (M1 o successivi) e almeno 8 GB di memoria. Funziona anche sui Mac Intel: nell'app scaricata con Whisper al posto di Parakeet, dal codice con Parakeet sul processore.
 
 1. **Gli strumenti di Apple.** Servono per git e per la voce Parakeet. Apri il Terminale e scrivi:
    ```bash
@@ -187,7 +187,7 @@ Se vuoi l'ultima versione, o modificare Lode, si installa dal codice in pochi mi
    ```bash
    bash desktop/voce-mac/compila.sh
    ```
-   Se salti questo passo, Lode usa Whisper. Funziona, ma è più lento e sbaglia di più.
+   Se salti questo passo, Lode usa Parakeet sul processore (sherpa-onnx, la stessa voce di Windows e Linux): scarica il modello, circa 640 MB, ed è un po' più lento del Neural Engine.
 
 5. **Avvia l'app:**
    ```bash
@@ -224,7 +224,7 @@ Se vuoi l'ultima versione, o modificare Lode, si installa dal codice in pochi mi
    npm install
    npm start
    ```
-3. La voce è Whisper e le scorciatoie sono quelle di Windows. Le finestre trasparenti e le scorciatoie globali dipendono dal desktop (GNOME, KDE…): su Wayland alcune potrebbero non funzionare. Raccontaci com'è andata.
+3. La voce è Parakeet sul processore (Whisper con meno di 6 GB di memoria) e le scorciatoie sono quelle di Windows. Le finestre trasparenti e le scorciatoie globali dipendono dal desktop (GNOME, KDE…): su Wayland alcune potrebbero non funzionare. Raccontaci com'è andata.
 
 ### Per tutti
 
@@ -275,12 +275,15 @@ Paghi direttamente il servizio, a consumo, di solito pochi centesimi a sessione:
 
 ## La voce
 
-| | Mac con chip Apple | Windows, Linux, Mac Intel |
-|---|---|---|
-| Motore | **Parakeet TDT v3** di NVIDIA sul Neural Engine, con [FluidAudio](https://github.com/FluidInference/FluidAudio), lo stesso motore dell'app FluidVoice | **Whisper** (base o small), dentro l'app |
-| Un minuto di Ripeti (prova sul Mac di sviluppo) | 0,8 s, quasi senza errori, con la punteggiatura | 3,7 s, con qualche errore |
+| | Mac con chip Apple | Windows e Linux (almeno 6 GB di memoria) | Mac Intel, e i computer con meno di 6 GB |
+|---|---|---|---|
+| Motore | **Parakeet TDT v3** di NVIDIA sul Neural Engine, con [FluidAudio](https://github.com/FluidInference/FluidAudio), lo stesso motore dell'app FluidVoice | **Parakeet TDT v3** sul processore, in formato ONNX, con [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) | **Whisper** (base o small), dentro l'app |
+| Download, una volta sola | circa 470 MB | circa 640 MB | 200 o 600 MB |
+| Un minuto di Ripeti (prova sul Mac di sviluppo) | 0,8 s, quasi senza errori, con la punteggiatura | 2-4 s nella barra (il motore da solo: circa 2 s; 90 secondi: 2,7 s), quasi senza errori, con la punteggiatura. Misurato sul Mac di sviluppo con 4 fili: su un PC dipende dal processore | 3,7 s, con qualche errore |
 
-Tutto offline. L'audio non resta mai su disco: sul Mac passa a Parakeet in un file temporaneo che si cancella subito (anche se qualcosa va storto).
+Tutto offline. L'audio non resta mai su disco: sul Mac passa a Parakeet in un file temporaneo che si cancella subito (anche se qualcosa va storto); su Windows e Linux passa al motore in memoria.
+
+**Parakeet su Windows e Linux.** Il modello (Parakeet TDT 0.6B v3, int8, convertito per sherpa-onnx) si scarica la prima volta che prepari la voce, da Hugging Face, sempre dalla stessa versione (un commit preciso, non «l'ultima»), nella cartella dei dati di Lode. Lode controlla l'impronta SHA256 di ogni file quando arriva e di nuovo prima di usarlo, una volta a ogni avvio di Lode (0,3 secondi sul Mac di sviluppo, qualche secondo su un PC lento): se non torna, cancella il file e lo riscarica. Se il download si interrompe, la volta dopo riprende da dove era rimasto. Il riconoscimento gira in un processo a parte, che tiene circa 1,5 GB di memoria; l'audio lungo (Ripeti arriva a 90 secondi) passa a pezzi di al massimo 30 secondi, così la memoria non sale. Se qualcosa non va (manca un pezzo del programma, poco spazio sul disco, un modello che non si carica o che arriva sbagliato), Lode lo dice e passa a Whisper senza perdere la frase o il pezzo di lezione in corso. Un file del modello rovinato sul disco invece va riscaricato: se in quel momento manca la rete, la voce dà errore finché la connessione non torna. Il pacchetto del Mac non include sherpa-onnx: il `.dmg` è universale (chip Apple e Intel insieme) e l'addon ha un file diverso per ogni processore, quindi sui Mac Intel resta Whisper.
 
 ## Privacy
 - **Niente account, niente server di Lode, niente pubblicità, niente tracciamento.**
@@ -329,11 +332,13 @@ node test/errori.mjs
 node --experimental-vm-modules test/diario.mjs
 node test/aggiorna.mjs
 node test/controlla-privacy.mjs
+node test/voce-onnx.mjs
 node test/prova-app.mjs
 ```
-- `test/unita.mjs` controlla comandi, formule, note, conti e il file per Anki, più la sicurezza della barra (librerie con versione esatta, Content-Security-Policy, percorsi, backup, dati del vault, chiavi, finestre che restano su Lode): 125 prove.
+- `test/unita.mjs` controlla comandi, formule, note, conti e il file per Anki, più la sicurezza della barra (librerie con versione esatta, Content-Security-Policy, percorsi, backup, dati del vault, chiavi, finestre che restano su Lode) e le parti della voce Parakeet ONNX che non hanno bisogno del modello (scelta del motore, versioni esatte, download con ripresa e impronta SHA256, la fila, il riposo, l'audio lungo a finestre, la chiusura durante l'avvio, il ripiego su Whisper): 168 prove.
 - Informatica: `codice.mjs` (141 prove su «Cosa stampa?»), `verifica-c.mjs` (452 programmi confrontati con il compilatore vero; senza compilatore salta), `progetto.mjs` (119, «Segui il progetto»), `errori.mjs` (218, gli errori spiegati), `diario.mjs` (90, il registro nel vault). Su GitHub girano tutte su Windows, Linux e macOS.
 - `test/aggiorna.mjs` (411 prove) controlla gli aggiornamenti senza Electron e senza rete: versioni con le prerelease, l'installer giusto per sistema e architettura, i `latest*.yml`, il Mac senza firma, un finto electron-updater, e che package.json, preload ed entitlements stiano insieme.
+- `test/voce-onnx.mjs` prova la voce Parakeet ONNX con il modello vero, senza Electron e senza microfono: trascrive le frasi di `test/audio`, misura un minuto di audio e un Ripeti di 90 secondi (su Mac e Linux anche la memoria del processo, che non deve salire), controlla le impronte, la fila, il riposo, la chiusura durante l'avvio e i ripieghi (crash, addon che manca, modello rovinato). Il modello lo cerca in `LODE_MODELLO_ONNX`; con `--scarica` lo scarica lì (circa 640 MB). Senza modello salta. Su GitHub gira su Windows e Linux solo a richiesta («Run workflow» o `[voce]` nel messaggio del commit), con il modello nella cache.
 - `test/controlla-privacy.mjs` guarda i file che finirebbero su GitHub (quelli in git e i nuovi non ignorati) e si ferma se trova chiavi, percorsi con un nome vero (`/Users/<nome>/`, `C:\Users\<nome>\`, `/home/<nome>/`, anche il tuo nome utente), file privati (`.env`, certificati, un vault di prova, foto e risultati delle prove), codice da un CDN o `npx --yes` senza versione esatta, pacchetti di `desktop/package-lock.json` fuori dal registro npm. Lancialo prima di ogni commit: su GitHub gira con le prove unitarie.
 - `test/prova-app.mjs` fa il giro completo dell'app su un vault temporaneo, senza toccare i tuoi dati: 81 prove (80 senza compilatore C). Con `LODE_SOLO='informatica|stampa|progetto|errore|diario|davvero'` fa solo i passi di informatica (2-3 minuti). Con `LODE_SOLO='anki'` solo «Esporta per Anki» (meno di un minuto). Per ora gira solo su macOS (su Windows e Linux manca la voce di sistema per generare l'audio delle prove; contributi benvenuti): le frasi «parlate» le genera la voce di sistema e l'audio va direttamente al motore, senza altoparlanti né microfono.
 
@@ -363,7 +368,7 @@ node test/prova-app.mjs
 | `js/ai.js` | L'AI: locale (Ollama), Claude con gli strumenti (API chiamata con `fetch`, senza SDK), oppure un servizio in formato OpenAI; il prof dell'orale |
 | `js/fornitori.js` | I servizi della «tua AI», un elenco solo per la barra e per il main (che accetta dalla barra solo l'id del servizio) |
 | `js/librerie.js`, `desktop/vendor.mjs` | Le librerie di altri (pdf.js, Temml, transformers.js) con la versione esatta: nell'app file locali in `vendor/`, copiati da `desktop/node_modules`; nel browser da jsDelivr con l'impronta nell'import map |
-| `js/voce.js` | La voce: Parakeet (Mac) o Whisper, in fila con priorità per Ripeti e i comandi |
+| `js/voce.js` | La voce: Parakeet (Neural Engine sul Mac, ONNX altrove) o Whisper, in fila con priorità per Ripeti e i comandi; il ripiego su Whisper |
 | `js/orecchio.js` | Il microfono condiviso in aula, con gli ultimi 90 secondi solo in memoria |
 | `js/trascrizione.js` | La lezione intera: microfono, pezzi da 20-30 s, voce, formule, nota Obsidian |
 | `js/formule.js` | Le formule dette a voce in LaTeX |
@@ -382,6 +387,7 @@ node test/prova-app.mjs
 | `desktop/main.mjs` | L'app Electron: finestra trasparente sempre in primo piano, scorciatoie globali, icona nella barra dei menu, chiamate all'AI |
 | `desktop/installa.mjs` | Installa Obsidian e Ollama + Qwen3.5 |
 | `desktop/voce.mjs`, `desktop/voce-mac/` | `lode-voce`: Parakeet v3 via FluidAudio |
+| `desktop/voce-onnx.mjs`, `desktop/voce-onnx-motore.mjs` | Parakeet v3 ONNX con sherpa-onnx: scelta del motore, download verificato del modello, il processo che trascrive |
 | `desktop/vault.mjs` | Crea il vault, lo registra in Obsidian, rilegge le lezioni quando cambiano |
 | `desktop/progetto.mjs`, `desktop/esegui.mjs` | Le cartelle seguite: versioni, diff, impronta, e le prove eseguite solo dopo la conferma |
 | `desktop/aggiorna.mjs`, `desktop/verifica-rilascio.mjs` | Gli aggiornamenti: electron-updater su Windows e Linux, avviso e `.dmg` sul Mac senza firma; il controllo dei `latest*.yml` prima di pubblicare |
@@ -392,7 +398,7 @@ Design: solo bianco e nero, font [Geist](https://github.com/vercel/geist-font), 
 
 ## Cosa manca (cerco mani)
 - [ ] Firma degli installer: il workflow è pronto, mancano solo i certificati (Apple 99 $ l'anno; per Windows Azure Trusted Signing o SignPath). Cosa comprare e come attivarla: [docs/FIRMA.md](docs/FIRMA.md)
-- [ ] Parakeet anche su Windows e Linux (versione ONNX, gira sul processore)
+- [ ] Parakeet su Windows e Linux c'è (ONNX, sul processore), ma va provato su un PC vero: raccontaci quanto ci mette
 - [ ] Sincronizzazione facoltativa fra dispositivi, cifrata
 - [ ] Riconoscere chi parla (prof o studenti) nella trascrizione
 - [ ] Regole dei singoli atenei per il voto di laurea
@@ -402,6 +408,7 @@ Lode usa, senza modificarli:
 - [Obsidian](https://obsidian.md): gratis per uso personale, non open source;
 - [Ollama](https://ollama.com) (MIT) e [Qwen3.5](https://huggingface.co/Qwen) (Apache 2.0);
 - [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache 2.0) e il modello [Parakeet TDT v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) di NVIDIA (CC BY 4.0);
+- [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (Apache 2.0) con la [versione ONNX di Parakeet TDT v3](https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8);
 - [transformers.js](https://github.com/huggingface/transformers.js) (Apache 2.0) con [Whisper](https://github.com/openai/whisper) (MIT);
 - [pdf.js](https://github.com/mozilla/pdf.js) (Apache 2.0) e [Temml](https://temml.org) (MIT);
 - [Electron](https://www.electronjs.org) (MIT);

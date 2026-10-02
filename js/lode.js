@@ -320,8 +320,11 @@ function ricomincia() {
 }
 
 /* ---------- campo: riposo, ascolto, un attimo ---------- */
+// L'etichetta di «Un attimo…» quando si aspetta la voce (Ripeti, l'inizio e la fine della trascrizione): se intanto la
+// voce si scarica, o Parakeet non parte e si passa a Whisper (200-600 MB), l'etichetta lo dice (vedi lode:voce in avvia)
+let attesaVoce = null, voceRipiegata = false;
 function modo(m, etichetta) {
-  A.modo = m; campo.dataset.modo = m;
+  A.modo = m; campo.dataset.modo = m; attesaVoce = null;
   if (m === 'pensa') {
     campo.querySelector('.stato.pensa .lbl').textContent = etichetta || 'Un attimo…';
     if (campo._pensa) return; campo._pensa = true;
@@ -663,7 +666,7 @@ async function avviaTrascrizione(opz = {}) {
   const l = opz.lezione || V.lezioneDaAnnotare();
   if (!opz.daFile && !(await consensoAula())) return;
   try {
-    if (!Voce.pronta()) { modo('pensa', 'Preparo la voce…'); }
+    if (!Voce.pronta()) { modo('pensa', 'Preparo la voce…'); attesaVoce = 'Preparo la voce…'; }
     await TR.avvia(l, opz); modo('riposo');
     try { localStorage.setItem('lode:voce', '1'); } catch { }
     if (opz.daFile) {   // una registrazione: si trascrive tutta, poi si chiude da sola
@@ -679,7 +682,7 @@ async function avviaTrascrizione(opz = {}) {
 }
 async function fermaTrascrizione() {
   if (!TR.attiva()) return rispostaFissa('Non sto trascrivendo niente.');
-  modo('pensa', 'Trascrivo gli ultimi secondi…');
+  modo('pensa', 'Trascrivo gli ultimi secondi…'); attesaVoce = 'Trascrivo gli ultimi secondi…';
   const l = TR.stato().lezione, r = await TR.ferma(); modo('riposo'); segnala('fatto'); aggiornaTutto();
   await mostraFatto({ testo: `Lezione trascritta: ${r.parole.toLocaleString('it-IT')} parole.`, nota: r.sospese ? `${r.sospese} ${r.sospese === 1 ? 'riga non è ancora' : 'righe non sono ancora'} nella nota (la cartella non risponde): le scrivo appena posso, tienimi aperto.` : 'È tutto nella nota.', azione: AI.attiva() ? ['Riordina', () => { nuovoTurno(); detto(A.turno, 'Riordina la lezione'); riordinaLezione(null, l); }] : ['Condividi', () => { nuovoTurno(); detto(A.turno, 'Condividi la sbobina'); condividiLezione(l.corso); }], sintesi: `${r.parole} parole trascritte` });
   if (!(D.imp.ripetiInAula && lezioneOra())) O.spegni();   // il microfono resta acceso solo se serve a «Ripeti» in aula
@@ -741,7 +744,8 @@ async function ripeti(sec = 60) {
   if (!O.attivo()) return accendiRipeti();
   if (O.secondi() < 1) return rispostaFissa('Ascolto da un attimo: non ho ancora niente da ripeterti.');
   const quando = new Date(), audio = O.ultimi(sec);
-  modo('pensa', `Riascolto gli ultimi ${Math.round(Math.min(sec, O.secondi()))} secondi…`); segnala('pensa');
+  const riascolto = `Riascolto gli ultimi ${Math.round(Math.min(sec, O.secondi()))} secondi…`;
+  modo('pensa', riascolto); attesaVoce = riascolto; segnala('pensa');
   let testo = ''; try { testo = await Voce.trascriviAudio(audio, { subito: true }); } catch (e) { modo('riposo'); return rispostaFissa('Non sono riuscito a riascoltare: ' + e.message, { errore: true }); }
   modo('riposo');
   if (!testo) return rispostaFissa('Negli ultimi 60 secondi non ho sentito parlare.');
@@ -1054,7 +1058,7 @@ function schedaPrepara(cosa) {
     ${riga('vault', 'Il tuo vault', true, esc(V.info?.percorso || 'Documenti/Lode') + ' · Home, corsi, lezioni, glossario', '<button type="button" class="btn small" data-apri>Apri</button>')}
     ${riga('obsidian', 'Obsidian', st?.obsidian.installato, st?.obsidian.installato ? 'Installato e collegato al vault' : 'Gratis per uso personale · installer ufficiale da GitHub, circa 230 MB', st?.obsidian.installato ? '<button type="button" class="btn small" data-apri>Apri</button>' : '<button type="button" class="btn small primary" data-installa="obsidian">Installa</button>')}
     ${riga('cervello', 'Cervello locale', !!st?.modello, st?.modello ? `${esc(st.modello)} · gira sul computer, senza internet` : `Ollama + ${esc(m?.etichetta || 'Qwen3.5')}, ${esc(m?.perche || '')} · circa ${m ? String(m.gb + 0.2).replace('.', ',') : '3,5'} GB`, st?.modello ? '<span class="ld-spunta">pronto</span>' : '<button type="button" class="btn small primary" data-installa="cervello">Installa</button>')}
-    ${riga('voce', 'Voce', Voce.pronta(), Voce.pronta() ? Voce.NOME_VOCE + ' in locale · tieni premuto ' + TASTI + ' e parla' : `${Voce.MAC_ARM ? 'Parakeet v3 sul Neural Engine' : 'Whisper ' + (Voce.MODELLO_VOCE.endsWith('small') ? 'small' : 'base')} in locale, in italiano · circa ${Voce.PESO_VOCE} MB, una volta sola`, Voce.pronta() ? '<span class="ld-spunta">pronta</span>' : '<button type="button" class="btn small primary" data-voce>Prepara</button>')}
+    ${riga('voce', 'Voce', Voce.pronta(), Voce.pronta() ? Voce.NOME_VOCE + ' in locale · tieni premuto ' + TASTI + ' e parla' : `${Voce.descrizioneVoce()}, in locale, in italiano · circa ${Voce.PESO_VOCE} MB, una volta sola`, Voce.pronta() ? '<span class="ld-spunta">pronta</span>' : '<button type="button" class="btn small primary" data-voce>Prepara</button>')}
     ${riga('tuaai', 'La tua AI <small>facoltativa</small>', !!AI.fornitore(), AI.fornitore() ? `${esc(AI.FORNITORI[AI.fornitore()].nome)} collegata · paghi tu a consumo, direttamente al servizio` : 'Claude, ChatGPT, Gemini, Mistral…: più potente, a consumo con la tua chiave', `<button type="button" class="btn small" data-tuaai>${AI.fornitore() ? 'Cambia' : 'Collega'}</button>`)}
     ${AGG?.possibile ? riga('aggiorna', 'Aggiornamenti', AGG.attivi, esc(testoAggiornamenti()), '<span class="ld-agg-az" style="display:flex;gap:6px"></span>') : ''}
     <p class="ld-nota">Il cervello locale è gratis e lavora offline: estrae definizioni, crea carte, spiega e interroga. La tua AI è un potenziamento facoltativo: Lode non vede né incassa niente.</p>`);
@@ -1781,7 +1785,14 @@ export function avvia() {
   PR.collega({ scheda, segnala, entra, dopo, premi, rispostaFissa, mostraFatto, nuovoTurno, detto: t => detto(A.turno, t), corsiPossibili,
     aggiornaPillola: () => { if (!A.avviso && !F.stato()) aggiornaPillola(); },
     evento: eventoProgetto, spiegaErrore: e => { spiegaEsito(e).catch(x => console.error('Lode: errore non spiegato', x)); } });
-  addEventListener('lode:voce', e => { const x = e.detail; document.querySelectorAll('.ld-prepara').forEach(s => mostraAvanzamento(s, 'voce', x.fase === 'pronta' ? { fase: 'fatto', p: 1, testo: Voce.NOME_VOCE + ' in locale · tieni premuto ' + TASTI + ' e parla' } : x.fase === 'errore' ? { fase: 'errore', testo: x.testo } : { p: x.p, testo: `Scarico ${Voce.NOME_VOCE} · ${Math.round((x.p || 0) * 100)}%` })); if (A.modo === 'ascolto' && x.fase === 'scarico') campo.querySelector('.stato.ascolto .lbl').textContent = `Ti ascolto · preparo la voce ${Math.round((x.p || 0) * 100)}%`; if (x.fase === 'pronta' && A.modo === 'ascolto') campo.querySelector('.stato.ascolto .lbl').textContent = 'Ti ascolto'; });
+  addEventListener('lode:voce', e => { const x = e.detail; document.querySelectorAll('.ld-prepara').forEach(s => mostraAvanzamento(s, 'voce', x.fase === 'pronta' ? { fase: 'fatto', p: 1, testo: Voce.NOME_VOCE + ' in locale · tieni premuto ' + TASTI + ' e parla' } : x.fase === 'errore' || x.fase === 'ripiego' ? { fase: x.fase === 'errore' ? 'errore' : undefined, p: 0, testo: x.testo } : { p: x.p, testo: `Scarico ${Voce.NOME_VOCE} · ${Math.round((x.p || 0) * 100)}%` })); if (A.modo === 'ascolto' && x.fase === 'scarico') campo.querySelector('.stato.ascolto .lbl').textContent = `Ti ascolto · preparo la voce ${Math.round((x.p || 0) * 100)}%`; if (x.fase === 'pronta' && A.modo === 'ascolto') campo.querySelector('.stato.ascolto .lbl').textContent = 'Ti ascolto';
+    if (x.fase === 'ripiego') voceRipiegata = true;
+    if (A.modo === 'pensa' && attesaVoce) {   // Ripeti o la trascrizione che aspettano la voce: si vede a che punto è
+      const lbl = campo.querySelector('.stato.pensa .lbl'), cosa = voceRipiegata ? 'Parakeet non parte: preparo Whisper' : 'Preparo la voce';
+      if (x.fase === 'ripiego') lbl.textContent = cosa + '…';
+      else if (x.fase === 'scarico') lbl.textContent = `${cosa} · ${Math.round((x.p || 0) * 100)}%`;
+      else if (x.fase === 'pronta') lbl.textContent = attesaVoce;
+    } });
   // la voce già preparata si carica in silenzio dopo l'avvio: così il primo ⌥ Spazio è immediato
   try { if (DESKTOP && localStorage.getItem('lode:voce')) setTimeout(() => Voce.prepara().catch(() => { }), 4000); } catch { }
   if (V.attivo) {

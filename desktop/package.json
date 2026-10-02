@@ -15,7 +15,8 @@
     "dist:linux": "node prepara.mjs && electron-builder --linux AppImage --publish never"
   },
   "dependencies": {
-    "electron-updater": "6.8.10"
+    "electron-updater": "6.8.10",
+    "sherpa-onnx-node": "1.13.8"
   },
   "devDependencies": {
     "@huggingface/transformers": "3.8.1",
@@ -28,7 +29,13 @@
     "onnxruntime-node": "file:./vuoto",
     "onnxruntime-web": "file:./vuoto",
     "sharp": "file:./vuoto",
-    "@napi-rs/canvas": "file:./vuoto"
+    "@napi-rs/canvas": "file:./vuoto",
+    "sherpa-onnx-darwin-arm64": "1.13.8",
+    "sherpa-onnx-darwin-x64": "1.13.8",
+    "sherpa-onnx-linux-x64": "1.13.8",
+    "sherpa-onnx-linux-arm64": "1.13.8",
+    "sherpa-onnx-win-x64": "1.13.8",
+    "sherpa-onnx-win-ia32": "1.13.8"
   },
   "build": {
     "appId": "it.lode.app",
@@ -51,12 +58,19 @@
       "vault.mjs",
       "installa.mjs",
       "voce.mjs",
+      "voce-onnx.mjs",
+      "voce-onnx-motore.mjs",
       "progetto.mjs",
       "esegui.mjs",
       "aggiorna.mjs",
       "web/**",
       "package.json",
-      "build/tray*.png"
+      "build/tray*.png",
+      "!node_modules/sherpa-onnx-darwin-*{,/**}"
+    ],
+    "asarUnpack": [
+      "node_modules/sherpa-onnx-win-*/**",
+      "node_modules/sherpa-onnx-linux-*/**"
     ],
     "electronFuses": {
       "runAsNode": false,

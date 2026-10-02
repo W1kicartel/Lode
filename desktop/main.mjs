@@ -1,14 +1,16 @@
 // Lode, l'app desktop. Una finestra trasparente in cima allo schermo, sopra tutte le altre: dentro c'è solo la barra.
 // I clic passano attraverso tranne che sulla barra. Scorciatoie globali per la cattura in aula. Il vault Obsidian in
 // Documenti/Lode è la memoria: dati di Lode in .lode/dati.json, lezioni in Markdown. Icona nella barra dei menu.
-import { app, BrowserWindow, Menu, ShareMenu, Tray, clipboard, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, net, powerMonitor, screen, shell } from 'electron';
+import { app, BrowserWindow, Menu, ShareMenu, Tray, clipboard, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, net, powerMonitor, screen, shell, utilityProcess } from 'electron';
 import { existsSync, readFileSync, mkdirSync, writeFileSync, rmSync, renameSync, copyFileSync } from 'node:fs';
 import { execFile } from 'node:child_process';
+import { totalmem } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as V from './vault.mjs';
 import * as I from './installa.mjs';
 import * as VOCE from './voce.mjs';
+import * as VOCE_ONNX from './voce-onnx.mjs';
 import * as PROGETTO from './progetto.mjs';
 import * as AGGIORNA from './aggiorna.mjs';
 
@@ -375,14 +377,41 @@ ipcMain.handle('appunti:errore', () => {
 });
 app.on('will-quit', () => progetti?.chiudi());
 ipcMain.handle('sistema:inattivo', () => powerMonitor.getSystemIdleTime());
-// la voce sul Mac: Parakeet v3 sul Neural Engine (lode-voce). Altrove, o senza il programma, resta Whisper nella barra.
+// La voce: tre motori, li sceglie il main (VOCE_ONNX.scegliMotore) e la barra chiede solo voce:stato.
+// • Mac con chip Apple e lode-voce: Parakeet v3 sul Neural Engine (voce.mjs), come prima.
+// • Altrove, se c'è l'addon di sherpa-onnx per questo sistema e almeno ~6 GB di memoria: Parakeet v3 ONNX sul processore,
+//   in un utilityProcess (voce-onnx.mjs), con il modello in userData/voce-onnx.
+// • Altrimenti Whisper, dentro la barra (js/voce.js). Ci si torna anche se Parakeet ONNX non parte (addon, crash, modello
+//   rovinato, spazio): il main risponde { errore, ripiego: true } e la barra ritrascrive lo stesso audio con Whisper.
+//   Un addon che non si carica resta segnato in config.json fino alla versione dopo di Lode: niente tentativi a ogni avvio.
+const progressoVoce = x => { for (const w of BrowserWindow.getAllWindows()) w.webContents.send('voce:progresso', x); };
 const voce = VOCE.crea({ binario: [join(process.resourcesPath || '', 'bin', 'lode-voce'), join(QUI, 'bin', 'lode-voce')].find(existsSync) || join(QUI, 'bin', 'lode-voce'),   // nel pacchetto: Resources/bin
-  avanza: x => { for (const w of BrowserWindow.getAllWindows()) w.webContents.send('voce:progresso', x); } });
-ipcMain.handle('voce:stato', () => ({ parakeet: voce.disponibile() }));
-ipcMain.handle('voce:prepara', () => voce.avvia());
-ipcMain.handle('voce:trascrivi', (_, audio) => voce.trascrivi(audio));
-ipcMain.handle('voce:riposa', () => { voce.chiudi(); return true; });   // a riposo (js/voce.js): il processo esce, torna alla prima frase
-app.on('will-quit', () => voce.chiudi());
+  avanza: progressoVoce });
+// nelle prove (solo in sviluppo): LODE_VOCE sceglie il motore (mac, onnx, whisper), LODE_MODELLO_ONNX la cartella del modello
+const voceOnnx = VOCE_ONNX.crea({ cartella: process.env.LODE_MODELLO_ONNX || join(app.getPath('userData'), 'voce-onnx'), avvia: VOCE_ONNX.processoElectron(utilityProcess), rete: I.rete, avanza: p => progressoVoce({ p }) });
+let onnxGuasta = null, motoreVoce = ['mac', 'onnx', 'whisper'].includes(process.env.LODE_VOCE) ? process.env.LODE_VOCE : null;
+const sceltaVoce = () => motoreVoce ??= VOCE_ONNX.scegliMotore({ piattaforma: process.platform, arch: process.arch, lodeVoce: voce.disponibile(), sherpa: VOCE_ONNX.sherpaPresente(), memoria: totalmem(),
+  guasta: onnxGuasta || (conf.voceOnnx?.versione === app.getVersion() ? conf.voceOnnx.guasta : null) });
+async function suOnnx(fai) {
+  try { return await fai(); }
+  catch (e) {
+    // «chiusa» dopo un guasto: un'altra richiesta in attesa quando il motore è stato chiuso per passare a Whisper
+    const ripiego = VOCE_ONNX.RIPIEGO.includes(e.codice) || (e.codice === 'chiusa' && !!onnxGuasta);
+    if (ripiego) {
+      onnxGuasta = e.codice; motoreVoce = null; voceOnnx.chiudi(); console.warn('Lode: Parakeet ONNX non va, passo a Whisper:', e.message, e.dettaglio || '');
+      if (e.codice === 'addon') { conf.voceOnnx = { guasta: 'addon', versione: app.getVersion() }; salvaConf(); }
+    } else if (e.dettaglio) console.warn('Lode: voce Parakeet ONNX:', e.message, e.dettaglio);
+    return { errore: e.message, ripiego };   // alla barra solo la frase in italiano: il dettaglio tecnico resta qui
+  }
+}
+const nonNelMain = { errore: 'la voce è Whisper, nella barra', ripiego: true };
+ipcMain.handle('voce:stato', () => { const m = sceltaVoce(); return { parakeet: m === 'mac', motore: m, peso: m === 'onnx' ? VOCE_ONNX.PESO_MB : null }; });
+ipcMain.handle('voce:prepara', () => { const m = sceltaVoce(); return m === 'onnx' ? suOnnx(() => voceOnnx.avvia()) : m === 'mac' ? voce.avvia() : nonNelMain; });
+ipcMain.handle('voce:trascrivi', (_, audio) => { const m = sceltaVoce(); return m === 'onnx' ? suOnnx(() => voceOnnx.trascrivi(audio)) : m === 'mac' ? voce.trascrivi(audio) : nonNelMain; });
+// a riposo (js/voce.js): il processo esce, torna alla prima frase. Il timer del riposo gira in ogni finestra: Parakeet
+// ONNX che sta partendo o trascrivendo per un'altra finestra resta acceso (ci penserà il timer di quella)
+ipcMain.handle('voce:riposa', () => { voce.chiudi(); if (!voceOnnx.occupato()) voceOnnx.chiudi(); return true; });
+app.on('will-quit', () => { voce.chiudi(); voceOnnx.chiudi(); });
 // dopo una cattura veloce il fuoco torna all'app dove lo studente stava scrivendo
 function rilascia() {
   if (!barra || barra.isDestroyed()) return;
