@@ -34,7 +34,8 @@ function ancora() {
   // mentre si trascina un file, la gemma sta al centro della zona e lo guarda arrivare
   const z = document.querySelector('.ld.drop .ld-zona-in svg');
   if (z) { const r = z.getBoundingClientRect(); if (r.width) return { x: r.left + r.width / 2, y: r.top + r.height / 2, s: 1.6 }; }
-  const a = document.querySelector(S.dove === 'pannello' ? '.ld[data-aperto="1"] .ld-testa .r1 .ld-rombo' : '.ld-pill .ld-rombo');
+  // con una proposta aperta la gemma sta al suo posto, a sinistra della proposta (non sopra il testo)
+  const a = document.querySelector(S.dove === 'pannello' ? '.ld[data-aperto="1"] .ld-testa .r1 .ld-rombo' : '.ld.propone:not([data-aperto="1"]) .ld-proposta .ld-rombo') || document.querySelector(S.dove === 'pannello' ? '.ld[data-aperto="1"] .ld-testa .r1 .ld-rombo' : '.ld-pill .ld-rombo');
   if (!a) return null;
   const r = a.getBoundingClientRect(); if (!r.width && !r.height) return null;
   return { x: r.left + r.width / 2 + (S.dove === 'pannello' ? 4 : 0), y: r.top + r.height / 2, s: S.dove === 'pannello' ? 1.45 : 1.05 };

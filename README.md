@@ -1,189 +1,259 @@
 # Lode
 
-**L'assistente di studio per chi fa l'università. Open source, gratis, i dati restano tuoi.**
+**L'assistente di studio per l'università che vive in cima allo schermo. Open source, gratis, in italiano. I tuoi appunti restano sul tuo computer.**
 
-Lode vive in una piccola barra di vetro nero in cima allo schermo. A riposo ti dice una cosa sola: il prossimo esame, le carte da ripassare o il tempo che scorre. Ci passi sopra e si apre: il piano di oggi, sei strumenti, un campo dove scrivere (o parlare) in italiano normale.
+Lode è una piccola pillola di vetro nero in cima allo schermo. Mentre sei a lezione e prendi appunti, ascolta per te e ti fa recuperare quello che ti sei perso. A casa ti allena sulle cose che il prof ha detto davvero. Tutto finisce in un vault [Obsidian](https://obsidian.md) che è tuo: file Markdown che puoi leggere, correggere e portarti dietro.
 
-```
-focus 50 su analisi 2
-ho preso 28 in fisica
-esame basi di dati il 15 gennaio 9 cfu
-quanto mi serve per 110
-se prendo 30 in analisi 2
-ripassa analisi
-carta: teorema di Green = l'integrale di linea sul bordo è uguale…
-interrogami su basi di dati
-```
+![«Ripeti»: gli ultimi 60 secondi del prof, con l'ultima frase in evidenza](docs/immagini/ripeti.jpg)
 
-Niente account, niente server, niente pubblicità. Si apre nel browser, funziona offline, si installa come app su computer e telefono.
+> **Stato: beta.** Funziona ed è provato, ma su un computer solo, un Mac con chip Apple. Non c'è ancora un installer da scaricare: si installa dal codice in cinque minuti (vedi sotto). Windows e Linux non sono ancora stati provati.
 
-## Al primo avvio
-
-Una finestra di benvenuto in due parti:
-- **Obbligatoria.** Come ti chiami, poi un clic per installare **Obsidian** (l'installer ufficiale), il **cervello locale** (Ollama + Qwen3.5, scelto in base alla memoria del computer) e la **voce**: sui Mac con chip Apple è Parakeet v3 sul Neural Engine, altrove Whisper.
-- **Facoltativa, il setup veloce:**
-  - ateneo e corso;
-  - il **libretto incollato da Esse3**, letto anche senza AI;
-  - gli esami da dare con le date;
-  - l'**orario**, scritto a parole, incollato dal sito o importato dal calendario `.ics`;
-  - quando studi, quanto spesso Lode può proporti cose e le ore di silenzio.
-
-Si rifà dal menu dell'icona («Rifai la configurazione…»).
-
-## L'allenatore
-
-Dì a Lode quando hai l'esame: «ho l'esame di analisi 2 il 15 gennaio», «l'appello di fisica è il 3 febbraio», «analisi 2 spostato al 20». In momenti a caso della giornata, quando sei al computer e libero, la pillola si allunga e ti propone una cosa piccola. Per esempio:
-- *2 minuti su 6 definizioni?*
-- *8 carte da ripassare*
-- *Rileggi le cose che il prof ha detto «da esame»*
-- *Tre domande lampo, come all'orale?*
-- *Oggi ti mancano 2 h: un focus?*
-
-Rispondi con **Gioca** o con **Dopo**. Più l'esame è vicino, più le proposte sono frequenti. Mai a lezione, in focus, durante una trascrizione o nelle ore di silenzio. Lode impara: le proposte che accetti tornano più spesso, e la [[Memoria]] le registra. Per regolarle: «proposte poche / normali / frequenti», «spegni le proposte».
-
-## In aula, a casa, nel tuo vault Obsidian
-
-L'**app desktop** mette la barra sopra tutte le finestre. Al primo avvio:
-- crea un **vault Obsidian** in `Documenti/Lode`;
-- con un clic da «Prepara Lode» installa **Obsidian** (l'installer ufficiale) e un **cervello locale**: Ollama + Qwen3.5 (4B, 9B o 35B-A3B «a esperti», in base alla memoria). Sulle slide di prova il 4B ha scritto carte tutte fedeli al materiale, il vecchio Gemma 3 4B circa una su tre sbagliata o inventata;
-- prepara la **voce**: sui Mac con chip Apple **Parakeet v3** di NVIDIA sul Neural Engine, con [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache 2.0, lo stesso motore dell'app FluidVoice). Su Windows e Linux c'è Whisper, che gira dentro la barra. Su un minuto di lezione Parakeet trascrive in 0,8 s quasi senza errori e con la punteggiatura, Whisper base in 3,7 s.
-
-Tutto funziona sul computer, senza account e senza internet.
-
-- **Sa quando sei a lezione.** Scrivi una volta «lezione analisi 2 lunedì e mercoledì 9-11 aula 7». Da quel momento la barra mostra `● Analisi 2 · fine tra 23 min · ★2`.
-- **Trascrive la lezione intera** (⌃⌥R). Ogni 20-30 secondi aggiunge le parole del prof alla nota della lezione in Obsidian, quindi niente si perde. Le **formule dette a voce diventano LaTeX**: «l'integrale da zero a pi greco di seno di x in d x» → $\int_{0}^{\pi} \sin x \, dx$. L'audio non viene mai salvato.
-- **Ripeti** (⌃⌥P): ti sei perso una frase? In aula Lode tiene in memoria gli ultimi 60 secondi, solo in RAM e mai su disco, e su richiesta te li trascrive. Poi puoi aggiungerli agli appunti o segnarli come ★.
-- **Sbobine da passare ai compagni.** Con «condividi la sbobina» Lode crea due file: un `.md` per Obsidian e una pagina `.html` che si apre su qualsiasi telefono, con le formule disegnate. Partono dal menu Condividi (AirDrop, Messaggi, Mail…). Chi ha Lode trascina la sbobina sulla pillola e se la ritrova nel vault, con definizioni e ★ pronte per i giochi.
-- **Trascina un file sulla pillola, anche chiusa.** Si allarga in una zona di rilascio e poi chiede *cosa ne faccio?*. Accetta:
-  - PDF e slide `.pptx`: carte del ripasso, riassunto in Obsidian, definizioni per i giochi, interrogazione, allegato alla lezione;
-  - foto della lavagna: trascritta in appunti con le formule;
-  - registrazioni audio: trascritte nella lezione;
-  - appunti `.md`, `.txt` e `.docx`;
-  - sbobine dei compagni;
-  - carte di Anki.
-- **Riordina.** A fine lezione il modello locale (o la tua AI) trasforma la trascrizione in appunti puliti, con titoli, punti e formule. Poi ne estrae definizioni e ★ da esame.
-- **Cattura veloce senza lasciare gli appunti:** ⌃⌥S **★ Da esame**, ⌃⌥D **Definizione**, ⌃⌥Q **Domanda per il prof**.
-- **Voce:** tieni premuto ⌥ Spazio e parla. Esempi: «ho preso ventotto in fisica due», «definizione nucleofilo uguale specie ricca di elettroni», «spiegami il teorema di Green».
-- **A casa ti allena:** «2 minuti · 6 definizioni di Analisi 2 di stamattina». I giochi sono abbina, chi sono?, completa e flash.
-- **Impara con te:** Lode scrive e rilegge `Lode/Memoria.md`, il Glossario e le pagine dei corsi. Più usi Lode, più sa cosa ripassare e come aiutarti (vedi «Come cresce» qui sotto).
-
-```bash
-cd desktop && npm install && npm start
-```
-
-Per i pacchetti: `npm run dist:mac`, `dist:win`, `dist:linux`.
-
-**Prove:**
-- `node test/unita.mjs` controlla comandi, formule, note e conti;
-- `node test/prova-app.mjs`, solo su macOS, fa un giro completo dell'app su un vault temporaneo. Le frasi «parlate» le genera la voce di sistema.
-
-## Come cresce con ogni studente
-
-Lode non ha un server e non addestra un modello: **la sua memoria è il vault Obsidian dello studente**. Sono file Markdown leggibili, che lo studente può correggere e sincronizzare come vuole.
-
-1. **Ogni lezione è una nota.** Contiene appunti, ★, definizioni, domande, trascrizione e appunti riordinati. Lode la rilegge a ogni modifica, anche quando scrivi in Obsidian.
-2. **Ogni definizione ha una memoria.** Ogni risposta ai giochi e al ripasso aggiorna quando ripresentarla (ripetizione dilazionata SM-2). Quelle sbagliate tornano prima, quelle sicure si diradano.
-3. **`Lode/Memoria.md`** è il riassunto di cosa sai, cosa sbagli, quando studi e le ★ recenti. Nella sezione «Note per Lode» gli dici come vuoi essere aiutato.
-4. **L'AI legge tutto questo a ogni domanda**, insieme alle ultime lezioni: orario, esami, ★, definizioni e appunti. Le spiegazioni e l'orale sono quindi sul *tuo* corso, con le parole del *tuo* prof.
-5. **Pagine generate:** Home, Esami, Glossario e le pagine dei corsi si aggiornano da sole e collegano tutto. Lode scrive solo dentro i suoi riquadri, il resto è tuo.
+---
 
 ## Cosa fa
 
-| | |
-|---|---|
-| **Libretto** | Media ponderata e aritmetica, **base di laurea** (media × 110 / 30), CFU fatti e mancanti. La lode vale quanto dice il tuo ateneo (30, 31, 32 o 33). |
-| **Che voto mi serve** | «quanto mi serve per 105» → la media che ti serve nei CFU che mancano. «se prendo 30 in analisi» → come cambia la media, subito. |
-| **Piano per gli appelli** | Ogni esame ha le sue ore previste (10 per CFU, le cambi). Lode conta i giorni e ti dice quante ore fare **oggi** per arrivarci in pari. |
-| **Focus** | Il timer sta nella barra, sempre visibile. A fine sessione un rintocco, la pausa parte da sola, le ore entrano nel piano dell'esame. Serie di giorni di fila. |
-| **Ripasso a intervalli** | Flashcard con l'algoritmo SM-2: Spazio per girare, 1-4 per rispondere. Le difficili tornano domani, le facili tra settimane. Importa i mazzi di Anki (testo con tab). |
-| **Voce** | Tieni premuto ⌥ Spazio (Ctrl ⇧ Spazio su Windows) e parla. Gratis, nel browser. |
-| **AI** | Con il cervello locale (gratis) o la tua AI preferita: spiegazioni da tutor, **carte del ripasso da PDF, slide e foto della lavagna** (trascinali sulla finestra), e **l'interrogazione**: un prof d'orale che fa una domanda alla volta, ti corregge e alla fine ti dà un voto onesto. |
+### In aula
+- **Ripeti** (⌃⌥P). Ti sei perso una frase? Lode tiene in memoria gli ultimi 60 secondi, solo in RAM e mai su disco, e su richiesta te li scrive, con l'ultima frase del prof in evidenza. Un clic e va negli appunti o tra le cose «★ da esame».
+- **Trascrive la lezione intera** (⌃⌥R) nella nota della lezione in Obsidian, a pezzi di 20-30 secondi: se il computer si spegne, quello che c'era è già salvato.
+- **Le formule dette a voce diventano formule.** «l'integrale da zero a uno di x al quadrato in dx» diventa $\int_{0}^{1} x^{2} \, dx$, e lo stesso vale per limiti, derivate, sommatorie, frazioni e lettere greche.
+- **Cattura veloce** senza lasciare gli appunti: ⌃⌥S **★ Da esame**, ⌃⌥D **Definizione**, ⌃⌥Q **Domanda per il prof**.
+- **Sa quando sei a lezione.** Scrivi una volta «lezione analisi 2 lunedì e mercoledì 9-11 aula 7» e la pillola mostra `● Analisi 2 · fine tra 23 min · ★2`.
 
-Lode non scrive mai niente da solo: quello che propone l'AI (carte, esami, voti) arriva con **Conferma / Annulla**, e ogni comando si può annullare con un clic.
+![La lezione trascritta nella nota, con le formule](docs/immagini/trascrizione.jpg)
 
-## Come si usa
+### Con i file
+Trascina un file sulla pillola, anche chiusa: si allarga e ti chiede *cosa ne faccio?*
 
-**Online:** apri il sito (GitHub Pages) e premi «prova con i dati di esempio» per vederlo pieno in dieci secondi. Dal menu del browser: *Installa app*.
+- **PDF e slide (`.pptx`):** carte del ripasso, riassunto in Obsidian, definizioni per i giochi, interrogazione, allegato alla lezione.
+- **Foto della lavagna:** trascritta in appunti, formule comprese.
+- **Registrazioni audio:** trascritte nella lezione.
+- **Appunti (`.md`, `.txt`, `.docx`), sbobine dei compagni e mazzi di Anki.**
 
-**Sul tuo computer:**
+![Un PDF lasciato sulla pillola: cosa ne faccio?](docs/immagini/file.jpg)
 
-```bash
-git clone https://github.com/<tuo-utente>/lode && cd lode
-python3 -m http.server 5173
+### A casa
+- **Ti allena quando hai due minuti.** Digli quando hai l'esame («ho l'esame di analisi 2 il 15 gennaio»). Quando sei al computer e libero, la pillola si allunga e ti propone una cosa piccola: un gioco sulle definizioni, le carte da ripassare, le ★ da rileggere, tre domande come all'orale. Più l'esame è vicino, più spesso. Mai a lezione o nelle ore di silenzio. Impara cosa ti serve.
+- **Giochi di memoria** sulle definizioni delle tue lezioni: abbina, chi sono?, completa, flash.
+- **Ripasso a intervalli** (SM-2): le carte difficili tornano domani, le facili tra settimane.
+- **Interrogazione:** un prof d'orale che fa una domanda alla volta, ti corregge e alla fine ti dà un voto onesto.
+- **Libretto e conti:** media ponderata, base di laurea, «quanto mi serve per 110», «se prendo 30 in analisi», ore da fare oggi per arrivare all'appello.
+- **Sbobine da passare ai compagni:** un `.md` per Obsidian e una pagina `.html` che si apre su qualsiasi telefono, con le formule disegnate.
+
+![La proposta a sorpresa nella pillola](docs/immagini/proposta.jpg)
+
+![Il gioco: abbina ogni termine alla sua definizione](docs/immagini/gioco.jpg)
+
+### Parli come parli
+Nessun comando da imparare. Scrivi, o tieni premuto ⌥ Spazio e parla:
+
+```
+ho preso 28 in fisica 2
+esame basi di dati il 15 gennaio 9 cfu
+quanto mi serve per 110
+def: gradiente = vettore delle derivate parziali
+ripeti
+trascrivi la lezione
+interrogami su analisi 2
+spiegami il teorema di Green
 ```
 
-poi apri http://localhost:5173. Non c'è niente da compilare: HTML, CSS e JavaScript a moduli.
+---
 
-Scorciatoie: **/** o **⌘K** per scrivere, **⌥ Spazio** tenuto premuto per parlare, **Esc** per chiudere, **Spazio** e **1-4** nel ripasso.
+## Installazione
 
-## Privacy
+### Cosa serve
+- **Un Mac con chip Apple (M1 o successivi) e almeno 8 GB di memoria.** È la configurazione provata. Windows e Linux dovrebbero funzionare con la voce Whisper al posto di Parakeet, ma non sono ancora stati provati.
+- **Circa 5 GB liberi:** Obsidian circa 230 MB, l'AI locale circa 3,5 GB, la voce circa 470 MB.
+- **[Node.js](https://nodejs.org) 20 o successivo** e **git.** Sul Mac git arriva con gli strumenti di Apple (passo 1).
 
-- Tutto sta nel `localStorage` del tuo browser. Da *Esporta* scarichi un backup JSON; da *Importa un backup* lo rimetti, anche su un altro computer.
-- La chiave della tua AI resta su questo computer e parte solo verso il servizio che hai scelto. Non finisce nel vault né nei backup.
-- Senza chiave non esce nessun dato dal computer: comandi, timer, libretto e ripasso sono locali.
+### Passo per passo (Mac)
 
-## Quanto costa l'AI
-**Niente, di base.** Il cervello locale (Ollama + Qwen3.5) è gratis, lavora offline e gli appunti non escono dal computer.
+1. **Gli strumenti di Apple.** Servono per git e per la voce Parakeet. Apri il Terminale e scrivi:
+   ```bash
+   xcode-select --install
+   ```
+   Si apre una finestra: premi **Installa**. Se dice che sono già installati, va bene così.
 
-**Se vuoi di più**, scrivi «AI» nella barra e collega la chiave del servizio che preferisci:
+2. **Node.js.** Scarica la versione «LTS» da [nodejs.org](https://nodejs.org) e installala.
+
+3. **Scarica Lode:**
+   ```bash
+   git clone https://github.com/<UTENTE>/lode.git
+   cd lode
+   ```
+
+4. **La voce migliore (consigliato, Mac con chip Apple).** Compila `lode-voce`, il riconoscimento vocale Parakeet sul Neural Engine. Ci vogliono 3-5 minuti la prima volta:
+   ```bash
+   bash desktop/voce-mac/compila.sh
+   ```
+   Se salti questo passo, Lode usa Whisper. Funziona, ma è più lento e sbaglia di più.
+
+5. **Avvia l'app:**
+   ```bash
+   cd desktop
+   npm install
+   npm start
+   ```
+
+6. **La configurazione guidata** si apre da sola:
+   - **Obbligatoria.** Come ti chiami, poi un clic installa **Obsidian** (l'installer ufficiale, con la firma verificata), l'**AI locale** (Ollama + Qwen3.5, scelto in base alla memoria del computer) e la **voce**. I download continuano anche mentre vai avanti.
+   - **Facoltativa, il setup veloce.** Ateneo e corso, il **libretto incollato da Esse3** (letto anche senza AI), gli esami con le date, l'**orario** (a parole, incollato dal sito o dal calendario `.ics`), quando studi e quanto spesso Lode può proporti cose.
+
+   La pillola compare in cima allo schermo. Il vault Obsidian è in `Documenti/Lode`. Ti serve di nuovo la configurazione? Dal menu dell'icona: «Rifai la configurazione…».
+
+7. **Il microfono.** La prima volta che usi la voce, Ripeti o la trascrizione, macOS chiede il permesso: concedilo. Se l'hai negato, si riattiva da *Impostazioni di Sistema → Privacy e sicurezza → Microfono*.
+
+### Aggiornare
+```bash
+cd lode
+git pull
+bash desktop/voce-mac/compila.sh
+cd desktop
+npm install
+```
+
+### Se qualcosa non va
+- **`npm install` dà `EACCES`:** la cartella della cache di npm appartiene a root (un vecchio difetto di npm). Si sistema con:
+  ```bash
+  sudo chown -R $(id -u):$(id -g) ~/.npm
+  ```
+- **`compila.sh` si ferma con errori su `PackageDescription` o `SwiftBridging`:** sono due difetti noti dei Command Line Tools 16.4 di Apple. Lo script li aggira da solo. Se fallisce comunque, aggiorna gli strumenti di Apple (passo 1) e riprova.
+- **La prima trascrizione con Parakeet ci mette circa 45 secondi:** il Mac sta preparando il modello per il Neural Engine. Succede una volta sola.
+- **L'AI locale è lenta:** con 8 GB di memoria Qwen3.5 4B scrive circa 20 parole al secondo. Le carte da un PDF richiedono circa mezzo minuto.
+
+### Disinstallare
+Cancella la cartella `lode`. I tuoi appunti restano in `Documenti/Lode`: sono tuoi. Obsidian e Ollama sono app normali, si tolgono dalla cartella Applicazioni. Il modello si toglie con `ollama rm qwen3.5:4b`.
+
+### Solo nel browser (senza installare)
+Per provare libretto, conti, timer, ripasso e giochi senza installare niente:
+```bash
+python3 -m http.server 5173
+```
+poi apri http://localhost:5173: segui la configurazione oppure, per vederlo pieno in un attimo, premi «Esempio» nella barra. Voce, trascrizione, Ripeti, Obsidian e AI locale sono solo nell'app.
+
+---
+
+## L'AI: gratis di base, potenziabile con la tua chiave
+
+**Niente da pagare.** L'AI locale (Ollama + Qwen3.5) gira sul tuo computer, gratis e offline: gli appunti non escono. Lode sceglie il modello in base alla memoria:
+
+| Memoria del computer | Modello |
+|---|---|
+| fino a 15 GB | Qwen3.5 4B |
+| da 16 GB | Qwen3.5 9B |
+| da 40 GB | Qwen3.5 35B-A3B, un modello «a esperti»: grande ma veloce come uno piccolo |
+
+Sulle slide di prova Qwen3.5 4B ha scritto carte tutte fedeli al materiale. Il modello che usavamo prima, Gemma 3 4B, ne sbagliava o inventava circa una su tre.
+
+**Se vuoi di più**, scrivi **«AI»** nella barra e collega la chiave del servizio che preferisci:
 - **Claude** (Anthropic);
 - **ChatGPT** (OpenAI);
 - **Gemini** (Google);
-- **Mistral**;
+- **Mistral** (server in Europa);
 - **Groq**;
 - **OpenRouter**;
 - **DeepSeek**.
 
-Paghi direttamente il servizio, a consumo: di solito pochi centesimi a sessione. Lode non vede né incassa niente. La chiave resta su questo computer, mai nel vault né nei backup.
+Paghi direttamente il servizio, a consumo, di solito pochi centesimi a sessione: Lode non vede né incassa niente. Alcuni servizi hanno piani gratuiti con limiti. Lode ti dice quando i testi possono essere usati per addestrare i modelli: per esempio il piano gratuito di Gemini.
 
-Con l'opzione «Appunti e lezioni restano sul computer» la tua AI fa solo spiegazioni e orale. Carte, definizioni e riordino restano al modello locale.
+- **Appunti sul computer.** Con l'opzione «Appunti e lezioni restano sul computer», la tua AI fa solo spiegazioni e orale. Carte, definizioni e riordino restano all'AI locale.
+- **Con Claude** Lode può anche proporre carte, esami e voti da confermare.
+- **L'AI propone, tu decidi.** Ogni modifica ai tuoi dati arriva con **Conferma / Annulla**.
 
-Con Claude Lode può anche proporre carte, esami e voti da confermare. Con gli altri servizi spiega, interroga, crea carte e riordina gli appunti.
+## La voce
 
-## Com'è fatto
+| | Mac con chip Apple | Windows, Linux, Mac Intel |
+|---|---|---|
+| Motore | **Parakeet TDT v3** di NVIDIA sul Neural Engine, con [FluidAudio](https://github.com/FluidInference/FluidAudio), lo stesso motore dell'app FluidVoice | **Whisper** (base o small), dentro l'app |
+| Un minuto di Ripeti (prova sul Mac di sviluppo) | 0,8 s, quasi senza errori, con la punteggiatura | 3,7 s, con qualche errore |
+
+Tutto offline. L'audio non viene mai salvato su disco.
+
+## Privacy
+- **Niente account, niente server di Lode, niente pubblicità, niente tracciamento.**
+- I dati stanno sul tuo computer: nel vault Obsidian (`Documenti/Lode`) e nei file dell'app.
+- Il microfono si accende solo quando lo chiedi: voce, Ripeti in aula se l'hai attivato, trascrizione. Per Ripeti l'audio vive solo in memoria, per 90 secondi.
+- La chiave della tua AI resta su questo computer e parte solo verso il servizio che hai scelto. Non finisce nel vault né nei backup.
+- **Registrare una lezione** dipende dal regolamento del tuo ateneo e dal docente: chiedi prima.
+
+## Come cresce con te
+Lode non ha un server e non addestra modelli: **la sua memoria è il tuo vault**.
+1. **Ogni lezione è una nota.** Contiene appunti, ★, definizioni, domande, trascrizione e appunti riordinati. Lode la rilegge anche quando scrivi in Obsidian.
+2. **Ogni definizione ha una memoria.** Ogni risposta ai giochi e al ripasso decide quando ripresentarla.
+3. **`Lode/Memoria.md`** riassume cosa sai, cosa sbagli, quando studi e quali proposte ti piacciono. Nella sezione «Note per Lode» puoi dirgli come vuoi essere aiutato.
+4. **L'AI legge tutto questo** quando le chiedi qualcosa: le spiegazioni e l'orale sono sul *tuo* corso, con le parole del *tuo* prof.
+5. **Le pagine Home, Esami, Glossario e dei corsi** si aggiornano da sole. Lode scrive solo dentro i suoi riquadri, il resto è tuo.
+
+## Scorciatoie (Mac)
+
+| | |
+|---|---|
+| ⌥ Spazio (tieni premuto) | parla |
+| ⌃⌥ Spazio | scrivi |
+| ⌃⌥P | Ripeti |
+| ⌃⌥R | trascrivi la lezione / fine |
+| ⌃⌥S · ⌃⌥D · ⌃⌥Q | ★ da esame · definizione · domanda |
+| ⌃⌥G | gioco |
+| Esc | indietro, poi chiudi |
+
+---
+
+## Per chi sviluppa
+
+**Niente build:** HTML, CSS e moduli ES che il browser legge così come sono. L'app desktop è Electron.
+
+**Prove:**
+```bash
+node --experimental-vm-modules test/unita.mjs
+node test/prova-app.mjs
+```
+- `test/unita.mjs` controlla comandi, formule, note e conti: 45 prove.
+- `test/prova-app.mjs` fa il giro completo dell'app su un vault temporaneo, senza toccare i tuoi dati: 57 prove. Funziona solo su macOS: le frasi «parlate» le genera la voce di sistema e l'audio va direttamente al motore, senza altoparlanti né microfono.
+
+**Pacchetti** (sperimentali, non ancora firmati): `cd desktop`, poi `npm run dist:mac`, `dist:win` oppure `dist:linux`.
 
 | File | Cosa fa |
 |---|---|
-| `js/lode.js` | La barra: pillola, pannello a molla, conversazione, strumenti, conferme, voce, file trascinati |
-| `js/comandi.js` | Capisce l'italiano senza AI: date («15/1», «lunedì», «tra 10 giorni»), voti, minuti, nomi d'esame approssimati |
+| `js/lode.js` | La barra: pillola, pannello a molla, conversazione, schede, conferme, voce, file trascinati, «La tua AI» |
+| `js/comandi.js` | Capisce l'italiano senza AI: date, voti, minuti, nomi d'esame approssimati |
 | `js/dati.js` | Dati e conti: media, base di laurea, voto che serve, piano, SM-2 |
-| `js/focus.js` | Il timer: sopravvive al ricaricamento, notifiche, rintocco sintetizzato |
-| `js/ai.js` | L'AI: il locale (Ollama), Claude con gli strumenti (carte, esami, voti, focus) o un servizio in formato OpenAI (ChatGPT, Gemini, Mistral, Groq, OpenRouter, DeepSeek); il prof dell'orale |
-| `js/voce.js` | Riconoscimento e lettura ad alta voce del browser, in italiano |
-| `js/mascotte.js` | La gemma con gli occhi: guarda il cursore, ascolta, pensa, legge mentre studi, salta quando finisci |
-| `js/motore.js` | Un solo ciclo di animazione: curve morbide, entrate sfocate, molle senza rimbalzi |
-| `js/pagina.js` | La pagina sotto la barra (nel browser) o «il quadro» (nell'app): numeri, appelli, libretto, mazzi, impostazioni |
-| `js/markdown.js` | Le note di Obsidian: modello della lezione, lettura di definizioni/★/domande, inserimento in una sezione, orario come tabella |
-| `js/vault.js` | Il vault visto dalla barra: annota nella lezione giusta, apre Obsidian, scrive la Memoria |
-| `js/giochi.js` | I giochi di memoria: abbina, chi sono?, completa, flash |
-| `js/trascrizione.js` | La lezione intera: microfono → pezzi da 20-30 s → Parakeet o Whisper → formule → nota Obsidian, salvata a ogni pezzo |
-| `desktop/voce-mac/` | `lode-voce`: Parakeet v3 (FluidAudio) sul Neural Engine. Si compila con `desktop/voce-mac/compila.sh`, che aggira due difetti dei Command Line Tools 16.4 |
-| `desktop/voce.mjs` | Avvia `lode-voce` e gli passa l'audio |
-| `js/orecchio.js` | Il microfono condiviso in aula, con gli ultimi 90 secondi solo in memoria (per «Ripeti») |
-| `js/file.js` | I file trascinati: tipo, testo di PDF (pdf.js), Word e PowerPoint (zip di XML), audio a 16 kHz |
-| `js/sbobina.js` | Sbobine da condividere (.md + .html con formule MathML) e sbobine ricevute |
-| `js/benvenuto.js` | La configurazione guidata: nome, installazioni, setup veloce (libretto da Esse3, .ics, abitudini) |
-| `js/allenatore.js` | Le proposte a sorpresa: quando (al computer, libero, non in silenzio), cosa (giochi, carte, ★, orale, focus), e cosa impara |
-| `js/formule.js` | Le formule dette a voce in LaTeX (integrali, limiti, sommatorie, derivate, frazioni, potenze, lettere greche…) |
-| `desktop/installa.mjs` | Installa Obsidian (installer ufficiale, firma verificata) e Ollama + Qwen3.5 |
-| `desktop/main.mjs` | L'app Electron: finestra trasparente sempre in primo piano, clic che passano attraverso, scorciatoie globali, icona nella barra dei menu |
-| `desktop/vault.mjs` | Crea il vault, lo registra in Obsidian, lo guarda e rilegge le lezioni quando cambiano |
+| `js/ai.js` | L'AI: locale (Ollama), Claude con gli strumenti, oppure un servizio in formato OpenAI; il prof dell'orale |
+| `js/voce.js` | La voce: Parakeet (Mac) o Whisper, in fila con priorità per Ripeti e i comandi |
+| `js/orecchio.js` | Il microfono condiviso in aula, con gli ultimi 90 secondi solo in memoria |
+| `js/trascrizione.js` | La lezione intera: microfono, pezzi da 20-30 s, voce, formule, nota Obsidian |
+| `js/formule.js` | Le formule dette a voce in LaTeX |
+| `js/file.js` | I file trascinati: tipo, testo di PDF (pdf.js), Word e PowerPoint, audio a 16 kHz |
+| `js/sbobina.js` | Sbobine da condividere (.md + .html con formule) e sbobine ricevute |
+| `js/allenatore.js` | Le proposte a sorpresa: quando, cosa, e cosa impara |
+| `js/benvenuto.js` | La configurazione guidata |
+| `js/giochi.js` | I giochi di memoria |
+| `js/markdown.js`, `js/vault.js` | Le note di Obsidian e il vault visto dalla barra |
+| `js/mascotte.js`, `js/motore.js` | La gemma con gli occhi e le animazioni |
+| `desktop/main.mjs` | L'app Electron: finestra trasparente sempre in primo piano, scorciatoie globali, icona nella barra dei menu, chiamate all'AI |
+| `desktop/installa.mjs` | Installa Obsidian e Ollama + Qwen3.5 |
+| `desktop/voce.mjs`, `desktop/voce-mac/` | `lode-voce`: Parakeet v3 via FluidAudio |
+| `desktop/vault.mjs` | Crea il vault, lo registra in Obsidian, rilegge le lezioni quando cambiano |
 
-Design: solo bianco e nero, font [Geist](https://github.com/vercel/geist-font) (OFL), luce che segue il cursore, `prefers-reduced-motion` rispettato.
+Design: solo bianco e nero, font [Geist](https://github.com/vercel/geist-font), movimento morbido, `prefers-reduced-motion` rispettato. Le regole per contribuire sono in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Da fare (cerco mani)
-
-- [ ] Sincronizzazione facoltativa fra dispositivi (cifrata, file su Drive/iCloud o Supabase)
-- [ ] Import del libretto dai portali d'ateneo (Esse3, Infostud, …) incollando la pagina
-- [ ] Calendario `.ics` degli appelli e promemoria
+## Cosa manca (cerco mani)
+- [ ] Installer firmato per macOS e Windows
+- [ ] Prove vere su Windows e Linux; Parakeet anche lì (versione ONNX)
+- [ ] Prove in aule vere: rumore, distanza, accenti
+- [ ] Sincronizzazione facoltativa fra dispositivi, cifrata
 - [ ] Esportazione dei mazzi per Anki
-- [ ] Mazzi condivisi per corso (link a un JSON)
 - [ ] Riconoscere chi parla (prof o studenti) nella trascrizione
-- [ ] Passare da Electron a Tauri (app più leggera)
-- [ ] Regole dei singoli atenei per il voto di laurea (punti bonus, lodi, Erasmus)
+- [ ] Regole dei singoli atenei per il voto di laurea
 
-Le pull request sono benvenute: leggi [CONTRIBUTING.md](CONTRIBUTING.md).
+## Crediti
+Lode usa, senza modificarli:
+- [Obsidian](https://obsidian.md): gratis per uso personale, non open source;
+- [Ollama](https://ollama.com) (MIT) e [Qwen3.5](https://huggingface.co/Qwen) (Apache 2.0);
+- [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache 2.0) e il modello [Parakeet TDT v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) di NVIDIA (CC BY 4.0);
+- [transformers.js](https://github.com/huggingface/transformers.js) (Apache 2.0) con [Whisper](https://github.com/openai/whisper) (MIT);
+- [pdf.js](https://github.com/mozilla/pdf.js) (Apache 2.0) e [Temml](https://temml.org) (MIT);
+- [Electron](https://www.electronjs.org) (MIT);
+- [Geist](https://github.com/vercel/geist-font) (SIL OFL 1.1).
 
 ## Licenza
-
-MIT. Geist e Geist Mono: SIL Open Font License 1.1 (vedi `fonts/LICENZE.txt`).
+MIT. Fai quello che vuoi, citando il progetto. Geist e Geist Mono: SIL Open Font License 1.1 (vedi `fonts/LICENZE.txt`).

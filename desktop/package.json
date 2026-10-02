@@ -22,11 +22,12 @@
     "appId": "it.lode.app",
     "productName": "Lode",
     "directories": { "output": "dist", "buildResources": "build" },
-    "files": ["main.mjs", "preload.cjs", "vault.mjs", "web/**", "build/tray*.png", "package.json"],
+    "files": ["main.mjs", "preload.cjs", "vault.mjs", "installa.mjs", "voce.mjs", "web/**", "build/tray*.png", "package.json"],
+    "extraResources": [{ "from": "bin", "to": "bin", "filter": ["lode-voce"] }],
     "mac": {
       "category": "public.app-category.education",
       "target": [{ "target": "dmg", "arch": ["universal"] }],
-      "extendInfo": { "LSUIElement": true, "NSMicrophoneUsageDescription": "Lode usa il microfono solo quando tieni premuto il tasto per parlare." }
+      "extendInfo": { "LSUIElement": true, "NSMicrophoneUsageDescription": "Lode usa il microfono quando parli con lui, per «Ripeti» in aula e per trascrivere le lezioni che scegli. L'audio non viene mai salvato." }
     },
     "win": { "target": "nsis" },
     "nsis": { "oneClick": true, "perMachine": false, "runAfterFinish": true },
