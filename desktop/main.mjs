@@ -159,7 +159,10 @@ setInterval(() => {
 const progresso = (cosa, x) => manda('installa:progresso', { cosa, ...x });
 async function stato() {
   const o = V.obsidian(vault()), ol = await I.statoOllama(), m = I.modelloConsigliato();
-  const scelto = conf.modello && ol.modelli.some(x => x === conf.modello || x === conf.modello + ':latest') ? conf.modello : ol.modelli.find(x => x.startsWith('gemma3')) || null;
+  // il consigliato se c'è, poi quello scelto prima, poi un Qwen3.5 o un Gemma 3 già installato
+  const c = n => n && ol.modelli.some(x => x === n || x === n + ':latest');
+  const scelto = c(m.nome) ? m.nome : c(conf.modello) ? conf.modello : ol.modelli.find(x => x.startsWith('qwen3.5')) || ol.modelli.find(x => x.startsWith('gemma3')) || null;
+  if (scelto && scelto !== conf.modello) { conf.modello = scelto; salvaConf(); }
   return { obsidian: { installato: I.obsidianInstallato() || o.installato, registrato: !!o.registrato }, ollama: ol, consigliato: m, modello: scelto, piattaforma: process.platform };
 }
 let inCorso = {};

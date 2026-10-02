@@ -20,7 +20,7 @@ Niente account, niente server, niente pubblicità. Si apre nel browser, funziona
 ## Al primo avvio
 
 Una finestra di benvenuto in due parti:
-- **Obbligatoria.** Come ti chiami, poi un clic per installare **Obsidian** (l'installer ufficiale), il **cervello locale** (Ollama + Gemma 3, scelto in base alla memoria del computer) e la **voce**: sui Mac con chip Apple è Parakeet v3 sul Neural Engine, altrove Whisper.
+- **Obbligatoria.** Come ti chiami, poi un clic per installare **Obsidian** (l'installer ufficiale), il **cervello locale** (Ollama + Qwen3.5, scelto in base alla memoria del computer) e la **voce**: sui Mac con chip Apple è Parakeet v3 sul Neural Engine, altrove Whisper.
 - **Facoltativa, il setup veloce:**
   - ateneo e corso;
   - il **libretto incollato da Esse3**, letto anche senza AI;
@@ -45,7 +45,7 @@ Rispondi con **Gioca** o con **Dopo**. Più l'esame è vicino, più le proposte 
 
 L'**app desktop** mette la barra sopra tutte le finestre. Al primo avvio:
 - crea un **vault Obsidian** in `Documenti/Lode`;
-- con un clic da «Prepara Lode» installa **Obsidian** (l'installer ufficiale) e un **cervello locale**: Ollama + Gemma 3, scelto in base alla memoria del computer;
+- con un clic da «Prepara Lode» installa **Obsidian** (l'installer ufficiale) e un **cervello locale**: Ollama + Qwen3.5 (4B, 9B o 35B-A3B «a esperti», in base alla memoria). Sulle slide di prova il 4B ha scritto carte tutte fedeli al materiale, il vecchio Gemma 3 4B circa una su tre sbagliata o inventata;
 - prepara la **voce**: sui Mac con chip Apple **Parakeet v3** di NVIDIA sul Neural Engine, con [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache 2.0, lo stesso motore dell'app FluidVoice). Su Windows e Linux c'è Whisper, che gira dentro la barra. Su un minuto di lezione Parakeet trascrive in 0,8 s quasi senza errori e con la punteggiatura, Whisper base in 3,7 s.
 
 Tutto funziona sul computer, senza account e senza internet.
@@ -151,7 +151,7 @@ Lode usa Claude Opus 5.5 con la chiave dello studente (si crea su [console.anthr
 | `js/benvenuto.js` | La configurazione guidata: nome, installazioni, setup veloce (libretto da Esse3, .ics, abitudini) |
 | `js/allenatore.js` | Le proposte a sorpresa: quando (al computer, libero, non in silenzio), cosa (giochi, carte, ★, orale, focus), e cosa impara |
 | `js/formule.js` | Le formule dette a voce in LaTeX (integrali, limiti, sommatorie, derivate, frazioni, potenze, lettere greche…) |
-| `desktop/installa.mjs` | Installa Obsidian (installer ufficiale, firma verificata) e Ollama + Gemma 3 |
+| `desktop/installa.mjs` | Installa Obsidian (installer ufficiale, firma verificata) e Ollama + Qwen3.5 |
 | `desktop/main.mjs` | L'app Electron: finestra trasparente sempre in primo piano, clic che passano attraverso, scorciatoie globali, icona nella barra dei menu |
 | `desktop/vault.mjs` | Crea il vault, lo registra in Obsidian, lo guarda e rilegge le lezioni quando cambiano |
 
