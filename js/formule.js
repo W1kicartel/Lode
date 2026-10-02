@@ -53,8 +53,10 @@ export function parlatoInFormule(testo) {
   for (let k = 0; k < 2; k++) t = t.replace(g(String.raw`(${A})\s+(?:fratto|diviso)\s+(${A})`), (_, a, b) => P(`\\frac{${X(a)}}{${X(b)}}`));
   // 7. grandi operatori: integrali, limiti, sommatorie
   t = t.replace(g(String.raw`\bintegrale\s+(?:definito\s+)?(?:da|tra)\s+(${A})\s+(?:a|e)\s+(${A})\s+(?:di\s+)?`), (_, a, b) => 'integrale ' + P(`\\int_{${X(a)}}^{${X(b)}}`));
-  t = t.replace(g(String.raw`\bintegrale\s+doppio\s+(?:su\s+([a-zA-Z])\s+)?(?:di\s+)?`), (_, d) => 'integrale doppio ' + P(d ? `\\iint_{${d}}` : '\\iint'));
-  t = t.replace(g(String.raw`\bintegrale\s+(?:indefinito\s+)?di\s+`), () => 'integrale ' + P('\\int'));
+  // «integrale doppio» da solo è un nome, non una formula: il simbolo solo con «su D» o «di f»
+  t = t.replace(g(String.raw`\bintegrale\s+doppio\s+(?:su\s+([a-zA-Z])\s+(?:di\s+)?|di\s+(?!linea\b|superficie\b))`), (_, d) => 'integrale doppio ' + P(d ? `\\iint_{${d}}` : '\\iint'));
+  // «integrale di linea / di superficie / di Riemann…» sono nomi: restano parole
+  t = t.replace(g(String.raw`\bintegrale\s+(?:indefinito\s+)?di\s+(?!linea\b|superficie\b|flusso\b|volume\b|riemann\b|lebesgue\b|cauchy\b)`), () => 'integrale ' + P('\\int'));
   t = t.replace(g(String.raw`\b(?:in\s+)?d[e]?\s+([a-z])\b(?=\s|$|[.,;])`), (m, x) => /^\s*(?:in\s+)?d[e]?\s/i.test(m) ? P(`\\, d${x}`) : m);
   t = t.replace(g(String.raw`\blimite\s+per\s+([a-z])\s+che\s+tende\s+a\s+(${A})(?:\s+di)?`), (_, x, a) => 'limite ' + P(`\\lim_{${x} \\to ${X(a)}}`));
   t = t.replace(g(String.raw`\b(sommatoria|somma|produttoria)\s+per\s+([a-z])\s+che\s+va\s+da\s+(${A})\s+a\s+(${A})(?:\s+di)?`), (_, s, n, a, b) => s + ' ' + P(`${/prod/i.test(s) ? '\\prod' : '\\sum'}_{${n}=${X(a)}}^{${X(b)}}`));
@@ -84,5 +86,7 @@ export function parlatoInFormule(testo) {
     else out.push(...pezzi.map(p => X(p)));
     i = j;
   }
-  return out.join(' ').replace(/\s+([.,;:!?])/g, '$1').replace(/\$\s*\$/g, ' ').trim();
+  return out.join(' ').replace(/\s+([.,;:!?])/g, '$1').replace(/\$\s*\$/g, ' ')
+    .replace(/\\, d([a-z])\$\s+d\s?([a-z])\b/g, '\\, d$1 \\, d$2$')   // «in dx dy»: anche il secondo differenziale nella formula
+    .trim();
 }

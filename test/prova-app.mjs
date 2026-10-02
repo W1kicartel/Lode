@@ -36,6 +36,8 @@ function pdf(righe) {
   return Buffer.from(out, 'latin1').toString('base64');
 }
 const DISPENSA = pdf(['Dispensa di Analisi 2 - Forme differenziali', 'Una forma differenziale si dice chiusa se le derivate incrociate coincidono.', 'Una forma differenziale si dice esatta se ammette un potenziale.', 'Ogni forma esatta e chiusa. Il viceversa vale su domini semplicemente connessi.', 'Un dominio e semplicemente connesso se ogni curva chiusa si contrae a un punto.']);
+// un minuto intero di lezione: l'ultima frase (quella da ripetere) arriva dopo i 50 secondi
+const MINUTO = parla(`Allora ragazzi, riprendiamo da dove eravamo rimasti la volta scorsa. Oggi parliamo del teorema di Green, che lega l'integrale di linea lungo il bordo di un dominio all'integrale doppio sul dominio stesso. Perché valga, il dominio deve essere regolare e il bordo va percorso in senso antiorario. Le funzioni P e Q devono avere derivate parziali continue. Una conseguenza importante riguarda il calcolo delle aree: l'area di un dominio si può ottenere con un integrale di linea lungo il suo bordo. Vediamo un esempio con il cerchio di raggio uno, che conoscete bene dal corso di Analisi uno. Prima però una domanda: chi si ricorda la definizione di forma differenziale esatta? Una forma è esatta se ammette un potenziale. E attenzione: il teorema di Green all'esame lo chiedo sempre, con la dimostrazione.`, 'minuto');
 const WAV = Buffer.from(readFileSync(join(DIR, 'voto.wav'))).toString('base64');
 const LEZIONE = parla(`Buongiorno a tutti, oggi parliamo di integrali definiti. Calcoliamo l'integrale da zero a pi greco di seno di x in d x, che vale due.
 Ricordate il teorema fondamentale del calcolo integrale: la derivata della funzione integrale è uguale alla funzione integranda.
@@ -79,6 +81,8 @@ const passi = [
   { nome: 'trascrizione della lezione', js: `(async()=>{ __lode.avviaTrascrizione({ audioProva: T.audio(${A(LEZIONE)}) }); await T.conferma(30); await T.aspetta(() => __lode.TR.stato() && !__lode.TR.stato().coda && __lode.TR.stato().righe > 0, 180); await __lode.fermaTrascrizione(); return (await T.calma(60)).slice(-200) })()`, atteso: 'Lezione trascritta' },
   { nome: 'riordina col modello locale', js: `(async()=>{ await __lode.indietro(); const p = T.di('riordina la lezione', 600); const t = await T.conferma(420); if (!t) return (await p); await T.aspetta(() => document.querySelector('.ld-filo').innerText.includes('Appunti salvati'), 60); const d = await T.conferma(240); await T.calma(60); return t + ' | ' + d })()`, atteso: 'Salvare gli appunti riordinati' },
   { nome: 'ripeti: gli ultimi 60 secondi', js: `(async()=>{ await __lode.indietro(); await __lode.O.immetti(T.audio(${A(VOCE.voto)})); await __lode.ripeti(); await T.calma(60); return document.querySelector('.ld-ripeti')?.innerText.slice(0, 200) || document.querySelector('.ld-filo').innerText.slice(-200) })()`, atteso: 'ULTIMI' },
+  { nome: 'voce: motore', js: `__lode.Voce.nomeMotore()`, atteso: '', mostra: true },
+  { nome: 'ripeti: un minuto intero, ultima frase in chiaro', js: `(async()=>{ await __lode.indietro(); await __lode.O.immetti(T.audio(${A(MINUTO)})); const t0 = performance.now(); await __lode.ripeti(); const ms = performance.now() - t0; const s = [...document.querySelectorAll('.ld-ripeti')].pop(); return Math.round(ms) + ' ms · ULTIMA: ' + s.querySelector('.ultima')?.innerText + ' · TUTTO: ' + s.querySelector('.ld-detto-prof').innerText })()`, atteso: 'chiedo sempre', mostra: true },
   { nome: 'ripeti: agli appunti', js: `(async()=>{ document.querySelector('.ld-ripeti [data-r=appunti]').click(); return (await T.calma(20)).slice(-120) })()`, atteso: 'Negli appunti di Analisi 2' },
   { nome: 'condividi la sbobina', js: `(async()=>{ await __lode.indietro(); return T.di('condividi la sbobina di analisi 2', 60) })()`, atteso: 'Sbobina di Analisi 2 pronta' },
   { nome: 'trascina: la pillola si allarga', js: `(async()=>{ try { await __lode.indietro(); dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})); await new Promise(r=>setTimeout(r,900)); const w = await T.lascia(T.file(${A(Buffer.from('Il gradiente è il vettore delle derivate parziali. La matrice hessiana raccoglie le derivate seconde. Un punto di sella è un punto stazionario che non è né massimo né minimo.').toString('base64'))}, 'appunti-compagno.md', 'text/markdown')); const c = [...document.querySelectorAll('.ld-file-op')].pop(); return 'larga ' + w + ' · ' + (c ? c.querySelector('.ld-opzioni').innerText.split('\\n').join(' | ').slice(0, 300) : 'nessuna scheda: ' + document.querySelector('.ld-filo').innerText.slice(-300)); } catch (e) { return 'ERRORE ' + e.message; } })()`, atteso: 'Carte del ripasso' },
@@ -111,7 +115,7 @@ passi.forEach((p, i) => {
   const r = ris[i] ?? '(nessuna risposta)';
   const passa = r.toLowerCase().includes(p.atteso.toLowerCase());
   passa ? ok++ : ko++;
-  console.log(`${passa ? '✓' : '✗'} ${p.nome}${passa ? '' : `\n    atteso «${p.atteso}», arrivato: ${r.slice(0, 300)}`}`);
+  console.log(`${passa ? '✓' : '✗'} ${p.nome}${passa ? '' : `\n    atteso «${p.atteso}», arrivato: ${r.slice(0, 300)}`}`); if (p.mostra && passa) console.log('    → ' + r.slice(0, 900));
 });
 // la nota della lezione nel vault
 const cartella = join(VAULT, 'Lezioni', 'Analisi 2'), file = existsSync(cartella) ? readdirSync(cartella).find(f => f.endsWith('.md')) : null;

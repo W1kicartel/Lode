@@ -1,3 +1,12 @@
 .DS_Store
 *.log
 .claude/
+desktop/voce-mac/.build/
+desktop/voce-mac/.pm/
+desktop/voce-mac/vendor/
+desktop/voce-mac/build/
+desktop/voce-mac/build-log.txt
+desktop/voce-mac/prova/*.wav
+desktop/voce-mac/prova/*.aiff
+desktop/voce-mac/Package.resolved
+desktop/bin/

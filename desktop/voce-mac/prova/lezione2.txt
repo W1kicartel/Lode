@@ -1,0 +1,1 @@
+Prima di andare avanti, una domanda: chi si ricorda la definizione di forma differenziale esatta? Una forma è esatta se esiste una funzione potenziale il cui differenziale coincide con la forma. Su un dominio semplicemente connesso, se la forma è chiusa allora è anche esatta.

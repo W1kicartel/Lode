@@ -515,6 +515,8 @@ button.ld-ripeti-riga:hover{background:rgba(255,255,255,.06)}
 .ld-pill .ld-orecchio{align-self:center;width:10px;height:10px;color:var(--muted);margin-left:2px}
 .ld-pill .ld-orecchio::after{inset:3px}
 .ld-ripeti .ld-detto-prof{margin:10px 0 0;font-size:15.5px;line-height:1.5;color:rgba(245,245,245,.94)}
+.ld-ripeti .ld-detto-prof .prima{color:var(--ld-tenue)}
+.ld-ripeti .ld-detto-prof .ultima{color:var(--ink);font-weight:500}
 .ld-ripeti .az{display:flex;gap:8px;margin-top:12px}
 .ld-ripeti .az .btn{flex:1;justify-content:center}
 @media (max-width:620px){.ld-opzioni{grid-template-columns:1fr}}

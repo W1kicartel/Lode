@@ -1,0 +1,15 @@
+<!doctype html><meta charset="utf-8"><script type="module">
+const T = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3');
+const out = {};
+for (const modello of ['onnx-community/whisper-base', 'onnx-community/whisper-small']) {
+  const dev = navigator.gpu ? 'webgpu' : 'wasm';
+  const asr = await T.pipeline('automatic-speech-recognition', modello, { device: dev, dtype: dev === 'webgpu' ? { encoder_model: 'fp32', decoder_model_merged: 'q4' } : 'q8' });
+  const buf = await (await fetch('minuto.wav')).arrayBuffer();
+  const a = new Float32Array(new Int16Array(buf.slice(44)).length); const i16 = new Int16Array(buf.slice(44)); for (let i = 0; i < a.length; i++) a[i] = i16[i] / 32768;
+  await asr(new Float32Array(16000), { language: 'italian', task: 'transcribe' });
+  const t = performance.now();
+  const r = await asr(a, { language: 'italian', task: 'transcribe', chunk_length_s: 30, stride_length_s: 5 });
+  out[modello] = { dev, sec: (performance.now() - t) / 1000, testo: r.text };
+}
+window.__fatto = out;
+</script>

@@ -703,16 +703,30 @@ async function accendiRipeti() {
   return mostraFatto({ testo: 'Ripeti è attivo.', nota: `Tengo gli ultimi 60 secondi. Ti sei perso qualcosa? ${MAC ? '⌃⌥P' : 'Ctrl Alt P'} o «ripeti».`, sintesi: 'ripeti attivo' });
 }
 function spegniRipeti() { D.imp.ripetiInAula = false; salva(); if (!TR.attiva()) O.spegni(); aggiornaTutto(); return mostraFatto({ testo: 'Ripeti spento.', nota: 'Il microfono è chiuso.' }); }
+// quello che ha detto il prof: l'ultima frase (quella che ti sei perso) in chiaro, il resto prima, più tenue
+function dettoProf(f) {
+  const frasi = f.match(/[^.!?…]+(?:[.!?…]+|$)/g)?.map(x => x.trim()).filter(Boolean) || [f];
+  let k = frasi.length - 1; while (k > 0 && frasi.slice(k).join(' ').length < 70) k--;
+  let prima = frasi.slice(0, k).join(' '), ultima = frasi.slice(k).join(' ');
+  // senza punti (Whisper a volte non li mette) l'«ultima frase» sarebbe tutto: si taglia sulle virgole, poi sulle parole
+  if (ultima.length > 220) {
+    const pezzi = ultima.split(/(?<=,)\s+/); let j = pezzi.length - 1; while (j > 0 && pezzi.slice(j).join(' ').length < 90) j--;
+    let coda = pezzi.slice(j).join(' ');
+    if (coda.length > 220) coda = coda.split(' ').slice(-30).join(' ');
+    prima = (prima + ' ' + ultima.slice(0, ultima.length - coda.length)).trim(); ultima = coda;
+  }
+  return `${prima ? `<span class="prima">${mdHtml(prima)}</span> ` : ''}<span class="ultima">${mdHtml(ultima)}</span>`;
+}
 async function ripeti(sec = 60) {
   if (!O.attivo()) return accendiRipeti();
   if (O.secondi() < 1) return rispostaFissa('Ascolto da un attimo: non ho ancora niente da ripeterti.');
   const quando = new Date(), audio = O.ultimi(sec);
   modo('pensa', `Riascolto gli ultimi ${Math.round(Math.min(sec, O.secondi()))} secondi…`); segnala('pensa');
-  let testo = ''; try { testo = await Voce.trascriviAudio(audio); } catch (e) { modo('riposo'); return rispostaFissa('Non sono riuscito a riascoltare: ' + e.message, { errore: true }); }
+  let testo = ''; try { testo = await Voce.trascriviAudio(audio, { subito: true }); } catch (e) { modo('riposo'); return rispostaFissa('Non sono riuscito a riascoltare: ' + e.message, { errore: true }); }
   modo('riposo');
   if (!testo) return rispostaFissa('Negli ultimi 60 secondi non ho sentito parlare.');
   const f = parlatoInFormule(testo), hh = `${String(quando.getHours()).padStart(2, '0')}:${String(quando.getMinutes()).padStart(2, '0')}`;
-  const s = scheda('ld-ripeti', `<span class="ld-lbl">Gli ultimi ${Math.round(Math.min(sec, audio.length / 16000))} secondi · ${hh}</span><p class="ld-detto-prof">${mdHtml(f)}</p>
+  const s = scheda('ld-ripeti', `<span class="ld-lbl">Gli ultimi ${Math.round(Math.min(sec, audio.length / 16000))} secondi · ${hh}</span><p class="ld-detto-prof">${dettoProf(f)}</p>
     <div class="az"><button type="button" class="btn primary" data-r="appunti">Agli appunti</button><button type="button" class="btn" data-r="stella">★ Da esame</button><button type="button" class="btn" data-r="copia">Copia</button></div>`);
   s.querySelector('[data-r=copia]').addEventListener('click', e => { navigator.clipboard.writeText(f).then(() => { e.target.textContent = 'Copiato'; }); });
   s.querySelector('[data-r=appunti]').addEventListener('click', async e => { e.target.disabled = true; const l = await V.annota('appunti', `- **${hh}** ${f}`, { grezza: true }); mostraFatto({ testo: `Negli appunti di ${l.corso}.` }); });
@@ -911,11 +925,11 @@ function schedaPrepara(cosa) {
     ${riga('vault', 'Il tuo vault', true, esc(V.info?.percorso || 'Documenti/Lode') + ' · Home, corsi, lezioni, glossario', '<button type="button" class="btn small" data-apri>Apri</button>')}
     ${riga('obsidian', 'Obsidian', st?.obsidian.installato, st?.obsidian.installato ? 'Installato e collegato al vault' : 'Gratis per uso personale · installer ufficiale da GitHub, circa 230 MB', st?.obsidian.installato ? '<button type="button" class="btn small" data-apri>Apri</button>' : '<button type="button" class="btn small primary" data-installa="obsidian">Installa</button>')}
     ${riga('cervello', 'Cervello locale', !!st?.modello, st?.modello ? `${esc(st.modello)} · gira sul computer, senza internet` : `Ollama + ${esc(m?.etichetta || 'Gemma 3')}, ${esc(m?.perche || '')} · circa ${m ? String(m.gb + 0.2).replace('.', ',') : '3,5'} GB`, st?.modello ? '<span class="ld-spunta">pronto</span>' : '<button type="button" class="btn small primary" data-installa="cervello">Installa</button>')}
-    ${riga('voce', 'Voce', Voce.pronta(), Voce.pronta() ? 'Whisper in locale · tieni premuto ' + TASTI + ' e parla' : `Whisper ${Voce.MODELLO_VOCE.endsWith('small') ? 'small' : 'base'} in locale, in italiano · circa ${Voce.MODELLO_VOCE.endsWith('small') ? '600' : '200'} MB, una volta sola`, Voce.pronta() ? '<span class="ld-spunta">pronta</span>' : '<button type="button" class="btn small primary" data-voce>Prepara</button>')}
+    ${riga('voce', 'Voce', Voce.pronta(), Voce.pronta() ? Voce.NOME_VOCE + ' in locale · tieni premuto ' + TASTI + ' e parla' : `${Voce.MAC_ARM ? 'Parakeet v3 sul Neural Engine' : 'Whisper ' + (Voce.MODELLO_VOCE.endsWith('small') ? 'small' : 'base')} in locale, in italiano · circa ${Voce.PESO_VOCE} MB, una volta sola`, Voce.pronta() ? '<span class="ld-spunta">pronta</span>' : '<button type="button" class="btn small primary" data-voce>Prepara</button>')}
     <p class="ld-nota">${AI.motore() === 'claude' ? 'Hai anche Claude attivo: per spiegazioni e orale usa quello, il cervello locale lavora offline.' : 'Il cervello locale estrae le definizioni dagli appunti, crea carte, spiega e ti interroga. Tutto resta sul computer.'}</p>`);
   s.querySelectorAll('[data-apri]').forEach(b => b.addEventListener('click', () => apriAppunti({ file: 'Home.md', corso: 'Home' })));
   s.querySelectorAll('[data-installa]').forEach(b => b.addEventListener('click', () => chiediInstalla(b.dataset.installa, s)));
-  s.querySelector('[data-voce]')?.addEventListener('click', () => { mostraAvanzamento(s, 'voce', { testo: 'Scarico Whisper…', p: 0 }); Voce.prepara().then(() => { try { localStorage.setItem('lode:voce', '1'); } catch { } }).catch(() => { }); });
+  s.querySelector('[data-voce]')?.addEventListener('click', () => { mostraAvanzamento(s, 'voce', { testo: `Scarico ${Voce.NOME_VOCE}…`, p: 0 }); Voce.prepara().then(() => { try { localStorage.setItem('lode:voce', '1'); } catch { } }).catch(() => { }); });
   if (cosa && !(cosa === 'obsidian' ? st?.obsidian.installato : st?.modello)) chiediInstalla(cosa, s);
   for (const [k, x] of Object.entries(avanzamenti)) mostraAvanzamento(s, k, x);
   if (A.turno) A.turno.dataset.sintesi = 'prepara Lode';
@@ -1425,7 +1439,7 @@ function collegaDesktop() {
 
 export function avvia() {
   A = nuovoStato(); costruisci(); collega();
-  addEventListener('lode:voce', e => { const x = e.detail; document.querySelectorAll('.ld-prepara').forEach(s => mostraAvanzamento(s, 'voce', x.fase === 'pronta' ? { fase: 'fatto', p: 1, testo: 'Whisper in locale · tieni premuto ' + TASTI + ' e parla' } : x.fase === 'errore' ? { fase: 'errore', testo: x.testo } : { p: x.p, testo: `Scarico Whisper · ${Math.round((x.p || 0) * 100)}%` })); if (A.modo === 'ascolto' && x.fase === 'scarico') campo.querySelector('.stato.ascolto .lbl').textContent = `Ti ascolto · preparo la voce ${Math.round((x.p || 0) * 100)}%`; if (x.fase === 'pronta' && A.modo === 'ascolto') campo.querySelector('.stato.ascolto .lbl').textContent = 'Ti ascolto'; });
+  addEventListener('lode:voce', e => { const x = e.detail; document.querySelectorAll('.ld-prepara').forEach(s => mostraAvanzamento(s, 'voce', x.fase === 'pronta' ? { fase: 'fatto', p: 1, testo: Voce.NOME_VOCE + ' in locale · tieni premuto ' + TASTI + ' e parla' } : x.fase === 'errore' ? { fase: 'errore', testo: x.testo } : { p: x.p, testo: `Scarico ${Voce.NOME_VOCE} · ${Math.round((x.p || 0) * 100)}%` })); if (A.modo === 'ascolto' && x.fase === 'scarico') campo.querySelector('.stato.ascolto .lbl').textContent = `Ti ascolto · preparo la voce ${Math.round((x.p || 0) * 100)}%`; if (x.fase === 'pronta' && A.modo === 'ascolto') campo.querySelector('.stato.ascolto .lbl').textContent = 'Ti ascolto'; });
   // la voce già preparata si carica in silenzio dopo l'avvio: così il primo ⌥ Spazio è immediato
   try { if (DESKTOP && localStorage.getItem('lode:voce')) setTimeout(() => Voce.prepara().catch(() => { }), 4000); } catch { }
   if (V.attivo) {
