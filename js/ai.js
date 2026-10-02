@@ -5,7 +5,7 @@ import { D, cfuFatti, dataLunga, fatti, media, num, oggi, prossimi, daRipassare,
 
 const MODELLO = 'claude-opus-5-5';
 let SDK = null, client = null, chiaveUsata = '';
-// due motori: Claude (chiave dello studente) o il cervello locale (Ollama + Gemma, installato da Lode). Claude se c'è la chiave.
+// due motori: Claude (chiave dello studente) o il cervello locale (Ollama + Qwen3.5, installato da Lode). Claude se c'è la chiave.
 const PONTE = typeof window !== 'undefined' ? window.lodeDesktop : null;
 let LOCALE = null;
 export const impostaLocale = m => { LOCALE = m || null; };

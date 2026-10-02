@@ -1,7 +1,7 @@
 // Lode prepara il computer dello studente, sempre col suo consenso dal pannello:
 //  1. Obsidian ufficiale, scaricato da github.com/obsidianmd/obsidian-releases (gratis per uso personale; non lo
 //     ridistribuiamo noi) e aperto già sul vault di Lode;
-//  2. il «cervello locale»: Ollama più un modello Gemma 3 scelto in base alla memoria del computer, per estrarre
+//  2. il «cervello locale»: Ollama più un modello Qwen3.5 scelto in base alla memoria del computer, per estrarre
 //     definizioni dagli appunti, creare carte, spiegare e interrogare senza chiavi e senza internet.
 import { shell } from 'electron';
 import { createWriteStream, existsSync, mkdirSync, rmSync, accessSync, constants, chmodSync, writeFileSync } from 'node:fs';
@@ -82,14 +82,17 @@ export async function apriObsidian(url) {
   if (url) await shell.openExternal(url);
 }
 
-/* ---------- il cervello locale: Ollama + Gemma 3 ---------- */
+/* ---------- il cervello locale: Ollama + Qwen3.5 ---------- */
 export const OLLAMA = 'http://127.0.0.1:11434';
 // il modello giusto per la memoria del computer: abbastanza piccolo da girare liscio mentre lo studente usa altre app
 export function modelloConsigliato() {
+  // Qwen3.5 (Alibaba, Apache 2.0, legge anche le immagini). Sulle slide di Analisi 2 il 4B ha scritto 11 carte tutte
+  // fedeli in 33 s; Gemma 3 4B 18 carte in 43 s, circa 7 sbagliate o inventate. Il 35B-A3B è «a esperti»: grande ma
+  // veloce come un 3B, solo dove la memoria lo permette (9B e 35B-A3B non ancora provati su un computer vero).
   const gb = totalmem() / 2 ** 30;
-  if (gb >= 30) return { nome: 'gemma3:27b', etichetta: 'Gemma 3 27B', gb: 17, perche: 'il più bravo, per computer con molta memoria' };
-  if (gb >= 15) return { nome: 'gemma3:12b', etichetta: 'Gemma 3 12B', gb: 8.1, perche: 'spiega bene e regge l\'orale' };
-  return { nome: 'gemma3:4b', etichetta: 'Gemma 3 4B', gb: 3.3, perche: `leggero per ${Math.round(gb)} GB di memoria: definizioni, carte e giochi` };
+  if (gb >= 40) return { nome: 'qwen3.5:35b-a3b', etichetta: 'Qwen3.5 35B-A3B', gb: 24, perche: 'il più bravo e veloce come un modello piccolo, per computer con molta memoria' };
+  if (gb >= 15) return { nome: 'qwen3.5:9b', etichetta: 'Qwen3.5 9B', gb: 6.6, perche: 'spiega bene e regge l\'orale' };
+  return { nome: 'qwen3.5:4b', etichetta: 'Qwen3.5 4B', gb: 3.4, perche: `per ${Math.round(gb)} GB di memoria: definizioni, carte, giochi e orale` };
 }
 export async function statoOllama() {
   const installato = MAC ? ['/Applications/Ollama.app', join(homedir(), 'Applications', 'Ollama.app')].some(existsSync) || existsSync('/usr/local/bin/ollama')
@@ -149,7 +152,7 @@ export async function scaricaModello(nome, avanza) {
 // una chat col modello locale, in streaming: i pezzi arrivano a chi chiama
 export async function chatLocale({ modello, messaggi, formato, segnale, pezzo }) {
   await avviaOllama();
-  const r = await fetch(OLLAMA + '/api/chat', { method: 'POST', signal: segnale, body: JSON.stringify({ model: modello, messages: messaggi, stream: true, ...(formato ? { format: formato } : {}), options: { temperature: formato ? 0.2 : 0.6, num_ctx: 8192 }, keep_alive: '15m' }) });
+  const r = await fetch(OLLAMA + '/api/chat', { method: 'POST', signal: segnale, body: JSON.stringify({ model: modello, messages: messaggi, stream: true, ...(formato ? { format: formato } : {}), ...(/^qwen3/.test(modello) ? { think: false } : {}), options: { temperature: formato ? 0.2 : 0.6, num_ctx: 8192 }, keep_alive: '15m' }) });
   if (!r.ok || !r.body) throw new Error(r.status === 404 ? `Il modello ${modello} non è installato` : 'Il modello locale non risponde');
   const lettore = r.body.getReader(), dec = new TextDecoder(); let resto = '', tutto = '';
   for (; ;) {

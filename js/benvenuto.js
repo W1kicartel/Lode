@@ -87,7 +87,7 @@ function installa() {
   const web = !L;
   guscio(web ? `<h1>Lode completa vive nell'app.</h1><p class="bv-sub">Nel browser hai libretto, timer, ripasso e giochi. Obsidian, l'AI sul computer, la voce e la trascrizione delle lezioni sono nell'app desktop.</p>`
     : `<h1>Prepariamo il tuo computer.</h1><p class="bv-sub">Tre installazioni, una volta sola. Poi Lode funziona anche senza internet, e niente di tuo esce dal computer.</p>
-    <div class="bv-inst">${[['obsidian', 'Obsidian', 'dove vivono i tuoi appunti: un vault già pronto', '230 MB'], ['cervello', 'Il cervello locale', 'Ollama e Gemma 3: legge gli appunti, crea carte e definizioni, spiega e interroga', '3,5 GB'], ['voce', 'La voce', `${Voce.MAC_ARM ? 'Parakeet v3, sul Neural Engine del Mac' : 'Whisper'}: comandi a voce, «Ripeti» e trascrizione delle lezioni`, `${Voce.PESO_VOCE} MB`]]
+    <div class="bv-inst">${[['obsidian', 'Obsidian', 'dove vivono i tuoi appunti: un vault già pronto', '230 MB'], ['cervello', 'Il cervello locale', 'Ollama e Qwen3.5: legge gli appunti, crea carte e definizioni, spiega e interroga', '3,5 GB'], ['voce', 'La voce', `${Voce.MAC_ARM ? 'Parakeet v3, sul Neural Engine del Mac' : 'Whisper'}: comandi a voce, «Ripeti» e trascrizione delle lezioni`, `${Voce.PESO_VOCE} MB`]]
       .map(([k, t, d, mb]) => `<div class="bv-riga" data-k="${k}"><i class="bv-stato"></i><div><b>${t}</b><span class="d">${d}</span><i class="bv-barra"><i></i></i></div><small>${mb}</small></div>`).join('')}</div>
     <p class="bv-nota">Obsidian è gratis per uso personale e viene dal suo sito ufficiale. Il cervello locale si sceglie in base alla memoria del computer.</p>`,
   { avanti: web ? 'Avanti' : 'Installa tutto', avantiNo: false });
