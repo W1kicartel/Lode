@@ -17,21 +17,23 @@ const BASE = 'onnx-community/whisper-base', TJS = 'https://cdn.jsdelivr.net/npm/
 export let MODELLO_VOCE = (!CPU && MEM >= 8 && (navigator.hardwareConcurrency || 4) >= 12) ? 'onnx-community/whisper-small' : BASE;
 let T = null, asr = null, caricando = null;
 const avvisa = x => dispatchEvent(new CustomEvent('lode:voce', { detail: x }));
-export const pronta = () => !!asr || MAC_PRONTO;
-let MAC_PRONTO = false;
+// «pronta» = scaricata e partita almeno una volta: dopo un riposo (vedi sotto) torna in memoria da sola, senza riscaricare
+export const pronta = () => !!asr || MAC_PRONTO || partita;
+let MAC_PRONTO = false, partita = false;
 export async function prepara() {
   if (await motoreMac()) return preparaMac();
   return preparaWhisper();
 }
 // Parakeet: il programma si avvia (la prima volta scarica il modello, ~500 MB, e ne manda l'avanzamento)
-let caricaMac = null;
+let caricaMac = null, suProgresso = false, staCaricando = 0;
 function preparaMac() {
   if (MAC_PRONTO) return Promise.resolve(true);
   caricaMac ||= (async () => {
-    window.lodeDesktop.su('voce:progresso', x => { if (!MAC_PRONTO) avvisa({ fase: 'scarico', p: x.p }); });
+    staCaricando++;
+    if (!suProgresso) { suProgresso = true; window.lodeDesktop.su('voce:progresso', x => { if (!MAC_PRONTO && !partita) avvisa({ fase: 'scarico', p: x.p }); }); }
     await window.lodeDesktop.invoca('voce:prepara');
-    MAC_PRONTO = true; avvisa({ fase: 'pronta' }); return true;
-  })().catch(e => { caricaMac = null; avvisa({ fase: 'errore', testo: e.message }); throw e; });
+    MAC_PRONTO = partita = true; avvisa({ fase: 'pronta' }); return true;
+  })().catch(e => { caricaMac = null; avvisa({ fase: 'errore', testo: e.message }); throw e; }).finally(() => staCaricando--);
   return caricaMac;
 }
 // sul Mac con Apple Silicon la voce è Parakeet (testi dell'interfaccia: nome e peso)
@@ -43,6 +45,7 @@ const rete = e => /fetch|network|locate/i.test(e?.message) || !navigator.onLine;
 function preparaWhisper() {
   if (asr) return Promise.resolve(asr);
   caricando ||= (async () => {
+    staCaricando++;
     // WebGPU solo con una scheda vera: su Windows navigator.gpu c'è anche senza (VM, driver in lista nera)
     const ad = CPU ? null : await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' }).catch(() => null);
     if (!ad || (ad.info?.isFallbackAdapter ?? ad.isFallbackAdapter)) sulProcessore();
@@ -52,16 +55,16 @@ function preparaWhisper() {
       T = await import(TJS + '?' + Date.now());   // un transformers.js nuovo: quello di prima si ricorda l'errore di WebGPU
       asr = await carica('wasm'); sulProcessore();
     }
-    avvisa({ fase: 'pronta' });
+    partita = true; avvisa({ fase: 'pronta' });
     return asr;
-  })().catch(e => { caricando = null; console.warn(e); avvisa({ fase: 'errore', testo: rete(e) ? 'Non riesco a scaricare la voce: controlla la connessione e riprova.' : 'La voce non riesce a partire su questo computer.' }); throw e; });
+  })().catch(e => { caricando = null; console.warn(e); avvisa({ fase: 'errore', testo: rete(e) ? 'Non riesco a scaricare la voce: controlla la connessione e riprova.' : 'La voce non riesce a partire su questo computer.' }); throw e; }).finally(() => staCaricando--);
   return caricando;
 }
 async function carica(dev) {
   T ||= await import(TJS);
   const file = {}, a = await T.pipeline('automatic-speech-recognition', dev === 'wasm' ? BASE : MODELLO_VOCE, {
     device: dev, dtype: dev === 'webgpu' ? { encoder_model: 'fp32', decoder_model_merged: 'q4' } : 'q8',
-    progress_callback: p => { if (p.status === 'progress' && p.total) { file[p.file] = [p.loaded, p.total]; const v = Object.values(file); avvisa({ fase: 'scarico', p: v.reduce((s, x) => s + x[0], 0) / v.reduce((s, x) => s + x[1], 0) }); } },
+    progress_callback: p => { if (p.status === 'progress' && p.total && !partita) { file[p.file] = [p.loaded, p.total]; const v = Object.values(file); avvisa({ fase: 'scarico', p: v.reduce((s, x) => s + x[0], 0) / v.reduce((s, x) => s + x[1], 0) }); } },
   });
   // un giro a vuoto: la prima trascrizione vera non paga la compilazione degli shader (e se la scheda non regge, si vede qui)
   await a(new Float32Array(16000), { language: 'italian', task: 'transcribe' });
@@ -72,6 +75,7 @@ async function carica(dev) {
 // Sul Mac, se c'è, il motore è Parakeet (lode-voce, desktop/voce-mac): più preciso e più veloce di Whisper.
 const fila = []; let lavora = false;
 export function trascriviAudio(audio, { subito = false } = {}) {
+  usata = Date.now();
   return new Promise((ok, ko) => { const x = { audio, ok, ko }; subito ? fila.unshift(x) : fila.push(x); gira(); });
 }
 async function gira() {
@@ -80,8 +84,18 @@ async function gira() {
     const { audio, ok, ko } = fila.shift();
     try { const t = await ((await motoreMac()) ? preparaMac().then(() => parakeet(audio)) : prepara().then(() => trascrivi(audio))); ok(ALLUCINAZIONI.test(t) ? '' : t); } catch (e) { ko(e); }
   }
-  lavora = false;
+  lavora = false; usata = Date.now();
 }
+// A riposo la voce esce dalla memoria: fuori dalla lezione (orecchio spento), dopo 10 minuti senza usarla. Whisper su WebGPU
+// tiene circa 1 GB tra barra e scheda, Parakeet un processo a parte: su un portatile da 8 GB, tutto il giorno, pesa.
+// Torna da sola alla prima frase, dal disco (un paio di secondi, niente da riscaricare). In aula resta sempre pronta.
+const RIPOSO = 10 * 60e3; let usata = Date.now(), inAula = false;
+addEventListener('lode:orecchio', e => { inAula = !!e.detail?.acceso; usata = Date.now(); });
+setInterval(() => {
+  if (inAula || lavora || fila.length || rec || staCaricando || Date.now() - usata < RIPOSO) return;
+  if (asr) { const a = asr; asr = caricando = null; Promise.resolve(a.dispose?.()).catch(() => { }); }
+  if (MAC_PRONTO) { MAC_PRONTO = false; caricaMac = null; window.lodeDesktop?.invoca('voce:riposa').catch(() => { }); }
+}, 60e3)?.unref?.();
 // Whisper legge 30 secondi alla volta: oltre, l'audio va diviso in finestre sovrapposte (senza, di un minuto di
 // «Ripeti» arrivava solo la prima metà, la più vecchia, e mancava proprio l'ultima frase del prof)
 const trascrivi = async audio => (await asr(audio, { language: 'italian', task: 'transcribe', ...(audio.length > 16000 * 29 ? { chunk_length_s: 30, stride_length_s: 5 } : {}) }))
@@ -171,7 +185,7 @@ function ascoltaBrowser({ parziale, fine, errore }) {
   return r;
 }
 
-export function ascolta(opz) { ferma(true); rec = DESKTOP ? ascoltaWhisper(opz) : ascoltaBrowser(opz); return rec; }
+export function ascolta(opz) { ferma(true); usata = Date.now(); rec = DESKTOP ? ascoltaWhisper(opz) : ascoltaBrowser(opz); return rec; }
 export function ferma(annulla = false) {
   if (!rec) return;
   if (DESKTOP) { rec.annullato = annulla; rec.fermo = true; rec.chiudi?.(); if (annulla) rec = null; return; }

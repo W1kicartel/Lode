@@ -43,8 +43,10 @@ async function riga(t) {
   }
   return out.join('');
 }
-export async function html({ md, corso, data }) {
-  const corpo = frontmatter(md).corpo.split(/\r?\n/), out = [];
+// Markdown essenziale (titoli, elenchi, paragrafi) con le formule in MathML: per la pagina della sbobina e per le
+// anteprime nella barra (la foto della lavagna trascritta: formule disegnate, non LaTeX grezzo)
+export async function corpoHtml(testo) {
+  const corpo = String(testo).split(/\r?\n/), out = [];
   let lista = false;
   for (const r of corpo) {
     const h = r.match(/^(#{1,3})\s+(.*)$/), li = r.match(/^\s*[-*]\s+(.*)$/);
@@ -54,6 +56,10 @@ export async function html({ md, corso, data }) {
     else if (r.trim()) out.push(`<p>${await riga(r)}</p>`);
   }
   if (lista) out.push('</ul>');
+  return out.join('\n');
+}
+export async function html({ md, corso, data }) {
+  const corpo = await corpoHtml(frontmatter(md).corpo);
   return `<!doctype html>
 <html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="lode-sbobina" content="1"><title>${esc(pulito(corso))} · sbobina del ${esc(data)}</title>
@@ -69,7 +75,7 @@ li{margin:4px 0}math{font-size:1.08em}
 p b:first-child{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:600}
 footer{margin-top:60px;font-size:13px;color:var(--muted)}
 </style></head><body><main>
-${out.join('\n')}
+${corpo}
 <footer>Fatta con Lode, l'assistente di studio open source. Hai Lode? Trascina questo file sulla pillola in alto e la ritrovi nel tuo vault Obsidian.</footer>
 </main>
 <script type="text/markdown" id="lode-md">${md.replace(/<\/script/gi, '<\\/script')}</script>

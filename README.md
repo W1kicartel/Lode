@@ -6,7 +6,9 @@ Lode è una piccola pillola di vetro nero in cima allo schermo. Mentre sei a lez
 
 ![«Ripeti»: gli ultimi 60 secondi del prof, con l'ultima frase in evidenza](docs/immagini/ripeti.jpg)
 
-> **Stato: beta.** Funziona su **Windows, macOS e Linux**, ma finora è stato provato a fondo solo su un Mac con chip Apple. Il codice per Windows c'è tutto (installazione di Obsidian e dell'AI, scorciatoie, voce), però non l'abbiamo ancora provato su un PC vero: se lo provi, [raccontaci com'è andata](https://github.com/W1kicartel/Lode/issues). Non c'è ancora un installer da scaricare: si installa dal codice in pochi minuti (vedi sotto).
+> **Stato: beta.** Funziona su **Windows, macOS e Linux**, ma finora è stato provato a fondo solo su un Mac con chip Apple. Il codice per Windows c'è tutto (installazione di Obsidian e dell'AI, scorciatoie, voce), però non l'abbiamo ancora provato su un PC vero: se lo provi, [raccontaci com'è andata](https://github.com/W1kicartel/Lode/issues).
+
+**[⬇ Scarica Lode](https://github.com/W1kicartel/Lode/releases/latest)** per Mac, Windows o Linux, poi segui i [tre passi del primo avvio](#installa).
 
 ---
 
@@ -57,11 +59,50 @@ interrogami su analisi 2
 spiegami il teorema di Green
 ```
 
+### Per chi studia informatica
+Quattro cose per Programmazione e i laboratori. Niente AI: le risposte le calcola il computer, e Lode non scrive codice al posto tuo.
+
+- **«Cosa stampa?»** Cinque domande da un minuto su piccoli programmi in C: cicli, divisione intera, `%` con i negativi, `i++` e `++i`, switch senza break, puntatori, ricorsione. La risposta giusta la calcola Lode, e nelle prove la confrontiamo con un compilatore vero su centinaia di programmi. Le risposte sbagliate sono gli errori tipici, e se ne scegli una ti dice quale: «è quello che stamperebbe con `i <= 4`». Se hai un corso di programmazione, compare anche il bottone **Codice** e ogni tanto la pillola te lo propone.
+- **«Segui progetto».** Scegli la cartella del laboratorio. Lode ti dice cosa è cambiato davvero, file per file, con le funzioni nuove, e se l'hai provato dopo l'ultima modifica. Vale anche se il codice lo scrive Claude Code, Codex o un copia-incolla: Lode non sa chi ha scritto le righe, e lo dice. Lode nella tua cartella non scrive: le versioni le tiene nella sua. I comandi che confermi (per esempio make) e il tuo programma invece sì, come dal terminale.
+- **Le prove a un clic.** Lode compila e lancia le prove `.in`/`.out` che trova nella cartella. Ti mostra prima il comando esatto, e lo esegue solo dopo il tuo sì in una finestra del sistema. Non è una sandbox: il programma gira sul tuo computer, come dal terminale. Se manca il compilatore te lo dice e ti spiega come installarlo, ma non scarica niente da sola.
+- **Gli errori in italiano.** «**lista.c, riga 42**: usi `nodo` ma non è dichiarato», con la tua riga sotto e tre passi da aprire uno alla volta: dove guardare, cosa vuol dire e, solo per gli errori meccanici, la correzione. Nei progetti segnati «valutato» la correzione non c'è (e finché ne segui uno, nemmeno per gli errori copiati). Funziona anche senza seguire un progetto: copia l'errore dal terminale, da Code::Blocks o da Dev-C++ e scrivi «spiegami l'errore».
+- **Il registro nel vault.** Il diario del progetto (`Progetti/<nome>/<giorno>.md`), la tabella «Cosa so davvero» nella pagina del corso e gli errori che fai più spesso. È un registro per te, non una prova per il prof: lo puoi correggere o spegnere, e niente esce dal computer.
+
+Cosa è permesso con gli agenti e con l'AI lo decide il tuo corso: chiedi al docente. Su Windows serve un compilatore C (MSYS2 o WinLibs): finora l'abbiamo provato solo sul Mac. Su Windows, mentre Lode segue una cartella, non la puoi rinominare né spostare: prima scrivi «smetti di seguire».
+
+```
+cosa stampa
+segui progetto
+cosa è cambiato
+provato?
+prova il progetto
+spiegami l'errore
+diario del progetto
+non scrivere il diario del progetto lab3
+smetti di seguire lab3
+```
+
 ---
 
 ## Installazione
 
-Scegli il tuo sistema: [Windows](#windows) · [Mac](#mac) · [Linux](#linux). Ti servono circa **5 GB liberi**: Obsidian circa 300 MB, l'AI locale circa 3,5 GB, la voce dai 200 ai 600 MB.
+### Installa
+
+Il modo più semplice: scarica l'installer dalla pagina **[Release](https://github.com/W1kicartel/Lode/releases/latest)** (in fondo, alla voce «Assets»). Ti servono circa **5 GB liberi**: Obsidian circa 300 MB, l'AI locale circa 3,5 GB, la voce dai 200 ai 600 MB. Al primo avvio Lode ti chiede il nome e, con un clic, installa Obsidian, l'AI locale e la voce.
+
+Gli installer non sono firmati con un certificato a pagamento (costa ogni anno e Lode è gratis), quindi **la prima volta** il sistema chiede una conferma:
+
+| | Scarica | Primo avvio |
+|---|---|---|
+| **Mac** (chip Apple e Intel) | `Lode-…-mac.dmg` | Apri il `.dmg` e trascina Lode in **Applicazioni**. Aprilo: il Mac dice che non può verificarlo, premi **Fine**. Poi vai in **Impostazioni di Sistema › Privacy e sicurezza**, scorri in fondo e premi **Apri comunque** accanto a «Lode». Serve solo la prima volta. |
+| **Windows** 10 e 11 | `Lode-…-windows.exe` | Aprilo. Se compare «Windows ha protetto il PC», premi **Ulteriori informazioni**, poi **Esegui comunque**. Si installa per il tuo utente, senza permessi di amministratore, e parte da solo. |
+| **Linux** (64 bit) | `Lode-…-linux.AppImage` | Rendilo eseguibile (tasto destro › Proprietà › «Consenti l'esecuzione», oppure `chmod +x Lode-*.AppImage`) e aprilo. |
+
+Lode vive nella barra dei menu (Mac) o nell'area di notifica (Windows): non cercarlo nel Dock. È la pillola nera in cima allo schermo: si apre con un clic, o tenendo premuto **⌥ Spazio** sul Mac e **Ctrl+Shift+Spazio** su Windows e Linux.
+
+### Dal codice
+
+Se vuoi l'ultima versione, o modificare Lode, si installa dal codice in pochi minuti. Scegli il tuo sistema: [Windows](#windows) · [Mac](#mac) · [Linux](#linux).
 
 ### Windows
 
@@ -267,12 +308,18 @@ Lode non ha un server e non addestra modelli: **la sua memoria è il tuo vault**
 **Prove:**
 ```bash
 node --experimental-vm-modules test/unita.mjs
+node test/codice.mjs
+node test/verifica-c.mjs
+node --experimental-vm-modules test/progetto.mjs
+node test/errori.mjs
+node --experimental-vm-modules test/diario.mjs
 node test/prova-app.mjs
 ```
-- `test/unita.mjs` controlla comandi, formule, note e conti: 45 prove.
-- `test/prova-app.mjs` fa il giro completo dell'app su un vault temporaneo, senza toccare i tuoi dati: 57 prove. Per ora gira solo su macOS (su Windows e Linux manca la voce di sistema per generare l'audio delle prove; contributi benvenuti): le frasi «parlate» le genera la voce di sistema e l'audio va direttamente al motore, senza altoparlanti né microfono.
+- `test/unita.mjs` controlla comandi, formule, note e conti: 60 prove.
+- Informatica: `codice.mjs` (135 prove su «Cosa stampa?»), `verifica-c.mjs` (452 programmi confrontati con il compilatore vero; senza compilatore salta), `progetto.mjs` (96, «Segui il progetto»), `errori.mjs` (195, gli errori spiegati), `diario.mjs` (90, il registro nel vault). Su GitHub girano tutte su Windows, Linux e macOS.
+- `test/prova-app.mjs` fa il giro completo dell'app su un vault temporaneo, senza toccare i tuoi dati: 73 prove (72 senza compilatore C). Con `LODE_SOLO='informatica|stampa|progetto|errore|diario|davvero'` fa solo i passi di informatica (2-3 minuti). Per ora gira solo su macOS (su Windows e Linux manca la voce di sistema per generare l'audio delle prove; contributi benvenuti): le frasi «parlate» le genera la voce di sistema e l'audio va direttamente al motore, senza altoparlanti né microfono.
 
-**Pacchetti** (sperimentali, non ancora firmati): `cd desktop`, poi `npm run dist:mac`, `dist:win` oppure `dist:linux`.
+**Pacchetti** (non firmati): `cd desktop`, poi `npm run dist:mac`, `dist:win` oppure `dist:linux`. Gli installer pubblici li costruisce GitHub da solo (`.github/workflows/rilascio.yml`) quando si pubblica un tag `v…`.
 
 | File | Cosa fa |
 |---|---|
@@ -288,6 +335,10 @@ node test/prova-app.mjs
 | `js/sbobina.js` | Sbobine da condividere (.md + .html con formule) e sbobine ricevute |
 | `js/allenatore.js` | Le proposte a sorpresa: quando, cosa, e cosa impara |
 | `js/benvenuto.js` | La configurazione guidata |
+| `js/codice/albero.js`, `js/codice/modelli.js`, `js/codice/stampa.js` | «Cosa stampa?»: un piccolo C che Lode sa eseguire, i modelli di domanda con i loro errori tipici, la scheda |
+| `js/codice/progetto.js` | «Segui il progetto» nella barra: pillola, «Fatto. In parole semplici», «Provato?» |
+| `js/errori.js` | Gli errori di gcc, clang, MinGW, Python e Java spiegati in italiano, senza AI |
+| `js/codice/diario.js` | Il registro nel vault: diario del progetto, «Cosa so davvero», la sezione «Informatica» della Memoria |
 | `js/giochi.js` | I giochi di memoria |
 | `js/markdown.js`, `js/vault.js` | Le note di Obsidian e il vault visto dalla barra |
 | `js/mascotte.js`, `js/motore.js` | La gemma con gli occhi e le animazioni |
@@ -295,11 +346,12 @@ node test/prova-app.mjs
 | `desktop/installa.mjs` | Installa Obsidian e Ollama + Qwen3.5 |
 | `desktop/voce.mjs`, `desktop/voce-mac/` | `lode-voce`: Parakeet v3 via FluidAudio |
 | `desktop/vault.mjs` | Crea il vault, lo registra in Obsidian, rilegge le lezioni quando cambiano |
+| `desktop/progetto.mjs`, `desktop/esegui.mjs` | Le cartelle seguite: versioni, diff, impronta, e le prove eseguite solo dopo la conferma |
 
 Design: solo bianco e nero, font [Geist](https://github.com/vercel/geist-font), movimento morbido, `prefers-reduced-motion` rispettato. Le regole per contribuire sono in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Cosa manca (cerco mani)
-- [ ] Installer firmato per macOS e Windows
+- [ ] Firma degli installer (certificati Apple e Windows) e aggiornamenti automatici
 - [ ] Parakeet anche su Windows e Linux (versione ONNX, gira sul processore)
 - [ ] Sincronizzazione facoltativa fra dispositivi, cifrata
 - [ ] Esportazione dei mazzi per Anki

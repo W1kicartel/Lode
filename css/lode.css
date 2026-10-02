@@ -465,6 +465,8 @@ button.ld-trascrivi:focus-visible{outline:2px solid var(--ink)}
 .ld-trascrivi.on .ld-rec,.ld-live.rec{background:var(--ink);box-shadow:none}
 @media (prefers-reduced-motion:no-preference){.ld-trascrivi.on .ld-rec,.ld-live.rec{animation:ld-respira 1.6s var(--morbido) infinite}}
 .ld-anteprima{max-height:240px;overflow-y:auto;padding:10px 12px;border-radius:9px;background:rgba(255,255,255,.03);font-size:13px;line-height:1.5;color:rgba(245,245,245,.88);scrollbar-width:thin;scrollbar-gutter:stable}
+.ld-anteprima :is(h1,h2,h3){margin:8px 0 4px;font-size:13.5px;font-weight:650;letter-spacing:-.01em;color:#fff}.ld-anteprima :is(p,ul){margin:4px 0}.ld-anteprima ul{padding-left:16px}.ld-anteprima li{margin:2px 0}
+.ld-anteprima math{font-size:1.08em;color:#fff}.ld-anteprima math[display=block]{margin:6px 0;overflow-x:auto;overflow-y:hidden}
 
 /* ---------- la zona dove lasciare i file: la pillola si allarga ---------- */
 .ld-zona{position:absolute;inset:0;z-index:8;display:grid;place-items:center;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .25s var(--morbido),visibility 0s .25s}
@@ -559,3 +561,98 @@ button.ld-ripeti-riga:hover{background:rgba(255,255,255,.06)}
 .ld-esito-r.e-parziale em{box-shadow:inset 0 0 0 1px var(--ink);background:none;color:var(--ink)}
 .ld-ripassa{margin:6px 0 10px;padding-left:18px;font-size:13px;line-height:1.5}
 .ld-contesta{margin:6px 0 0 22px}
+
+/* ---------- informatica: il bottone «Codice» fa nove strumenti, tre per riga ---------- */
+.ld-strumenti.nove{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:620px){.ld-strumenti.nove{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* ---------- cosa stampa? (js/codice/stampa.js) ---------- */
+.ld-stampa .capo{gap:12px}
+.ld-stampa .capo .ld-lbl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ld-stampa .conto{flex:none}
+.ld-codice{margin:0 0 2px;padding:9px 0;border-radius:10px;background:rgba(0,0,0,.32);box-shadow:inset 0 0 0 1px var(--ld-filo);font:450 12.5px/1.6 var(--mono);color:rgba(245,245,245,.94);overflow-x:auto;white-space:pre;tab-size:4;scrollbar-width:thin}
+.ld-codice code{font:inherit}
+.ld-codice .r{display:block;padding-right:14px}
+.ld-codice .r i{display:inline-block;width:34px;margin-right:12px;padding-right:9px;text-align:right;font-style:normal;color:var(--ld-tenue);opacity:.75;border-right:1px solid var(--ld-riga);-webkit-user-select:none;user-select:none}
+.ld-stampa .ld-uscite{margin-top:12px}
+.ld-stampa .ld-uscite .btn{position:relative;height:auto;min-height:44px;padding:10px 12px 10px 36px;justify-content:flex-start;align-items:flex-start;text-align:left;font:500 13px/1.45 var(--mono);white-space:pre-wrap;word-break:break-word}
+.ld-stampa .ld-uscite .btn kbd{position:absolute;left:10px;top:12px;font:500 10px/1.2 var(--mono);padding:1px 5px;border-radius:4px;box-shadow:inset 0 0 0 1px currentColor;opacity:.45;background:none;color:inherit}
+.ld-stampa .ld-uscite .btn.vuota span{font-family:var(--sans);font-style:italic;color:var(--muted)}
+.ld-stampa .ld-uscite .btn.giusta.vuota span{color:inherit}
+.ld-stampa .ld-scrivi{margin-top:12px}
+.ld-stampa .ld-scrivi input{font-family:var(--mono)}
+.ld-stampa .ld-scrivi+.ld-nota{margin-top:6px}
+.ld-stampa .ld-scrivi kbd,.ld-spiega .az kbd{font:500 10px var(--mono);padding:1px 5px;border-radius:4px;box-shadow:inset 0 0 0 1px currentColor;opacity:.45;background:none;color:inherit}
+.ld-spiega{margin-top:12px;padding-top:11px;border-top:1px solid var(--ld-riga);font-size:13.5px;line-height:1.5;color:rgba(245,245,245,.92)}
+.ld-spiega p{margin:0}
+.ld-spiega p+p{margin-top:6px}
+.ld-spiega .ok{font-weight:600;color:var(--ink)}
+.ld-spiega code{font:500 12.5px var(--mono);padding:1px 5px;border-radius:4px;background:rgba(255,255,255,.07);color:var(--ink);white-space:pre-wrap}
+.ld-spiega .az{display:flex;margin-top:10px}
+.ld-spiega .az .btn{height:36px;padding:0 16px}
+@media (max-width:620px){.ld-stampa .ld-uscite{grid-template-columns:1fr}}
+
+/* ---------- segui il progetto (js/codice/progetto.js) ---------- */
+.ld-progetto .capo{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding-bottom:8px}
+.ld-progetto .capo .ld-tenue{font:500 11px var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ld-progetto .az{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+.ld-progetto .az .btn.ld-piano{background:transparent;box-shadow:none}
+.ld-progetto .az .ld-tenue{margin-left:auto;font:500 11px var(--mono)}
+.ld-progetto code{font:500 12.5px var(--mono);padding:1px 5px;border-radius:5px;background:rgba(255,255,255,.07);color:var(--ink);overflow-wrap:anywhere}
+.ld-progetto .ld-nota{margin-top:8px}
+.ld-progetto .ld-riga-form{margin-top:12px}
+.ld-progetto .ld-riga-form[hidden]{display:none}
+.ld-progetto .ld-riga-form .ld-lbl{flex:none}
+.ld-progetto .ld-preset{margin-top:12px}
+.ld-psegui .ld-chip.larga{height:auto;min-height:52px;padding:9px 14px;box-sizing:border-box;gap:3px}
+.ld-psegui .ld-chip.larga span{line-height:1.35}
+.ld-ptesto{margin:8px 0 0;font-size:14px;line-height:1.5;color:rgba(245,245,245,.9)}
+.ld-pcomando .ld-riga-form input{font:500 12.5px var(--mono)}
+.ld-pfile .ld-riga{grid-template-columns:3px minmax(0,1fr) auto 64px;min-height:48px}
+.ld-pfile .ld-riga .t b{font:600 13px var(--mono)}
+.ld-pfile .ld-riga .n{font:500 12.5px var(--mono);letter-spacing:0;color:var(--muted)}
+.ld-pfile .ld-riga.nuovo .ld-seg{background:var(--ink)}
+.ld-pfile .ld-riga.cambiato .ld-seg{background:rgba(255,255,255,.55)}
+.ld-pfile .ld-riga.tolto .ld-seg{background:transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.5)}
+.ld-pfile .ld-riga.tolto .t b{text-decoration:line-through;color:var(--muted)}
+.ld-diff{margin:6px 0 10px;max-height:340px;overflow:auto;padding:6px 0;border-radius:9px;background:rgba(255,255,255,.025);box-shadow:inset 0 0 0 1px var(--ld-filo);font:12px/1.6 var(--mono);color:rgba(245,245,245,.9);scrollbar-width:thin}
+.ld-diff .r{display:grid;grid-template-columns:34px 34px max-content;width:max-content;min-width:100%;border-left:2px solid transparent;white-space:pre}
+.ld-diff .r i{font-style:normal;text-align:right;padding-right:10px;color:var(--ld-tenue);user-select:none}
+.ld-diff .r span{padding-right:12px}
+.ld-diff .piu{border-left:2px solid #fff}
+.ld-diff .meno{opacity:.45;text-decoration:line-through}
+.ld-diff .salto{padding:2px 0 2px 70px;color:var(--ld-tenue);user-select:none}
+.ld-pfatto ul{margin:8px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;font-size:13.5px;line-height:1.5;color:rgba(245,245,245,.9)}
+.ld-pfatto li{position:relative;padding-left:14px}
+.ld-pfatto li::before{content:"–";position:absolute;left:0;color:var(--ld-tenue)}
+.ld-pfatto .provato{margin:12px 0 0;padding-top:10px;border-top:1px solid var(--ld-riga);font-size:13.5px;line-height:1.5}
+.ld-pfatto .provato b{font-weight:600}
+.ld-pesito .ld-esito{margin:4px 0 8px}
+.ld-pcaso{display:grid;grid-template-columns:16px minmax(0,1fr);gap:8px;padding:8px 0;border-top:1px solid var(--ld-riga);font-size:13px;line-height:1.5;color:rgba(245,245,245,.9)}
+.ld-pcaso .s{font:600 12px/1.6 var(--mono);color:var(--muted)}
+.ld-pcaso.no .s{color:var(--ink)}
+.ld-puscita{margin:8px 0 0;max-height:220px;overflow:auto;padding:9px 11px;border-radius:9px;background:rgba(255,255,255,.03);box-shadow:inset 0 0 0 1px var(--ld-filo);font:11.5px/1.5 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere;color:var(--muted);scrollbar-width:thin}
+.ld-puscita[hidden]{display:none}
+
+/* ---------- errori spiegati (js/errori.js, F3): codice in Geist Mono, riga dell'errore con la barra bianca ---------- */
+/* la scheda è .ld-scheda.ld-err; le risposte d'errore della barra (p.ld-ai.ld-err) restano come sono */
+.ld-scheda.ld-err .capo{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ld-err-conto{font:500 11px var(--mono);color:var(--ld-tenue)}
+.ld-err-titolo{margin:8px 0 0;font-size:14px;line-height:1.45}
+.ld-err-titolo b{font-weight:600}
+.ld-scheda.ld-err code{font:500 12.5px var(--mono);padding:1px 5px;border-radius:5px;background:rgba(255,255,255,.07)}
+.ld-scheda.ld-err .ld-nota{margin-top:6px}
+.ld-err-codice{margin:10px 0 0;padding:7px 0;border-radius:9px;background:rgba(0,0,0,.35);box-shadow:inset 0 0 0 1px var(--ld-filo);font:500 12.5px/1.65 var(--mono);overflow-x:auto;tab-size:4}
+.ld-err-r{display:block;padding-right:12px;white-space:pre;color:var(--muted);border-left:2px solid transparent}
+.ld-err-r i{display:inline-block;min-width:3.4em;padding-right:1em;text-align:right;font-style:normal;color:var(--ld-tenue);user-select:none}
+.ld-err-r.qui{color:var(--ink);border-left-color:#fff;background:rgba(255,255,255,.05)}
+.ld-err-r.piu{color:var(--ink);border-left-color:#fff}
+.ld-err-r.meno{opacity:.45;text-decoration:line-through}
+.ld-err-passo{margin-top:8px;padding-top:8px;border-top:1px solid var(--ld-riga)}
+.ld-err-passo summary{display:flex;align-items:baseline;gap:9px;cursor:pointer;list-style:none;font-size:13.5px;font-weight:600;color:var(--muted);transition:color .25s}
+.ld-err-passo summary::-webkit-details-marker{display:none}
+.ld-err-passo summary:hover,.ld-err-passo[open] summary{color:var(--ink)}
+.ld-err-passo summary small{font:600 10.5px var(--mono);letter-spacing:.08em;color:var(--ld-tenue)}
+.ld-err-passo p{margin:6px 0 0;font-size:13px;line-height:1.55;color:rgba(245,245,245,.88)}
+.ld-err-vista{margin-left:auto;font:500 11px var(--mono);color:var(--ld-tenue)}
+.ld-err-orig pre{margin:6px 0 0;white-space:pre-wrap;word-break:break-word;font:500 12px/1.5 var(--mono);color:var(--muted)}
