@@ -1,7 +1,7 @@
 // Lode, l'aiutante in cima allo schermo. A riposo è una pillola di vetro nero: il prossimo esame, le carte di oggi
 // o il timer che scorre. Passandoci sopra si apre a molla in un pannello: «Oggi», sei strumenti e il campo
 // «Chiedi o scrivi un comando…». Si parla tenendo premuto ⌥ Spazio. I file trascinati diventano carte del ripasso.
-// Senza AI capisce i comandi in italiano (comandi.js); con la chiave Claude spiega, crea carte e interroga come all'orale.
+// Senza AI capisce i comandi in italiano (comandi.js); con il cervello locale (gratis) o la tua AI preferita spiega, crea carte e interroga come all'orale.
 import { piuGiorni, norm, D, DESKTOP, lezioneOra, prossimaLezione, daGiocare, ricorda, aggiungiOrario, lezioni, RISPOSTE, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esc, fatti, media, minuti, num, oggi, ore, piano, prossimi, prossimoIntervallo, registraVoto, rispondi, salva, serie, serve, simula, sostituisci, traQuanto, trovaEsame, intervalloTesto, giorniTra } from './dati.js';
 import { RIDOTTO, attendi, comprimi, conta, dopo, entra, h, lineare, morbido, ogni, premi, tween } from './motore.js';
 import { ESEMPI, interpreta } from './comandi.js';
@@ -259,7 +259,7 @@ export function apri({ fisso = false } = {}) {
   const pezzi = [testa, ...corpo.querySelector('.ld-dentro').children, corpo.querySelector('.ld-piede')].filter(x => x.style.display !== 'none' && !(x === filo && !filo.children.length) && !(x === allegatiBox && !allegatiBox.children.length));
   pezzi.forEach((p, i) => entra(p, { ritardo: 50 + i * 45, dy: 10, blur: 8, ms: 560 }));
   segnala('aperto');
-  if (BRIDGE && AI.motore() === 'locale') BRIDGE.invoca('locale:scalda').catch(() => { });
+  if (BRIDGE && [AI.motore(), AI.motore('testo')].includes('locale')) BRIDGE.invoca('locale:scalda').catch(() => { });
   return attendi(560);
 }
 export function chiudi(avviso) {
@@ -590,7 +590,7 @@ function chiudiRipasso() { A.ripasso = null; }
 
 function schedaAiuto() {
   const s = scheda('ld-aiuto', `<span class="ld-lbl">Prova a scrivere</span>${ESEMPI.map(([f, d]) => `<button type="button" class="ld-es-cmd" data-cmd="${esc(f.replace(' …', ''))}"><b>${esc(f)}</b><span>${esc(d)}</span></button>`).join('')}
-    ${AI.attiva() ? '' : '<p class="ld-nota">Con la chiave Claude (Impostazioni) puoi anche chiedere spiegazioni, creare carte dai PDF e farti interrogare.</p>'}`);
+    ${AI.attiva() ? '' : '<p class="ld-nota">Con il cervello locale (gratis) o la tua AI (scrivi «AI») puoi anche chiedere spiegazioni, creare carte dai PDF e farti interrogare.</p>'}`);
   s.querySelectorAll('[data-cmd]').forEach(b => b.addEventListener('click', () => { const t = b.dataset.cmd; if (t.endsWith('=')) { const i = campo.querySelector('input'); i.value = t + ' '; i.focus(); } else invia(t); }));
   if (A.turno) A.turno.dataset.sintesi = 'comandi';
 }
@@ -669,14 +669,14 @@ async function riordinaLezione(corso, lez) {
   await new Promise(r => setTimeout(r, 600));   // il vault rilegge la nota appena scritta
   const l = lez ? (lezioni().find(x => x.file && norm(x.corso) === norm(lez.corso) && x.data === lez.data) || lez) : lezioni().find(x => (x.paroleTrascritte || 0) >= 40 && (!corso || norm(x.corso) === norm(corso)));
   if (!l?.trascrizione || l.paroleTrascritte < 30) return rispostaFissa(corso ? `Non trovo una trascrizione di **${corso}**.` : 'Non trovo una lezione trascritta. In aula premi **Trascrivi la lezione**.');
-  if (!AI.attiva()) return rispostaFissa('Per riordinare serve l\'AI: installa il **cervello locale** da «Prepara Lode» (gratis, offline) o aggiungi una chiave Claude.');
+  if (!AI.attiva()) return rispostaFissa('Per riordinare serve l\'AI: installa il **cervello locale** da «Prepara Lode» (gratis, offline) o collega la tua AI: scrivi «AI».');
   modo('pensa', `Riordino ${l.corso}…`); segnala('pensa');
   let md;
   try { md = await AI.riordina({ corso: l.corso, testo: l.trascrizione, appunti: l.appunti, avanza: p => modo('pensa', `Riordino ${l.corso}… ${Math.round(p * 100)}%`) }); }
   catch (e) { modo('riposo'); return rispostaFissa('Non sono riuscito a riordinare: ' + e.message, { errore: true }); }
   modo('riposo');
   const card = schedaConferma({ titolo: `Salvare gli appunti riordinati di ${l.corso}?`, extra: `<div class="ld-anteprima">${mdHtml(md.slice(0, 1400))}${md.length > 1400 ? '<span class="ld-tenue"> …</span>' : ''}</div>`,
-    nota: `Vanno nella nota, in «Appunti riordinati da Lode», sotto la trascrizione (che resta). Li ha scritti ${AI.motore() === 'locale' ? 'il modello locale' : 'Claude'}: rileggili.` });
+    nota: `Vanno nella nota, in «Appunti riordinati da Lode», sotto la trascrizione (che resta). Li ha scritti ${AI.nomeMotore('testo')}: rileggili.` });
   await attendiDecisione(card, async () => {
     await V.annota('riordinati', md, { lezione: l, grezza: true });
     await mostraFatto({ testo: 'Appunti salvati nella nota.', azione: ['Condividi', () => { nuovoTurno(); detto(A.turno, 'Condividi la sbobina'); condividiLezione(l.corso); }], sintesi: 'lezione riordinata' }, card);
@@ -768,7 +768,7 @@ export async function riceviFile(lista) {
   schedaFile(x);
 }
 function opzioniPer(x) {
-  const ai = AI.attiva(), app = V.attivo, serveAI = ai ? '' : 'serve il cervello locale o Claude', serveApp = app ? '' : 'nell\'app desktop';
+  const ai = AI.attiva(), app = V.attivo, serveAI = ai ? '' : 'serve il cervello locale o la tua AI', serveApp = app ? '' : 'nell\'app desktop';
   const testo = ['pdf', 'slide', 'word', 'testo'].includes(x.tipo);
   if (x.tipo === 'sbobina') return [{ k: 'sbobina', t: 'Aggiungi al mio vault', d: 'Diventa una lezione nel tuo Obsidian: definizioni e ★ entrano nei giochi', no: serveApp, primo: true }, { k: 'allega', t: 'Allega soltanto', d: 'Salvo il file negli allegati della lezione', no: serveApp }];
   if (x.tipo === 'carte') return [{ k: 'importaCarte', t: 'Importa le carte', d: 'Una per riga: domanda, poi Tab, «;» o « = », poi risposta', primo: true }];
@@ -835,7 +835,7 @@ async function usaFile(x, op, { corso, data }) {
   if (op === 'lavagna') {
     modo('pensa', 'Leggo la foto…'); segnala('pensa');
     const blocco = await AI.bloccoFile(x.file), md = await AI.trascriviFoto({ blocco, corso }); modo('riposo');
-    const card = schedaConferma({ titolo: `Mettere negli appunti di ${corso}?`, extra: `<div class="ld-anteprima">${mdHtml(md.slice(0, 1400))}</div>`, nota: 'Insieme alla foto, nella nota della lezione di oggi. Rileggila: l\'ha trascritta ' + (AI.motore() === 'locale' ? 'il modello locale.' : 'Claude.') });
+    const card = schedaConferma({ titolo: `Mettere negli appunti di ${corso}?`, extra: `<div class="ld-anteprima">${mdHtml(md.slice(0, 1400))}</div>`, nota: 'Insieme alla foto, nella nota della lezione di oggi. Rileggila: l\'ha trascritta ' + AI.nomeMotore('testo') + '.' });
     return attendiDecisione(card, async () => { const r = await allegaFile(x, corso); await V.annota('appunti', md, { lezione: r.l, grezza: true }); await mostraFatto({ testo: 'Lavagna negli appunti.', azione: ['Apri', () => apriAppunti(r.l)] }, card); return {}; });
   }
   // da qui serve il testo del file
@@ -844,7 +844,7 @@ async function usaFile(x, op, { corso, data }) {
   if (x.tipo === 'foto') blocchi = [await AI.bloccoFile(x.file)];
   else {
     try { testo = await FILE.testoDi(x); blocchi = [{ type: 'text', text: `[${x.nome}]\n${testo.slice(0, 120000)}` }]; }
-    catch (e) { if (x.tipo === 'pdf' && AI.motore() === 'claude') blocchi = [await AI.bloccoFile(x.file)]; else throw e; }
+    catch (e) { if (x.tipo === 'pdf' && AI.motore('testo') === 'claude') blocchi = [await AI.bloccoFile(x.file)]; else throw e; }
   }
   if (op === 'carte') {
     modo('pensa', 'Scrivo le carte…');
@@ -913,6 +913,52 @@ function zonaOff() {
   if (!A.aperto) { forma.w.t = larghezza(); forma.h.t = 36; forma.r.t = 18; molla(); }
 }
 
+/* ---------- la tua AI: la chiave del servizio che preferisci (facoltativa, a consumo) ---------- */
+function schedaAI(preferito) {
+  const st = AI.statoAI(), F = AI.FORNITORI, loc = !!st.locale;
+  const s = scheda('ld-tuaai', `<span class="ld-lbl">La tua AI</span>
+    <p class="ld-nota" style="margin-top:6px">${loc ? 'Adesso Lode usa il <b>cervello locale</b>: gratis, offline, gli appunti restano qui.' : 'Il <b>cervello locale</b> gratis si installa da «Prepara Lode».'} Se vuoi un'AI più potente, collega la tua chiave: paghi direttamente il servizio, a consumo (di solito pochi centesimi a sessione). Lode non vede né incassa niente; la chiave resta su questo computer.</p>
+    <div class="ld-opzioni">${Object.entries(F).map(([k, f]) => `<button type="button" class="ld-op${st.fornitore === k ? ' primo' : ''}" data-f="${k}"><b>${esc(f.nome)}${st.fornitore === k ? ' · collegata' : ''}</b><span>${esc(f.ditta)} · ${esc(f.nota)}</span></button>`).join('')}</div>
+    <div class="ld-ai-chiave" hidden><span class="ld-lbl"></span><div class="ld-riga-form"><input type="password" autocomplete="off" spellcheck="false" aria-label="Chiave API"><button type="button" class="btn small primary" data-collega>Collega</button></div><small class="ld-tenue"></small></div>
+    <div class="ld-ai-modello" ${st.fornitore && st.fornitore !== 'anthropic' ? '' : 'hidden'}><span class="ld-lbl">Modello</span><div class="ld-riga-form"><select aria-label="Modello">${st.modello ? `<option>${esc(st.modello)}</option>` : ''}</select></div></div>
+    ${loc ? `<label class="ld-spunta-ai"><input type="checkbox" data-uso${st.uso === 'pesante' ? ' checked' : ''}> Appunti e lezioni restano sul computer: la tua AI solo per spiegazioni e orale</label>` : ''}
+    ${st.fornitore ? '<div class="az"><button type="button" class="btn small ld-piano" data-scollega>Usa solo il cervello locale</button></div>' : ''}`);
+  const box = s.querySelector('.ld-ai-chiave'), inp = box.querySelector('input'), nota = box.querySelector('small');
+  let scelto = null;
+  const scegli = k => {
+    scelto = k; const f = F[k];
+    s.querySelectorAll('[data-f]').forEach(b => b.classList.toggle('scelta', b.dataset.f === k));
+    box.hidden = false; box.querySelector('.ld-lbl').textContent = `Chiave di ${f.nome}`;
+    inp.placeholder = f.segnaposto || 'incolla la chiave'; inp.value = AI.chiaveSalvata(k) || '';
+    nota.innerHTML = `Si crea su <b>${esc(f.sito)}</b>.`;
+    entra(box, { dy: 6, blur: 5, ms: 360 }); requestAnimationFrame(() => inp.focus({ preventScroll: true }));
+  };
+  s.querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => scegli(b.dataset.f)));
+  const collega = async () => {
+    const chiave = inp.value.trim(); if (!scelto || !chiave) return;
+    const b = box.querySelector('[data-collega]'); b.disabled = true; nota.textContent = 'Provo la chiave…';
+    try {
+      const r = await AI.provaFornitore(scelto, chiave);
+      AI.collegaFornitore(scelto, chiave, r.modello); salva();
+      const sel = s.querySelector('.ld-ai-modello select'), mod = s.querySelector('.ld-ai-modello');
+      if (scelto !== 'anthropic' && r.modelli.length) { sel.innerHTML = r.modelli.map(m => `<option${m === r.modello ? ' selected' : ''}>${esc(m)}</option>`).join(''); mod.hidden = false; }
+      else mod.hidden = true;
+      s.querySelectorAll('[data-f]').forEach(x => { x.classList.toggle('primo', x.dataset.f === scelto); x.querySelector('b').textContent = F[x.dataset.f].nome + (x.dataset.f === scelto ? ' · collegata' : ''); });
+      nota.textContent = ''; box.hidden = true; segnala('fatto'); aggiornaTutto();
+      await mostraFatto({ testo: `${F[scelto].nome} collegata.`, nota: `${r.modello ? 'Modello ' + r.modello + '. ' : ''}${AI.statoAI().uso === 'pesante' ? 'Gli appunti restano sul computer.' : 'Spiegazioni, orale, carte e riordino usano la tua AI.'}`, sintesi: 'AI collegata' }, s);
+    } catch (e) { nota.textContent = e.status === 401 || e.status === 403 ? 'La chiave non è valida.' : /fetch|network/i.test(e.message) ? 'Non riesco a raggiungere il servizio: c\'è la rete?' : 'Non è andata: ' + e.message; }
+    finally { b.disabled = false; }
+  };
+  box.querySelector('[data-collega]').addEventListener('click', collega);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); collega(); } });
+  s.querySelector('.ld-ai-modello select')?.addEventListener('change', e => { AI.collegaFornitore(AI.fornitore(), D.imp.chiave, e.target.value); salva(); });
+  s.querySelector('[data-uso]')?.addEventListener('change', e => { AI.impostaUso(e.target.checked ? 'pesante' : 'tutto'); salva(); });
+  s.querySelector('[data-scollega]')?.addEventListener('click', async e => { AI.scollegaFornitore(); salva(); aggiornaTutto(); e.target.disabled = true; await mostraFatto({ testo: 'Lode usa solo il cervello locale.', nota: 'La chiave resta salvata qui, se vuoi ricollegarla.' }, s); });
+  if (preferito && F[preferito]) scegli(preferito);
+  s.querySelectorAll('.ld-op').forEach((b, i) => entra(b, { ritardo: 60 + i * 40, dy: 6, blur: 5, ms: 400 }));
+  if (A.turno) A.turno.dataset.sintesi = 'la tua AI';
+}
+
 /* ---------- preparare il computer: Obsidian e il cervello locale ---------- */
 let STATO = null;
 async function aggiornaStato() { if (!V.attivo) return; try { STATO = await V.stato(); AI.impostaLocale(STATO.modello); } catch { } if (A?.aperto && A.home) disegnaHome(); }
@@ -926,7 +972,9 @@ function schedaPrepara(cosa) {
     ${riga('obsidian', 'Obsidian', st?.obsidian.installato, st?.obsidian.installato ? 'Installato e collegato al vault' : 'Gratis per uso personale · installer ufficiale da GitHub, circa 230 MB', st?.obsidian.installato ? '<button type="button" class="btn small" data-apri>Apri</button>' : '<button type="button" class="btn small primary" data-installa="obsidian">Installa</button>')}
     ${riga('cervello', 'Cervello locale', !!st?.modello, st?.modello ? `${esc(st.modello)} · gira sul computer, senza internet` : `Ollama + ${esc(m?.etichetta || 'Qwen3.5')}, ${esc(m?.perche || '')} · circa ${m ? String(m.gb + 0.2).replace('.', ',') : '3,5'} GB`, st?.modello ? '<span class="ld-spunta">pronto</span>' : '<button type="button" class="btn small primary" data-installa="cervello">Installa</button>')}
     ${riga('voce', 'Voce', Voce.pronta(), Voce.pronta() ? Voce.NOME_VOCE + ' in locale · tieni premuto ' + TASTI + ' e parla' : `${Voce.MAC_ARM ? 'Parakeet v3 sul Neural Engine' : 'Whisper ' + (Voce.MODELLO_VOCE.endsWith('small') ? 'small' : 'base')} in locale, in italiano · circa ${Voce.PESO_VOCE} MB, una volta sola`, Voce.pronta() ? '<span class="ld-spunta">pronta</span>' : '<button type="button" class="btn small primary" data-voce>Prepara</button>')}
-    <p class="ld-nota">${AI.motore() === 'claude' ? 'Hai anche Claude attivo: per spiegazioni e orale usa quello, il cervello locale lavora offline.' : 'Il cervello locale estrae le definizioni dagli appunti, crea carte, spiega e ti interroga. Tutto resta sul computer.'}</p>`);
+    ${riga('tuaai', 'La tua AI <small>facoltativa</small>', !!AI.fornitore(), AI.fornitore() ? `${esc(AI.FORNITORI[AI.fornitore()].nome)} collegata · paghi tu a consumo, direttamente al servizio` : 'Claude, ChatGPT, Gemini, Mistral…: più potente, a consumo con la tua chiave', `<button type="button" class="btn small" data-tuaai>${AI.fornitore() ? 'Cambia' : 'Collega'}</button>`)}
+    <p class="ld-nota">Il cervello locale è gratis e lavora offline: estrae definizioni, crea carte, spiega e interroga. La tua AI è un potenziamento facoltativo: Lode non vede né incassa niente.</p>`);
+  s.querySelector('[data-tuaai]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'La mia AI'); schedaAI(); });
   s.querySelectorAll('[data-apri]').forEach(b => b.addEventListener('click', () => apriAppunti({ file: 'Home.md', corso: 'Home' })));
   s.querySelectorAll('[data-installa]').forEach(b => b.addEventListener('click', () => chiediInstalla(b.dataset.installa, s)));
   s.querySelector('[data-voce]')?.addEventListener('click', () => { mostraAvanzamento(s, 'voce', { testo: `Scarico ${Voce.NOME_VOCE}…`, p: 0 }); Voce.prepara().then(() => { try { localStorage.setItem('lode:voce', '1'); } catch { } }).catch(() => { }); });
@@ -992,7 +1040,7 @@ async function chiudiLezione(corso, { lezione, testo } = {}) {
   const l0 = lezione || lezioni().find(x => (x.file || x.appunti) && (!corso || norm(x.corso) === norm(corso)) && ((x.parole || 0) >= 10 || (x.paroleTrascritte || 0) >= 60));
   const l = l0 && { ...l0, appunti: testo || (l0.parole >= 10 ? l0.appunti : (l0.trascrizione || '').slice(0, 9000)) };
   if (!l) return rispostaFissa(corso ? `Non trovo appunti di **${corso}** negli ultimi giorni.` : 'Non trovo una lezione con abbastanza appunti: scrivili nella sezione «Appunti» della nota.');
-  if (!AI.attiva()) return rispostaFissa('Per leggere gli appunti serve l\'AI: installa il **cervello locale** (gratis, funziona offline) da «Prepara Lode», oppure aggiungi una chiave Claude.');
+  if (!AI.attiva()) return rispostaFissa('Per leggere gli appunti serve l\'AI: installa il **cervello locale** (gratis, funziona offline) da «Prepara Lode», oppure collega la tua AI: scrivi «AI».');
   modo('pensa', `Leggo gli appunti di ${l.corso}…`); segnala('pensa');
   let r; try { r = await AI.estraiLezione({ corso: l.corso, appunti: l.appunti, gia: (l.definizioni || []).map(d => d.t) }); }
   catch (e) { modo('riposo'); return rispostaFissa('Non sono riuscito a leggere gli appunti: ' + e.message, { errore: true }); }
@@ -1000,7 +1048,7 @@ async function chiudiLezione(corso, { lezione, testo } = {}) {
   if (!r.definizioni.length && !r.daEsame.length) return rispostaFissa('Negli appunti non ho trovato definizioni nuove. Prova a scriverle per esteso, anche brevi.');
   const card = schedaConferma({ titolo: `Aggiungere a ${l.corso} · ${dataBreve(l.data)}?`,
     extra: `<ol class="ld-proposte">${r.definizioni.map(d => `<li><b>${esc(d.termine)}</b><span>${esc(d.definizione)}</span></li>`).join('')}${r.daEsame.map(x => `<li><b>★ ${esc(x)}</b></li>`).join('')}</ol>`,
-    nota: `${r.definizioni.length} definizioni${r.daEsame.length ? ` e ${r.daEsame.length} ★` : ''} nella nota della lezione. Controlla che siano giuste: le ha scritte ${AI.motore() === 'locale' ? 'il modello locale' : 'Claude'}.` });
+    nota: `${r.definizioni.length} definizioni${r.daEsame.length ? ` e ${r.daEsame.length} ★` : ''} nella nota della lezione. Controlla che siano giuste: le ha scritte ${AI.nomeMotore('testo')}.` });
   card.querySelectorAll('.ld-proposte li').forEach((li, i) => entra(li, { ritardo: 100 + Math.min(i, 12) * 55, dy: 6, blur: 5, ms: 420 }));
   await attendiDecisione(card, async () => {
     for (const d of r.definizioni) await V.annota('definizione', d.definizione, { termine: d.termine, lezione: l });
@@ -1153,6 +1201,7 @@ async function esegui(c) {
     case 'naviga': return schedaNote(c.q);
     case 'chiudiLezione': return chiudiLezione(c.corso);
     case 'prepara': return schedaPrepara(c.cosa);
+    case 'ai': return schedaAI(c.fornitore);
     case 'proposte': D.imp.allenatore = c.livello; salva(); return mostraFatto({ testo: c.livello === 'mai' ? 'Proposte spente.' : `Proposte ${({ poco: 'poche', normale: 'normali', spesso: 'frequenti' })[c.livello]}.`, nota: c.livello === 'mai' ? 'Le riaccendi quando vuoi.' : 'Mai a lezione, in focus o nelle ore di silenzio.' });
     case 'proponi': { const r = await provaAllenatore(true); return r?.includes(':') ? null : rispostaFissa('Per ora non ho niente da proporti: aggiungi un esame con la data, o segna qualche definizione a lezione.'); }
     case 'trascrivi': return avviaTrascrizione();
@@ -1192,10 +1241,17 @@ async function eseguiStrumento(nome, x) {
 async function chiediAI(testo, { sistema } = {}) {
   const g = GEN; modo('pensa', A.allegati.length ? 'Leggo il file…' : A.orale ? 'Il prof ci pensa…' : 'Un attimo…'); segnala('pensa');
   const blocchi = [];
-  for (const f of A.allegati) { try { blocchi.push(await AI.bloccoFile(f.file)); } catch { } }
+  for (const f of A.allegati) {
+    try {
+      // a Claude i PDF vanno così come sono; agli altri (locale o servizi in formato OpenAI) il testo estratto qui
+      const x = AI.motore() !== 'claude' ? await FILE.classifica(f.file) : null;
+      if (x && ['pdf', 'slide', 'word'].includes(x.tipo)) blocchi.push({ type: 'document', source: { type: 'text', media_type: 'text/plain', data: (await FILE.testoDi(x)).slice(0, 120000) }, title: f.file.name });
+      else blocchi.push(await AI.bloccoFile(f.file));
+    } catch { }
+  }
   if (A.allegati.length) { const t = A.turno; const box = h('div', 'ld-allegati'); A.allegati.forEach(f => box.append(chipFile(f.file, false))); t.append(box); A.allegati = []; allegatiBox.innerHTML = ''; }
   // col modello locale i file diventano carte con una risposta strutturata (niente strumenti)
-  if (blocchi.length && AI.motore() === 'locale' && !A.orale) {
+  if (blocchi.length && AI.motore() !== 'claude' && !A.orale) {
     try { const carte = await AI.carteDa([...blocchi, { type: 'text', text: testo }]); modo('riposo'); if (!carte.length) return rispostaFissa('Da questo file non ho tirato fuori carte: se è un PDF, il modello locale non lo legge. Prova con una foto delle pagine o col testo.'); return eseguiStrumento('crea_carte', { carte, esame: prossimi()[0]?.nome }); }
     catch (e) { modo('riposo'); return rispostaFissa('Non sono riuscito a leggere il file: ' + e.message, { errore: true }); }
     finally { if (g === GEN) segnala('quiete'); }
@@ -1203,14 +1259,14 @@ async function chiediAI(testo, { sistema } = {}) {
   A.storia.push({ role: 'user', content: [...blocchi, { type: 'text', text: testo }] });
   A.controller = new AbortController();
   try {
-    if (AI.motore() === 'locale') { await AI.conversaLocale({ storia: A.storia, sistema, segnale: A.controller.signal, suTesto: d => { if (g !== GEN) return; if (!A.risposta) { modo('riposo'); A.risposta = nuovaRisposta(); } A.risposta.aggiungi(d); } }); A.risposta?.fine(); return; }
+    if (AI.motore() !== 'claude') { await AI.conversaSemplice({ storia: A.storia, sistema, segnale: A.controller.signal, suTesto: d => { if (g !== GEN) return; if (!A.risposta) { modo('riposo'); A.risposta = nuovaRisposta(); } A.risposta.aggiungi(d); } }); A.risposta?.fine(); return; }
     await AI.conversa({ storia: A.storia, sistema, strumenti: !A.orale, segnale: A.controller.signal, esegui: eseguiStrumento,
       suTesto: d => { if (g !== GEN) return; if (!A.risposta) { modo('riposo'); A.risposta = nuovaRisposta(); } A.risposta.aggiungi(d); } });
     A.risposta?.fine();
   } catch (e) {
     if (g !== GEN || e.name === 'AbortError' || /abort/i.test(e.message)) return;
     console.error(e);
-    const msg = e.status === 401 ? 'La chiave non è valida: controllala in Impostazioni.' : e.status === 429 ? 'Troppe richieste in poco tempo: riprova tra un minuto.' : e.status === 529 || e.status >= 500 ? 'Claude è sovraccarico in questo momento: riprova tra poco.' : /Failed to fetch|NetworkError/i.test(e.message) ? 'Sembra che manchi la rete.' : 'Qualcosa non è andato: ' + e.message;
+    const msg = e.status === 401 ? 'La chiave non è valida: ricollegala scrivendo «AI».' : e.status === 429 ? 'Troppe richieste in poco tempo: riprova tra un minuto.' : e.status === 529 || e.status >= 500 ? `${AI.nomeMotore()} è sovraccarico in questo momento: riprova tra poco.` : /Failed to fetch|NetworkError/i.test(e.message) ? 'Sembra che manchi la rete.' : 'Qualcosa non è andato: ' + e.message;
     A.risposta?.fine(); rispostaFissa(msg, { errore: true });
     // la storia resta coerente: tolgo la domanda senza risposta
     while (A.storia.length && A.storia.at(-1).role === 'user') A.storia.pop();
@@ -1221,7 +1277,7 @@ async function chiediAI(testo, { sistema } = {}) {
 async function avviaOrale(e, nomeDetto, materialeFile) {
   if (!A.turno || A.home) nuovoTurno();
   if (!AI.attiva()) {
-    rispostaFissa(V.attivo ? 'Per l\'interrogazione serve l\'AI: installa il **cervello locale** da «Prepara Lode» (gratis, offline) o aggiungi una chiave Claude. Intanto puoi fare il **ripasso** delle carte.' : 'Per l\'interrogazione serve l\'AI: aggiungi la tua chiave Claude in **Impostazioni** (costa pochi centesimi a sessione). Intanto puoi fare il **ripasso** delle carte.');
+    rispostaFissa(V.attivo ? 'Per l\'interrogazione serve l\'AI: installa il **cervello locale** da «Prepara Lode» (gratis, offline) o collega la tua AI (scrivi «AI»). Intanto puoi fare il **ripasso** delle carte.' : 'Per l\'interrogazione serve l\'AI: aggiungi la tua chiave Claude in **Impostazioni** (costa pochi centesimi a sessione). Intanto puoi fare il **ripasso** delle carte.');
     return;
   }
   if (!e) {
@@ -1304,7 +1360,7 @@ async function importaSenzaAI() {
     }
   }
   A.allegati = []; allegatiBox.innerHTML = ''; campo.querySelector('input').placeholder = 'Chiedi o scrivi un comando…';
-  if (!carte.length) return rispostaFissa('Senza AI leggo solo file di testo con una carta per riga (domanda, poi Tab o «;» o « = », poi risposta), come l\'export di Anki. Per PDF e foto aggiungi la chiave Claude in Impostazioni.');
+  if (!carte.length) return rispostaFissa('Senza AI leggo solo file di testo con una carta per riga (domanda, poi Tab o «;» o « = », poi risposta), come l\'export di Anki. Per PDF e foto serve il cervello locale o la tua AI (scrivi «AI»).');
   const e = prossimi()[0];
   const card = schedaConferma({ titolo: `Importare ${carte.length} carte?`, extra: `<ol class="ld-proposte">${carte.slice(0, 8).map(c => `<li><b>${esc(c.fronte)}</b><span>${esc(c.retro)}</span></li>`).join('')}${carte.length > 8 ? `<li class="altre">e altre ${carte.length - 8}</li>` : ''}</ol>`, nota: e ? `Le metto in ${e.nome}: lo cambi dalla pagina.` : '' });
   await attendiDecisione(card, async () => { carte.forEach(c => aggiungiCarta({ ...c, esameId: e?.id || null })); salva(); aggiornaTutto(); await mostraFatto({ testo: `${carte.length} carte importate.`, azione: ['Ripassa ora', () => { nuovoTurno(); schedaRipasso(e?.id); }] }, card); return {}; });
@@ -1450,7 +1506,7 @@ export function avvia() {
 }
 // la pagina sotto chiede a Lode di fare cose (ripassa, interroga, focus) dal suo pannello
 // per le prove automatiche (test/): accesso ai motori della barra
-window.__lode = { D: () => D, invia, provaAllenatore, AL, riceviFile, O, ripeti, condividiLezione, indietro, TR, Voce, avviaTrascrizione, fermaTrascrizione, riordinaLezione, stato: () => A };
+window.__lode = { D: () => D, AI, invia, provaAllenatore, AL, riceviFile, O, ripeti, condividiLezione, indietro, TR, Voce, avviaTrascrizione, fermaTrascrizione, riordinaLezione, stato: () => A };
 export const azioni = {
   focus: esameId => avviaFocus({ esameId }),
   ripassa: esameId => { apri({ fisso: true }); nuovoTurno(); detto(A.turno, esameId ? 'Ripassa ' + esame(esameId)?.nome : 'Ripasso'); schedaRipasso(esameId); },

@@ -161,7 +161,8 @@ async function stato() {
   const o = V.obsidian(vault()), ol = await I.statoOllama(), m = I.modelloConsigliato();
   // il consigliato se c'è, poi quello scelto prima, poi un Qwen3.5 o un Gemma 3 già installato
   const c = n => n && ol.modelli.some(x => x === n || x === n + ':latest');
-  const scelto = c(m.nome) ? m.nome : c(conf.modello) ? conf.modello : ol.modelli.find(x => x.startsWith('qwen3.5')) || ol.modelli.find(x => x.startsWith('gemma3')) || null;
+  // Ollama occupato (sta caricando un modello) non risponde subito: non vuol dire che il modello non ci sia più
+  const scelto = !ol.acceso ? conf.modello || null : c(m.nome) ? m.nome : c(conf.modello) ? conf.modello : ol.modelli.find(x => x.startsWith('qwen3.5')) || ol.modelli.find(x => x.startsWith('gemma3')) || null;
   if (scelto && scelto !== conf.modello) { conf.modello = scelto; salvaConf(); }
   return { obsidian: { installato: I.obsidianInstallato() || o.installato, registrato: !!o.registrato }, ollama: ol, consigliato: m, modello: scelto, piattaforma: process.platform };
 }
@@ -198,6 +199,35 @@ ipcMain.handle('locale:chat', async (e, { id, messaggi, formato, modello }) => {
   const c = new AbortController(); chat.set(id, c);
   try { return await I.chatLocale({ modello: modello || conf.modello, messaggi, formato, segnale: c.signal, pezzo: t => e.sender.send('locale:pezzo', { id, t }) }); }
   finally { chat.delete(id); }
+});
+// l'AI dello studente (la sua chiave, il servizio che preferisce): le chiamate passano da qui, niente limiti CORS.
+// Formato OpenAI (ChatGPT, Gemini, Mistral, Groq, OpenRouter, DeepSeek). La chiave non viene mai salvata qui.
+const chatCloud = new Map();
+ipcMain.handle('ai:chat', async (e, { id, base, chiave, corpo }) => {
+  const c = new AbortController(); chatCloud.set(id, c);
+  try {
+    const r = await fetch(base.replace(/\/$/, '') + '/chat/completions', { method: 'POST', signal: c.signal, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + chiave, 'X-Title': 'Lode' }, body: JSON.stringify(corpo) });
+    if (!r.ok) { const t = await r.text().catch(() => ''); return { errore: t.slice(0, 400) || r.statusText, stato: r.status }; }
+    if (!corpo.stream) return { json: await r.json() };
+    const lettore = r.body.getReader(), dec = new TextDecoder(); let resto = '', tutto = '';
+    for (; ;) {
+      const { done, value } = await lettore.read(); if (done) break;
+      resto += dec.decode(value, { stream: true }); const righe = resto.split('\n'); resto = righe.pop();
+      for (const riga of righe) {
+        const d = riga.replace(/^data:\s*/, '').trim(); if (!d || d === '[DONE]' || !riga.startsWith('data:')) continue;
+        let x; try { x = JSON.parse(d); } catch { continue; }
+        const t = x.choices?.[0]?.delta?.content || ''; if (t) { tutto += t; e.sender.send('ai:pezzo', { id, t }); }
+      }
+    }
+    return { testo: tutto };
+  } catch (err) { return { errore: c.signal.aborted ? 'interrotta' : err.message, stato: 0 }; }
+  finally { chatCloud.delete(id); }
+});
+ipcMain.handle('ai:stop', (_, { id }) => { chatCloud.get(id)?.abort(); return true; });
+ipcMain.handle('ai:modelli', async (_, { base, chiave }) => {
+  const r = await fetch(base.replace(/\/$/, '') + '/models', { headers: { authorization: 'Bearer ' + chiave } });
+  if (!r.ok) return { errore: (await r.text().catch(() => '')).slice(0, 300) || r.statusText, stato: r.status };
+  const j = await r.json(); return { modelli: (j.data || j.models || []).map(m => String(m.id || m.name || '').replace(/^models\//, '')).filter(Boolean) };
 });
 ipcMain.handle('locale:scalda', async () => { if (conf.modello) await fetch(I.OLLAMA + '/api/generate', { method: 'POST', body: JSON.stringify({ model: conf.modello, keep_alive: '15m' }) }).catch(() => { }); return true; });
 ipcMain.handle('locale:stop', (_, { id }) => { chat.get(id)?.abort(); return true; });

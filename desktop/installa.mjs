@@ -98,7 +98,7 @@ export async function statoOllama() {
   const installato = MAC ? ['/Applications/Ollama.app', join(homedir(), 'Applications', 'Ollama.app')].some(existsSync) || existsSync('/usr/local/bin/ollama')
     : WIN ? existsSync(join(process.env.LOCALAPPDATA || '', 'Programs', 'Ollama', 'ollama.exe')) : existsSync('/usr/local/bin/ollama') || existsSync('/usr/bin/ollama');
   let acceso = false, modelli = [];
-  try { const r = await fetch(OLLAMA + '/api/tags', { signal: AbortSignal.timeout(1500) }); if (r.ok) { acceso = true; modelli = (await r.json()).models?.map(m => m.name) || []; } } catch { }
+  try { const r = await fetch(OLLAMA + '/api/tags', { signal: AbortSignal.timeout(4000) }); if (r.ok) { acceso = true; modelli = (await r.json()).models?.map(m => m.name) || []; } } catch { }
   return { installato: installato || acceso, acceso, modelli };
 }
 async function aspettaOllama(sec = 60) {
@@ -152,7 +152,7 @@ export async function scaricaModello(nome, avanza) {
 // una chat col modello locale, in streaming: i pezzi arrivano a chi chiama
 export async function chatLocale({ modello, messaggi, formato, segnale, pezzo }) {
   await avviaOllama();
-  const r = await fetch(OLLAMA + '/api/chat', { method: 'POST', signal: segnale, body: JSON.stringify({ model: modello, messages: messaggi, stream: true, ...(formato ? { format: formato } : {}), ...(/^qwen3/.test(modello) ? { think: false } : {}), options: { temperature: formato ? 0.2 : 0.6, num_ctx: 8192 }, keep_alive: '15m' }) });
+  const r = await fetch(OLLAMA + '/api/chat', { method: 'POST', signal: segnale, body: JSON.stringify({ model: modello, messages: messaggi, stream: true, ...(formato ? { format: formato } : {}), ...(/^qwen3/.test(modello) ? { think: false } : {}), options: { temperature: formato ? 0.2 : 0.6, num_ctx: 8192, num_predict: 4096 }, keep_alive: '15m' }) });
   if (!r.ok || !r.body) throw new Error(r.status === 404 ? `Il modello ${modello} non è installato` : 'Il modello locale non risponde');
   const lettore = r.body.getReader(), dec = new TextDecoder(); let resto = '', tutto = '';
   for (; ;) {

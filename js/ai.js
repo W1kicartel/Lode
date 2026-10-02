@@ -1,19 +1,40 @@
-// L'AI di Lode (facoltativa): Claude, con la chiave API dello studente, salvata solo in questo browser.
-// Spiega, crea carte da appunti/PDF/foto, interroga come all'orale. Non scrive mai da sola: ogni modifica ai dati
-// (carte, esami, voti) arriva come proposta con «Conferma / Annulla», come fa Lumi nel gestionale.
+// L'AI di Lode. Di base il cervello locale (Ollama + Qwen3.5, installato da Lode): gratis, offline, gli appunti non escono.
+// Chi vuole di più mette la chiave del servizio che preferisce e paga a consumo, di solito pochi centesimi a sessione:
+// Claude (con gli strumenti: propone carte, esami, voti), oppure un servizio in formato OpenAI (ChatGPT, Gemini, Mistral,
+// Groq, OpenRouter, DeepSeek). La chiave resta su questo computer, mai nel vault. Lode non vede né incassa niente.
+// Non scrive mai da sola: ogni modifica ai dati arriva come proposta con «Conferma / Annulla».
 import { D, cfuFatti, dataLunga, fatti, media, num, oggi, prossimi, daRipassare, lezioni, lezioneOra } from './dati.js';
 
 const MODELLO = 'claude-opus-5-5';
 let SDK = null, client = null, chiaveUsata = '';
-// due motori: Claude (chiave dello studente) o il cervello locale (Ollama + Qwen3.5, installato da Lode). Claude se c'è la chiave.
 const PONTE = typeof window !== 'undefined' ? window.lodeDesktop : null;
 let LOCALE = null;
 export const impostaLocale = m => { LOCALE = m || null; };
 export const modelloLocale = () => LOCALE;
-export const motore = () => D.imp.chiave ? 'claude' : (PONTE && LOCALE) ? 'locale' : null;
+
+// i servizi: base dell'API in formato OpenAI, quali modelli preferire (dal più adatto), dove si crea la chiave, una nota
+export const FORNITORI = {
+  anthropic: { nome: 'Claude', ditta: 'Anthropic', sito: 'console.anthropic.com', segnaposto: 'sk-ant-…', nota: 'Il più bravo a spiegare e a interrogare; propone anche carte, esami e voti da confermare.' },
+  openai: { nome: 'ChatGPT', ditta: 'OpenAI', base: 'https://api.openai.com/v1', sito: 'platform.openai.com/api-keys', segnaposto: 'sk-…', preferiti: [/^gpt-5(\.\d+)?-mini$/, /^gpt-5(\.\d+)?$/, /^gpt-4\.1-mini$/, /^gpt-4o-mini$/], nota: 'A consumo, pochi centesimi a sessione.' },
+  google: { nome: 'Gemini', ditta: 'Google', base: 'https://generativelanguage.googleapis.com/v1beta/openai', sito: 'aistudio.google.com/apikey', segnaposto: 'AIza…', preferiti: [/^gemini-\d+(\.\d+)?-flash$/, /^gemini-\d+(\.\d+)?-flash-latest$/, /^gemini-[\d.]+-flash/, /^gemini-[\d.]+-pro$/], nota: 'Ha un piano gratuito con limiti; nel piano gratuito Google può usare i testi per migliorare i suoi modelli.' },
+  mistral: { nome: 'Mistral', ditta: 'Mistral AI (Francia)', base: 'https://api.mistral.ai/v1', sito: 'console.mistral.ai/api-keys', segnaposto: '', preferiti: [/^mistral-medium-latest$/, /^mistral-small-latest$/, /^mistral-large-latest$/], nota: 'Europeo, server in Europa.' },
+  groq: { nome: 'Groq', ditta: 'Groq', base: 'https://api.groq.com/openai/v1', sito: 'console.groq.com/keys', segnaposto: 'gsk_…', preferiti: [/^openai\/gpt-oss-120b$/, /^qwen\/qwen3/, /^llama-3\.3-70b/, /^meta-llama\/llama-4/], nota: 'Velocissimo, modelli aperti; ha un piano gratuito con limiti.' },
+  openrouter: { nome: 'OpenRouter', ditta: 'OpenRouter', base: 'https://openrouter.ai/api/v1', sito: 'openrouter.ai/keys', segnaposto: 'sk-or-…', preferiti: [/^openrouter\/auto$/], nota: 'Una chiave per centinaia di modelli, anche gratuiti.' },
+  deepseek: { nome: 'DeepSeek', ditta: 'DeepSeek', base: 'https://api.deepseek.com', sito: 'platform.deepseek.com/api_keys', segnaposto: 'sk-…', preferiti: [/^deepseek-chat$/], nota: 'Molto economico; server in Cina.' },
+};
+const ai = () => (D.imp.ai ||= { fornitore: D.imp.chiave ? 'anthropic' : null, modello: '', uso: 'tutto' });
+export const fornitore = () => D.imp.chiave ? (ai().fornitore || 'anthropic') : null;
+// chi fa il lavoro: 'claude', 'cloud' (un altro servizio con la chiave dello studente), 'locale', o nessuno.
+// compito 'testo' = lavori sugli appunti (carte, definizioni, riordino, foto): con «uso: pesante» restano sul computer.
+export function motore(compito = 'chat') {
+  const f = fornitore(), loc = PONTE && LOCALE ? 'locale' : null;
+  if (f && !(compito === 'testo' && ai().uso === 'pesante' && loc)) return f === 'anthropic' ? 'claude' : 'cloud';
+  return loc;
+}
 export const attiva = () => !!motore();
+export const nomeMotore = (compito = 'chat') => { const m = motore(compito); return m === 'locale' ? 'il modello locale' : m ? FORNITORI[fornitore()].nome : 'nessuno'; };
 async function cliente() {
-  if (!D.imp.chiave) throw new Error('Manca la chiave: aggiungila in Impostazioni.');
+  if (!D.imp.chiave) throw new Error('Manca la chiave: aggiungila scrivendo «AI» nella barra.');
   SDK ||= (await import('https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk/+esm')).default;
   if (!client || chiaveUsata !== D.imp.chiave) { client = new SDK({ apiKey: D.imp.chiave, dangerouslyAllowBrowser: true }); chiaveUsata = D.imp.chiave; }
   return client;
@@ -140,11 +161,102 @@ function perOllama(storia) {
 const SISTEMA_LOCALE = SISTEMA.split('\nStrumenti:')[0] + `
 Non puoi modificare i dati di Lode: se lo studente vuole salvare carte o definizioni, digli di usare «chiudi lezione» o i comandi della barra.
 Non inventare: se non sei sicuro di una definizione o di una formula, dillo.`;
+// conversazione senza strumenti: col modello locale o con un servizio in formato OpenAI
 export async function conversaLocale({ storia, sistema, suTesto, segnale }) {
-  const testo = await chatLocale([{ role: 'system', content: (sistema || SISTEMA_LOCALE) + '\n\nDati dello studente adesso:\n' + contesto() }, ...perOllama(storia)], { pezzo: suTesto, segnale });
+  const sis = (sistema || SISTEMA_LOCALE) + '\n\nDati dello studente adesso:\n' + contesto();
+  const testo = motore('chat') === 'cloud'
+    ? await chatCloud([{ role: 'system', content: sis }, ...perOpenAI(storia)], { pezzo: suTesto, segnale })
+    : await chatLocale([{ role: 'system', content: sis }, ...perOllama(storia)], { pezzo: suTesto, segnale });
   storia.push({ role: 'assistant', content: [{ type: 'text', text: testo }] });
   return storia;
 }
+export const conversaSemplice = conversaLocale;
+
+/* ---------- un servizio in formato OpenAI, con la chiave dello studente ---------- */
+const ascoltaCloud = new Map();
+if (PONTE) PONTE.su('ai:pezzo', ({ id, t }) => ascoltaCloud.get(id)?.(t));
+const erroreHttp = (testo, stato) => {
+  let m = String(testo || ''); try { const j = JSON.parse(m); m = j.error?.message || j.message || j[0]?.error?.message || m; } catch { }
+  const e = new Error(m.slice(0, 240) || 'errore ' + stato); e.status = stato; return e;
+};
+async function chiamaCloud(corpo, { pezzo, segnale } = {}) {
+  const f = FORNITORI[fornitore()], chiave = D.imp.chiave;
+  if (!f?.base) throw new Error('Servizio sconosciuto: ricollega la tua AI.');
+  if (PONTE) {
+    const id = Math.random().toString(36).slice(2);
+    if (pezzo) ascoltaCloud.set(id, pezzo);
+    const stop = () => PONTE.invoca('ai:stop', { id }); segnale?.addEventListener('abort', stop);
+    try {
+      const r = await PONTE.invoca('ai:chat', { id, base: f.base, chiave, corpo });
+      if (r.errore) { if (segnale?.aborted) { const x = new Error('interrotta'); x.name = 'AbortError'; throw x; } throw erroreHttp(r.errore, r.stato); }
+      return r;
+    } finally { ascoltaCloud.delete(id); segnale?.removeEventListener('abort', stop); }
+  }
+  // nel browser la chiamata è diretta (qualche servizio non lo permette: allora serve l'app desktop)
+  const r = await fetch(f.base + '/chat/completions', { method: 'POST', signal: segnale, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + chiave }, body: JSON.stringify(corpo) });
+  if (!r.ok) throw erroreHttp(await r.text().catch(() => ''), r.status);
+  if (!corpo.stream) return { json: await r.json() };
+  const lettore = r.body.getReader(), dec = new TextDecoder(); let resto = '', tutto = '';
+  for (; ;) {
+    const { done, value } = await lettore.read(); if (done) break;
+    resto += dec.decode(value, { stream: true }); const righe = resto.split('\n'); resto = righe.pop();
+    for (const riga of righe) { if (!riga.startsWith('data:')) continue; const d = riga.slice(5).trim(); if (!d || d === '[DONE]') continue; try { const t = JSON.parse(d).choices?.[0]?.delta?.content || ''; if (t) { tutto += t; pezzo?.(t); } } catch { } }
+  }
+  return { testo: tutto };
+}
+// la conversazione nel formato di Claude diventa quella OpenAI (le foto passano come immagini, i PDF come testo se c'è)
+function perOpenAI(storia) {
+  return storia.map(m => {
+    if (typeof m.content === 'string') return { role: m.role, content: m.content };
+    const parti = [];
+    for (const b of m.content) {
+      if (b.type === 'text') parti.push({ type: 'text', text: b.text });
+      else if (b.type === 'image') parti.push({ type: 'image_url', image_url: { url: `data:${b.source.media_type};base64,${b.source.data}` } });
+      else if (b.type === 'document' && b.source?.type === 'text') parti.push({ type: 'text', text: `[File ${b.title || ''}]\n${b.source.data.slice(0, 120000)}` });
+      else if (b.type === 'document') parti.push({ type: 'text', text: `[Il PDF «${b.title || ''}» non è leggibile qui: chiedi allo studente il testo o una foto delle pagine.]` });
+    }
+    return { role: m.role, content: parti.every(x => x.type === 'text') ? parti.map(x => x.text).join('\n\n') : parti };
+  });
+}
+const testoDi = r => r.testo ?? r.json?.choices?.[0]?.message?.content ?? '';
+// risposta strutturata: schema JSON se il servizio lo accetta, altrimenti JSON semplice con lo schema nelle istruzioni
+async function chatCloud(messaggi, { formato, pezzo, segnale } = {}) {
+  const base = { model: ai().modello, messages: messaggi };
+  if (!formato) return testoDi(await chiamaCloud({ ...base, stream: !!pezzo }, { pezzo, segnale }));
+  const conSchema = [{ role: 'system', content: 'Rispondi solo con un oggetto JSON valido che rispetta questo schema JSON:\n' + JSON.stringify(formato) }, ...messaggi];
+  const tentativi = [
+    { ...base, response_format: { type: 'json_schema', json_schema: { name: 'risposta', schema: formato } } },
+    { ...base, messages: conSchema, response_format: { type: 'json_object' } },
+    { ...base, messages: conSchema },
+  ];
+  let ultimo;
+  for (const corpo of tentativi) {
+    try { const t = testoDi(await chiamaCloud(corpo, { segnale })); if (t.trim()) return t; ultimo = new Error('il servizio ha risposto vuoto'); }   // vuoto: si prova il formato successivo
+    catch (e) { ultimo = e; if (e.status !== 400 && e.status !== 422) throw e; }   // formato non supportato: si prova il successivo
+  }
+  throw ultimo;
+}
+const leggiJSON = t => { const x = String(t).replace(/^```(?:json)?\s*|\s*```$/g, ''); try { return JSON.parse(x); } catch { const i = x.indexOf('{'), j = x.lastIndexOf('}'); return JSON.parse(x.slice(i, j + 1)); } };
+// prima di salvare la chiave: la prova e sceglie il modello (il più adatto tra quelli che la chiave può usare)
+export async function provaFornitore(id, chiave) {
+  if (id === 'anthropic') { await provaChiave(chiave); return { modelli: [MODELLO], modello: MODELLO }; }
+  const f = FORNITORI[id];
+  const r = PONTE ? await PONTE.invoca('ai:modelli', { base: f.base, chiave })
+    : await fetch(f.base + '/models', { headers: { authorization: 'Bearer ' + chiave } }).then(async x => x.ok ? { modelli: ((await x.json()).data || []).map(m => String(m.id).replace(/^models\//, '')) } : { errore: await x.text(), stato: x.status });
+  if (r.errore) throw erroreHttp(r.errore, r.stato);
+  const modelli = r.modelli.filter(m => !/embed|tts|whisper|audio|image|moderation|dall-e|transcribe|realtime|guard|search/i.test(m));
+  let modello = null; for (const p of f.preferiti || []) { modello = modelli.filter(m => p.test(m)).sort().reverse()[0]; if (modello) break; }
+  return { modelli, modello: modello || modelli[0] || '' };
+}
+export function collegaFornitore(id, chiave, modello) {
+  Object.assign(ai(), { fornitore: id, modello: id === 'anthropic' ? MODELLO : modello });
+  D.imp.chiave = chiave;
+  try { const c = JSON.parse(localStorage.getItem('lode:chiavi') || '{}'); c[id] = chiave; localStorage.setItem('lode:chiavi', JSON.stringify(c)); } catch { }
+}
+export function scollegaFornitore() { D.imp.chiave = ''; ai().fornitore = null; }
+export const chiaveSalvata = id => { try { return JSON.parse(localStorage.getItem('lode:chiavi') || '{}')[id] || ''; } catch { return ''; } };
+export const impostaUso = u => { ai().uso = u === 'pesante' ? 'pesante' : 'tutto'; };
+export const statoAI = () => ({ ...ai(), fornitore: fornitore(), locale: LOCALE });
 
 /* ---------- compiti con risposta strutturata (Claude o locale) ---------- */
 const SCHEMA_LEZIONE = { type: 'object', additionalProperties: false, required: ['definizioni', 'da_esame'], properties: {
@@ -153,17 +265,16 @@ const SCHEMA_LEZIONE = { type: 'object', additionalProperties: false, required: 
 const SCHEMA_CARTE = { type: 'object', additionalProperties: false, required: ['carte'], properties: {
   carte: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['fronte', 'retro'], properties: { fronte: { type: 'string' }, retro: { type: 'string' } } } } } };
 async function strutturato(istruzioni, contenuto, schema) {
-  if (motore() === 'claude') {
+  const m = motore('testo'), parti = [...(Array.isArray(contenuto) ? contenuto : [{ type: 'text', text: contenuto }]), { type: 'text', text: istruzioni }];
+  if (m === 'claude') {
     const c = await cliente();
-    const r = await c.messages.create({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low', format: { type: 'json_schema', schema } }, messages: [{ role: 'user', content: [...(Array.isArray(contenuto) ? contenuto : [{ type: 'text', text: contenuto }]), { type: 'text', text: istruzioni }] }] });
+    const r = await c.messages.create({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low', format: { type: 'json_schema', schema } }, messages: [{ role: 'user', content: parti }] });
     if (r.stop_reason === 'refusal') throw new Error('Claude ha declinato la richiesta.');
     return JSON.parse(r.content.find(b => b.type === 'text')?.text || '{}');
   }
-  if (motore() === 'locale') {
-    const m = perOllama([{ role: 'user', content: [...(Array.isArray(contenuto) ? contenuto : [{ type: 'text', text: contenuto }]), { type: 'text', text: istruzioni }] }]);
-    return JSON.parse(await chatLocale(m, { formato: schema }));
-  }
-  throw new Error('Serve il cervello locale o una chiave Claude.');
+  if (m === 'cloud') return leggiJSON(await chatCloud(perOpenAI([{ role: 'user', content: parti }]), { formato: schema }));
+  if (m === 'locale') return JSON.parse(await chatLocale(perOllama([{ role: 'user', content: parti }]), { formato: schema }));
+  throw new Error('Serve il cervello locale o la tua AI.');
 }
 // «chiudi lezione»: dagli appunti grezzi alle definizioni e alle cose da esame, solo ciò che c'è davvero negli appunti
 export async function estraiLezione({ corso, appunti, gia = [] }) {
@@ -180,7 +291,7 @@ Estrai:
 // «Riordina»: dalla trascrizione grezza della lezione ad appunti da studiare. A pezzi (il modello locale ha poco contesto):
 // ogni pezzo diventa una parte con titolo, punti chiari e formule in LaTeX; niente che il prof non abbia detto.
 export async function riordina({ corso, testo, appunti = '', avanza, fonte = 'lezione' }) {
-  const parole = String(testo).split(/\s+/), passo = motore() === 'claude' ? 9000 : 1400, pezzi = [];
+  const M = motore('testo'), parole = String(testo).split(/\s+/), passo = M === 'claude' || M === 'cloud' ? 9000 : 1400, pezzi = [];
   for (let i = 0; i < parole.length; i += passo) pezzi.push(parole.slice(i, i + passo).join(' '));
   const istr = (k, n) => fonte === 'documento' ? `Questa è ${n > 1 ? `la parte ${k} di ${n} del` : 'il'} testo di un documento di studio (slide o dispense) del corso «${corso}».` : `Questa è ${n > 1 ? `la parte ${k} di ${n} della` : 'la'} trascrizione automatica di una lezione universitaria di «${corso}» (contiene errori di trascrizione; le formule dette a voce sono già in LaTeX tra $…$).`;
   const istr2 = (k, n) => istr(k, n) + `
@@ -196,12 +307,14 @@ Rispondi solo con gli appunti, senza introduzioni.`;
   for (const [k, pezzo] of pezzi.entries()) {
     avanza?.(k / pezzi.length);
     const contenuto = `Trascrizione:\n\n${pezzo}${k === 0 && appunti ? `\n\nAppunti presi a mano dallo studente (per orientarti):\n${appunti}` : ''}`;
-    if (motore() === 'claude') {
+    const dom = contenuto + '\n\n' + istr2(k + 1, pezzi.length);
+    if (M === 'claude') {
       const c = await cliente();
-      const r = await c.messages.create({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low' }, messages: [{ role: 'user', content: contenuto + '\n\n' + istr2(k + 1, pezzi.length) }] });
+      const r = await c.messages.create({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low' }, messages: [{ role: 'user', content: dom }] });
       out.push(r.content.filter(b => b.type === 'text').map(b => b.text).join('').trim());
-    } else if (motore() === 'locale') out.push((await chatLocale(perOllama([{ role: 'user', content: contenuto + '\n\n' + istr2(k + 1, pezzi.length) }]))).trim());
-    else throw new Error('Serve il cervello locale o una chiave Claude.');
+    } else if (M === 'cloud') out.push((await chatCloud([{ role: 'user', content: dom }])).trim());
+    else if (M === 'locale') out.push((await chatLocale(perOllama([{ role: 'user', content: dom }]))).trim());
+    else throw new Error('Serve il cervello locale o la tua AI.');
   }
   avanza?.(1);
   return out.join('\n\n').replace(/^#{1,2}\s/gm, '### ');
@@ -210,9 +323,11 @@ Rispondi solo con gli appunti, senza introduzioni.`;
 // la foto della lavagna (o di una pagina) diventa appunti: testo fedele, formule in LaTeX, schemi descritti a parole
 export async function trascriviFoto({ blocco, corso }) {
   const istr = `È una foto di una lavagna o di una pagina di appunti${corso ? ` della lezione di «${corso}»` : ''}. Trascrivila in appunti Markdown in italiano, fedeli a ciò che si vede: titoli con «### », punti con «- », formule in LaTeX tra $…$ (Obsidian le mostra), grafici e schemi descritti in una riga tra parentesi quadre. Se una parte è illeggibile scrivi [illeggibile]. Solo gli appunti, senza introduzioni.`;
-  if (motore() === 'claude') { const c = await cliente(); const r = await c.messages.create({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low' }, messages: [{ role: 'user', content: [blocco, { type: 'text', text: istr }] }] }); return r.content.filter(b => b.type === 'text').map(b => b.text).join('').trim(); }
-  if (motore() === 'locale') return (await chatLocale(perOllama([{ role: 'user', content: [blocco, { type: 'text', text: istr }] }]))).trim();
-  throw new Error('Serve il cervello locale o una chiave Claude.');
+  const M = motore('testo'), msg = [{ role: 'user', content: [blocco, { type: 'text', text: istr }] }];
+  if (M === 'claude') { const c = await cliente(); const r = await c.messages.create({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low' }, messages: msg }); return r.content.filter(b => b.type === 'text').map(b => b.text).join('').trim(); }
+  if (M === 'cloud') return (await chatCloud(perOpenAI(msg))).trim();
+  if (M === 'locale') return (await chatLocale(perOllama(msg))).trim();
+  throw new Error('Serve il cervello locale o la tua AI.');
 }
 // un documento (slide, dispense, PDF) diventa un riassunto da studiare, a pezzi come la trascrizione
 export async function riassumi({ corso, testo, nome, avanza }) {

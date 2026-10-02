@@ -536,3 +536,13 @@ button.ld-ripeti-riga:hover{background:rgba(255,255,255,.06)}
 .ld-stella{padding:9px 0;border-top:1px solid var(--ld-riga);font-size:14px;line-height:1.45}
 .ld-stella::before{content:"★ ";color:var(--muted)}
 .ld-elenco-stelle .az{margin-top:10px}
+
+/* ---------- la tua AI ---------- */
+.ld-tuaai .ld-opzioni{margin-top:12px}
+.ld-tuaai .ld-op.scelta{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.ld-ai-chiave,.ld-ai-modello{margin-top:14px}
+.ld-ai-chiave small{display:block;margin-top:7px;font-size:12px}
+.ld-ai-chiave small b{color:var(--ink);font-weight:500}
+.ld-spunta-ai{display:flex;gap:9px;align-items:flex-start;margin-top:14px;font-size:12.5px;line-height:1.45;color:var(--muted);cursor:pointer}
+.ld-spunta-ai input{margin-top:2px;accent-color:#fff}
+.ld-prep .t b small{font-weight:400;color:var(--ld-tenue);font-size:11.5px;margin-left:4px}
