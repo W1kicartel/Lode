@@ -1,26 +1,47 @@
 // Prova completa dell'app desktop, su un vault e una configurazione temporanei (non tocca i tuoi dati):
-//   node test/prova-app.mjs            (macOS: le frasi «parlate» si generano con la voce Alice di sistema)
+//   node test/prova-app.mjs
+// Le frasi «parlate»: sul Mac si generano con la voce Alice di sistema; altrove (Windows, Linux) si usano quelle salvate
+// in test/audio (si rigenerano su un Mac con LODE_SALVA_AUDIO=1 LODE_SOLO_AUDIO=1 node test/prova-app.mjs).
+// LODE_CI=1 (la macchina Windows di GitHub): prima installa davvero Ollama e il modello con l'installer di Lode, salva le
+// foto della barra in LODE_FOTO e i risultati in LODE_RISULTATI (JSON).
 // Copre comandi, aula (★, definizioni, domande nella nota Obsidian), focus, libretto, ripasso, giochi, orario, note,
 // indietro/Esc, voce (Whisper locale), trascrizione di una lezione con formule, riordino e definizioni col modello
 // locale, domanda all'AI. L'audio va direttamente al motore: niente altoparlanti, niente microfono.
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdtempSync, readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { createRequire } from 'node:module';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const QUI = dirname(fileURLToPath(import.meta.url)), DESKTOP = join(QUI, '..', 'desktop');
 const DIR = mkdtempSync(join(tmpdir(), 'lode-prova-')), VAULT = join(DIR, 'Vault');
-const ELECTRON = join(DESKTOP, 'node_modules', '.bin', 'electron');
-if (!existsSync(ELECTRON)) { console.error('Prima: cd desktop && npm install'); process.exit(1); }
+// il binario di Electron, su qualunque sistema (su Windows .bin/electron è uno script .cmd)
+let ELECTRON; try { ELECTRON = createRequire(join(DESKTOP, 'package.json'))('electron'); } catch { }
+if (!ELECTRON || !existsSync(ELECTRON)) { console.error('Prima: cd desktop && npm install'); process.exit(1); }
+const CI = !!process.env.LODE_CI, FOTO = process.env.LODE_FOTO || '';
+if (FOTO) mkdirSync(FOTO, { recursive: true });
 
-// audio: frasi dette con la voce di sistema, 16 kHz mono, in base64 (int16)
+// audio: frasi dette con la voce di sistema, 16 kHz mono, in base64 (int16). Il nome del file salvato contiene
+// l'impronta del testo: se la frase cambia, l'audio vecchio non viene usato per sbaglio.
+const AUDIO = join(QUI, 'audio'), MAC = process.platform === 'darwin';
+const wav16 = pcm => { const h = Buffer.alloc(44); h.write('RIFF', 0); h.writeUInt32LE(36 + pcm.length, 4); h.write('WAVEfmt ', 8); h.writeUInt32LE(16, 16); h.writeUInt16LE(1, 20); h.writeUInt16LE(1, 22); h.writeUInt32LE(16000, 24); h.writeUInt32LE(32000, 28); h.writeUInt16LE(2, 32); h.writeUInt16LE(16, 34); h.write('data', 36); h.writeUInt32LE(pcm.length, 40); return Buffer.concat([h, pcm]); };
 function parla(testo, nome) {
-  const aiff = join(DIR, nome + '.aiff'), wav = join(DIR, nome + '.wav');
-  execFileSync('say', ['-v', 'Alice', '-r', '175', '-o', aiff, testo]);
-  execFileSync('afconvert', ['-f', 'WAVE', '-d', 'LEI16@16000', '-c', '1', aiff, wav]);
-  const b = readFileSync(wav), i = b.indexOf('data') + 8;
-  return b.subarray(i).toString('base64');
+  const fisso = join(AUDIO, `${nome}-${createHash('sha1').update(testo).digest('hex').slice(0, 10)}.pcm`);
+  let pcm;
+  if (MAC && !process.env.LODE_AUDIO_FISSO) {
+    const aiff = join(DIR, nome + '.aiff'), wav = join(DIR, nome + '-mac.wav');
+    execFileSync('say', ['-v', 'Alice', '-r', '175', '-o', aiff, testo]);
+    execFileSync('afconvert', ['-f', 'WAVE', '-d', 'LEI16@16000', '-c', '1', aiff, wav]);
+    const b = readFileSync(wav); pcm = b.subarray(b.indexOf('data') + 8);
+    if (process.env.LODE_SALVA_AUDIO) { mkdirSync(AUDIO, { recursive: true }); writeFileSync(fisso, pcm); }
+  } else {
+    if (!existsSync(fisso)) { console.error(`Manca l'audio di prova ${fisso}: generalo su un Mac con LODE_SALVA_AUDIO=1 LODE_SOLO_AUDIO=1 node test/prova-app.mjs`); process.exit(1); }
+    pcm = readFileSync(fisso);
+  }
+  writeFileSync(join(DIR, nome + '.wav'), wav16(pcm));   // per i passi che lasciano un file audio sulla pillola
+  return pcm.toString('base64');
 }
 const VOCE = {
   voto: parla('Ho preso ventotto in fisica due.', 'voto'),
@@ -45,6 +66,8 @@ Vediamo un esempio: f di x uguale x al quadrato più due x più uno. Una primiti
 Il limite per x che tende a zero di seno di x fratto x è uguale a uno, questo all'esame lo chiedo sempre.
 Definiamo infine la funzione integrale come l'integrale da a a x di f di t in d t.`, 'lezione');
 
+if (process.env.LODE_SOLO_AUDIO) { console.log('audio di prova salvati in', AUDIO); process.exit(0); }
+
 const d = new Date(), hh = d.getHours();
 const lezioneOra = `lezione analisi 2 ${['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'][d.getDay()]} dalle ${hh} alle ${Math.min(23, hh + 2)} aula 7`;
 const A = v => JSON.stringify(v);
@@ -64,8 +87,9 @@ const passi = [
     // a qualunque ora parta la prova, «adesso» c'è solo la lezione di Analisi 2 (la aggiunge il passo dopo): gli altri corsi oggi no
     { const D = __lode.D(), g = new Date().getDay(); D.orario.forEach(o => { if (o.corso !== 'Analisi 2') o.giorni = o.giorni.filter(x => x !== g); }); dispatchEvent(new CustomEvent('lode:dati')); }
     document.querySelector('.ld-pill').click(); return 'pronto'; })()` },
+  ...(CI ? [{ nome: 'installa: AI locale (Ollama + modello, installer di Lode)', attesa: 500, js: `(async()=>{ const r = await window.lodeDesktop.invoca('installa:cervello'); for (let k = 0; k < 20 && !__lode.AI.modelloLocale(); k++) { dispatchEvent(new CustomEvent('lode:dati')); await new Promise(r => setTimeout(r, 1000)); } return JSON.stringify(r) })()`, atteso: '"esito":"ok"', mostra: true }] : []),
   { nome: 'orario: lezione adesso', js: `T.di(${A(lezioneOra)})`, atteso: 'in orario' },
-  { nome: 'pillola in aula', js: `(async()=>{ await __lode.indietro(); document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})); dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})); await new Promise(r=>setTimeout(r,900)); return document.querySelector('.ld-pill').innerText })()`, atteso: 'Analisi 2' },
+  { nome: 'pillola in aula', ...(FOTO ? { foto: 'pillola-aula.png' } : {}), js: `(async()=>{ await __lode.indietro(); document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})); dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})); await new Promise(r=>setTimeout(r,900)); return document.querySelector('.ld-pill').innerText })()`, atteso: 'Analisi 2' },
   { nome: '★ da esame', js: `(async()=>{ document.querySelector('.ld-pill').click(); await new Promise(r=>setTimeout(r,700)); return T.di('★ il teorema di Green all\\'esame lo chiede sempre') })()`, atteso: 'Segnato in Analisi 2' },
   { nome: 'definizione', js: `T.di('def: gradiente = vettore delle derivate parziali')`, atteso: '«Gradiente» in Analisi 2' },
   { nome: 'domanda per il prof', js: `T.di('? perché serve la continuità delle derivate')`, atteso: 'Domanda salvata' },
@@ -74,7 +98,7 @@ const passi = [
   { nome: 'quanto mi serve', js: `T.di('quanto mi serve per 105')`, atteso: 'Per partire da 105' },
   { nome: 'simulazione', js: `T.di('se prendo 30 in basi di dati')`, atteso: 'la media passa' },
   { nome: 'ripasso', js: `(async()=>{ await T.di('ripassa analisi 2'); document.querySelector('.ld-rip .gira').click(); await new Promise(r=>setTimeout(r,400)); document.querySelector('.ld-rip [data-q="4"]').click(); await new Promise(r=>setTimeout(r,700)); return document.querySelector('.ld-rip .conto').innerText })()`, atteso: '2 di' },
-  { nome: 'gioco', js: `(async()=>{ await T.di('gioca analisi 2'); return document.querySelector('.ld-gioco')?.innerText.slice(0, 60) || document.querySelector('.ld-filo').innerText.slice(-200) })()`, atteso: 'GIOCO · ANALISI 2' },
+  { nome: 'gioco', ...(FOTO ? { foto: 'gioco.png' } : {}), js: `(async()=>{ await T.di('gioca analisi 2'); return document.querySelector('.ld-gioco')?.innerText.slice(0, 60) || document.querySelector('.ld-filo').innerText.slice(-200) })()`, atteso: 'GIOCO · ANALISI 2' },
   { nome: 'orario scheda', js: `(async()=>{ await T.di('orario'); return document.querySelector('.ld-orario')?.innerText.slice(0,80) })()`, atteso: 'ORARIO' },
   { nome: 'note del vault', js: `(async()=>{ await T.di('note'); await new Promise(r=>setTimeout(r,800)); return document.querySelector('.ld-note')?.innerText.slice(0,200) })()`, atteso: 'Glossario' },
   { nome: 'indietro', js: `(async()=>{ document.querySelector('.ld-indietro').click(); await new Promise(r=>setTimeout(r,900)); return String(document.querySelector('.ld-indietro').hidden) + ' ' + getComputedStyle(document.querySelector('.ld-home')).display })()`, atteso: 'true flex' },
@@ -85,24 +109,24 @@ const passi = [
   { nome: 'riordina col modello locale', js: `(async()=>{ await __lode.indietro(); const p = T.di('riordina la lezione', 600); const t = await T.conferma(420); if (!t) return (await p); await T.aspetta(() => document.querySelector('.ld-filo').innerText.includes('Appunti salvati'), 60); const d = await T.conferma(240); await T.calma(60); return t + ' | ' + d })()`, atteso: 'Salvare gli appunti riordinati' },
   { nome: 'ripeti: gli ultimi 60 secondi', js: `(async()=>{ await __lode.indietro(); await __lode.O.immetti(T.audio(${A(VOCE.voto)})); await __lode.ripeti(); await T.calma(60); return document.querySelector('.ld-ripeti')?.innerText.slice(0, 200) || document.querySelector('.ld-filo').innerText.slice(-200) })()`, atteso: 'ULTIMI' },
   { nome: 'voce: motore', js: `__lode.Voce.nomeMotore()`, atteso: '', mostra: true },
-  { nome: 'ripeti: un minuto intero, ultima frase in chiaro', js: `(async()=>{ await __lode.indietro(); await __lode.O.immetti(T.audio(${A(MINUTO)})); const t0 = performance.now(); await __lode.ripeti(); const ms = performance.now() - t0; const s = [...document.querySelectorAll('.ld-ripeti')].pop(); return Math.round(ms) + ' ms · ULTIMA: ' + s.querySelector('.ultima')?.innerText + ' · TUTTO: ' + s.querySelector('.ld-detto-prof').innerText })()`, atteso: 'chiedo sempre', mostra: true },
+  { nome: 'ripeti: un minuto intero, ultima frase in chiaro', ...(FOTO ? { foto: 'ripeti.png' } : {}), js: `(async()=>{ await __lode.indietro(); await __lode.O.immetti(T.audio(${A(MINUTO)})); const t0 = performance.now(); await __lode.ripeti(); const ms = performance.now() - t0; const s = [...document.querySelectorAll('.ld-ripeti')].pop(); return Math.round(ms) + ' ms · ULTIMA: ' + s.querySelector('.ultima')?.innerText + ' · TUTTO: ' + s.querySelector('.ld-detto-prof').innerText })()`, atteso: 'chiedo sempre', mostra: true },
   { nome: 'ripeti: agli appunti', js: `(async()=>{ document.querySelector('.ld-ripeti [data-r=appunti]').click(); return (await T.calma(20)).slice(-120) })()`, atteso: 'Negli appunti di Analisi 2' },
   { nome: 'condividi la sbobina', js: `(async()=>{ await __lode.indietro(); return T.di('condividi la sbobina di analisi 2', 60) })()`, atteso: 'Sbobina di Analisi 2 pronta' },
-  { nome: 'trascina: la pillola si allarga', js: `(async()=>{ try { await __lode.indietro(); dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})); await new Promise(r=>setTimeout(r,900)); const w = await T.lascia(T.file(${A(Buffer.from('Il gradiente è il vettore delle derivate parziali. La matrice hessiana raccoglie le derivate seconde. Un punto di sella è un punto stazionario che non è né massimo né minimo.').toString('base64'))}, 'appunti-compagno.md', 'text/markdown')); const c = [...document.querySelectorAll('.ld-file-op')].pop(); return 'larga ' + w + ' · ' + (c ? c.querySelector('.ld-opzioni').innerText.split('\\n').join(' | ').slice(0, 300) : 'nessuna scheda: ' + document.querySelector('.ld-filo').innerText.slice(-300)); } catch (e) { return 'ERRORE ' + e.message; } })()`, atteso: 'Carte del ripasso' },
+  { nome: 'trascina: la pillola si allarga', ...(FOTO ? { foto: 'zona-file.png' } : {}), js: `(async()=>{ try { await __lode.indietro(); dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})); await new Promise(r=>setTimeout(r,900)); const w = await T.lascia(T.file(${A(Buffer.from('Il gradiente è il vettore delle derivate parziali. La matrice hessiana raccoglie le derivate seconde. Un punto di sella è un punto stazionario che non è né massimo né minimo.').toString('base64'))}, 'appunti-compagno.md', 'text/markdown')); const c = [...document.querySelectorAll('.ld-file-op')].pop(); return 'larga ' + w + ' · ' + (c ? c.querySelector('.ld-opzioni').innerText.split('\\n').join(' | ').slice(0, 300) : 'nessuna scheda: ' + document.querySelector('.ld-filo').innerText.slice(-300)); } catch (e) { return 'ERRORE ' + e.message; } })()`, atteso: 'Carte del ripasso' },
   { nome: 'file di testo → carte (modello locale)', js: `(async()=>{ await T.scegli('carte'); const t = await T.conferma(300); await T.calma(30); return t })()`, atteso: 'Salvare' },
   { nome: 'PDF → definizioni per i giochi', js: `(async()=>{ await __lode.indietro(); await T.lascia(T.file(${A(DISPENSA)}, 'dispensa-forme.pdf', 'application/pdf')); await T.scegli('definizioni'); const t = await T.conferma(300); await T.calma(30); return t + ' | ' + document.querySelector('.ld-filo').innerText.slice(-150) })()`, atteso: 'Aggiungere a Analisi 2' },
   { nome: 'registrazione audio → trascritta nella lezione', js: `(async()=>{ await __lode.indietro(); await T.lascia(T.file(${A(WAV)}, 'registrazione.wav', 'audio/wav')); await T.scegli('audio'); await T.aspetta(() => document.querySelector('.ld-filo').innerText.includes('Lezione trascritta'), 240); return document.querySelector('.ld-filo').innerText.slice(-200) })()`, atteso: 'Lezione trascritta' },
   { nome: 'ricevi una sbobina', js: `(async()=>{ await __lode.indietro(); const testo = await window.lodeDesktop.invoca('vault:leggi', { file: 'Sbobine/' + (await window.lodeDesktop.invoca('vault:note')).find(n => n.file.startsWith('Sbobine/') && n.file.endsWith('.md')).file.slice(8) }); const md = testo.replace(/corso: "Analisi 2"/, 'corso: "Fisica 2"'); await T.lascia(new File([md], 'sbobina-fisica.md', { type: 'text/markdown' })); await T.scegli('sbobina'); return (await T.calma(30)).slice(-160) })()`, atteso: 'nel tuo vault' },
   { nome: 'esame comunicato a voce', js: `(async()=>{ await __lode.indietro(); return T.di("ho l'esame di fisica 2 tra 5 giorni", 30) })()`, atteso: 'ti propongo' },
-  { nome: 'allenatore: la pillola propone', js: `(async()=>{ await __lode.indietro(); dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})); await new Promise(r=>setTimeout(r,900)); const r = await __lode.provaAllenatore(true); await new Promise(r=>setTimeout(r,900)); const el = document.querySelector('.ld.propone .ld-proposta'); return r + ' | ' + (el ? el.innerText.replace(/\\n/g,' ') + ' | larga ' + Math.round(document.querySelector('.ld').getBoundingClientRect().width) : 'nessuna proposta visibile') })()`, atteso: 'larga' },
+  { nome: 'allenatore: la pillola propone', ...(FOTO ? { foto: 'proposta.png' } : {}), js: `(async()=>{ await __lode.indietro(); dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})); await new Promise(r=>setTimeout(r,900)); const r = await __lode.provaAllenatore(true); await new Promise(r=>setTimeout(r,900)); const el = document.querySelector('.ld.propone .ld-proposta'); return r + ' | ' + (el ? el.innerText.replace(/\\n/g,' ') + ' | larga ' + Math.round(document.querySelector('.ld').getBoundingClientRect().width) : 'nessuna proposta visibile') })()`, atteso: 'larga' },
   { nome: 'allenatore: accetta e parte', js: `(async()=>{ document.querySelector('.ld-proposta [data-p=si]').click(); await new Promise(r=>setTimeout(r,2500)); const st = __lode.AL.riepilogo(); return 'accettate ' + Object.values(st).reduce((a, x) => a + x.si, 0) + ' | ' + document.querySelector('.ld-filo').innerText.slice(-160) })()`, atteso: 'accettate 1' },
   { nome: 'allenatore: «Dopo» rimanda', js: `(async()=>{ __lode.D().imp.silenzio = { da: '00:00', a: '00:00' }; await __lode.indietro(); dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'})); await new Promise(r=>setTimeout(r,900)); await __lode.provaAllenatore(true); await new Promise(r=>setTimeout(r,700)); document.querySelector('.ld-proposta [data-p=dopo]').click(); await new Promise(r=>setTimeout(r,400)); return (await __lode.provaAllenatore(false)) })()`, atteso: 'rimandata' },
   { nome: "domanda all'AI locale", js: `(async()=>{ await __lode.indietro(); return T.di('spiegami in una frase cos\\'è un integrale definito', 240) })()`, atteso: 'integrale' },
   // la tua AI: Ollama espone lo stesso formato di ChatGPT/Groq/OpenRouter (/v1), qui fa da «servizio esterno» con la sua chiave finta
-  { nome: 'la tua AI: la scheda', js: `(async()=>{ await __lode.indietro(); await __lode.invia('AI'); await new Promise(r=>setTimeout(r,700)); return [...document.querySelectorAll('.ld-tuaai [data-f]')].map(b=>b.dataset.f).join(',') })()`, atteso: 'anthropic,openai,google,mistral,groq,openrouter,deepseek' },
-  { nome: 'la tua AI: collega un servizio in formato OpenAI', js: `(async()=>{ const F = __lode.AI.FORNITORI.openai; F.base = 'http://127.0.0.1:11434/v1'; F.preferiti = [/^gemma3:4b$/]; document.querySelector('.ld-tuaai [data-f=openai]').click(); await new Promise(r=>setTimeout(r,500)); const i = document.querySelector('.ld-ai-chiave input'); i.value = 'chiave-di-prova'; document.querySelector('.ld-ai-chiave [data-collega]').click(); await T.aspetta(() => document.querySelector('.ld-filo').innerText.includes('ChatGPT collegata'), 30); return __lode.AI.motore() + ' · ' + JSON.stringify(__lode.AI.statoAI()) + ' · ' + document.querySelector('.ld-filo').innerText.slice(-160) })()`, atteso: 'cloud' },
-  { nome: 'la tua AI: risposta in streaming', js: `(async()=>{ await __lode.indietro(); return T.di('spiegami in una frase cos\\'è il gradiente', 300) })()`, atteso: 'gradiente' },
-  { nome: 'la tua AI: carte con risposta strutturata', js: `(async()=>{ const c = await __lode.AI.carteDa([{ type: 'text', text: 'Il gradiente di f è il vettore delle derivate parziali e punta nella direzione di massima crescita. Un punto stazionario è un punto dove il gradiente si annulla. La matrice hessiana raccoglie le derivate seconde.' }]); return c.length + ' carte: ' + c.map(x => x.fronte).join(' | ') })()`, atteso: 'carte' },
+  { nome: 'la tua AI: la scheda', ...(FOTO ? { foto: 'tua-ai.png' } : {}), js: `(async()=>{ await __lode.indietro(); await __lode.invia('AI'); await new Promise(r=>setTimeout(r,700)); return [...document.querySelectorAll('.ld-tuaai [data-f]')].map(b=>b.dataset.f).join(',') })()`, atteso: 'anthropic,openai,google,mistral,groq,openrouter,deepseek' },
+  { nome: 'la tua AI: collega un servizio in formato OpenAI', js: `(async()=>{ const F = __lode.AI.FORNITORI.openai; F.base = 'http://127.0.0.1:11434/v1'; F.preferiti = [/^gemma3:4b$/, /^qwen3/]; document.querySelector('.ld-tuaai [data-f=openai]').click(); await new Promise(r=>setTimeout(r,500)); const i = document.querySelector('.ld-ai-chiave input'); i.value = 'chiave-di-prova'; document.querySelector('.ld-ai-chiave [data-collega]').click(); await T.aspetta(() => document.querySelector('.ld-filo').innerText.includes('ChatGPT collegata'), 30); return __lode.AI.motore() + ' · ' + JSON.stringify(__lode.AI.statoAI()) + ' · ' + document.querySelector('.ld-filo').innerText.slice(-160) })()`, atteso: 'cloud' },
+  { nome: 'la tua AI: risposta in streaming', pesante: true, js: `(async()=>{ await __lode.indietro(); return T.di('spiegami in una frase cos\\'è il gradiente', 300) })()`, atteso: 'gradiente' },
+  { nome: 'la tua AI: carte con risposta strutturata', pesante: true, js: `(async()=>{ const c = await __lode.AI.carteDa([{ type: 'text', text: 'Il gradiente di f è il vettore delle derivate parziali e punta nella direzione di massima crescita. Un punto stazionario è un punto dove il gradiente si annulla. La matrice hessiana raccoglie le derivate seconde.' }]); return c.length + ' carte: ' + c.map(x => x.fronte).join(' | ') })()`, atteso: 'carte' },
   { nome: 'la tua AI: appunti sul computer', js: `(async()=>{ __lode.AI.impostaUso('pesante'); const r = __lode.AI.motore() + '/' + __lode.AI.motore('testo'); __lode.AI.impostaUso('tutto'); return r })()`, atteso: 'cloud/locale' },
   { nome: 'la tua AI: torna al locale', js: `(async()=>{ __lode.AI.scollegaFornitore(); return __lode.AI.motore() + '/' + __lode.AI.motore('testo') })()`, atteso: 'locale/locale' },
   { nome: 'configurazione: si apre', js: `(()=>{ location.href = location.href.split('?')[0] + '?benvenuto=1'; return 1 })()`, attesa: 500, atteso: '1' },
@@ -111,11 +135,14 @@ const passi = [
   { nome: 'configurazione: setup veloce e fine', js: `(async()=>{ const w = ms => new Promise(r => setTimeout(r, ms)); const av = () => document.querySelector('[data-bv=avanti]').click(); av(); await w(900); av(); await w(900); document.querySelector('#bv-corso').value = 'Matematica'; av(); await w(900); document.querySelector('#bv-lib').value = '00123 - ANALISI MATEMATICA I   1  9  28/30  12/02/2025'; document.querySelector('#bv-leggi').click(); await w(4000); av(); await w(900); document.querySelector('.bv-es .n').value = 'Geometria 2'; document.querySelector('.bv-es .d').value = '2026-12-15'; av(); await w(900); av(); await w(900); av(); await w(900); const fine = document.querySelector('.bv-corpo').innerText; setTimeout(av, 100); return fine.replace(/\\n/g, ' ').slice(0, 400) })()`, atteso: 'Fatto, Marco' },
   { attesa: 3000, js: '1' },
 ];
+// sulla macchina Windows di GitHub (niente scheda video) i passi pesanti col modello di prova si saltano: verificano il
+// formato delle chiamate ai servizi esterni, che non dipende dal sistema ed è provato sul Mac
+if (CI) for (let i = passi.length - 1; i >= 0; i--) if (passi[i].pesante) { console.log('saltato su questa macchina:', passi[i].nome); passi.splice(i, 1); }
 writeFileSync(join(DIR, 'passi.json'), JSON.stringify(passi));
 console.log('Vault di prova:', VAULT);
 
 const out = await new Promise(ok => {
-  const p = spawn(ELECTRON, ['.'], { cwd: DESKTOP, env: { ...process.env, LODE_DATI: join(DIR, 'dati'), LODE_VAULT: VAULT, LODE_OBSIDIAN_DIR: join(DIR, 'obsidian'), LODE_NON_APRIRE: '1', LODE_PROVA: join(DIR, 'passi.json'), LODE_ESCI: '1' } });
+  const p = spawn(ELECTRON, ['.'], { cwd: DESKTOP, env: { ...process.env, LODE_DATI: join(DIR, 'dati'), LODE_VAULT: VAULT, LODE_OBSIDIAN_DIR: join(DIR, 'obsidian'), LODE_NON_APRIRE: '1', LODE_PROVA: join(DIR, 'passi.json'), LODE_ESCI: '1', ...(FOTO ? { LODE_FOTO: FOTO } : {}) } });
   let s = ''; p.stdout.on('data', x => s += x); p.stderr.on('data', x => s += x); p.on('close', () => ok(s));
 });
 const ris = Object.fromEntries([...out.matchAll(/^passo (\d+)(?: errore)?: (.*)$/gm)].map(m => [+m[1], m[2]]));
@@ -150,5 +177,10 @@ verifica.push(
   ['configurazione: segnata come fatta', !!conf.benvenuto],
 );
 for (const [n, v] of verifica) { v ? ok++ : ko++; console.log(`${v ? '✓' : '✗'} ${n}`); }
+if (process.env.LODE_RISULTATI) writeFileSync(process.env.LODE_RISULTATI, JSON.stringify({
+  sistema: `${process.platform} ${process.arch}`, ok, ko,
+  passi: passi.map((p, i) => p.nome && { nome: p.nome, passa: (ris[i] ?? '').toLowerCase().includes(p.atteso.toLowerCase()), risposta: (ris[i] ?? '(nessuna risposta)').slice(0, 1500) }).filter(Boolean),
+  verifica: verifica.map(([n, v]) => ({ nome: n, passa: !!v })), registro: out.slice(-20000),
+}, null, 1));
 console.log(`\n${ok} passate, ${ko} fallite · nota: ${file ? join(cartella, file) : 'non creata'}`);
 process.exit(ko ? 1 : 0);

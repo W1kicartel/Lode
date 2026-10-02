@@ -85,11 +85,15 @@ export async function apriObsidian(url) {
 /* ---------- il cervello locale: Ollama + Qwen3.5 ---------- */
 export const OLLAMA = 'http://127.0.0.1:11434';
 // il modello giusto per la memoria del computer: abbastanza piccolo da girare liscio mentre lo studente usa altre app
+const schedaNvidia = () => WIN ? existsSync(join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'nvidia-smi.exe')) : existsSync('/usr/bin/nvidia-smi') || existsSync('/usr/local/bin/nvidia-smi');
 export function modelloConsigliato() {
   // Qwen3.5 (Alibaba, Apache 2.0, legge anche le immagini). Sulle slide di Analisi 2 il 4B ha scritto 11 carte tutte
   // fedeli in 33 s; Gemma 3 4B 18 carte in 43 s, circa 7 sbagliate o inventate. Il 35B-A3B è «a esperti»: grande ma
   // veloce come un 3B, solo dove la memoria lo permette (9B e 35B-A3B non ancora provati su un computer vero).
   const gb = totalmem() / 2 ** 30;
+  // fuori dai Mac con chip Apple (memoria unificata) la memoria non basta: senza una scheda video il modello gira sul
+  // processore, e un 9B sarebbe lentissimo. Lì il 9B solo con una NVIDIA; altrimenti il 4B.
+  if (!(MAC && process.arch === 'arm64') && !schedaNvidia()) return { nome: 'qwen3.5:4b', etichetta: 'Qwen3.5 4B', gb: 3.4, perche: 'veloce anche senza scheda video: definizioni, carte, giochi e orale' };
   if (gb >= 40) return { nome: 'qwen3.5:35b-a3b', etichetta: 'Qwen3.5 35B-A3B', gb: 24, perche: 'il più bravo e veloce come un modello piccolo, per computer con molta memoria' };
   if (gb >= 15) return { nome: 'qwen3.5:9b', etichetta: 'Qwen3.5 9B', gb: 6.6, perche: 'spiega bene e regge l\'orale' };
   return { nome: 'qwen3.5:4b', etichetta: 'Qwen3.5 4B', gb: 3.4, perche: `per ${Math.round(gb)} GB di memoria: definizioni, carte, giochi e orale` };

@@ -1,0 +1,78 @@
+# Le prove di Lode sulle macchine di GitHub (gratis per i repository pubblici):
+# - prove unitarie su Windows, Linux e macOS;
+# - la prova completa dell'app desktop su Windows: installa davvero Obsidian, Ollama + il modello e la voce con gli
+#   installer di Lode, poi usa la barra come uno studente. Risultati e foto della barra vanno nel ramo «risultati-windows».
+name: Prove
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unita:
+    name: Prove unitarie (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --experimental-vm-modules test/unita.mjs
+
+  app-windows:
+    name: App completa su Windows
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Dipendenze dell'app
+        working-directory: desktop
+        run: npm ci
+      - name: Prova completa
+        env:
+          LODE_CI: '1'
+          LODE_FOTO: ${{ runner.temp }}\out\foto
+          LODE_RISULTATI: ${{ runner.temp }}\out\risultati.json
+        run: node test/prova-app.mjs
+      - name: Risultati nel ramo risultati-windows
+        if: always()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $out = Join-Path $env:RUNNER_TEMP 'out'
+          New-Item -Force -ItemType Directory $out | Out-Null
+          if (!(Test-Path (Join-Path $out 'risultati.json'))) { '{"errore":"nessun risultato: la prova non è arrivata in fondo"}' | Set-Content (Join-Path $out 'risultati.json') }
+          "commit: $env:GITHUB_SHA`nrun: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID" | Set-Content (Join-Path $out 'LEGGIMI.txt')
+          Set-Location $out
+          git init -q
+          git checkout -q -b risultati-windows
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Risultati della prova su Windows ($env:GITHUB_SHA)"
+          git push -q -f "https://x-access-token:$env:GH_TOKEN@github.com/$env:GITHUB_REPOSITORY.git" risultati-windows
+      - name: Riepilogo
+        if: always()
+        shell: pwsh
+        run: |
+          $f = Join-Path $env:RUNNER_TEMP 'out\risultati.json'
+          if (Test-Path $f) {
+            $r = Get-Content $f -Raw | ConvertFrom-Json
+            "## Lode su Windows: $($r.ok) passate, $($r.ko) fallite" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+            foreach ($p in $r.passi) { "- $(if ($p.passa) { '✓' } else { '✗' }) $($p.nome)" | Out-File -Append $env:GITHUB_STEP_SUMMARY }
+            foreach ($p in $r.verifica) { "- $(if ($p.passa) { '✓' } else { '✗' }) $($p.nome)" | Out-File -Append $env:GITHUB_STEP_SUMMARY }
+          }
