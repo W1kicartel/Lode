@@ -90,7 +90,7 @@ smetti di seguire lab3
 
 ### Installa
 
-Per ora Lode si installa dal codice: gli installer da scaricare arriveranno quando saranno firmati con un certificato ([perché](#gli-installer-non-ancora-firmati)). Non serve saper programmare. Apri il terminale una volta, copi i comandi della tua sezione e al resto pensa Lode. Così non compare nessun avviso del sistema: Node.js, Electron, Obsidian e Ollama sono firmati dai loro autori.
+Per ora Lode si installa dal codice: gli installer da scaricare arriveranno quando saranno firmati con un certificato ([perché](#gli-installer-non-ancora-firmati)). Non serve saper programmare. Apri il terminale una volta, copi i comandi della tua sezione e al resto pensa Lode. Così il sistema non blocca niente: Node.js, Electron, Obsidian e Ollama sono firmati dai loro autori.
 
 Ti servono circa **5 GB liberi** (Obsidian circa 300 MB, l'AI locale circa 3,5 GB, la voce dai 200 ai 640 MB) e 15-30 minuti, quasi tutti di download. I comandi mettono Lode nella cartella `Lode` dentro la tua cartella utente.
 
@@ -101,7 +101,7 @@ Al primo avvio Lode ti chiede il nome e con un clic installa Obsidian, l'AI loca
 - **Windows:** nel **menu Start** e sul **desktop**;
 - **Linux:** nel **menu delle applicazioni**.
 
-Da lì la riapri come le altre app, e all'accensione del computer parte da sola: il terminale non serve più. Icona e avvio all'accensione si tolgono dal menu dell'icona di Lode.
+Da lì la riapri come le altre app, e all'accensione del computer parte da sola: il terminale non serve più. Icona e avvio all'accensione si tolgono dal menu dell'icona di Lode. Sul Mac, quando Lode attiva l'avvio all'accensione, macOS mostra la notifica «Elementi in background aggiunti»: è lei.
 
 Lode vive nella barra dei menu (Mac) o nell'area di notifica (Windows): non cercarla nel Dock. È la pillola nera in cima allo schermo: si apre con un clic, o tenendo premuto **⌥ Spazio** sul Mac e **Ctrl+Shift+Spazio** su Windows e Linux.
 
@@ -115,7 +115,7 @@ Poi riaprila dall'icona. Sul Mac, se avevi compilato la voce per il Neural Engin
 
 **Cosa serve:** Windows 10 o 11 a 64 bit, almeno 8 GB di memoria (16 GB consigliati per l'AI locale).
 
-1. **Apri PowerShell.** Tasto Windows, scrivi «PowerShell», Invio.
+1. **Apri PowerShell.** Tasto Windows, scrivi «PowerShell», Invio. Aprilo normale, non «come amministratore».
 
 2. **Installa Node.js e Git** (una volta sola):
    ```powershell
@@ -124,11 +124,11 @@ Poi riaprila dall'icona. Sul Mac, se avevi compilato la voce per il Neural Engin
    ```powershell
    winget install Git.Git
    ```
-   Poi **chiudi e riapri PowerShell**, così vede i programmi nuovi. Se `winget` non c'è, scaricali a mano da [nodejs.org](https://nodejs.org) (versione «LTS») e [git-scm.com](https://git-scm.com/download/win).
+   La prima volta winget chiede di accettare le sue condizioni: scrivi **Y** e Invio. Windows chiede anche il permesso di installare Node.js e Git: rispondi sì. Poi **chiudi e riapri PowerShell**, così vede i programmi nuovi. Se `winget` non c'è, scaricali a mano da [nodejs.org](https://nodejs.org) (versione «LTS») e [git-scm.com](https://git-scm.com/download/win).
 
 3. **Scarica Lode e avvialo** (copia la riga intera; `npm install` scarica qualche centinaio di MB e ci mette qualche minuto):
    ```powershell
-   git clone https://github.com/W1kicartel/Lode.git; cd Lode\desktop; npm.cmd install; npm.cmd start
+   cd ~; git clone https://github.com/W1kicartel/Lode.git; cd Lode\desktop; npm.cmd install; npm.cmd start
    ```
 
 4. **La configurazione guidata** si apre da sola. Ti chiede come ti chiami e con un clic installa **Obsidian**, l'**AI locale** (Ollama + Qwen3.5) e la **voce** (Parakeet, o Whisper se il computer ha meno di 6 GB di memoria). Il vault con i tuoi appunti nasce in `Documenti\Lode`. La pillola compare in cima allo schermo; l'icona di Lode è vicino all'orologio, nell'area di notifica.
@@ -167,7 +167,7 @@ Poi riaprila dall'icona. Sul Mac, se avevi compilato la voce per il Neural Engin
 
 3. **Scarica Lode e avvialo** (copia la riga intera; `npm install` scarica qualche centinaio di MB e ci mette qualche minuto):
    ```bash
-   git clone https://github.com/W1kicartel/Lode.git && cd Lode/desktop && npm install && npm start
+   cd ~ && git clone https://github.com/W1kicartel/Lode.git && cd Lode/desktop && npm install && npm start
    ```
 
 4. **La configurazione guidata** si apre da sola:
@@ -176,7 +176,7 @@ Poi riaprila dall'icona. Sul Mac, se avevi compilato la voce per il Neural Engin
 
    La pillola compare in cima allo schermo. Il vault Obsidian è in `Documenti/Lode`. Ti serve di nuovo la configurazione? Dal menu dell'icona: «Rifai la configurazione…».
 
-5. **Il microfono.** La prima volta che usi la voce, Ripeti o la trascrizione, macOS chiede il permesso: concedilo. Se hai avviato Lode dal Terminale lo chiede per il Terminale, se l'hai aperta dall'icona lo chiede per Lode. Se l'hai negato, si riattiva da *Impostazioni di Sistema → Privacy e sicurezza → Microfono*.
+5. **Il microfono.** La prima volta che usi la voce, Ripeti o la trascrizione, macOS chiede il permesso: concedilo. Se hai avviato Lode dal Terminale lo chiede per il Terminale; se l'hai aperta dall'icona può chiederlo per «Electron», il programma su cui gira Lode. Se l'hai negato, si riattiva da *Impostazioni di Sistema → Privacy e sicurezza → Microfono*.
 
 6. **La voce migliore (consigliato, Mac con chip Apple).** Lode parte con Parakeet sul processore (sherpa-onnx, la stessa voce di Windows e Linux). Sul Neural Engine è più veloce: chiudi Lode (menu della sua icona › Esci da Lode) e compila `lode-voce`, ci vogliono 3-5 minuti la prima volta:
    ```bash
@@ -199,7 +199,7 @@ Poi riaprila dall'icona. Sul Mac, se avevi compilato la voce per il Neural Engin
 1. **Ollama** su Linux si installa con lo script ufficiale, da [ollama.com/download/linux](https://ollama.com/download/linux). Lode installa da sé Obsidian (AppImage) e il modello.
 2. **Scarica Lode e avvialo** (copia la riga intera):
    ```bash
-   git clone https://github.com/W1kicartel/Lode.git && cd Lode/desktop && npm install && npm start
+   cd ~ && git clone https://github.com/W1kicartel/Lode.git && cd Lode/desktop && npm install && npm start
    ```
    Se si ferma con «The SUID sandbox helper binary was found, but is not configured correctly» (succede su alcune distribuzioni, per esempio Ubuntu 24.04), avvialo con `npm start -- --no-sandbox`: l'icona che crea Lode se lo ricorda.
 3. La voce è Parakeet sul processore (Whisper con meno di 6 GB di memoria) e le scorciatoie sono quelle di Windows. Le finestre trasparenti e le scorciatoie globali dipendono dal desktop (GNOME, KDE…): su Wayland alcune potrebbero non funzionare. Raccontaci com'è andata.

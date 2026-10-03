@@ -544,10 +544,10 @@ function creaTray() {
     { label: 'Usa un altro vault…', click: scegliVault },
     { type: 'separator' },
     DAL_CODICE
-      ? { label: 'Avvia Lode all\'accensione', type: 'checkbox', checked: !!provaIcona(() => ICONA.avvioAttivo(datiIcona(), app), { zitto: true }), click: i => provaIcona(() => ICONA.avvio(datiIcona(), i.checked, app)) }
+      ? { label: 'Avvia Lode all\'accensione', type: 'checkbox', checked: !!provaIcona(() => ICONA.avvioAttivo(datiIcona(), app), { zitto: true }), click: i => provaIcona(() => ICONA.avvio(datiIcona(), i.checked, app, shell)) }
       : { label: 'Avvia Lode all\'accensione', type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin, enabled: app.isPackaged, click: i => app.setLoginItemSettings({ openAtLogin: i.checked }) },
     ...(DAL_CODICE ? [{ label: MAC ? 'Icona di Lode in Applicazioni' : WIN ? 'Icona di Lode nel menu Start e sul desktop' : 'Icona di Lode nel menu delle applicazioni', type: 'checkbox',
-      checked: !!provaIcona(() => ICONA.haIcona(datiIcona()), { zitto: true }), click: i => provaIcona(() => i.checked ? ICONA.creaIcona(datiIcona(), shell) : ICONA.togliIcona(datiIcona())) }] : []),
+      checked: !!provaIcona(() => ICONA.haIcona(datiIcona(), shell), { zitto: true }), click: i => provaIcona(() => i.checked ? ICONA.creaIcona(datiIcona(), shell) : ICONA.togliIcona(datiIcona(), shell)) }] : []),
     ...voceAggiorna(),
     { label: 'Esci da Lode', role: 'quit' },
   ]);
@@ -563,10 +563,10 @@ app.whenReady().then(async () => {
     let documenti; try { documenti = app.getPath('documents'); } catch { documenti = app.getPath('home'); }   // Documenti su OneDrive o in rete non raggiungibile
     conf.vault = join(documenti, 'Lode'); conf.primoAvvio = Date.now(); salvaConf(); if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: true });
     // dal codice, come l'installer: l'icona per riaprirla senza terminale e l'avvio all'accensione
-    else if (DAL_CODICE) provaIcona(() => { const d = datiIcona(); ICONA.creaIcona(d, shell); ICONA.avvio(d, true, app); }, { zitto: true });
+    else if (DAL_CODICE) provaIcona(() => { const d = datiIcona(); ICONA.creaIcona(d, shell); ICONA.avvio(d, true, app, shell); }, { zitto: true });
   }
-  // l'icona c'è ma la cartella di Lode è stata spostata (o è un'altra copia): punta di nuovo qui
-  else if (DAL_CODICE) provaIcona(() => { const d = datiIcona(); if (ICONA.haIcona(d) && (WIN || !ICONA.puntaQui(d))) ICONA.creaIcona(d, shell); }, { zitto: true });
+  // la cartella di Lode è stata spostata (o è un'altra copia): le icone di Lode che ci sono tornano a puntare qui
+  else if (DAL_CODICE) provaIcona(() => ICONA.aggiornaIcona(datiIcona(), shell), { zitto: true });
   // in sviluppo (npm start, le prove) le librerie della barra si copiano da desktop/node_modules in vendor/ accanto a
   // index.html, se mancano o se package.json ha cambiato versione (desktop/vendor.mjs); nel pacchetto sono già in web/vendor
   if (!app.isPackaged && WEB !== join(QUI, 'web')) try { if ((await import('./vendor.mjs')).vendorAggiornato(join(WEB, 'vendor'))) console.log('Lode: librerie della barra copiate in vendor/'); }

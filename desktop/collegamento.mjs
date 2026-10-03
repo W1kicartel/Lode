@@ -22,8 +22,9 @@ export function percorsi(d) {
 const xml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // bash: tra apici singoli non si espande niente; l'apice stesso diventa '\''
 const sh = s => `'${String(s).replace(/'/g, `'\\''`)}'`;
-// .desktop (specifica freedesktop): argomenti tra virgolette, con \ " ` $ preceduti da \, e % raddoppiato
-const dq = s => `"${String(s).replace(/[\\"`$]/g, m => '\\' + m).replace(/%/g, '%%')}"`;
+// .desktop (specifica freedesktop): dentro le virgolette \ " ` $ hanno davanti \; poi vale l'escape delle stringhe, che
+// raddoppia ogni \ (così un $ diventa \\$, come chiede la specifica e come legge GLib); il % si raddoppia
+const dq = s => `"${String(s).replace(/[\\"`$]/g, m => '\\' + m).replace(/\\/g, '\\\\').replace(/%/g, '%%')}"`;
 
 // il bundle del Mac: Info.plist, lo script che parte e l'icona. LSUIElement come nell'app installata (niente Dock);
 // la frase del microfono serve anche qui, perché macOS può chiedere il permesso a nome di questa icona
@@ -80,6 +81,7 @@ Icon=${join(d.cartella, 'build', 'icon.png')}
 Terminal=false
 Categories=Education;
 StartupWMClass=lode
+X-Lode-Dal-Codice=true
 ${autostart ? 'X-GNOME-Autostart-enabled=true\n' : ''}`;
 }
 
@@ -90,50 +92,73 @@ export function collegamentoWin(d) {
 }
 
 function scrivi(f, testo, modo) { mkdirSync(dirname(f), { recursive: true }); writeFileSync(f, testo); if (modo) chmodSync(f, modo); }
+const leggi = f => { try { return readFileSync(f, 'utf8'); } catch { return ''; } };
 
-export function haIcona(d) { return percorsi(d).icone.some(existsSync); }
+// l'icona in quel percorso l'ha creata Lode dal codice? Quelle dell'installer (Lode.lnk di NSIS, una Lode.app vera in
+// ~/Applications) non si toccano mai: né riscritte, né tolte
+export function nostra(d, f, shell) {
+  if (!existsSync(f)) return false;
+  if (d.piattaforma === 'darwin') return leggi(join(f, 'Contents', 'Info.plist')).includes(`<string>${ID}</string>`);
+  if (d.piattaforma === 'win32') { try { const t = shell.readShortcutLink(f).target || ''; return t === d.eseguibile || /node_modules[\\/]electron[\\/]dist[\\/]electron\.exe$/i.test(t); } catch { return false; } }
+  return leggi(f).includes('X-Lode-Dal-Codice=true');
+}
+export function haIcona(d, shell) { return percorsi(d).icone.some(f => nostra(d, f, shell)); }
 
-// crea (o riscrive) l'icona. shell: il modulo shell di Electron, serve solo su Windows
-export function creaIcona(d, shell) {
-  const p = percorsi(d);
+// l'icona punta già a questa cartella?
+function puntaQuiFile(d, f, shell) {
+  if (d.piattaforma === 'darwin') return leggi(join(f, 'Contents', 'MacOS', 'Lode')).includes(sh(d.cartella));
+  if (d.piattaforma === 'win32') { try { const l = shell.readShortcutLink(f), c = collegamentoWin(d); return l.target === c.target && l.args === c.args; } catch { return false; } }
+  return leggi(f).includes(dq(d.cartella));
+}
+export function puntaQui(d, shell) { const f = percorsi(d).icone.filter(x => nostra(d, x, shell)); return f.length > 0 && f.every(x => puntaQuiFile(d, x, shell)); }
+
+function scriviIcona(d, f, shell) {
   if (d.piattaforma === 'darwin') {
-    const app = p.icone[0];
-    rmSync(app, { recursive: true, force: true });
-    for (const f of fileMac(d)) {
-      const dest = join(app, f.rel);
-      if (f.copia) { mkdirSync(dirname(dest), { recursive: true }); if (existsSync(f.copia)) copyFileSync(f.copia, dest); }
-      else scrivi(dest, f.testo, f.modo);
+    rmSync(f, { recursive: true, force: true });
+    for (const x of fileMac(d)) {
+      const dest = join(f, x.rel);
+      if (x.copia) { mkdirSync(dirname(dest), { recursive: true }); if (existsSync(x.copia)) copyFileSync(x.copia, dest); }
+      else scrivi(dest, x.testo, x.modo);
     }
   } else if (d.piattaforma === 'win32') {
-    const c = collegamentoWin(d);
-    for (const f of p.icone) { mkdirSync(dirname(f), { recursive: true }); if (!shell.writeShortcutLink(f, existsSync(f) ? 'replace' : 'create', c)) throw new Error(`non riesco a creare ${f}`); }
-  } else scrivi(p.icone[0], fileLinux(d), 0o755);
-  // se l'avvio all'accensione era acceso, punta anche lui alla cartella di adesso
-  if (d.piattaforma !== 'win32' && p.avvio && existsSync(p.avvio)) avvio(d, true);
+    mkdirSync(dirname(f), { recursive: true });
+    if (!shell.writeShortcutLink(f, existsSync(f) ? 'replace' : 'create', collegamentoWin(d))) throw new Error(`non riesco a creare ${f}`);
+  } else scrivi(f, fileLinux(d), 0o755);
 }
 
-export function togliIcona(d) { for (const f of percorsi(d).icone) rmSync(f, { recursive: true, force: true }); }
+// crea l'icona dove manca o è nostra (mai sopra quella dell'installer). shell: il modulo shell di Electron, per Windows
+export function creaIcona(d, shell) {
+  for (const f of percorsi(d).icone) if (!existsSync(f) || nostra(d, f, shell)) scriviIcona(d, f, shell);
+  aggiornaAvvio(d);
+}
+// a ogni avvio dal codice: le icone nostre che puntano a un'altra cartella tornano qui. Quelle tolte dallo studente
+// (per esempio dal desktop) non ricompaiono
+export function aggiornaIcona(d, shell) {
+  let n = 0;
+  for (const f of percorsi(d).icone) if (nostra(d, f, shell) && !puntaQuiFile(d, f, shell)) { scriviIcona(d, f, shell); n++; }
+  if (n) aggiornaAvvio(d);
+  return n;
+}
+// Mac e Linux: se l'avvio all'accensione era acceso, punta anche lui alla cartella di adesso
+function aggiornaAvvio(d) { const a = percorsi(d).avvio; if (d.piattaforma !== 'win32' && a && existsSync(a)) avvio(d, true); }
 
-// l'avvio all'accensione. app: l'oggetto app di Electron, serve solo su Windows
-const argWin = d => [d.cartella, ...(d.argomenti || [])];
+// toglie solo le icone nostre. Sul Mac l'avvio apre l'icona: senza icona si toglie anche lui
+export function togliIcona(d, shell) {
+  for (const f of percorsi(d).icone) if (nostra(d, f, shell)) rmSync(f, { recursive: true, force: true });
+  if (d.piattaforma === 'darwin') rmSync(percorsi(d).avvio, { force: true });
+}
+
+// l'avvio all'accensione. app: l'oggetto app di Electron, serve solo su Windows. Su Windows Electron unisce gli argomenti
+// con uno spazio senza virgolette: una cartella con uno spazio (C:\Users\<nome cognome>\…) va messa tra virgolette qui
+const argWin = d => [d.cartella, ...(d.argomenti || [])].map(a => `"${a}"`);
 export function avvioAttivo(d, app) {
   if (d.piattaforma === 'win32') return !!app.getLoginItemSettings({ path: d.eseguibile, args: argWin(d) }).openAtLogin;
   return existsSync(percorsi(d).avvio);
 }
-export function avvio(d, acceso, app) {
+export function avvio(d, acceso, app, shell) {
   if (d.piattaforma === 'win32') return app.setLoginItemSettings({ openAtLogin: acceso, path: d.eseguibile, args: argWin(d) });
   const f = percorsi(d).avvio;
   if (!acceso) return rmSync(f, { force: true });
-  if (d.piattaforma === 'darwin') { if (!haIcona(d)) creaIcona(d); scrivi(f, agenteMac(percorsi(d).icone[0])); }
+  if (d.piattaforma === 'darwin') { if (!haIcona(d)) creaIcona(d, shell); scrivi(f, agenteMac(percorsi(d).icone[0])); }
   else scrivi(f, fileLinux(d, { autostart: true }));
-}
-
-// l'icona che c'è punta ancora a questa cartella? (Mac e Linux: si legge il file; Windows: si riscrive comunque)
-export function puntaQui(d) {
-  try {
-    const p = percorsi(d);
-    if (d.piattaforma === 'darwin') return readFileSync(join(p.icone[0], 'Contents', 'MacOS', 'Lode'), 'utf8').includes(sh(d.cartella));
-    if (d.piattaforma === 'linux') return readFileSync(p.icone[0], 'utf8').includes(dq(d.cartella));
-  } catch { }
-  return false;
 }
