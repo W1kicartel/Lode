@@ -318,7 +318,7 @@ function abitudini() {
       <label class="bv-campo"><span>Silenzio dalle</span><input type="time" id="bv-sd" value="${esc(i.silenzio?.da || '23:00')}"></label>
       <label class="bv-campo"><span>alle</span><input type="time" id="bv-sa" value="${esc(i.silenzio?.a || '08:00')}"></label>
       <div class="bv-campo tutta"><span>Focus</span><div class="bv-scelte" data-k="focus">${[25, 50, 90].map(v => `<button class="ld-chip${(i.focus || 25) === v ? ' on' : ''}" data-v="${v}"><b>${v} min</b></button>`).join('')}</div></div>
-      <label class="bv-spunta tutta"><input type="checkbox" id="bv-aula"${i.trascrizioneOk ? ' checked' : ''}><span>In aula accendi «Ripeti» da solo (gli ultimi 60 secondi, solo in memoria). Chiedi al docente se si può registrare.</span></label>
+      <label class="bv-spunta tutta"><input type="checkbox" id="bv-aula"${i.trascrizioneOk ? ' checked' : ''}><span>In aula accendi «Ripeti» da solo (l'ultimo minuto e mezzo, solo in memoria). Chiedi al docente se si può registrare.</span></label>
     </div>`, { salta: true });
   main.querySelectorAll('.bv-scelte').forEach(g => g.querySelectorAll('.ld-chip').forEach(b => b.addEventListener('click', () => { g.querySelectorAll('.ld-chip').forEach(x => x.classList.toggle('on', x === b)); })));
   P('abitudini').salva = () => {

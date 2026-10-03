@@ -161,7 +161,7 @@ function bloccoAula(lo) {
     ${st ? `<p class="ld-nota">${esc(st)} ${st === 1 ? 'cosa segnata' : 'cose segnate'} da esame oggi.</p>` : ''}</section>`;
 }
 function bloccoRipeti() {
-  if (O.attivo()) return `<div class="ld-ripeti-riga"><i class="ld-orecchio"></i><span>Ripeti attivo · tengo gli ultimi 60 secondi</span><button type="button" class="btn small primary" data-ld-ripeti="si">Ripeti <kbd>${MAC ? '⌃⌥P' : 'Ctrl Alt P'}</kbd></button><button type="button" class="btn small ld-piano" data-ld-ripeti="spegni">Spegni</button></div>`;
+  if (O.attivo()) return `<div class="ld-ripeti-riga"><i class="ld-orecchio"></i><span>Ripeti attivo · solo in memoria, mai su disco</span><button type="button" class="btn small primary" data-ld-ripeti="si">Ripeti <kbd>${MAC ? '⌃⌥P' : 'Ctrl Alt P'}</kbd></button><button type="button" class="btn small ld-piano" data-ld-ripeti="spegni">Spegni</button></div>`;
   return `<button type="button" class="ld-ripeti-riga spento" data-ld-ripeti="accendi"><i class="ld-orecchio"></i><span><b>Ripeti 60 s</b> · ti sei perso una frase? Lode te la ripete. Niente viene salvato.</span></button>`;
 }
 function bloccoTrascrizione() {
@@ -173,7 +173,7 @@ function bloccoTrascrizione() {
 function disegnaHome() {
   const r = righeOggi(), lo = lezioneOra(), st = strumenti();
   home._righe = r;
-  home.innerHTML = `${lo ? bloccoAula(lo) : ''}${lo && !r.length ? '' : `<section class="ld-oggi"><div class="capo"><span class="ld-lbl">Oggi</span><span>${D.esami.length ? `${esc(cfuFatti())} di ${esc(D.profilo.cfuTotali)} CFU` : ''}</span></div>
+  home.innerHTML = `${lo ? bloccoAula(lo) : V.attivo && O.attivo() && !TR.stato() ? `<section class="ld-aula">${bloccoRipeti()}</section>` : ''}${lo && !r.length ? '' : `<section class="ld-oggi"><div class="capo"><span class="ld-lbl">Oggi</span><span>${D.esami.length ? `${esc(cfuFatti())} di ${esc(D.profilo.cfuTotali)} CFU` : ''}</span></div>
     ${r.map((x, i) => `<div class="ld-riga ${x.cls}"><i class="ld-seg"></i><div class="t"><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div><span class="n">${esc(x.n)}</span><button type="button" class="btn small${i === 0 && x.cls === 'urg' ? ' primary' : ''}" data-ld-riga="${i}">${x.b}</button></div>`).join('') ||
     `<div class="ld-riga info vuota"><i class="ld-seg"></i><div class="t"><b>Inizia da qui</b><span>Scrivi «lezione analisi 2 lunedì 9-11 aula 7», oppure prova i dati di esempio</span></div><span class="n"></span><button type="button" class="btn small primary" data-ld-esempio>Esempio</button></div>`}</section>`}
     <div class="ld-strumenti${st.length === 9 ? ' nove' : ''}">${st.map(([k, t]) => `<button type="button" class="btn" data-ld-strumento="${k}">${ico(k)}<span>${t}</span></button>`).join('')}</div>`;
@@ -208,29 +208,33 @@ function aggiornaPillola(avviso) {
   const T = F.stato();
   pill.classList.toggle('timer', !!T && !avviso);
   if (avviso) { pill.innerHTML = `<i class="ld-rombo"></i><span class="ld-testo"><b>${esc(avviso)}</b></span>`; pill.setAttribute('aria-label', avviso); return; }
+  // il microfono di Ripeti acceso si vede in ogni stato della pillola, timer compreso
+  const mic = O.attivo(), orecchio = mic ? `<i class="ld-orecchio" title="Ripeti attivo: l'ultimo minuto e mezzo, solo in memoria"></i>` : '';
   if (T) {
     const fermo = !!T.fermo, pausa = T.fase === 'pausa';
-    if (!pill.querySelector('.ld-tempo')) pill.innerHTML = `<i class="ld-rombo"></i><b class="ld-tempo"></b><span class="ld-cosa"></span><i class="ld-avanza"><i></i></i>`;
+    if (!pill.querySelector('.ld-tempo')) pill.innerHTML = `<i class="ld-rombo"></i><b class="ld-tempo"></b><span class="ld-cosa"></span><i class="ld-orecchio" title="Ripeti attivo: l'ultimo minuto e mezzo, solo in memoria"></i><i class="ld-avanza"><i></i></i>`;
     pill.querySelector('.ld-tempo').textContent = F.mmss(F.restante());
     pill.querySelector('.ld-cosa').textContent = fermo ? 'in pausa' : pausa ? 'pausa' : F.etichetta();
+    pill.querySelector('.ld-orecchio').style.display = mic ? '' : 'none';
     pill.querySelector('.ld-avanza i').style.transform = `scaleX(${F.avanzamento().toFixed(4)})`;
     pill.classList.toggle('sosta', fermo || pausa);
-    pill.setAttribute('aria-label', `${pausa ? 'Pausa' : 'Focus su ' + F.etichetta()}: mancano ${F.mmss(F.restante())}`);
+    pill.setAttribute('aria-label', `${pausa ? 'Pausa' : 'Focus su ' + F.etichetta()}: mancano ${F.mmss(F.restante())}${mic ? '. Ripeti: microfono acceso' : ''}`);
     return;
   }
   const lo = lezioneOra(), pl = prossimaLezione(), sg = suggerimento(), tr = TR.stato(), pp = PR.pillola();
   const p = prossimi()[0], c = daRipassare().length;
   let testo, pieno = false;
   if (tr) { testo = `<i class="ld-live rec"></i><b>${esc(tr.lezione.corso)}</b><span class="ld-tenue">${tr.inPausa ? 'trascrizione in pausa' : 'trascrivo'} · ${tr.parole.toLocaleString('it-IT')} parole</span>`; pieno = true; }
-  else if (lo) { const st = stelleOggi(lo.corso); testo = `<i class="ld-live"></i><b>${esc(lo.corso)}</b><span class="ld-tenue">fine tra ${esc(lo.mancano)} min</span>${st ? `<span class="ld-punto"></span><span class="ld-tenue">★${esc(st)}</span>` : ''}${O.attivo() ? '<i class="ld-orecchio" title="Ripeti attivo: gli ultimi 60 secondi in memoria"></i>' : ''}`; pieno = true; }
-  else if (pl && pl.tra <= 20) { testo = `<b>${esc(pl.corso)}</b><span class="ld-tenue">${pl.aula ? 'aula ' + esc(pl.aula) + ' · ' : ''}tra ${esc(pl.tra)} min</span>`; pieno = true; }
-  else if (pp) { testo = pp.html; pieno = pp.pieno; }   // il progetto seguito: «lab3 · 2 file +41 −7», «lab3 · fatto · non provato»
+  else if (lo) { const st = stelleOggi(lo.corso); testo = `<i class="ld-live"></i><b>${esc(lo.corso)}</b><span class="ld-tenue">fine tra ${esc(lo.mancano)} min</span>${st ? `<span class="ld-punto"></span><span class="ld-tenue">★${esc(st)}</span>` : ''}${orecchio}`; pieno = true; }
+  else if (pl && pl.tra <= 20) { testo = `<b>${esc(pl.corso)}</b><span class="ld-tenue">${pl.aula ? 'aula ' + esc(pl.aula) + ' · ' : ''}tra ${esc(pl.tra)} min</span>${orecchio}`; pieno = true; }
+  else if (pp) { testo = pp.html + orecchio; pieno = pp.pieno; }   // il progetto seguito: «lab3 · 2 file +41 −7», «lab3 · fatto · non provato»
+  else if (mic) { testo = `<b>Ripeti</b><span class="ld-tenue">microfono acceso</span>${orecchio}`; pieno = true; }   // acceso a mano fuori lezione
   else if (sg) testo = `<b>2 minuti</b><span class="ld-tenue">${esc(sg.testo)}</span>`;
   else if (p) { const g = giorniTra(oggi(), p.data); testo = `<b>${esc(p.nome)}</b><span class="ld-tenue">${g === 0 ? 'oggi' : g === 1 ? 'domani' : `tra ${esc(g)} g`}</span>${c ? `<span class="ld-punto"></span><span class="ld-tenue">${esc(c)} carte</span>` : ''}`; pieno = g <= 7; }
   else if (c) testo = `<b>${esc(c)}</b><span class="ld-tenue">carte da ripassare</span>`;
   else testo = `<b>Lode</b><span class="ld-tenue">passa qui sopra</span>`;
   pill.innerHTML = `<i class="ld-rombo${pieno ? '' : ' ld-cavo'}"></i><span class="ld-testo">${testo}</span>`;
-  pill.setAttribute('aria-label', `Lode: ${pill.textContent}. Passa sopra o premi ${TASTI}.`);
+  pill.setAttribute('aria-label', `Lode: ${pill.textContent}${mic && !tr && !testo.includes('microfono acceso') ? '. Ripeti: microfono acceso' : ''}. Passa sopra o premi ${TASTI}.`);
   // un suggerimento nuovo: la gemma fa un piccolo cenno, al massimo ogni 90 minuti
   const chiave = sg ? sg.testo : '';
   if (chiave && chiave !== aggiornaPillola._ultimo && Date.now() - (D.imp.ultimoSuggerimento || 0) > 90 * 60e3 && !A.aperto) {
@@ -701,7 +705,7 @@ async function fermaTrascrizione() {
   modo('pensa', 'Trascrivo gli ultimi secondi…'); attesaVoce = 'Trascrivo gli ultimi secondi…';
   const l = TR.stato().lezione, r = await TR.ferma(); modo('riposo'); segnala('fatto'); aggiornaTutto();
   await mostraFatto({ testo: `Lezione trascritta: ${r.parole.toLocaleString('it-IT')} parole.`, nota: r.sospese ? `${r.sospese} ${r.sospese === 1 ? 'riga non è ancora' : 'righe non sono ancora'} nella nota (la cartella non risponde): le scrivo appena posso, tienimi aperto.` : 'È tutto nella nota.', azione: AI.attiva() ? ['Riordina', () => { nuovoTurno(); detto(A.turno, 'Riordina la lezione'); riordinaLezione(null, l); }] : ['Condividi', () => { nuovoTurno(); detto(A.turno, 'Condividi la sbobina'); condividiLezione(l.corso); }], sintesi: `${r.parole} parole trascritte` });
-  if (!(D.imp.ripetiInAula && lezioneOra())) O.spegni();   // il microfono resta acceso solo se serve a «Ripeti» in aula
+  if (!(D.imp.ripetiInAula && (lezioneOra() || ripetiAMano()))) O.spegni();   // il microfono resta acceso solo se serve a «Ripeti»
   if (!AI.attiva()) rispostaFissa('Con il **cervello locale** (da «Prepara Lode») la trascrizione diventa appunti ordinati, definizioni e ★ con un clic.');
 }
 async function riordinaLezione(corso, lez) {
@@ -725,10 +729,13 @@ async function riordinaLezione(corso, lez) {
 }
 
 /* ---------- «Ripeti»: cosa ha appena detto il prof ---------- */
+// quando l'hai acceso tu fuori dall'orario di lezione: il controllo di ogni minuto non lo spegne per O.MANUALE
+let ripetiManuale = 0;
+const ripetiAMano = () => !!ripetiManuale && Date.now() - ripetiManuale < O.MANUALE;
 async function consensoAula() {
   if (D.imp.trascrizioneOk) return true;
   const card = schedaConferma({ titolo: 'Ascoltare la lezione?', fuoco: false,
-    righe: [['Ripeti', 'tengo in memoria solo gli ultimi 60 secondi, mai su disco'], ['Trascrivi', 'scrivo la lezione nella nota, l\'audio non si salva'], ['Dove', 'tutto sul computer, niente su internet']],
+    righe: [['Ripeti', 'tengo in memoria solo l\'ultimo minuto e mezzo, mai su disco'], ['Trascrivi', 'scrivo la lezione nella nota, l\'audio non si salva'], ['Dove', 'tutto sul computer, niente su internet']],
     nota: 'Registrare una lezione dipende dal regolamento del tuo ateneo e dal docente: chiedi prima.' });
   card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = 'Te lo chiedo solo la prima volta.';
   const r = await attendiDecisione(card, async () => { D.imp.trascrizioneOk = true; salva(); await mostraFatto({ testo: 'D\'accordo.' }, card); return { ok: true }; });
@@ -737,11 +744,14 @@ async function consensoAula() {
 async function accendiRipeti() {
   if (!V.attivo) return rispostaFissa('«Ripeti» è nell\'**app desktop** di Lode.');
   if (!(await consensoAula())) return;
-  try { await O.accendi(); D.imp.ripetiInAula = true; salva(); Voce.prepara().catch(() => { }); aggiornaTutto(); }
+  try { await O.accendi(); D.imp.ripetiInAula = true; ripetiManuale = lezioneOra() ? 0 : Date.now(); salva(); Voce.prepara().catch(() => { }); aggiornaTutto(); }
   catch (e) { return rispostaFissa(Voce.erroreMicrofono(e), { errore: true }); }
-  return mostraFatto({ testo: 'Ripeti è attivo.', nota: `Tengo gli ultimi 60 secondi. Ti sei perso qualcosa? ${MAC ? '⌃⌥P' : 'Ctrl Alt P'} o «ripeti».`, sintesi: 'ripeti attivo' });
+  return mostraFatto({ testo: 'Ripeti è attivo.', nota: `Tengo in memoria l'ultimo minuto e mezzo, mai su disco. Ti sei perso qualcosa? ${MAC ? '⌃⌥P' : 'Ctrl Alt P'} o «ripeti».${ripetiManuale ? ' Fuori dall\'orario di lezione resto acceso al massimo 3 ore.' : ''}`, ...(ripetiManuale ? { azione: ['Spegni', () => { nuovoTurno(); detto(A.turno, 'Spegni Ripeti'); spegniRipeti(); }] } : {}), sintesi: 'ripeti attivo' });
 }
-function spegniRipeti() { D.imp.ripetiInAula = false; salva(); if (!TR.attiva()) O.spegni(); aggiornaTutto(); return mostraFatto({ testo: 'Ripeti spento.', nota: 'Il microfono è chiuso.' }); }
+function spegniRipeti() {
+  const eraAuto = !!D.imp.ripetiInAula; D.imp.ripetiInAula = false; ripetiManuale = 0; salva(); if (!TR.attiva()) O.spegni(); aggiornaTutto();
+  return mostraFatto({ testo: 'Ripeti spento.', nota: `${TR.attiva() ? 'Il microfono resta acceso per la trascrizione, finché non la chiudi.' : 'Il microfono è chiuso.'}${eraAuto ? ` A lezione non si accende più da solo: lo riaccendi con ${MAC ? '⌃⌥P' : 'Ctrl Alt P'}.` : ''}` });
+}
 // quello che ha detto il prof: l'ultima frase (quella che ti sei perso) in chiaro, il resto prima, più tenue
 function dettoProf(f) {
   const frasi = f.match(/[^.!?…]+(?:[.!?…]+|$)/g)?.map(x => x.trim()).filter(Boolean) || [f];
@@ -756,8 +766,12 @@ function dettoProf(f) {
   }
   return `${prima ? `<span class="prima">${mdHtml(prima)}</span> ` : ''}<span class="ultima">${mdHtml(ultima)}</span>`;
 }
-async function ripeti(sec = 60) {
-  if (!O.attivo()) return accendiRipeti();
+// gesto: la scorciatoia o il bottone. Scritto o detto («ripeti», «non ho capito») fuori lezione non accende il microfono da solo
+async function ripeti(sec = 60, { gesto = false } = {}) {
+  if (!O.attivo()) {
+    if (gesto || lezioneOra()) return accendiRipeti();
+    return mostraFatto({ testo: 'Ripeti è spento.', nota: `Ripeti ti scrive cosa ha detto il prof negli ultimi 60 secondi: lo accendi qui o con ${MAC ? '⌃⌥P' : 'Ctrl Alt P'}. Se volevi altro, chiedimelo con parole tue.`, azione: ['Accendi', () => { nuovoTurno(); detto(A.turno, 'Accendi Ripeti'); accendiRipeti(); }], sintesi: 'ripeti spento', no: true });
+  }
   if (O.secondi() < 1) return rispostaFissa('Ascolto da un attimo: non ho ancora niente da ripeterti.');
   const quando = new Date(), audio = O.ultimi(sec);
   const riascolto = `Riascolto gli ultimi ${Math.round(Math.min(sec, O.secondi()))} secondi…`;
@@ -932,7 +946,7 @@ async function usaFile(x, op, { corso, data }) {
 /* ---------- le proposte dell'allenatore: la pillola si allunga e chiede ---------- */
 let tProposta = 0;
 function mostraProposta(p) {
-  if (A.aperto || A.zona || A.proposta) return;
+  if (A.aperto || A.zona || A.proposta || O.attivo()) return;   // col microfono acceso la pillola resta visibile
   A.proposta = p; const el = shell.querySelector('.ld-proposta');
   el.querySelector('b').textContent = p.titolo; el.querySelector('.t span').textContent = p.testo; el.querySelector('[data-p=si]').textContent = p.bottone;
   shell.classList.add('propone'); forma.w.t = Math.min(520, innerWidth - 16); forma.h.t = 50; forma.r.t = 25; molla();
@@ -1880,7 +1894,7 @@ function collega() {
     const c = e.target.closest('[data-ld-cattura]'); if (c) { premi(c); cattura(c.dataset.ldCattura); return; }
     if (e.target.closest('[data-ld-appunti]')) apriAppunti();
     if (e.target.closest('[data-ld-trascrivi]')) { nuovoTurno(); detto(A.turno, 'Trascrivi la lezione'); avviaTrascrizione(); }
-    const rp = e.target.closest('[data-ld-ripeti]'); if (rp) { const k = rp.dataset.ldRipeti; nuovoTurno(); detto(A.turno, k === 'si' ? 'Ripeti' : k === 'spegni' ? 'Spegni Ripeti' : 'Accendi Ripeti'); k === 'si' ? ripeti() : k === 'spegni' ? spegniRipeti() : accendiRipeti(); return; }
+    const rp = e.target.closest('[data-ld-ripeti]'); if (rp) { const k = rp.dataset.ldRipeti; nuovoTurno(); detto(A.turno, k === 'si' ? 'Ripeti' : k === 'spegni' ? 'Spegni Ripeti' : 'Accendi Ripeti'); k === 'si' ? ripeti(60, { gesto: true }) : k === 'spegni' ? spegniRipeti() : accendiRipeti(); return; }
     const tr = e.target.closest('[data-ld-tr]'); if (tr) { const k = tr.dataset.ldTr; if (k === 'fine') { nuovoTurno(); detto(A.turno, 'Fine trascrizione'); fermaTrascrizione(); } else { k === 'pausa' ? TR.pausa() : TR.riprendi(); disegnaHome(); } }
   });
   addEventListener('keydown', e => {
@@ -1930,12 +1944,19 @@ function collega() {
   addEventListener('resize', () => { if (A.aperto) { forma.w.t = Math.min(560, innerWidth - 16); molla(); } });
   let tTr = 0;
   addEventListener('lode:trascrizione', () => { if (!A.avviso) aggiornaPillola(); clearTimeout(tTr); tTr = setTimeout(() => { if (A.aperto && A.home && !shell.contains(document.activeElement)) disegnaHome(); }, 300); });
+  addEventListener('lode:orecchio', e => { if (!e.detail?.acceso) ripetiManuale = 0; if (!A.avviso) aggiornaPillola(); if (A.aperto && A.home && !shell.contains(document.activeElement)) disegnaHome(); });
   addEventListener('lode:lezioni', () => { if (!A.avviso) aggiornaPillola(); if (A.aperto && A.home) disegnaHome(); });
   // il tempo passa: «fine tra 23 min», la lezione che inizia, il suggerimento del pomeriggio
   let minuto = -1;
   setInterval(() => { const m = new Date().getMinutes(); if (m === minuto) return; minuto = m;
-    // Ripeti: si accende da solo a lezione (se l'hai attivato una volta) e si spegne dopo
-    if (V.attivo && D.imp.ripetiInAula && D.imp.trascrizioneOk) { if (lezioneOra() && !O.attivo()) O.accendi().then(aggiornaTutto).catch(() => { }); else if (!lezioneOra() && O.attivo() && !TR.attiva()) { O.spegni(); aggiornaTutto(); } }
+    // Ripeti: si accende da solo a lezione (se l'hai attivato una volta) e si spegne dopo; acceso a mano fuori orario resta (orecchio.js)
+    if (V.attivo && !O.inProva()) {
+      const auto = !!(D.imp.ripetiInAula && D.imp.trascrizioneOk), inLezione = !!lezioneOra();
+      if (auto && inLezione) ripetiManuale = 0;   // a lezione decide l'orario: finita la lezione si spegne come sempre
+      const r = O.regolaAula({ acceso: O.attivo(), inLezione, auto, trascrive: TR.attiva(), manualeDa: ripetiManuale });
+      if (r === 'accendi') O.accendi().then(aggiornaTutto).catch(() => { });
+      else if (r === 'spegni') { const aMano = auto && ripetiManuale; ripetiManuale = 0; O.spegni(); aggiornaTutto(); if (aMano) mostraAvviso('Ripeti spento dopo 3 ore'); }
+    }
     // dieci minuti dopo la fine della lezione la trascrizione si chiude da sola
     const tr = TR.stato(); if (tr?.lezione.fine && !lezioneOra()) { const [hh, mm] = tr.lezione.fine.split(':').map(Number), d = new Date(); if (d.getHours() * 60 + d.getMinutes() >= hh * 60 + mm + 10) fermaTrascrizione(); } if (!A.avviso && !F.stato()) aggiornaPillola(); if (A.aperto && A.home && !shell.contains(document.activeElement)) { disegnaHome(); aggiornaTesta(); } }, 5000);
   if (BRIDGE) collegaDesktop();
@@ -1958,7 +1979,7 @@ function collegaDesktop() {
     if (nome === 'apri') { const t = Date.now(), ripetuto = pttAttivo && t - ultimoApri < 1100; ultimoApri = t; if (ripetuto || Voce.attivo()) return; pttAttivo = true; apri({ fisso: true }).then(() => campo.querySelector('input').focus({ preventScroll: true })); iniziaAscolto(); }
     else if (nome === 'scrivi') { apri({ fisso: true }).then(() => campo.querySelector('input').focus()); }
     else if (CATTURE[nome]) cattura(nome);
-    else if (nome === 'ripeti') { apri({ fisso: true }); nuovoTurno(); detto(A.turno, 'Ripeti'); ripeti(); }
+    else if (nome === 'ripeti') { apri({ fisso: true }); nuovoTurno(); detto(A.turno, 'Ripeti'); ripeti(60, { gesto: true }); }
     else if (nome === 'trascrivi') { apri({ fisso: true }); nuovoTurno(); if (TR.attiva()) { detto(A.turno, 'Fine trascrizione'); fermaTrascrizione(); } else { detto(A.turno, 'Trascrivi la lezione'); avviaTrascrizione(); } }
     else if (nome === 'gioco') { apri({ fisso: true }); nuovoTurno(); detto(A.turno, 'Gioca'); schedaGioco(); }
   });

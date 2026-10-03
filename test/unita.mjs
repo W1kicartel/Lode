@@ -40,6 +40,17 @@ prova('definizione a voce', c('definizione nucleofilo uguale specie ricca di ele
 prova('domanda a voce', c('Domanda per il prof perché serve la continuità?')?.tipo === 'domanda');
 prova('trascrivi', c('trascrivi la lezione')?.tipo === 'trascrivi' && c('fine trascrizione')?.tipo === 'fineTrascrizione');
 prova('riordina', c('riordina la lezione')?.tipo === 'riordina');
+
+// «Ripeti» controllato a ogni minuto: acceso a mano fuori orario non si spegne subito (prima si spegneva al minuto dopo)
+{
+  const O = await import('../js/orecchio.js'), ora = Date.parse('2026-10-03T12:00:00Z'), r = o => O.regolaAula({ ora, auto: true, trascrive: false, ...o });
+  prova('ripeti: a lezione si accende da solo', r({ acceso: false, inLezione: true }) === 'accendi' && r({ acceso: true, inLezione: true }) === null);
+  prova('ripeti: spento altrove (altro computer, configurazione) si spegne anche se acceso a mano o a lezione', r({ auto: false, acceso: true, inLezione: false, manualeDa: ora - 60e3 }) === 'spegni' && r({ auto: false, acceso: true, inLezione: true }) === 'spegni' && r({ auto: false, acceso: false, inLezione: true }) === null);
+  prova('ripeti: acceso dalla lezione, finita la lezione si spegne', r({ acceso: true, inLezione: false }) === 'spegni');
+  prova('ripeti: acceso a mano fuori orario resta acceso', r({ acceso: true, inLezione: false, manualeDa: ora - 10 * 60e3 }) === null && r({ acceso: true, inLezione: false, manualeDa: ora - O.MANUALE + 60e3 }) === null);
+  prova('ripeti: acceso a mano, dopo 3 ore si spegne da solo', r({ acceso: true, inLezione: false, manualeDa: ora - O.MANUALE }) === 'spegni');
+  prova('ripeti: mentre trascrivi non si tocca, spento resta spento', r({ acceso: true, inLezione: false, trascrive: true }) === null && r({ acceso: false, inLezione: false }) === null);
+}
 prova('esame detto a voce', c("ho l'esame di analisi 2 il 15 gennaio")?.esistente?.nome === 'Analisi 2' && c('analisi 2 spostato al 20 gennaio')?.data?.endsWith('-01-20'));
 prova('«ho lezione domani» non crea esami', c('ho lezione domani')?.tipo !== 'esame');
 prova('proposte', c('proposte frequenti')?.livello === 'spesso' && c('spegni le proposte')?.livello === 'mai');

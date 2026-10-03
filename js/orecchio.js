@@ -38,6 +38,19 @@ export function ultimi(sec = 60) {
 export const secondi = () => campioni / SR;
 export function ascolta(f) { ascoltatori.add(f); return () => ascoltatori.delete(f); }
 
+// «Ripeti» in aula, controllato a ogni minuto. auto: l'hai attivato (e hai dato il consenso), anche da un altro computer.
+// A lezione si accende da solo e dopo si spegne. Acceso a mano fuori dall'orario (a casa, una lezione non segnata) resta
+// acceso per MANUALE, una lezione lunga, poi si spegne da solo. Mentre trascrivi la lezione non si tocca. In tutti gli altri
+// casi il microfono acceso si spegne: anche se Ripeti viene spento altrove (un altro computer, «Rifai la configurazione»).
+export const MANUALE = 3 * 3600e3;
+export function regolaAula({ acceso, inLezione, auto, trascrive, manualeDa = 0, ora = Date.now() }) {
+  if (auto && inLezione) return acceso ? null : 'accendi';
+  if (!acceso || trascrive) return null;
+  return auto && manualeDa && ora - manualeDa < MANUALE ? null : 'spegni';
+}
+// l'audio delle prove automatiche (immetti) non è il microfono: il controllo di ogni minuto non lo tocca
+export const inProva = () => PROVA.on && !flusso;
+
 // prove automatiche: audio che entra come se venisse dal microfono
 const PROVA = { on: false };
 export async function immetti(audio) {

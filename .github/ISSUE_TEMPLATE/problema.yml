@@ -40,8 +40,8 @@ body:
     id: versione
     attributes:
       label: Versione di Lode
-      description: È nel nome del file che hai scaricato (`Lode-0.3.0-…`). Se l'hai installato dal codice, scrivi il commit (`git log -1 --oneline`).
-      placeholder: 0.3.0
+      description: È nel nome del file che hai scaricato (per esempio `Lode-0.5.1-…`). Se l'hai installato dal codice, scrivi il commit (`git log -1 --oneline`).
+      placeholder: 0.5.1
   - type: dropdown
     id: installazione
     attributes:

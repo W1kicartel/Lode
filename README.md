@@ -6,7 +6,7 @@ Lode è una piccola pillola di vetro nero in cima allo schermo. Mentre sei a lez
 
 ![«Ripeti»: gli ultimi 60 secondi del prof, con l'ultima frase in evidenza](docs/immagini/ripeti.jpg)
 
-> **Stato: beta.** Funziona su **Windows, macOS e Linux**, ma finora è stato provato a fondo solo su un Mac con chip Apple. Il codice per Windows c'è tutto (installazione di Obsidian e dell'AI, scorciatoie, voce), però non l'abbiamo ancora provato su un PC vero: se lo provi, [raccontaci com'è andata](https://github.com/W1kicartel/Lode/issues/new/choose) (prima togli dal messaggio il tuo nome, le chiavi e i percorsi: il modulo te lo ricorda).
+> **Stato: beta.** È fatto per **Windows, macOS e Linux**, ma finora è stato provato a fondo solo su un Mac con chip Apple. Il codice per Windows c'è tutto (installazione di Obsidian e dell'AI, scorciatoie, voce), però non l'abbiamo ancora provato su un PC vero: se lo provi, [raccontaci com'è andata](https://github.com/W1kicartel/Lode/issues/new/choose) (prima togli dal messaggio il tuo nome, le chiavi e i percorsi: il modulo te lo ricorda).
 
 **[⬇ Scarica Lode](https://github.com/W1kicartel/Lode/releases/latest)** per Mac, Windows o Linux, poi segui i [tre passi del primo avvio](#installa).
 
@@ -15,7 +15,7 @@ Lode è una piccola pillola di vetro nero in cima allo schermo. Mentre sei a lez
 ## Cosa fa
 
 ### In aula
-- **Ripeti** (⌃⌥P). Ti sei perso una frase? Lode tiene in memoria gli ultimi 60 secondi, solo in RAM e mai su disco, e su richiesta te li scrive, con l'ultima frase del prof in evidenza. Un clic e va negli appunti o tra le cose «★ da esame».
+- **Ripeti** (⌃⌥P). Ti sei perso una frase? Lode tiene in memoria l'ultimo minuto e mezzo, solo in RAM e mai su disco, e su richiesta ti scrive gli ultimi 60 secondi, con l'ultima frase del prof in evidenza. Un clic e va negli appunti o tra le cose «★ da esame». A lezione si accende da solo, se l'hai attivato una volta; se lo accendi tu (con ⌃⌥P o dal pannello) fuori dall'orario resta acceso al massimo 3 ore. Quando il microfono è acceso, la pillola lo segnala con un pallino.
 - **Trascrive la lezione intera** (⌃⌥R) nella nota della lezione in Obsidian, a pezzi di 20-30 secondi: se il computer si spegne, quello che c'era è già salvato.
 - **Le formule dette a voce diventano formule.** «l'integrale da zero a uno di x al quadrato in dx» diventa $\int_{0}^{1} x^{2} \, dx$, e lo stesso vale per limiti, derivate, sommatorie, frazioni e lettere greche.
 - **Cattura veloce** senza lasciare gli appunti: ⌃⌥S **★ Da esame**, ⌃⌥D **Definizione**, ⌃⌥Q **Domanda per il prof**.
@@ -90,7 +90,7 @@ smetti di seguire lab3
 
 ### Installa
 
-Il modo più semplice: scarica l'installer dalla pagina **[Release](https://github.com/W1kicartel/Lode/releases/latest)** (in fondo, alla voce «Assets»). Ti servono circa **5 GB liberi**: Obsidian circa 300 MB, l'AI locale circa 3,5 GB, la voce dai 200 ai 640 MB. Al primo avvio Lode ti chiede il nome e, con un clic, installa Obsidian, l'AI locale e la voce.
+Il modo più semplice: scarica l'installer dalla pagina **[Release](https://github.com/W1kicartel/Lode/releases/latest)** (in fondo, alla voce «Assets»). Ti servono circa **5 GB liberi**: Obsidian circa 300 MB, l'AI locale circa 3,5 GB, la voce dai 200 ai 640 MB. Al primo avvio Lode ti chiede il nome e, con un clic, installa Obsidian, l'AI locale e la voce (su Linux l'AI locale no: prima installa Ollama con lo script di [ollama.com](https://ollama.com/download/linux)).
 
 **Controlla che sia quello vero.** Scarica Lode solo dalla pagina Release di questo repository: un «Lode» passato in un gruppo o preso da un altro sito può avere lo stesso aspetto ed essere un'altra cosa. Accanto a ogni file GitHub mostra la sua impronta SHA-256 (`sha256:…`); dalle versioni dopo la 0.3.0 le stesse impronte sono anche nel file `SHA256SUMS.txt` della Release. Prima di aprirlo, calcola quella del file che hai scaricato e confrontale: devono avere le stesse lettere e cifre (Windows le scrive in maiuscolo). Se sono diverse, non aprirlo.
 
@@ -104,7 +104,7 @@ Gli installer non sono firmati con un certificato a pagamento (costa ogni anno e
 |---|---|---|
 | **Mac** (chip Apple e Intel) | `Lode-…-mac.dmg` | Apri il `.dmg` e trascina Lode in **Applicazioni**. Aprilo: il Mac dice che non può verificarlo, premi **Fine**. Poi vai in **Impostazioni di Sistema › Privacy e sicurezza**, scorri in fondo e premi **Apri comunque** accanto a «Lode». Serve solo la prima volta. |
 | **Windows** 10 e 11 | `Lode-…-windows.exe` | Aprilo. Se compare «Windows ha protetto il PC», premi **Ulteriori informazioni**, poi **Esegui comunque**. Si installa per il tuo utente, senza permessi di amministratore, e parte da solo. |
-| **Linux** (64 bit) | `Lode-…-linux.AppImage` | Rendilo eseguibile (tasto destro › Proprietà › «Consenti l'esecuzione», oppure `chmod +x Lode-*.AppImage`) e aprilo. |
+| **Linux** (64 bit) | `Lode-…-linux.AppImage` | Rendilo eseguibile (tasto destro › Proprietà › «Consenti l'esecuzione», oppure `chmod +x Lode-*.AppImage`) e aprilo. L'AI locale su Linux non si installa da sola: prima installa Ollama con lo script di [ollama.com](https://ollama.com/download/linux). |
 
 Lode vive nella barra dei menu (Mac) o nell'area di notifica (Windows): non cercarlo nel Dock. È la pillola nera in cima allo schermo: si apre con un clic, o tenendo premuto **⌥ Spazio** sul Mac e **Ctrl+Shift+Spazio** su Windows e Linux.
 
@@ -288,7 +288,7 @@ Tutto offline. L'audio non resta mai su disco: sul Mac passa a Parakeet in un fi
 ## Privacy
 - **Niente account, niente server di Lode, niente pubblicità, niente tracciamento.**
 - I dati stanno sul tuo computer: nel vault Obsidian (`Documenti/Lode`) e nei file dell'app.
-- Il microfono si accende solo quando lo chiedi: voce, Ripeti in aula se l'hai attivato, trascrizione. Per Ripeti l'audio vive solo in memoria, per 90 secondi.
+- Il microfono si accende solo quando lo chiedi: voce, Ripeti in aula se l'hai attivato (o fuori lezione, se lo accendi tu: al massimo 3 ore), trascrizione. Per Ripeti l'audio vive solo in memoria, per 90 secondi.
 - La chiave della tua AI resta su questo computer e parte solo verso il servizio che hai scelto. Non finisce nel vault né nei backup.
 - **Aggiornamenti:** l'app installata chiede a GitHub, poco dopo l'avvio e poi ogni 6 ore, se c'è una versione nuova di Lode, e da lì la scarica. Non manda niente di tuo: né dati, né identificativi, né statistiche. Si spengono da «Prepara Lode» o dal menu dell'icona.
 - **Registrare una lezione** dipende dal regolamento del tuo ateneo e dal docente: chiedi prima.
