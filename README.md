@@ -208,6 +208,8 @@ Poi riaprila dall'icona. Sul Mac, se avevi compilato la voce per il Neural Engin
 
 Nella pagina **[Release](https://github.com/W1kicartel/Lode/releases/latest)** ci sono già gli installer per Mac (`.dmg`), Windows (`.exe`) e Linux (`.AppImage`). Non sono ancora firmati con un certificato (Apple 99 $ l'anno; per Windows serve un servizio di firma, vedi [docs/FIRMA.md](docs/FIRMA.md)), quindi macOS e Windows li bloccano alla prima apertura e chiedono di confermare a mano. Quando saranno firmati torneranno la via più semplice, e si aggiorneranno da soli.
 
+**Attenzione:** gli installer della **0.5.0** non si aprono: nel pacchetto mancavano due file della sincronizzazione (nel codice è già corretto). Fino ai prossimi installer, firmati, installa Lode dal codice.
+
 <details>
 <summary>Usarli lo stesso</summary>
 
