@@ -226,6 +226,7 @@
 .ld-scheda select{padding-right:28px;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 15px) 15px,calc(100% - 11px) 15px;background-size:4px 4px;background-repeat:no-repeat;cursor:pointer}
 .ld-scheda select option{background:#161616;color:#F5F5F5}
 .ld-scheda input[type=date]{color-scheme:dark}
+.ld-scheda input[type=checkbox]{all:revert;flex:none;margin:2px 0 0;accent-color:#fff}   /* la casella resta una casella (uso dell'AI) */
 .ld-scheda input[type=number]{width:62px}
 .ld-riga-form{display:flex;gap:8px;align-items:center;margin-top:10px}
 .ld-riga-form>select,.ld-riga-form>input:first-child{flex:1}
