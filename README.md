@@ -423,7 +423,7 @@ Design: solo bianco e nero, font [Geist](https://github.com/vercel/geist-font), 
 ## Cosa manca (cerco mani)
 - [ ] Firma degli installer: il workflow è pronto, mancano solo i certificati (Apple 99 $ l'anno; per Windows Azure Trusted Signing o SignPath). Cosa comprare e come attivarla: [docs/FIRMA.md](docs/FIRMA.md)
 - [ ] Parakeet su Windows e Linux c'è (ONNX, sul processore), ma va provato su un PC vero: raccontaci quanto ci mette
-- [ ] Sincronizzazione facoltativa fra dispositivi, cifrata
+- [ ] La sincronizzazione fra i tuoi computer c'è dalla 0.5.0, cifrata se vuoi, ma è [sperimentale](#sincronizza-fra-i-tuoi-computer-sperimentale): va provata con iCloud, OneDrive, Dropbox e Google Drive veri. Raccontaci com'è andata
 - [ ] Riconoscere chi parla (prof o studenti) nella trascrizione
 - [ ] Regole dei singoli atenei per il voto di laurea
 
