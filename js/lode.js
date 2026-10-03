@@ -2,7 +2,7 @@
 // o il timer che scorre. Passandoci sopra si apre a molla in un pannello: «Oggi», sei strumenti e il campo
 // «Chiedi o scrivi un comando…». Si parla tenendo premuto ⌥ Spazio. I file trascinati diventano carte del ripasso.
 // Senza AI capisce i comandi in italiano (comandi.js); con il cervello locale (gratis) o la tua AI preferita spiega, crea carte e interroga come all'orale.
-import { datiIllegibili, piuGiorni, norm, D, DESKTOP, lezioneOra, prossimaLezione, daGiocare, ricorda, aggiungiOrario, lezioni, RISPOSTE, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esc, fatti, media, minuti, num, oggi, ore, piano, prossimi, prossimoIntervallo, registraVoto, rispondi, salva, serie, serve, simula, sostituisci, traQuanto, trovaEsame, intervalloTesto, giorniTra, definizioni } from './dati.js';
+import { inverti, datiIllegibili, piuGiorni, norm, D, DESKTOP, lezioneOra, prossimaLezione, daGiocare, ricorda, aggiungiOrario, lezioni, RISPOSTE, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esc, fatti, media, minuti, num, oggi, ore, piano, prossimi, prossimoIntervallo, registraVoto, rispondi, salva, serie, serve, simula, sostituisci, traQuanto, trovaEsame, intervalloTesto, giorniTra, definizioni } from './dati.js';
 import { RIDOTTO, attendi, comprimi, conta, dopo, entra, h, lineare, morbido, ogni, premi, tween } from './motore.js';
 import { ESEMPI, interpreta } from './comandi.js';
 import * as F from './focus.js';
@@ -26,6 +26,7 @@ import * as PR from './codice/progetto.js';
 import * as DI from './codice/diario.js';
 import { ERRORI } from './codice/modelli.js';
 import * as ER from './errori.js';
+import * as TS from './sync-testi.js';
 const BRIDGE = DESKTOP ? window.lodeDesktop : null;
 
 const segnala = (evento, x = {}) => dispatchEvent(new CustomEvent('lode', { detail: { evento, ...x } }));
@@ -91,7 +92,7 @@ function costruisci() {
   home = h('div', 'ld-home');
   filo = h('div', 'ld-filo'); filo.setAttribute('aria-live', 'polite');
   dentro.append(campo, allegatiBox, home, filo);
-  const piede = h('footer', 'ld-piede', `<span class="ld-piede-sx">Tieni premuto per parlare <kbd>${TASTI}</kbd></span><span>${IC.lucchetto}I dati restano su questo computer</span>`);
+  const piede = h('footer', 'ld-piede', `<span class="ld-piede-sx">Tieni premuto per parlare <kbd>${TASTI}</kbd></span><span class="ld-piede-dati">${IC.lucchetto}<span>I dati restano su questo computer</span></span>`);
   corpo.append(testa, dentro, piede);
   const zona = h('div', 'ld-zona', `<i class="bordo"></i><div class="ld-zona-in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><b>Lascia qui il file</b><span>${FILE.ACCETTATI}</span></div>`);
   zona.setAttribute('aria-hidden', 'true');
@@ -123,7 +124,13 @@ function suggerimento() {
 const stelleOggi = corso => (lezioni().find(l => l.corso === corso && l.data === oggi())?.stelle || []).length;
 function righeOggi() {
   const r = [];
-  if (datiIllegibili) r.push({ cls: 'urg', t: 'Non riesco a leggere i tuoi dati', d: 'Esami, voti e carte sono al sicuro, ma la cartella non risponde (OneDrive offline o file bloccato). Le modifiche di adesso vanno in un file a parte; riprovo da solo.', n: '', b: 'Riprova', f: () => location.reload() });   // ricaricata, la barra rilegge: se ora si legge, torna tutto
+  // la sincronizzazione: password da scrivere, cartella sparita, spostamento interrotto (i dati locali restano usabili)
+  if (syncBloccata()) r.push({ cls: 'urg', t: TS.rigaStato(SYNC), d: 'Lode funziona con i dati di questo computer: le modifiche aspettano nel diario.', n: '', b: 'Sblocca', f: () => { nuovoTurno(); detto(A.turno, 'Sblocca'); schedaSincronizza('sblocca'); } });
+  else if (SYNC?.acceso && SYNC.stato === 'sparito') r.push({ cls: 'urg', t: 'La cartella di Lode nel vault non c\'è più', d: 'È stata spostata o cancellata? I dati di questo computer sono al sicuro nel suo diario.', n: '', b: 'Vedi', f: () => { nuovoTurno(); schedaSincronizza(); } });
+  else if (SYNC?.spostamento) r.push({ cls: 'att', t: 'Lo spostamento nella cartella cloud si è interrotto', d: 'Il vault di prima è intatto: riprendo da dove ero rimasto.', n: '', b: 'Riprendi', f: () => { nuovoTurno(); detto(A.turno, 'Sincronizza fra i computer'); schedaSincronizza(); } });
+  if (datiIllegibili === 'altrove') r.push({ cls: 'urg', t: 'Questo vault si sincronizza con Lode su un altro computer', d: 'I dati sono nel diario di Lode 2: scegli «Uso già Lode su un altro computer» per vederli qui. Le modifiche di adesso vanno in un file a parte, non sopra i dati.', n: '', b: 'Uso già Lode', f: () => { nuovoTurno(); detto(A.turno, 'Uso già Lode su un altro computer'); schedaSincronizza('collega'); } });
+  else if (datiIllegibili === 'fermo') r.push({ cls: 'urg', t: 'Il diario di Lode su questo computer non si legge', d: 'Niente è stato cancellato: la cartella dei dati di Lode non risponde (disco pieno o guasto?).', n: '', b: 'Riprova', f: () => location.reload() });
+  else if (datiIllegibili) r.push({ cls: 'urg', t: 'Non riesco a leggere i tuoi dati', d: 'Esami, voti e carte sono al sicuro, ma la cartella non risponde (OneDrive offline o file bloccato). Le modifiche di adesso vanno in un file a parte; riprovo da solo.', n: '', b: 'Riprova', f: () => location.reload() });   // ricaricata, la barra rilegge: se ora si legge, torna tutto
   const lo = lezioneOra(), pl = prossimaLezione();
   if (!lo && pl && pl.tra <= 90) r.push({ cls: pl.tra <= 15 ? 'urg' : 'att', t: `${pl.corso} alle ${pl.inizio}`, d: `${pl.aula ? 'Aula ' + pl.aula + ' · ' : ''}tra ${pl.tra} min`, n: '', b: V.attivo ? 'Appunti' : 'Orario', f: () => V.attivo ? apriAppunti(pl) : (nuovoTurno(), schedaOrario()) });
   const rp = PR.rigaOggi(); if (rp) r.push(rp);   // il progetto seguito: «non provato», l'ultima prova andata male, «sta cambiando»
@@ -441,6 +448,7 @@ function contesto(html) {
   return c;
 }
 function mostraFatto(d = {}, dove) {
+  d.annulla?.fotografa?.();   // D subito dopo il comando: «Annulla» toglie solo quello che il comando ha cambiato
   const f = h('div', 'ld-fatto' + (d.no ? ' no' : ''), `${d.no ? IC.croce : IC.spunta}<b>${esc(d.testo || 'Fatto.')}</b>${d.nota ? `<span>${esc(d.nota)}</span>` : ''}`);
   if (d.annulla) { const b = h('button', 'btn small', 'Annulla'); b.type = 'button'; b.addEventListener('click', () => { d.annulla(); b.replaceWith(h('span', '', 'annullato')); aggiornaTutto(); }, { once: true }); f.append(b); }
   if (d.azione) { const b = h('button', 'btn small', esc(d.azione[0])); b.type = 'button'; b.addEventListener('click', d.azione[1]); f.append(b); }
@@ -450,8 +458,16 @@ function mostraFatto(d = {}, dove) {
   const path = f.querySelector('path');
   return Promise.all([entra(f, { dy: 4, blur: 4, ms: 380 }), tween(420, e => { path.style.strokeDashoffset = (1 - e).toFixed(3); }, { ritardo: 80 })]);
 }
-// ogni modifica fatta da un comando si può annullare con un clic
-function istantanea() { const s = JSON.parse(JSON.stringify(D)); return () => sostituisci(s); }
+// ogni modifica fatta da un comando si può annullare con un clic. «Annulla» fa l'operazione inversa e tocca solo quello che il
+// comando ha cambiato: le differenze fra l'istantanea e D subito dopo il comando (mostraFatto la scatta), rimesse al contrario
+// sul D di adesso. Prima rimetteva tutto D com'era prima del comando (sostituisci): con la sincronizzazione annullava anche
+// quello che era arrivato nel frattempo da un altro computer o dall'altra finestra (una carta fatta altrove finiva nel Cestino, §7)
+function istantanea() {
+  const prima = JSON.parse(JSON.stringify(D)); let dopo = null;
+  const ann = () => { if (!dopo) dopo = JSON.parse(JSON.stringify(D)); inverti(prima, dopo, D); salva(); };
+  ann.fotografa = () => { dopo = JSON.parse(JSON.stringify(D)); };
+  return ann;
+}
 function aggiornaTutto() { aggiornaPillola(); if (A.home) disegnaHome(); aggiornaTesta(); }
 
 /* ---------- proposte con «Conferma / Annulla» (per l'AI) ---------- */
@@ -1060,9 +1076,13 @@ function schedaPrepara(cosa) {
     ${riga('cervello', 'Cervello locale', !!st?.modello, st?.modello ? `${esc(st.modello)} · gira sul computer, senza internet` : `Ollama + ${esc(m?.etichetta || 'Qwen3.5')}, ${esc(m?.perche || '')} · circa ${m ? String(m.gb + 0.2).replace('.', ',') : '3,5'} GB`, st?.modello ? '<span class="ld-spunta">pronto</span>' : '<button type="button" class="btn small primary" data-installa="cervello">Installa</button>')}
     ${riga('voce', 'Voce', Voce.pronta(), Voce.pronta() ? Voce.NOME_VOCE + ' in locale · tieni premuto ' + TASTI + ' e parla' : `${Voce.descrizioneVoce()}, in locale, in italiano · circa ${Voce.PESO_VOCE} MB, una volta sola`, Voce.pronta() ? '<span class="ld-spunta">pronta</span>' : '<button type="button" class="btn small primary" data-voce>Prepara</button>')}
     ${riga('tuaai', 'La tua AI <small>facoltativa</small>', !!AI.fornitore(), AI.fornitore() ? `${esc(AI.FORNITORI[AI.fornitore()].nome)} collegata · paghi tu a consumo, direttamente al servizio` : 'Claude, ChatGPT, Gemini, Mistral…: più potente, a consumo con la tua chiave', `<button type="button" class="btn small" data-tuaai>${AI.fornitore() ? 'Cambia' : 'Collega'}</button>`)}
+    ${BRIDGE ? riga('sync', 'Sincronizza fra i tuoi computer <small>sperimentale</small>', !!SYNC?.acceso && !!SYNC.cloud && !syncBloccata(), esc(TS.rigaStato(SYNC)), `<button type="button" class="btn small" data-sync>${syncBloccata() ? 'Sblocca' : SYNC?.acceso && SYNC.cloud ? 'Gestisci' : 'Attiva'}</button>`) : ''}
+    ${BRIDGE && !(SYNC?.acceso && SYNC.cloud) ? riga('collega', 'Uso già Lode su un altro computer', false, 'Collega questo computer al vault che hai già nella cartella cloud', '<button type="button" class="btn small" data-collega>Collega</button>') : ''}
     ${AGG?.possibile ? riga('aggiorna', 'Aggiornamenti', AGG.attivi, esc(testoAggiornamenti()), '<span class="ld-agg-az" style="display:flex;gap:6px"></span>') : ''}
     <p class="ld-nota">Il cervello locale è gratis e lavora offline: estrae definizioni, crea carte, spiega e interroga. La tua AI è un potenziamento facoltativo: Lode non vede né incassa niente.</p>`);
   s.querySelector('[data-tuaai]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'La mia AI'); schedaAI(); });
+  s.querySelector('[data-sync]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Sincronizza fra i computer'); schedaSincronizza(syncBloccata() ? 'sblocca' : null); });
+  s.querySelector('[data-collega]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Uso già Lode su un altro computer'); schedaSincronizza('collega'); });
   mostraAggiornamenti(s);
   s.querySelectorAll('[data-apri]').forEach(b => b.addEventListener('click', () => apriAppunti({ file: 'Home.md', corso: 'Home' })));
   s.querySelectorAll('[data-installa]').forEach(b => b.addEventListener('click', () => chiediInstalla(b.dataset.installa, s)));
@@ -1092,6 +1112,177 @@ function mostraAvanzamento(s, cosa, x) {
   r.querySelector('.ld-prog i').style.transform = `scaleX(${(x.p ?? 0).toFixed(3)})`;
   if (x.fase === 'fatto') { r.classList.remove('va'); r.classList.add('ok'); r.querySelector('.btn.primary')?.replaceWith(h('span', 'ld-spunta', 'pronto')); }
   if (x.fase === 'errore') r.classList.remove('va');
+}
+
+/* ---------- sincronizzare fra i computer dello studente (desktop/sincronizza.mjs, docs/SINCRONIZZAZIONE.md) ---------- */
+// Niente server di Lode: il vault va nella cartella cloud che lo studente usa già. La barra mostra lo stato e chiede; le
+// cartelle e i percorsi li conosce solo il main (qui solo indici). I testi stanno in js/sync-testi.js
+let SYNC = null;
+async function aggiornaSync() { if (!BRIDGE) return null; try { SYNC = await BRIDGE.invoca('sync:stato'); } catch { } piedeSync(); return SYNC; }
+const syncBloccata = () => !!SYNC?.acceso && ['password', 'rigenerato'].includes(SYNC.stato);
+// il piede della barra: con la sincronizzazione accesa i dati non restano solo su questo computer, e lo si dice
+function piedeSync() {
+  const t = document.querySelector('.ld-piede-dati > span'); if (!t) return;
+  t.textContent = SYNC?.acceso && SYNC.cloud ? `${SYNC.cifrato ? 'Cifrati, sincronizzati' : 'Sincronizzati'} con ${SYNC.servizio || 'la tua cartella cloud'}` : 'I dati restano su questo computer';
+}
+const listaChiaro = () => `<ul class="ld-sync-lista">${TS.IN_CHIARO.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+const testoPortachiavi = () => SYNC?.portachiavi ? `La password si ricorda su questo computer (${BRIDGE?.piattaforma === 'darwin' ? 'nel Portachiavi' : BRIDGE?.piattaforma === 'win32' ? 'protetta dal tuo account di Windows' : 'nel portachiavi del sistema'}).`
+  : 'Questo computer non ha un portachiavi sicuro: Lode ti chiederà la password a ogni avvio.';
+async function schedaSincronizza(cosa) {
+  if (!BRIDGE) return rispostaFissa('La sincronizzazione fra i computer è nell\'**app desktop** di Lode.');
+  await aggiornaSync();
+  if (!SYNC) return rispostaFissa('Non riesco a leggere lo stato della sincronizzazione.', { errore: true });
+  if (SYNC.acceso && SYNC.cloud && cosa === 'altro') return rispostaFissa(`Sull'altro computer apri Lode e scegli «Uso già Lode su un altro computer», poi il vault «${SYNC.vault || 'Lode'}» in ${SYNC.servizio || 'la cartella cloud'}.`);
+  if (SYNC.acceso && SYNC.cloud) return schedaSyncAccesa(cosa);
+  if (cosa === 'altro') cosa = 'collega';
+  if (cosa === 'smetti' || cosa === 'sblocca' || cosa === 'password') return rispostaFissa('La sincronizzazione non è accesa: i dati di Lode restano su questo computer.');
+  const { cartelle = [], vault = [] } = await BRIDGE.invoca('sync:cartelle').catch(() => ({}));
+  const altro = cosa === 'collega';
+  const s = scheda('ld-sync', `<span class="ld-lbl">${altro ? 'Uso già Lode su un altro computer' : 'Sincronizza fra i tuoi computer'} · sperimentale</span>
+    <p class="ld-nota"><b>Sperimentale.</b> ${esc(TS.SPERIMENTALE)}</p>
+    ${altro ? '' : `<p class="ld-nota">Uso la cartella cloud che hai già: niente account, niente server di Lode. Copio il vault lì e passo alla copia; la cartella di prima resta dov'è. ${esc(TS.PRIMA)}</p>
+    ${SYNC.spostamento ? `<p class="ld-nota"><b>Lo spostamento in ${esc(SYNC.spostamento.servizio || 'cartella cloud')} si è interrotto.</b> Il vault di prima è intatto: scegli di nuovo la cartella e riprendo da dove ero rimasto.${SYNC.spostamento.cifrata ? ' Era cominciato con la password: ti chiederò di scriverla di nuovo.' : ''}</p>` : ''}
+    <div class="ld-opzioni">${cartelle.map(c => `<button type="button" class="ld-op" data-cloud="${c.i}"><b>${esc(c.servizio)}</b><span>${c.qui ? 'il vault è già qui: niente da spostare' : esc(c.nome)}</span></button>`).join('')}
+      <button type="button" class="ld-op" data-cloud="altra"><b>Un'altra cartella…</b><span>Syncthing, una cartella di rete</span></button></div>
+    ${cartelle.length ? '' : '<p class="ld-nota">Non trovo iCloud Drive, OneDrive, Dropbox o Google Drive su questo computer: scegli tu la cartella che si sincronizza.</p>'}`}
+    <span class="ld-lbl" style="margin-top:14px;display:block">${altro ? 'Scegli il vault nella cartella cloud' : 'Uso già Lode su un altro computer'}</span>
+    <div class="ld-opzioni">${vault.map(v => `<button type="button" class="ld-op" data-vault="${v.i}"><b>${esc(v.nome)}</b><span>${esc(v.servizio)} · già sincronizzato</span></button>`).join('')}
+      <button type="button" class="ld-op" data-vault="altro"><b>Scegli il vault…</b><span>la cartella «Lode» nella tua cartella cloud</span></button></div>
+    <p class="ld-nota">Il vault che c'è adesso su questo computer resta dov'è, intatto.${altro ? ' Se Lode qui ha già esami, voti o carte, li porto nel gruppo come «Dati di un altro primo avvio»: li importi tu, niente sostituisce i dati degli altri computer.' : ''}</p>`);
+  s.querySelectorAll('[data-cloud]').forEach(b => b.addEventListener('click', () => {
+    const c = cartelle.find(x => String(x.i) === b.dataset.cloud);
+    chiediSincronizza(c ? { i: c.i } : { scegli: true }, c?.servizio || 'la cartella che scegli', c?.qui);
+  }));
+  s.querySelectorAll('[data-vault]').forEach(b => b.addEventListener('click', () => collegaAltro(b.dataset.vault === 'altro' ? { scegli: true } : { i: +b.dataset.vault })));
+  s.querySelectorAll('.ld-op').forEach((b, i) => entra(b, { ritardo: 60 + i * 40, dy: 6, blur: 5, ms: 400 }));
+  if (A.turno) A.turno.dataset.sintesi = altro ? 'uso già Lode altrove' : 'sincronizza';
+}
+// la scelta della cifratura, una volta sola all'accensione (§10.1): il gruppo nasce cifrato o in chiaro e non cambia più modo
+async function chiediSincronizza(dove, servizio, giaDentro) {
+  const card = schedaConferma({ titolo: `Sincronizzare con ${servizio}?`, righe: [['Vault', giaDentro ? 'resta dov\'è: è già nella cartella cloud' : `una cartella «Lode» in ${servizio}`], ['Prima', giaDentro ? 'il dati.json di prima resta nella cronologia del servizio' : 'il vault di adesso resta dov\'è, intatto'], ['Dati di Lode', 'un diario per computer: niente conflitti, niente si perde']],
+    extra: `<div class="ld-sync-pw"><label class="ld-spunta-ai"><input type="checkbox" data-conpw> Proteggi i dati di Lode con una password</label>
+      <div class="ld-sync-pwbox" hidden><div class="ld-riga-form"><input type="password" autocomplete="new-password" placeholder="Password (almeno 8 caratteri)" aria-label="Password" data-pw><input type="password" autocomplete="new-password" placeholder="Ripetila" aria-label="Ripeti la password" data-pw2></div>
+      <p class="ld-nota"><b>Cifrati:</b> ${esc(TS.CIFRATI)}. <b>In chiaro nella cartella cloud</b>, anche con la password:</p>${listaChiaro()}
+      <p class="ld-nota">${esc(TS.SUL_COMPUTER)} ${giaDentro ? esc(TS.CRONOLOGIA) + ' ' : ''}${esc(TS.DIMENTICATA)} ${esc(testoPortachiavi())}</p></div><small class="ld-tenue" data-msg></small></div>`,
+    nota: `La password si può aggiungere anche dopo («Proteggi con una password»), o cambiare («Cambia password»). Sugli altri computer: «Uso già Lode su un altro computer». ${TS.PRIMA}`, fuoco: false });
+  card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = 'Si conferma solo col clic.';
+  const box = card.querySelector('.ld-sync-pwbox'), msg = t => { card.querySelector('[data-msg]').textContent = t; };
+  card.querySelector('[data-conpw]').addEventListener('change', e => { box.hidden = !e.target.checked; if (e.target.checked) card.querySelector('[data-pw]').focus(); });
+  // uno spostamento interrotto che era cominciato con la password si riprende solo con la password (il main lo rifiuta senza)
+  if (SYNC?.spostamento?.cifrata && !giaDentro) { const c = card.querySelector('[data-conpw]'); c.checked = true; c.disabled = true; box.hidden = false; msg('Lo spostamento era cominciato con la password: scrivila di nuovo.'); }
+  // una password che non va: si dice e la scheda aspetta di nuovo la conferma (attendiDecisione si riarma)
+  const esegui = async () => {
+    let password = null;
+    if (card.querySelector('[data-conpw]').checked) {
+      password = card.querySelector('[data-pw]').value;
+      if (password.length < 8) { msg('Almeno 8 caratteri.'); return attendiDecisione(card, esegui); }
+      if (password !== card.querySelector('[data-pw2]').value) { msg('Le due password non sono uguali.'); return attendiDecisione(card, esegui); }
+    }
+    card.querySelectorAll('input[type=password]').forEach(i => { i.value = ''; });
+    const p = h('p', 'ld-nota ld-sync-avanza', 'Preparo…'); card.append(p);
+    const r = await BRIDGE.invoca('sync:attiva', { ...dove, password }).catch(e => ({ esito: 'errore', errore: e.message }));
+    await aggiornaSync();
+    if (r.esito === 'ok') await mostraFatto({ testo: `Sincronizzato con ${r.servizio}.`, nota: r.giaDentro ? 'Il vault era già nella cartella cloud: da adesso ogni computer scrive solo il suo diario.' : `La cartella di prima («${r.da}») resta dov'era: cancellala tu quando vuoi. Sugli altri computer: «Uso già Lode su un altro computer».` }, card);
+    else if (r.esito === 'esiste') await mostraFatto({ testo: `In ${r.servizio} c'è già un vault di Lode sincronizzato.`, nota: 'Usa «Uso già Lode su un altro computer» per collegarti a quello.', no: true }, card);
+    else if (r.esito === 'annullato') await mostraFatto({ testo: 'Annullato.', nota: 'Non ho cambiato niente.', no: true }, card);
+    // la password che serve (spostamento cominciato con la password, o un gruppo già cifrato nel vault): si chiede di nuovo qui
+    else if (r.esito === 'password' || r.esito === 'sbagliata') { const c = card.querySelector('[data-conpw]'); c.checked = true; box.hidden = false; p.remove(); msg(r.errore || 'Scrivi la password.'); return attendiDecisione(card, esegui); }
+    else if (r.esito === 'aspetta') await mostraFatto({ testo: 'Non ancora.', nota: r.errore, no: true }, card);
+    else rispostaFissa(`Non è andata: ${r.errore || r.esito}${/intatto/.test(r.errore || '') ? '' : '. Il vault di prima è intatto.'}`, { errore: true });
+    return r;
+  };
+  await attendiDecisione(card, esegui);
+}
+async function collegaAltro(dove) {
+  const r = await BRIDGE.invoca('sync:collega', dove).catch(e => ({ esito: 'errore', errore: e.message }));
+  await aggiornaSync();
+  if (r.esito === 'ok') return mostraFatto({ testo: `Collegato al vault in ${r.servizio}.`, nota: [r.avviso, r.stato === 'password' ? 'I dati di Lode sono protetti da una password: scrivila per riceverli.' : 'Ricevo i dati dagli altri computer: arrivano da soli. Lode è già usabile.',
+    r.importati ? `I dati che avevi su questo computer (${r.importati} record) sono in «Dati di un altro primo avvio» nella scheda «Sincronizza»: importali da lì. Il file di prima resta nel vault «${r.vaultPrima}».` : ''].filter(Boolean).join(' ') });
+  if (r.esito !== 'annullato') rispostaFissa(r.errore || 'Non riesco a usare quella cartella.', { errore: true });
+}
+function schedaSyncAccesa(cosa) {
+  // fermo (il diario non si legge): solo la frase e «Riprova». Prima i rami della password guardavano uno stato vuoto e dicevano
+  // «Senza password…» con [Proteggi con una password] anche per un gruppo cifrato (giro 3)
+  if (SYNC.fermo) {
+    const f = scheda('ld-sync', `<span class="ld-lbl">Sincronizza fra i tuoi computer</span><p class="ld-sync-stato"><b>Il diario di Lode su questo computer non si legge</b></p>
+      <p class="ld-nota">Niente è stato cancellato: la cartella dei dati di Lode non risponde (disco pieno o guasto?). Le modifiche di adesso vanno in un file a parte.</p><div class="ld-riga-form"><button type="button" class="btn small primary" data-riprova>Riprova</button></div>`);
+    f.querySelector('[data-riprova]')?.addEventListener('click', () => location.reload());
+    return f;
+  }
+  const st = SYNC, bloccata = syncBloccata(), avvisi = (st.avvisi || []).filter(a => TS.AVVISI[a] && !(a === 'altra_password' && st.stato === 'rigenerato') && !(a === 'scrittura' && st.stato === 'scrittura'));
+  const s = scheda('ld-sync', `<span class="ld-lbl">Sincronizza fra i tuoi computer</span>
+    <p class="ld-sync-stato"><b>${esc(TS.rigaStato(st))}</b></p>
+    ${avvisi.map(a => `<p class="ld-nota">${esc(TS.AVVISI[a])}</p>`).join('')}
+    ${st.stato === 'sparito' ? '<p class="ld-nota">I dati di Lode di questo computer sono al sicuro nel suo diario. Se hai spostato il vault, scegli la cartella dove l\'hai messo.</p><div class="ld-riga-form"><button type="button" class="btn small primary" data-trova>Trova il vault</button></div>' : ''}
+    ${st.vecchiaDiversi ? `<p class="ld-nota"><b>Da una Lode vecchia:</b> ${st.vecchiaDiversi} ${st.vecchiaDiversi === 1 ? 'campo diverso' : 'campi diversi'} da quelli di adesso. Non cambiano niente da soli: la copia del file è nella cartella dei dati di Lode (sync/copie).</p>` : ''}
+    ${st.aggiunte ? `<p class="ld-nota"><b>Dati di un altro primo avvio o di una Lode vecchia:</b> ${st.aggiunte} ${st.aggiunte === 1 ? 'record' : 'record'} (esami, carte, sessioni…) che il diario non ha. Non entrano da soli.</p><div class="ld-riga-form"><button type="button" class="btn small" data-aggiunte>Importa le aggiunte</button></div>` : ''}
+    ${bloccata || cosa === 'sblocca' && st.cifrato ? `<div class="ld-sync-pw"><span class="ld-lbl">Password dei dati di Lode</span><div class="ld-riga-form"><input type="password" autocomplete="current-password" aria-label="Password" data-pw><button type="button" class="btn small primary" data-sblocca>Sblocca</button></div>
+      <p class="ld-nota">Intanto Lode funziona con i dati di questo computer: le modifiche aspettano nel diario. ${esc(testoPortachiavi())}</p><small class="ld-tenue" data-msg></small>
+      <p class="ld-nota">${esc(TS.DIMENTICATA)}</p><button type="button" class="btn small" data-dimenticata>Ho dimenticato la password</button>${st.ricordate ? ' <button type="button" class="btn small" data-dimentica>Dimentica la password qui</button>' : ''}</div>`
+    : st.cifrato ? `<p class="ld-nota"><b>Cifrati:</b> ${esc(TS.CIFRATI)}. <b>In chiaro nella cartella cloud:</b></p>${listaChiaro()}<p class="ld-nota">${esc(TS.SUL_COMPUTER)}</p>
+      <div class="ld-riga-form"><button type="button" class="btn small" data-cambia>Cambia password</button>${st.chiave || st.ricordate ? '<button type="button" class="btn small" data-dimentica>Dimentica la password qui</button>' : ''}</div>`
+    : `<p class="ld-nota">Senza password: chi può leggere la tua cartella cloud può leggere anche i dati di Lode, come già gli appunti.</p>
+      <div class="ld-riga-form"><button type="button" class="btn small" data-proteggi>Proteggi con una password</button></div>`}
+    ${st.recupero ? `<p class="ld-nota">Le modifiche che il diario non ha potuto prendere sono ${st.recuperi > 1 ? `in ${st.recuperi} file «recupero-…json» (l'ultimo: «${esc(st.recupero)}»)` : `nel file «${esc(st.recupero)}»`}, nella cartella dei dati di Lode: non le ho buttate.</p>` : ''}
+    <div class="ld-riga-form" style="margin-top:12px"><button type="button" class="btn small" data-smetti>Smetti su questo computer</button></div><small class="ld-tenue" data-msg2></small>`);
+  const msg = t => { const m = s.querySelector('[data-msg]') || s.querySelector('[data-msg2]'); if (m) m.textContent = t; };
+  s.querySelector('[data-trova]')?.addEventListener('click', () => collegaAltro({ scegli: true }));
+  s.querySelector('[data-aggiunte]')?.addEventListener('click', async e => {
+    e.currentTarget.disabled = true;
+    const r = await BRIDGE.invoca('sync:importaAggiunte').catch(x => ({ esito: 'errore', errore: x.message }));
+    await aggiornaSync(); aggiornaTutto();
+    if (r.esito === 'ok') mostraFatto({ testo: r.importati === 1 ? 'Importato 1 record.' : `Importati ${r.importati} record.`, nota: 'Ora sono su tutti i computer.' }, s);
+    else msg(r.errore || 'Non è andata.');
+  });
+  s.querySelector('[data-sblocca]')?.addEventListener('click', async e => {
+    const b = e.currentTarget, pw = s.querySelector('[data-pw]').value; if (!pw) return msg('Scrivi la password.');
+    b.disabled = true; msg('Controllo…');
+    const r = await BRIDGE.invoca('sync:sblocca', { password: pw }).catch(x => ({ esito: 'errore', errore: x.message }));
+    s.querySelector('[data-pw]').value = ''; b.disabled = false;
+    if (r.esito !== 'ok') return msg(r.errore || 'Non è andata.');
+    await aggiornaSync(); aggiornaTutto();
+    mostraFatto({ testo: 'Sbloccata.', nota: r.ricordata ? 'La password è ricordata su questo computer.' : 'Te la chiederò al prossimo avvio.' }, s);
+  });
+  s.querySelector('[data-pw]')?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); s.querySelector('[data-sblocca]')?.click(); } });
+  const nuovaPassword = (titolo, nota) => {
+    const card = schedaConferma({ titolo, extra: `<div class="ld-riga-form"><input type="password" autocomplete="new-password" placeholder="Password nuova (almeno 8 caratteri)" aria-label="Password nuova" data-pw><input type="password" autocomplete="new-password" placeholder="Ripetila" aria-label="Ripeti la password" data-pw2></div><small class="ld-tenue" data-msg></small>`, nota, fuoco: false });
+    card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = 'Si conferma solo col clic.';
+    const esegui = async () => {
+      const pw = card.querySelector('[data-pw]').value, m = t => { card.querySelector('[data-msg]').textContent = t; };
+      if (pw.length < 8) { m('Almeno 8 caratteri.'); return attendiDecisione(card, esegui); }
+      if (pw !== card.querySelector('[data-pw2]').value) { m('Le due password non sono uguali.'); return attendiDecisione(card, esegui); }
+      card.querySelectorAll('input[type=password]').forEach(i => { i.value = ''; });
+      const r = await BRIDGE.invoca('sync:cifra', { password: pw }).catch(x => ({ esito: 'errore', errore: x.message }));
+      await aggiornaSync(); aggiornaTutto();
+      if (r.esito === 'ok') await mostraFatto({ testo: 'Password nuova pronta.', nota: 'Gli altri computer te la chiederanno una volta.' }, card);
+      else rispostaFissa(r.errore || 'Non è andata.', { errore: true });
+      return r;
+    };
+    return attendiDecisione(card, esegui);
+  };
+  s.querySelector('[data-cambia]')?.addEventListener('click', () => nuovaPassword('Cambiare la password?', 'Lode rifà i dati di Lode nella cartella cloud con la password nuova. ' + TS.NUOVA_PASSWORD));
+  s.querySelector('[data-dimenticata]')?.addEventListener('click', () => nuovaPassword('Scegliere una password nuova?', TS.NUOVA_PASSWORD));
+  // §10.4 «proteggo dopo»: il main (sync:cifra) e il motore (cifra() da in_pari) lo sapevano già fare, mancava il bottone
+  s.querySelector('[data-proteggi]')?.addEventListener('click', () => nuovaPassword('Proteggere i dati di Lode con una password?', 'Lode rifà i dati di Lode nella cartella cloud, cifrati con la password. Gli altri computer te la chiederanno. ' + TS.CRONOLOGIA));
+  s.querySelector('[data-dimentica]')?.addEventListener('click', async e => { e.currentTarget.disabled = true; await BRIDGE.invoca('sync:dimentica'); await aggiornaSync(); mostraFatto({ testo: 'Password dimenticata su questo computer.', nota: 'Te la chiederò di nuovo.' }, s); });
+  s.querySelector('[data-smetti]')?.addEventListener('click', () => chiediSmetti());
+  if (cosa === 'smetti') chiediSmetti();
+  if (bloccata || cosa === 'sblocca') requestAnimationFrame(() => s.querySelector('[data-pw]')?.focus({ preventScroll: true }));
+  if (A.turno) A.turno.dataset.sintesi = 'sincronizza';
+}
+// «Smetti su questo computer» (§11): non esiste un segnale che spegne tutto per tutti
+async function chiediSmetti() {
+  const card = schedaConferma({ titolo: 'Smettere su questo computer?', righe: [['Vault', 'copiato in una cartella fuori dalla cartella cloud, che scegli tu'], ['Dati di Lode', 'tutti, anche quelli degli altri computer fino a oggi'], ['Gli altri computer', 'continuano a sincronizzarsi tra loro']],
+    nota: TS.SMETTI(SYNC?.servizio), fuoco: false });
+  card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = 'Si conferma solo col clic.';
+  await attendiDecisione(card, async () => {
+    const r = await BRIDGE.invoca('sync:smetti').catch(e => ({ esito: 'errore', errore: e.message }));
+    await aggiornaSync(); aggiornaTutto();
+    if (r.esito === 'ok') await mostraFatto({ testo: 'Smesso su questo computer.', nota: 'Il vault ora è fuori dalla cartella cloud. Per smettere ovunque, fallo su ogni computer.', sintesi: 'sincronizzazione smessa qui' }, card);
+    else if (r.esito === 'annullato') await mostraFatto({ testo: 'Annullato.', nota: 'Non ho cambiato niente.', no: true }, card);
+    else rispostaFissa(r.errore || 'Non è andata.', { errore: true });
+    return r;
+  });
 }
 
 /* ---------- navigare il vault ---------- */
@@ -1290,6 +1481,7 @@ async function esegui(c) {
     case 'naviga': return schedaNote(c.q);
     case 'chiudiLezione': return chiudiLezione(c.corso);
     case 'prepara': return schedaPrepara(c.cosa);
+    case 'sincronizza': return schedaSincronizza(c.cosa);
     case 'ai': return schedaAI(c.fornitore);
     case 'proposte': D.imp.allenatore = c.livello; salva(); return mostraFatto({ testo: c.livello === 'mai' ? 'Proposte spente.' : `Proposte ${({ poco: 'poche', normale: 'normali', spesso: 'frequenti' })[c.livello]}.`, nota: c.livello === 'mai' ? 'Le riaccendi quando vuoi.' : 'Mai a lezione, in focus o nelle ore di silenzio.' });
     case 'proponi': { const r = await provaAllenatore(true); return r?.includes(':') ? null : rispostaFissa('Per ora non ho niente da proporti: aggiungi un esame con la data, o segna qualche definizione a lezione.'); }
@@ -1806,13 +1998,21 @@ export function avvia() {
       if (A.aperto && A.home && !shell.contains(document.activeElement)) disegnaHome();
       if (prima !== s.fase && !A.aperto && (s.fase === 'pronta' || s.fase === 'da_scaricare')) mostraAvviso(s.fase === 'pronta' ? `Lode ${s.nuova.versione} è pronta` : `È uscita Lode ${s.nuova.versione}`, true);
     });
+    aggiornaSync().then(() => { if (A.aperto && A.home) disegnaHome(); });
+    // lo stato arriva dal main a ogni giro: la riga in home e nel «Prepara Lode», e un avviso se serve la password
+    BRIDGE.su('sync:stato', x => {
+      const prima = syncBloccata(), primo = SYNC?.stato; SYNC = x; piedeSync();
+      document.querySelectorAll('.ld-prepara .ld-prep[data-k="sync"] .d').forEach(d => { d.textContent = TS.rigaStato(x); });
+      if (prima !== syncBloccata() || primo !== x.stato) { if (A.aperto && A.home && !shell.contains(document.activeElement)) disegnaHome(); if (!prima && syncBloccata() && !A.aperto) mostraAvviso('Sincronizzazione in pausa · scrivi la password', true); }
+    });
+    BRIDGE.su('sync:progresso', x => document.querySelectorAll('.ld-sync-avanza').forEach(p => { p.textContent = x.testo || ''; }));
     V.suProgresso(x => { avanzamenti[x.cosa] = x; if (x.fase === 'fatto' || x.fase === 'errore') { delete avanzamenti[x.cosa]; aggiornaStato(); } document.querySelectorAll('.ld-prepara').forEach(s => mostraAvanzamento(s, x.cosa, x)); if (!A.aperto && x.fase !== 'fatto' && x.fase !== 'errore' && x.p != null) mostraAvviso(`${x.cosa === 'obsidian' ? 'Obsidian' : 'Cervello locale'} · ${Math.round(x.p * 100)}%`, true); });
   }
   if (F.stato()?.fase === 'focus' && !F.stato().fermo) setTimeout(() => segnala('focus'), 600);
 }
 // la pagina sotto chiede a Lode di fare cose (ripassa, interroga, focus) dal suo pannello
 // per le prove automatiche (test/): accesso ai motori della barra
-window.__lode = { D: () => D, AI, invia, provaAllenatore, AL, riceviFile, O, ripeti, condividiLezione, indietro, TR, Voce, avviaTrascrizione, fermaTrascrizione, riordinaLezione, stato: () => A, ST, PR, ER, DI };
+window.__lode = { D: () => D, SYNC: () => SYNC, aggiornaSync, schedaSincronizza, AI, invia, provaAllenatore, AL, riceviFile, O, ripeti, condividiLezione, indietro, TR, Voce, avviaTrascrizione, fermaTrascrizione, riordinaLezione, stato: () => A, ST, PR, ER, DI };
 export const azioni = {
   focus: esameId => avviaFocus({ esameId }),
   ripassa: esameId => { apri({ fisso: true }); nuovoTurno(); detto(A.turno, esameId ? 'Ripassa ' + esame(esameId)?.nome : 'Ripasso'); schedaRipasso(esameId); },

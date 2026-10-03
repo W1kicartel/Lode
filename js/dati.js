@@ -46,11 +46,24 @@ export function backupValido(d) {
 }
 // i dati non si sono potuti leggere (non «non ci sono»: OneDrive offline, file bloccato): Lode lo dice e non li sovrascrive
 export let datiIllegibili = null;
+// Con la sincronizzazione accesa (desktop/sincronizza.mjs) i dati arrivano dal diario con una versione (__ver): salva() la
+// rimanda, così il main confronta D con la BASE che questa finestra aveva davvero e ne ricava gli eventi (docs/SINCRONIZZAZIONE.md
+// §7). OPS: le operazioni che le differenze non sanno dire da sole (il ripasso con la risposta e il giorno, per l'SM-2 di
+// js/sm2.js). Con la sincronizzazione spenta VER resta null e tutto va come prima (dati.json intero)
+let VER = null;
+const OPS = [];
+// la forma di D che questa finestra ha mandato (o ricevuto) per ultima. Se D è cambiato da allora senza salva() (il gioco delle
+// definizioni e «Cosa stampa?» salvano solo alla fine), prima di sostituirlo con una vista nuova si manda (§7): prima ogni vista
+// che arrivava (un altro computer, Orario.md scritto in Obsidian, l'altra finestra) buttava le risposte della sessione
+let mandato = null;
+const forma = d => { try { return JSON.stringify({ ...d, imp: { ...d.imp, chiave: '' } }); } catch { return null; } };
+const prendiVersione = g => { if (g && g.__ver != null) { VER = g.__ver; delete g.__ver; } return g; };
 function carica() {
   let d = null;
-  try { const g = DESKTOP ? window.lodeDesktop.leggiDati() : JSON.parse(localStorage.getItem(CHIAVE)); if (g?.__errore) datiIllegibili = g.__errore; d = unisci(g); } catch { }
+  try { const g = prendiVersione(DESKTOP ? window.lodeDesktop.leggiDati({ ...VUOTO(), imp: { ...VUOTO().imp, chiave: '' } }) : JSON.parse(localStorage.getItem(CHIAVE))); if (g?.__errore) datiIllegibili = g.__errore; d = unisci(g); } catch { }
   d ||= VUOTO();
   if (DESKTOP) d.imp.chiave = chiaveLocale();
+  if (VER != null) mandato = forma(d);
   return d;
 }
 export let D = carica();
@@ -58,14 +71,47 @@ export function salva() {
   try {
     if (DESKTOP) {
       const c = { ...D, imp: { ...D.imp, chiave: '' } };
-      window.lodeDesktop.salvaDati(c);
+      window.lodeDesktop.salvaDati(c, VER != null ? { ver: VER, ops: OPS.splice(0) } : undefined);
+      if (VER != null) mandato = JSON.stringify(c);
       if (D.imp.chiave) localStorage.setItem('lode:chiave', D.imp.chiave); else localStorage.removeItem('lode:chiave');   // scollegata: niente resta sul disco
     } else localStorage.setItem(CHIAVE, JSON.stringify(D));
   } catch (e) { console.warn('Lode: salvataggio non riuscito', e); }
   dispatchEvent(new CustomEvent('lode:dati'));
 }
 // un'altra finestra dell'app (o un altro computer, via vault sincronizzato) ha cambiato i dati
-if (DESKTOP) window.lodeDesktop.su('dati:cambiati', d => { const n = unisci(d); if (!n) return; n.imp.chiave = D.imp.chiave; D = n; datiIllegibili = null; dispatchEvent(new CustomEvent('lode:dati')); });
+if (DESKTOP) window.lodeDesktop.su('dati:cambiati', d => {
+  // prima le modifiche fatte qui e non ancora mandate, con la versione che questa finestra aveva (il main le confronta con quella BASE)
+  if (VER != null && d?.__ver != null && forma(D) !== mandato) salva();
+  const n = unisci(prendiVersione(d)); if (!n) return; n.imp.chiave = D.imp.chiave; D = n; datiIllegibili = null;
+  if (VER != null) mandato = forma(D);
+  dispatchEvent(new CustomEvent('lode:dati'));
+});
+// «Annulla» (js/lode.js, istantanea): l'operazione inversa di un comando, solo su quello che il comando ha cambiato.
+const copiaJ = x => (x === undefined ? undefined : JSON.parse(JSON.stringify(x)));
+const stessoJ = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const conId = a => Array.isArray(a) && a.length > 0 && a.every(r => r && typeof r === 'object' && typeof r.id === 'string');
+// p, q: prima e dopo il comando; cur: l'oggetto di adesso, cambiato sul posto. Liste di record per id (creato → via, tolto →
+// torna, cambiato → solo i campi cambiati); un valore torna com'era solo se nessuno l'ha cambiato dopo il comando
+export function inverti(p, q, cur) {
+  if (!cur || typeof cur !== 'object') return;
+  for (const k of new Set([...Object.keys(p || {}), ...Object.keys(q || {})])) {
+    const a = p?.[k], b = q?.[k];
+    if (stessoJ(a, b)) continue;
+    if ((conId(a) || conId(b)) && (a === undefined || Array.isArray(a)) && (b === undefined || Array.isArray(b))) {
+      const lista = Array.isArray(cur[k]) ? cur[k] : (cur[k] = []);
+      const ma = new Map((a || []).map(r => [r.id, r])), mb = new Map((b || []).map(r => [r.id, r]));
+      for (const [id, r] of mb) {
+        const i = lista.findIndex(x => x?.id === id);
+        if (!ma.has(id)) { if (i >= 0) lista.splice(i, 1); } else if (i >= 0) inverti(ma.get(id), r, lista[i]);
+      }
+      for (const [id, r] of ma) if (!mb.has(id) && !lista.some(x => x?.id === id)) lista.push(copiaJ(r));
+      continue;
+    }
+    if (a && b && typeof a === 'object' && typeof b === 'object' && !Array.isArray(a) && !Array.isArray(b)) { inverti(a, b, cur[k]); continue; }
+    if (stessoJ(cur[k], b)) { if (a === undefined) delete cur[k]; else cur[k] = copiaJ(a); }
+  }
+}
+
 export function sostituisci(nuovi) { D = { ...VUOTO(), ...nuovi, esami: (nuovi.esami || []).map(inForma), profilo: { ...VUOTO().profilo, ...nuovi.profilo }, imp: { ...VUOTO().imp, ...nuovi.imp, chiave: D.imp.chiave }, codice: { ...VUOTO().codice, ...nuovi.codice } }; salva(); }
 // la chiave AI non esce mai in un'esportazione
 export function esporta() { const c = structuredClone(D); c.imp.chiave = ''; return c; }
@@ -195,6 +241,7 @@ export function rispondi(c, q) {
   if (q < 3) { c.rip = 0; c.int = 0; c.scad = oggi(); }
   else { c.rip += 1; c.int = int; c.scad = piuGiorni(oggi(), int); }
   c.ease = Math.max(1.3, c.ease + .1 - (5 - q) * (.08 + (5 - q) * .02));
+  if (VER != null) OPS.push({ tipo: 'ripasso', carta: c.id, q, giorno: oggi(), ris: { ease: c.ease, int: c.int, rip: c.rip, scad: c.scad } });
   salva();
 }
 export const intervalloTesto = n => n === 0 ? 'ora' : n === 1 ? '1 g' : n < 30 ? `${n} g` : n < 365 ? `${Math.round(n / 30)} mesi` : `${num(n / 365)} anni`;
@@ -282,6 +329,7 @@ export function esempio() {
   const T = oggi(), d = VUOTO();
   d.profilo = { nome: 'Giulia', corso: 'Ingegneria informatica', cfuTotali: 180, lode: 30 };
   d.benvenuto = true; d.imp = { ...D.imp };
+  d.esempio = true;   // il segno dei dati di esempio: il benvenuto li riconosce da qui, non dai nomi degli esami (comunissimi anche veri)
   const E = (nome, cfu, voto, lode, giorniFa) => ({ id: id(), nome, cfu, voto, lode, idoneita: voto == null, fatto: true, data: piuGiorni(T, -giorniFa), oreObiettivo: null });
   d.esami = [
     E('Analisi 1', 9, 27, false, 300), E('Fondamenti di informatica', 9, 30, true, 290), E('Geometria e algebra lineare', 6, 24, false, 250),

@@ -56,6 +56,15 @@ jobs:
       # aggiornamenti (desktop/aggiorna.mjs): versioni, installer giusto, latest*.yml, Mac senza firma, finto electron-updater
       - name: Aggiornamenti
         run: node test/aggiorna.mjs
+      # sincronizzazione v2 (docs/SINCRONIZZAZIONE.md): le parti pure del motore, il simulatore che prova se stesso, gli scenari
+      # dei problemi noti e un giro di fuzz con semi fissi (riproducibile: un errore si rifà in locale con lo stesso seme)
+      - name: Sincronizzazione (motore, simulatore, scenari, fuzz)
+        run: |
+          node test/sync-motore.mjs
+          node test/sync-sim/autoprova.mjs
+          node test/sync-sim/scenari.mjs --motore test/sync-sim/motore-v2.mjs
+          node test/sync-sim/fuzz.mjs --motore test/sync-sim/motore-v2.mjs --giri 300 --seme 1
+          node test/sync-sim/fuzz.mjs --motore test/sync-sim/motore-v2.mjs --giri 200 --seme 1 --cifratura
       # cosa finirebbe in pubblico (test/controlla-privacy.mjs): niente chiavi, percorsi con un nome vero, file privati,
       # codice da CDN senza versione esatta, pacchetti fuori dal registro npm. Gira anche quando una prova sopra è fallita
       - name: Privacy (chiavi, nomi, versioni esatte)
@@ -126,6 +135,9 @@ jobs:
           LODE_FOTO: ${{ runner.temp }}\out\foto
           LODE_RISULTATI: ${{ runner.temp }}\out\risultati.json
         run: node test/prova-app.mjs
+      # la sincronizzazione nell'app vera: tre computer, uno alla volta, su una cartella «cloud» temporanea
+      - name: Sincronizzazione nell'app
+        run: node test/sincronizza-app.mjs
       # risultati e foto passano a «risultati-windows» (qui sotto) come artifact: questo job ha eseguito l'app, Ollama e gli
       # installer scaricati, che restano accesi fino alla fine e non devono vedere un token che scrive
       - name: Risultati per il ramo risultati-windows

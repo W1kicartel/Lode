@@ -148,10 +148,11 @@ body{--font-text-theme:"Geist",-apple-system,"Segoe UI",sans-serif;--font-monosp
 .markdown-rendered h2{letter-spacing:-.02em}
 `;
 
+// orario null: Orario.md non si crea (con la sincronizzazione lo scrive il motore, mai «perché manca»: docs/SINCRONIZZAZIONE.md §9, #40)
 export function crea(vault, orario = []) {
   for (const d of ['Lezioni', 'Corsi', 'Lode', 'Modelli', 'Allegati', 'Inbox', '.lode']) mkdirSync(join(vault, d), { recursive: true });
   seManca(join(vault, 'Benvenuto.md'), BENVENUTO);
-  seManca(join(vault, 'Orario.md'), M.orarioMd(orario));
+  if (orario) seManca(join(vault, 'Orario.md'), M.orarioMd(orario));
   seManca(join(vault, 'Lode', 'Memoria.md'), MEMORIA);
   seManca(join(vault, 'Modelli', 'Lezione.md'), MODELLO);
   seManca(join(vault, 'Modelli', 'Esame.md'), MODELLO_ESAME);
@@ -278,7 +279,8 @@ export function memoria(vault, testo) {
 }
 
 /* ---------- guardare il vault ---------- */
-export function guarda(vault, { lezioniCambiate, orarioCambiato, noteCambiate }) {
+// syncCambiato (facoltativo): un file della sincronizzazione (.lode/sync, .lode/dati.json) o un Orario*.md, per il motore
+export function guarda(vault, { lezioniCambiate, orarioCambiato, noteCambiate, syncCambiato = null }) {
   let t1 = 0, t2 = 0, ultimoOrario = null;
   const segnaOrario = testo => { ultimoOrario = testo; };
   const orario = () => { try { const t = readFileSync(join(vault, 'Orario.md'), 'utf8'); if (t !== ultimoOrario) { ultimoOrario = t; orarioCambiato(M.leggiOrario(t)); } } catch { } };
@@ -286,8 +288,9 @@ export function guarda(vault, { lezioniCambiate, orarioCambiato, noteCambiate })
   try {
     w = watch(vault, { recursive: true }, (_, nome) => {
       // Windows: con tanti cambi insieme (OneDrive, git, uno zip) il nome si perde: può essere cambiato tutto, si rilegge tutto
-      if (!nome) { clearTimeout(t1); t1 = setTimeout(lezioniCambiate, 300); clearTimeout(t2); t2 = setTimeout(() => { orario(); noteCambiate(); }, 300); return; }
+      if (!nome) { clearTimeout(t1); t1 = setTimeout(lezioniCambiate, 300); clearTimeout(t2); t2 = setTimeout(() => { orario(); noteCambiate(); }, 300); syncCambiato?.(); return; }
       const n = String(nome).split(sep).join('/');
+      if (syncCambiato && (n.startsWith('.lode/sync/') || n === '.lode/dati.json' || /^Orario.*\.md$/.test(n))) syncCambiato();
       if (!n.endsWith('.md') || n.includes('.tmp-')) return;
       if (n.startsWith('Lezioni/')) { clearTimeout(t1); t1 = setTimeout(lezioniCambiate, 300); }
       else if (n === 'Orario.md') setTimeout(orario, 200);
