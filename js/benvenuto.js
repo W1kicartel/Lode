@@ -57,7 +57,30 @@ const P = k => PASSI.find(p => p.k === k);
 function ciao() {
   guscio(`<h1>Ciao.<br>Io sono Lode.</h1>
     <p class="bv-sub">Vivo in una piccola barra in cima allo schermo. In aula non ti faccio perdere niente, a casa ti alleno su quello che stai per dimenticare, e tengo tutto nel tuo Obsidian.</p>
-    <p class="bv-nota">Prima tre cose necessarie (due minuti, più i download). Poi, se vuoi, il setup veloce.</p>`, { avanti: 'Iniziamo', indietro: false });
+    <p class="bv-nota">Prima tre cose necessarie (due minuti, più i download). Poi, se vuoi, il setup veloce.</p>
+    ${L ? '<p class="bv-nota"><button type="button" class="btn piano" data-bv-altro>Uso già Lode su un altro computer</button></p><div class="bv-altro"></div>' : ''}`, { avanti: 'Iniziamo', indietro: false });
+  main.querySelector('[data-bv-altro]')?.addEventListener('click', altroComputer);
+}
+// il secondo computer: il vault c'è già nella cartella cloud (desktop/sincronizza.mjs). Si sceglie, e i dati arrivano da lì:
+// nome, esami e carte non si chiedono di nuovo, si passa alle installazioni. Il vault di questo computer resta dov'è
+async function altroComputer() {
+  const box = main.querySelector('.bv-altro'); if (!box) return;
+  const cart = await L.invoca('sync:cartelle').catch(() => []);
+  const v = cart.flatMap(c => c.vaults.map(x => ({ ...x, i: c.i, servizio: c.servizio })));
+  box.innerHTML = `<p class="bv-sub">Scegli il vault di Lode nella cartella cloud che usi (iCloud Drive, OneDrive, Dropbox, Google Drive, Syncthing). Il vault di questo computer resta dov'è.</p>
+    <div class="bv-scelte">${v.map((x, k) => `<button type="button" class="btn" data-v="${k}">${esc(x.nome)} · ${esc(x.servizio)}</button>`).join('')}<button type="button" class="btn" data-v="altro">Scegli la cartella…</button></div><p class="bv-nota" data-msg></p>`;
+  entra(box, { dy: 8, blur: 6, ms: 420 });
+  box.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', async () => {
+    const x = v[+b.dataset.v], msg = box.querySelector('[data-msg]');
+    msg.textContent = 'Collego…';
+    const r = await L.invoca('sync:collega', x ? { i: x.i, j: x.j } : { scegli: true }).catch(e => ({ esito: 'errore', errore: e.message }));
+    if (r.esito === 'annullato') { msg.textContent = ''; return; }
+    if (r.esito !== 'ok') { msg.textContent = r.errore || 'Non riesco a usare quella cartella.'; return; }
+    msg.textContent = r.bloccata ? 'Collegato. I dati di Lode sono cifrati: la barra ti chiederà la password.' : `Collegato a ${r.servizio}: esami, voti e carte arrivano dall'altro computer.`;
+    await new Promise(ok => setTimeout(ok, 1400));
+    S.nome = D.profilo.nome || S.nome; S.esempio = false;
+    S.passo = PASSI.findIndex(p => p.k === 'installa'); disegna();
+  }));
 }
 function nome() {
   guscio(`<h1>Come ti chiami?</h1><p class="bv-sub">Solo per salutarti. Resta sul tuo computer.</p>

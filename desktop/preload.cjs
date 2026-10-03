@@ -1,12 +1,15 @@
 // Il ponte fra la barra e il computer: solo questi canali, niente altro.
 const { contextBridge, ipcRenderer } = require('electron');
 const IN = ['dati:cambiati', 'vault:lezioni', 'vault:orario', 'vault:info', 'scorciatoia', 'installa:progresso', 'locale:pezzo', 'voce:progresso', 'ai:pezzo',
-  'progetto:cambiato', 'progetto:fatto', 'progetto:uscita', 'progetto:esito', 'aggiorna:cambiato'];
+  'progetto:cambiato', 'progetto:fatto', 'progetto:uscita', 'progetto:esito', 'aggiorna:cambiato', 'sync:stato', 'sync:progresso'];
 const OUT = ['vault:info', 'vault:lezioni', 'vault:annota', 'vault:apri', 'vault:scrivi', 'vault:memoria', 'vault:scegli', 'vault:blocco', 'vault:note', 'finestra:rilascia', 'sistema:inattivo', 'installa:stato', 'installa:obsidian', 'installa:cervello', 'locale:chat', 'locale:stop', 'locale:scalda', 'vault:leggi', 'vault:salvaFile', 'vault:mostra', 'condividi', 'benvenuto:fatto', 'vault:pulisciCorsi', 'voce:stato', 'voce:prepara', 'voce:trascrivi', 'voce:riposa', 'ai:chat', 'ai:stop', 'ai:modelli', 'scorciatoie:stato',
   // informatica: segui il progetto (la barra manda solo l'id, mai percorsi o comandi) ed «spiegami l'errore» dagli appunti
   'progetto:scegli', 'progetto:segui', 'progetto:smetti', 'progetto:stato', 'progetto:diff', 'progetto:righe', 'progetto:rileva', 'progetto:conferma', 'progetto:prova', 'progetto:visto', 'appunti:errore',
   // le versioni nuove di Lode (desktop/aggiorna.mjs): la barra chiede solo azioni, gli URL li decide il main
-  'aggiorna:stato', 'aggiorna:imposta', 'aggiorna:riavvia', 'aggiorna:scarica'];
+  'aggiorna:stato', 'aggiorna:imposta', 'aggiorna:riavvia', 'aggiorna:scarica',
+  // la sincronizzazione fra i computer (desktop/sincronizza.mjs): la barra manda solo indici di un elenco fatto dal main, e la
+  // password (che il main usa e dimentica), mai percorsi
+  'sync:stato', 'sync:cartelle', 'sync:attiva', 'sync:collega', 'sync:cifra', 'sync:sblocca', 'sync:dimentica', 'sync:smetti', 'sync:ricomincia'];
 // il ponte solo nelle pagine di Lode, che arrivano da file:// (la cartella dell'app). Se una finestra finisse su un'altra
 // pagina (main.mjs lo impedisce già, restaLode), quella pagina riceverebbe lo stesso preload: così non trova il ponte
 if (location.protocol === 'file:') contextBridge.exposeInMainWorld('lodeDesktop', {

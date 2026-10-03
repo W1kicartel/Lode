@@ -44,7 +44,10 @@ export function backupValido(d) {
   return ogg(d) && d.v === 1 && Array.isArray(d.esami) && d.esami.every(esameOk) && lista(d.carte, cartaOk) && lista(d.orario, orarioOk) && lista(d.sessioni, sessioneOk)
     && (d.profilo == null || (ogg(d.profilo) && testo(d.profilo.nome) && testo(d.profilo.corso) && numero(d.profilo.cfuTotali) && numero(d.profilo.lode))) && (d.imp == null || ogg(d.imp));
 }
-// i dati non si sono potuti leggere (non «non ci sono»: OneDrive offline, file bloccato): Lode lo dice e non li sovrascrive
+// i dati non si sono potuti leggere (non «non ci sono»: OneDrive offline, file bloccato): Lode lo dice e non li sovrascrive.
+// 'bloccati': la sincronizzazione è cifrata e su questo computer manca la password (desktop/sincronizza.mjs).
+// Con la sincronizzazione accesa D porta anche __rev: la versione da cui la barra è partita, che il main usa per capire cosa
+// è cambiato qui e cosa è arrivato dall'altro computer (docs/SINCRONIZZAZIONE.md). salva() lo rimanda così com'è
 export let datiIllegibili = null;
 function carica() {
   let d = null;
@@ -67,8 +70,8 @@ export function salva() {
 // un'altra finestra dell'app (o un altro computer, via vault sincronizzato) ha cambiato i dati
 if (DESKTOP) window.lodeDesktop.su('dati:cambiati', d => { const n = unisci(d); if (!n) return; n.imp.chiave = D.imp.chiave; D = n; datiIllegibili = null; dispatchEvent(new CustomEvent('lode:dati')); });
 export function sostituisci(nuovi) { D = { ...VUOTO(), ...nuovi, esami: (nuovi.esami || []).map(inForma), profilo: { ...VUOTO().profilo, ...nuovi.profilo }, imp: { ...VUOTO().imp, ...nuovi.imp, chiave: D.imp.chiave }, codice: { ...VUOTO().codice, ...nuovi.codice } }; salva(); }
-// la chiave AI non esce mai in un'esportazione
-export function esporta() { const c = structuredClone(D); c.imp.chiave = ''; return c; }
+// la chiave AI non esce mai in un'esportazione (e nemmeno __rev, il numero di versione della sincronizzazione)
+export function esporta() { const c = structuredClone(D); c.imp.chiave = ''; delete c.__rev; return c; }
 // in ascolto da altre schede dello stesso browser
 addEventListener('storage', e => { if (e.key === CHIAVE && !DESKTOP) { D = carica(); dispatchEvent(new CustomEvent('lode:dati')); } });
 

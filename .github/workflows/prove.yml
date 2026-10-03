@@ -56,6 +56,10 @@ jobs:
       # aggiornamenti (desktop/aggiorna.mjs): versioni, installer giusto, latest*.yml, Mac senza firma, finto electron-updater
       - name: Aggiornamenti
         run: node test/aggiorna.mjs
+      # sincronizzazione fra computer (docs/SINCRONIZZAZIONE.md): unione, migrazione, copie in conflitto, cifratura,
+      # spostamento del vault interrotto, cartelle cloud. Tutto in cartelle temporanee
+      - name: Sincronizzazione fra computer
+        run: node test/sincronizza.mjs
       # cosa finirebbe in pubblico (test/controlla-privacy.mjs): niente chiavi, percorsi con un nome vero, file privati,
       # codice da CDN senza versione esatta, pacchetti fuori dal registro npm. Gira anche quando una prova sopra è fallita
       - name: Privacy (chiavi, nomi, versioni esatte)

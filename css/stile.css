@@ -208,6 +208,7 @@ html.benvenuto main{max-width:none;padding:0}
 .bv-piede div{display:flex;gap:8px}
 .bv-piede .btn{height:42px;padding:0 20px;font-size:14.5px}
 .bv-inst{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.bv-scelte{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .bv-riga{display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line)}
 .bv-riga b{display:block;font-size:16px;font-weight:600;letter-spacing:-.015em}
 .bv-riga .d{display:block;font-size:13.5px;color:var(--muted);margin-top:2px}

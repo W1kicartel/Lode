@@ -2,7 +2,7 @@
 // la barra ci scrive le ★ da esame, le definizioni e le domande, e rilegge tutto quando lo studente scrive in Obsidian.
 // La nota «Lode/Memoria.md» è ciò che Lode ha imparato dello studente: definizioni sicure e da rinforzare, orari, abitudini.
 // Nel browser (senza app) le stesse cose restano nei dati locali, così giochi e ripasso funzionano lo stesso.
-import { D, DESKTOP, definizioni, esame, id, impostaLezioniVault, lezioneOra, lezioni, oggi, salva, serie, minuti, ultimaLezioneFinita, dataLunga, dataBreve, norm, trovaEsame, prossimi, fatti, daFare, media, num, piano, giorniTra, cfuFatti, daRipassare, prossimaLezione } from './dati.js';
+import { D, DESKTOP, datiIllegibili, definizioni, esame, id, impostaLezioniVault, lezioneOra, lezioni, oggi, salva, serie, minuti, ultimaLezioneFinita, dataLunga, dataBreve, norm, trovaEsame, prossimi, fatti, daFare, media, num, piano, giorniTra, cfuFatti, daRipassare, prossimaLezione } from './dati.js';
 import { SEZIONI, GIORNI_BREVI, fileCorso, fileLezione, notaCorso, notaLezione, orarioMd, pulito } from './markdown.js';
 import { aggiornaDiario, sezioneMemoria } from './codice/diario.js';
 import { CONCETTI } from './codice/modelli.js';
@@ -13,7 +13,20 @@ export let info = null;   // { percorso, nome, obsidian: { installato, registrat
 const avvisa = () => dispatchEvent(new CustomEvent('lode:vault'));
 if (L) {
   L.su('vault:lezioni', l => impostaLezioniVault(l));
-  L.su('vault:orario', o => { D.orario = o.map(x => ({ id: id(), ...x })); salva(); });
+  // Orario.md cambiato (in Obsidian, o arrivato dalla cartella cloud): entrano solo le righe aggiunte e tolte (desktop/vault.mjs,
+  // differenzeOrario), mai l'orario intero al posto di quello che c'è (le lezioni aggiunte sull'altro computer restano)
+  L.su('vault:orario', x => {
+    if (Array.isArray(x)) x = { aggiunte: x, tolte: [], righe: x };
+    const k = o => [o.corso, (o.giorni || []).join(','), o.inizio, o.fine, o.aula || ''].join('|');
+    const via = new Map(); for (const o of x.tolte || []) via.set(k(o), (via.get(k(o)) || 0) + 1);
+    let cambiato = false;
+    const resta = D.orario.filter(o => { const c = via.get(k(o)); if (c) { via.set(k(o), c - 1); cambiato = true; return false; } return true; });
+    const ci = new Set(resta.map(k));
+    for (const o of x.aggiunte || []) if (!ci.has(k(o))) { resta.push({ id: id(), ...o }); ci.add(k(o)); cambiato = true; }
+    if (cambiato) { D.orario = resta; salva(); }
+    // Orario.md mostra un orario diverso da quello di Lode (una lezione aggiunta sull'altro computer): si riscrive
+    if (x.righe && D.orario.map(k).sort().join('\n') !== x.righe.map(k).sort().join('\n')) scriviOrario();
+  });
   L.su('vault:info', i => { info = i; avvisa(); });
   L.invoca('vault:info').then(i => { info = i; avvisa(); });
   L.invoca('vault:lezioni').then(l => impostaLezioniVault(l));
@@ -49,7 +62,8 @@ export async function apri(l) {
   try { return await L.invoca('vault:apri', { file: x.file || fileLezione(x), nuovo: x.file ? undefined : notaLezione(x) }); } catch (e) { return { esito: 'errore', errore: e.message }; }
 }
 export const apriVault = () => L?.invoca('vault:apri', { file: 'Benvenuto.md' });
-export function scriviOrario() { if (L) L.invoca('vault:scrivi', { file: 'Orario.md', testo: orarioMd(D.orario) }); }
+// con i dati bloccati (password non scritta) la barra parte vuota: un Orario.md vuoto cancellerebbe l'orario a tutti i computer
+export function scriviOrario() { if (L && !datiIllegibili) L.invoca('vault:scrivi', { file: 'Orario.md', testo: orarioMd(D.orario) }); }
 
 // le proposte dell'allenatore che funzionano (quelle accettate più spesso)
 const NOMI_PROP = { gioco: 'giochi', ripasso: 'ripasso delle carte', stelle: 'rileggere le ★', orale: 'domande lampo', focus: 'focus', stampa: 'cosa stampa' };
@@ -59,8 +73,10 @@ function proposte() {
   return k.length ? `- Delle proposte di Lode accetti soprattutto: ${k.slice(0, 2).map(([t, v]) => `${NOMI_PROP[t] || t} (${v.si} su ${v.tot})`).join(', ')}.\n` : '';
 }
 // la memoria di Lode, leggibile dallo studente: cosa sa, cosa sbaglia, come studia
+// con i dati non letti (bloccati da una password, cartella che non risponde) la barra parte vuota: le pagine non si
+// riscrivono, se no «Ancora nessun esame» arriverebbe nel vault condiviso e sugli altri computer
 export function scriviMemoria() {
-  if (!L) return;
+  if (!L || datiIllegibili) return;
   const defs = definizioni({ giorni: 3650 }), fatte = defs.filter(d => d.m);
   const sicure = fatte.filter(d => d.m.rip >= 2 && d.m.giuste >= d.m.sbagliate * 2);
   const deboli = fatte.filter(d => d.m.sbagliate > 0 && !sicure.includes(d)).sort((a, b) => b.m.sbagliate - a.m.sbagliate).slice(0, 15);
@@ -153,7 +169,7 @@ ${lez.flatMap(l => (l.stelle || []).map(s => `- ${s.replace(/^\d\d:\d\d\s*/, '')
 }
 let tPagine = 0;
 export function aggiornaPagine() {
-  if (!L) return; clearTimeout(tPagine);
+  if (!L || datiIllegibili) return; clearTimeout(tPagine);
   tPagine = setTimeout(async () => {
     const b = (file, id, testo, extra = {}) => L.invoca('vault:blocco', { file, id, testo, ...extra }).catch(e => console.warn('Lode:', file, e.message));
     await b('Home.md', 'pagina', home()); await b('Esami.md', 'pagina', esami()); await b('Glossario.md', 'pagina', glossario());

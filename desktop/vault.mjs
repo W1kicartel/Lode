@@ -148,10 +148,11 @@ body{--font-text-theme:"Geist",-apple-system,"Segoe UI",sans-serif;--font-monosp
 .markdown-rendered h2{letter-spacing:-.02em}
 `;
 
+// orario null: Orario.md non si crea (sincronizzazione accesa: un Orario.md vuoto scritto qui arriverebbe agli altri computer)
 export function crea(vault, orario = []) {
   for (const d of ['Lezioni', 'Corsi', 'Lode', 'Modelli', 'Allegati', 'Inbox', '.lode']) mkdirSync(join(vault, d), { recursive: true });
   seManca(join(vault, 'Benvenuto.md'), BENVENUTO);
-  seManca(join(vault, 'Orario.md'), M.orarioMd(orario));
+  if (orario) seManca(join(vault, 'Orario.md'), M.orarioMd(orario));
   seManca(join(vault, 'Lode', 'Memoria.md'), MEMORIA);
   seManca(join(vault, 'Modelli', 'Lezione.md'), MODELLO);
   seManca(join(vault, 'Modelli', 'Esame.md'), MODELLO_ESAME);
@@ -234,6 +235,17 @@ export function registra(vault) {
   } catch { }
   return obsidian(vault);
 }
+// il vault cambia cartella (la sincronizzazione lo sposta nella cartella cloud): nella lista di Obsidian la stessa voce prende
+// il percorso nuovo (stesso id: le impostazioni di Obsidian per quel vault restano). Se la voce non c'è, si aggiunge
+export function spostaInObsidian(vecchio, nuovo) {
+  const o = obsidian(vecchio);
+  if (!o.registrato || !existsSync(o.conf)) return registra(nuovo);
+  try {
+    const j = JSON.parse(readFileSync(o.conf, 'utf8'));
+    if (j.vaults?.[o.registrato]) { j.vaults[o.registrato].path = resolve(nuovo); j.vaults[o.registrato].ts = Date.now(); scriviSicuro(o.conf, JSON.stringify(j)); }
+  } catch { }
+  return obsidian(nuovo);
+}
 export function linkObsidian(vault, file) {
   const o = obsidian(vault), nome = vault.split(sep).pop();
   if (o.registrato) return { url: `obsidian://open?vault=${encodeURIComponent(o.registrato)}&file=${encodeURIComponent(String(file).replace(/\.md$/, ''))}`, esito: 'ok' };
@@ -278,16 +290,47 @@ export function memoria(vault, testo) {
 }
 
 /* ---------- guardare il vault ---------- */
-export function guarda(vault, { lezioniCambiate, orarioCambiato, noteCambiate }) {
-  let t1 = 0, t2 = 0, ultimoOrario = null;
-  const segnaOrario = testo => { ultimoOrario = testo; };
-  const orario = () => { try { const t = readFileSync(join(vault, 'Orario.md'), 'utf8'); if (t !== ultimoOrario) { ultimoOrario = t; orarioCambiato(M.leggiOrario(t)); } } catch { } };
+// lodeCambiata: un file .json sotto .lode/ (i file degli altri computer, con la sincronizzazione accesa)
+// Orario.md cambiato: la barra riceve le righe aggiunte e tolte, non l'orario intero (Orario.md è una nota che il servizio
+// cloud porta da un computer all'altro: due computer che aggiungono una lezione insieme ne tengono uno, e sostituito per
+// intero farebbe sparire la lezione dell'altro). Il confronto è con la versione già vista più vicina (l'ultima scritta o
+// letta qui, o una di prima: un Orario.md scritto altrove partendo da una versione vecchia non toglie le righe aggiunte qui)
+export const chiaveOrario = o => [o.corso, (o.giorni || []).join(','), o.inizio, o.fine, o.aula || ''].join('|');
+export function differenzeOrario(storia, righe) {
+  const conta = l => { const m = new Map(); for (const o of l) { const k = chiaveOrario(o); m.set(k, (m.get(k) || 0) + 1); } return m; };
+  const N = conta(righe);
+  let base = null, d = Infinity;
+  for (const b of [...storia].reverse()) {
+    const B = conta(b); let x = 0;
+    for (const k of new Set([...B.keys(), ...N.keys()])) x += Math.abs((B.get(k) || 0) - (N.get(k) || 0));
+    if (x < d) { d = x; base = b; }
+  }
+  const B = conta(base || []), aggiunte = [], tolte = [];
+  for (const o of righe) { const k = chiaveOrario(o); if ((B.get(k) || 0) > 0) B.set(k, B.get(k) - 1); else aggiunte.push(o); }
+  for (const b of base || []) { const k = chiaveOrario(b); if ((N.get(k) || 0) > 0) N.set(k, N.get(k) - 1); else tolte.push(b); }
+  return { aggiunte, tolte };
+}
+export const righeOrario = t => M.leggiOrario(t);
+export const testoOrario = o => M.orarioMd(o);
+export function guarda(vault, { lezioniCambiate, orarioCambiato, noteCambiate, lodeCambiata = () => { } }) {
+  let t1 = 0, t2 = 0, t3 = 0, ultimoOrario = null;
+  const storia = [];   // le ultime versioni di Orario.md viste o scritte qui (righe)
+  const ricorda = t => { storia.push(M.leggiOrario(t)); if (storia.length > 12) storia.shift(); };
+  const segnaOrario = testo => { ultimoOrario = testo; ricorda(testo); };
+  const orario = () => {
+    try {
+      const t = readFileSync(join(vault, 'Orario.md'), 'utf8'); if (t === ultimoOrario) return;
+      ultimoOrario = t; const righe = M.leggiOrario(t), dif = differenzeOrario(storia, righe); ricorda(t);
+      if (dif.aggiunte.length || dif.tolte.length) orarioCambiato({ ...dif, righe });
+    } catch { }
+  };
   let w;
   try {
     w = watch(vault, { recursive: true }, (_, nome) => {
       // Windows: con tanti cambi insieme (OneDrive, git, uno zip) il nome si perde: può essere cambiato tutto, si rilegge tutto
-      if (!nome) { clearTimeout(t1); t1 = setTimeout(lezioniCambiate, 300); clearTimeout(t2); t2 = setTimeout(() => { orario(); noteCambiate(); }, 300); return; }
+      if (!nome) { clearTimeout(t1); t1 = setTimeout(lezioniCambiate, 300); clearTimeout(t2); t2 = setTimeout(() => { orario(); noteCambiate(); }, 300); clearTimeout(t3); t3 = setTimeout(lodeCambiata, 400); return; }
       const n = String(nome).split(sep).join('/');
+      if (n.startsWith('.lode/') && n.endsWith('.json') && !n.includes('.tmp-')) { clearTimeout(t3); t3 = setTimeout(lodeCambiata, 400); return; }
       if (!n.endsWith('.md') || n.includes('.tmp-')) return;
       if (n.startsWith('Lezioni/')) { clearTimeout(t1); t1 = setTimeout(lezioniCambiate, 300); }
       else if (n === 'Orario.md') setTimeout(orario, 200);

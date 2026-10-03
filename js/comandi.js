@@ -130,6 +130,11 @@ export function interpreta(frase) {
   { const FORN = { claude: 'anthropic', anthropic: 'anthropic', chatgpt: 'openai', openai: 'openai', gpt: 'openai', gemini: 'google', google: 'google', mistral: 'mistral', groq: 'groq', openrouter: 'openrouter', deepseek: 'deepseek' };
     const m = t.match(/^(?:(?:la )?mia ai|ai|intelligenza artificiale|chiave(?: api)?|api ?key|(?:collega|usa|imposta|aggiungi|metti)(?: la chiave(?: di)?| la mia)? (claude|anthropic|chatgpt|openai|gpt|gemini|google|mistral|groq|openrouter|deepseek|ai|la mia ai|una chiave|chiave))$/);
     if (m) return { tipo: 'ai', fornitore: FORN[m[1]] || null }; }
+  // la sincronizzazione fra i computer (desktop/sincronizza.mjs): attivarla, collegare il secondo computer, la password
+  if (/^(?:(?:uso|ho|usavo) gi[aà] lode (?:su|in|sull) ?(?:un )?altro (?:computer|pc|mac|portatile)|(?:collega|usa|apri) (?:il )?(?:vault|lode) (?:dell ?altro|di un altro) (?:computer|pc|mac)|secondo computer)$/.test(t)) return { tipo: 'sincronizza', cosa: 'collega' };
+  if (/^(?:sblocca(?: i)?(?: dati)?|password (?:dei|di) (?:dati|lode))$/.test(t)) return { tipo: 'sincronizza', cosa: 'sblocca' };
+  if (/^(?:smetti|smettila|basta|spegni|disattiva|ferma|interrompi) (?:di )?(?:la )?sincronizza(?:re|zione)?(?: (?:fra|tra) (?:i )?(?:miei |tuoi )?computer)?$|^non sincronizzare pi[uù]$/.test(t)) return { tipo: 'sincronizza', cosa: 'smetti' };
+  if (/^(?:(?:attiva |accendi )?(?:la )?sincronizza(?:zione)?(?: (?:fra|tra) (?:i )?(?:miei |tuoi )?computer| (?:i )?dati| lode| il vault)?|sync|(?:cifra|proteggi)(?: i)? dati(?: di lode)?(?: con (?:una )?password)?)$/.test(t)) return { tipo: 'sincronizza', cosa: /cifra|proteggi/.test(t) ? 'cifra' : null };
   if (/^(?:prepara|configura|installa|setup)\b/.test(t)) return { tipo: 'prepara', cosa: /obsidian/.test(t) ? 'obsidian' : /modello|cervello|ollama|gemma|qwen|ai/.test(t) ? 'cervello' : null };
   // il diario del progetto nel vault: aprirlo, spegnerlo, riaccenderlo
   if ((m = t.match(/^(spegni|non scrivere|accendi|riaccendi|scrivi) (?:il |più il )?diario(?: (?:del|di) (?:progetto)?\s*(.*))?$/))) return { tipo: 'diarioOpz', diario: /accendi|^scrivi/.test(m[1]), progetto: m[2] ? pulisci(m[2]) : null };
@@ -235,6 +240,7 @@ export const ESEMPI = [
   ['riordina la lezione', 'dalla trascrizione ad appunti puliti (AI)'],
   ['ripeti', 'in aula: cosa ha detto il prof negli ultimi 60 secondi'],
   ['AI', 'collega la tua AI preferita (Claude, ChatGPT, Gemini, Mistral…), a consumo'],
+  ['sincronizza fra i computer', 'esami, voti e carte anche sull\'altro computer, con la cartella cloud che usi già'],
   ['condividi la sbobina', 'la lezione ai compagni: AirDrop, WhatsApp, mail'],
   ['chiudi lezione', 'definizioni e ★ estratte dagli appunti (AI)'],
   ['apri glossario', 'salta a una pagina del vault'],

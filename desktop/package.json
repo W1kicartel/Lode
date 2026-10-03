@@ -63,6 +63,8 @@
       "progetto.mjs",
       "esegui.mjs",
       "aggiorna.mjs",
+      "unione.mjs",
+      "sincronizza.mjs",
       "web/**",
       "package.json",
       "build/tray*.png",

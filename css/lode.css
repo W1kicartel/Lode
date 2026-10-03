@@ -132,6 +132,7 @@
 .ld-piede kbd{font:500 11px var(--mono);padding:1px 6px;margin-left:4px;border-radius:4px;color:var(--ink);box-shadow:inset 0 0 0 1px var(--ld-filo);background:rgba(255,255,255,.04)}
 .ld-piede span:last-child{display:inline-flex;align-items:center;gap:6px}
 .ld-piede svg{width:12px;height:12px;stroke:var(--ld-tenue)}
+.ld-piede .ld-piede-dati{min-width:0;margin-left:12px}.ld-piede .ld-piede-dati>span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 @media (prefers-reduced-motion:no-preference){
   .ld-riga:hover{transform:translateX(4px)}
@@ -226,6 +227,7 @@
 .ld-scheda select{padding-right:28px;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 15px) 15px,calc(100% - 11px) 15px;background-size:4px 4px;background-repeat:no-repeat;cursor:pointer}
 .ld-scheda select option{background:#161616;color:#F5F5F5}
 .ld-scheda input[type=date]{color-scheme:dark}
+.ld-scheda input[type=checkbox]{all:revert;flex:none;margin:2px 0 0;accent-color:#fff}   /* la casella resta una casella (password ricordata, uso dell'AI) */
 .ld-scheda input[type=number]{width:62px}
 .ld-riga-form{display:flex;gap:8px;align-items:center;margin-top:10px}
 .ld-riga-form>select,.ld-riga-form>input:first-child{flex:1}
@@ -544,6 +546,12 @@ button.ld-ripeti-riga:hover{background:rgba(255,255,255,.06)}
 .ld-tuaai .ld-opzioni{margin-top:12px}
 .ld-tuaai .ld-op.scelta{box-shadow:inset 0 0 0 1.5px var(--ink)}
 .ld-ai-chiave,.ld-ai-modello{margin-top:14px}
+/* sincronizza fra i computer */
+.ld-sync-stato{margin:6px 0 2px;font-size:13.5px;line-height:1.45}
+.ld-sync-stato b{font-weight:600}
+.ld-sync-pw{margin-top:14px}
+.ld-sync-pw .ld-riga-form{margin-top:8px}
+.ld-sync-pw small{display:block;margin-top:7px;font-size:12px}
 .ld-ai-chiave small{display:block;margin-top:7px;font-size:12px}
 .ld-ai-chiave small b{color:var(--ink);font-weight:500}
 .ld-spunta-ai{display:flex;gap:9px;align-items:flex-start;margin-top:14px;font-size:12.5px;line-height:1.45;color:var(--muted);cursor:pointer}
