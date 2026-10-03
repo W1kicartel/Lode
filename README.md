@@ -272,7 +272,7 @@ Paghi direttamente il servizio, a consumo, di solito pochi centesimi a sessione:
 
 ## La voce
 
-| | Mac con chip Apple | Windows e Linux (almeno 6 GB di memoria) | Mac Intel, e i computer con meno di 6 GB |
+| | Mac con chip Apple (dal codice dopo `compila.sh`, vedi [Mac](#mac); prima vale la colonna accanto) | Windows e Linux, e il Mac dal codice senza `compila.sh` (almeno 6 GB di memoria) | Mac Intel dall'installer, e i computer con meno di 6 GB |
 |---|---|---|---|
 | Motore | **Parakeet TDT v3** di NVIDIA sul Neural Engine, con [FluidAudio](https://github.com/FluidInference/FluidAudio), lo stesso motore dell'app FluidVoice | **Parakeet TDT v3** sul processore, in formato ONNX, con [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) | **Whisper** (base o small), dentro l'app |
 | Download, una volta sola | circa 470 MB | circa 640 MB | 200 o 600 MB |
