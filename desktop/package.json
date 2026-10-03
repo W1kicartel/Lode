@@ -1,7 +1,7 @@
 {
   "name": "lode",
   "productName": "Lode",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "L'assistente di studio in cima allo schermo, collegato al tuo vault Obsidian",
   "license": "MIT",
   "private": true,
