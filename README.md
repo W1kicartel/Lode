@@ -8,7 +8,7 @@ Lode è una piccola pillola di vetro nero in cima allo schermo. Mentre sei a lez
 
 > **Stato: beta.** È fatto per **Windows, macOS e Linux**, ma finora è stato provato a fondo solo su un Mac con chip Apple. Il codice per Windows c'è tutto (installazione di Obsidian e dell'AI, scorciatoie, voce), però non l'abbiamo ancora provato su un PC vero: se lo provi, [raccontaci com'è andata](https://github.com/W1kicartel/Lode/issues/new/choose) (prima togli dal messaggio il tuo nome, le chiavi e i percorsi: il modulo te lo ricorda).
 
-**[⬇ Scarica Lode](https://github.com/W1kicartel/Lode/releases/latest)** per Mac, Windows o Linux, poi segui i [tre passi del primo avvio](#installa).
+**[Installa Lode](#installa)** su Windows, Mac o Linux: una volta sola, dal terminale, copiando pochi comandi. Poi si apre dalla sua icona come le altre app e parte da sola all'accensione.
 
 ---
 
@@ -90,29 +90,26 @@ smetti di seguire lab3
 
 ### Installa
 
-Il modo più semplice: scarica l'installer dalla pagina **[Release](https://github.com/W1kicartel/Lode/releases/latest)** (in fondo, alla voce «Assets»). Ti servono circa **5 GB liberi**: Obsidian circa 300 MB, l'AI locale circa 3,5 GB, la voce dai 200 ai 640 MB. Al primo avvio Lode ti chiede il nome e, con un clic, installa Obsidian, l'AI locale e la voce (su Linux l'AI locale no: prima installa Ollama con lo script di [ollama.com](https://ollama.com/download/linux)).
+Per ora Lode si installa dal codice: gli installer da scaricare arriveranno quando saranno firmati con un certificato ([perché](#gli-installer-non-ancora-firmati)). Non serve saper programmare. Apri il terminale una volta, copi i comandi della tua sezione e al resto pensa Lode. Così non compare nessun avviso del sistema: Node.js, Electron, Obsidian e Ollama sono firmati dai loro autori.
 
-**Controlla che sia quello vero.** Scarica Lode solo dalla pagina Release di questo repository: un «Lode» passato in un gruppo o preso da un altro sito può avere lo stesso aspetto ed essere un'altra cosa. Accanto a ogni file GitHub mostra la sua impronta SHA-256 (`sha256:…`); dalle versioni dopo la 0.3.0 le stesse impronte sono anche nel file `SHA256SUMS.txt` della Release. Prima di aprirlo, calcola quella del file che hai scaricato e confrontale: devono avere le stesse lettere e cifre (Windows le scrive in maiuscolo). Se sono diverse, non aprirlo.
+Ti servono circa **5 GB liberi** (Obsidian circa 300 MB, l'AI locale circa 3,5 GB, la voce dai 200 ai 640 MB) e 15-30 minuti, quasi tutti di download. I comandi mettono Lode nella cartella `Lode` dentro la tua cartella utente.
 
-- **Mac** (Terminale): `shasum -a 256 ~/Downloads/Lode-*.dmg`
-- **Windows** (PowerShell): `Get-FileHash $HOME\Downloads\Lode-*.exe`
-- **Linux**: `sha256sum Lode-*.AppImage`, nella cartella dove l'hai scaricato
+Scegli il tuo sistema: **[Windows](#windows)** · **[Mac](#mac)** · **[Linux](#linux)**.
 
-Gli installer non sono firmati con un certificato a pagamento (costa ogni anno e Lode è gratis), quindi **la prima volta** il sistema chiede una conferma:
+Al primo avvio Lode ti chiede il nome e con un clic installa Obsidian, l'AI locale e la voce (su Linux l'AI locale no: prima installa Ollama, come spiega la sezione Linux). Poi crea la sua **icona**:
+- **Mac:** in **Applicazioni** (quella della tua cartella utente); la trovi anche con Spotlight;
+- **Windows:** nel **menu Start** e sul **desktop**;
+- **Linux:** nel **menu delle applicazioni**.
 
-| | Scarica | Primo avvio |
-|---|---|---|
-| **Mac** (chip Apple e Intel) | `Lode-…-mac.dmg` | Apri il `.dmg` e trascina Lode in **Applicazioni**. Aprilo: il Mac dice che non può verificarlo, premi **Fine**. Poi vai in **Impostazioni di Sistema › Privacy e sicurezza**, scorri in fondo e premi **Apri comunque** accanto a «Lode». Serve solo la prima volta. |
-| **Windows** 10 e 11 | `Lode-…-windows.exe` | Aprilo. Se compare «Windows ha protetto il PC», premi **Ulteriori informazioni**, poi **Esegui comunque**. Si installa per il tuo utente, senza permessi di amministratore, e parte da solo. |
-| **Linux** (64 bit) | `Lode-…-linux.AppImage` | Rendilo eseguibile (tasto destro › Proprietà › «Consenti l'esecuzione», oppure `chmod +x Lode-*.AppImage`) e aprilo. L'AI locale su Linux non si installa da sola: prima installa Ollama con lo script di [ollama.com](https://ollama.com/download/linux). |
+Da lì la riapri come le altre app, e all'accensione del computer parte da sola: il terminale non serve più. Icona e avvio all'accensione si tolgono dal menu dell'icona di Lode.
 
-Lode vive nella barra dei menu (Mac) o nell'area di notifica (Windows): non cercarlo nel Dock. È la pillola nera in cima allo schermo: si apre con un clic, o tenendo premuto **⌥ Spazio** sul Mac e **Ctrl+Shift+Spazio** su Windows e Linux.
+Lode vive nella barra dei menu (Mac) o nell'area di notifica (Windows): non cercarla nel Dock. È la pillola nera in cima allo schermo: si apre con un clic, o tenendo premuto **⌥ Spazio** sul Mac e **Ctrl+Shift+Spazio** su Windows e Linux.
 
-**Gli aggiornamenti.** Su Windows e Linux (AppImage) Lode si aggiorna da sola: scarica la versione nuova in background e in «Oggi» compare «Lode X.Y.Z è pronta» con **Riavvia ora**; se non premi niente, si installa quando chiudi Lode. Sul Mac, finché l'app non è firmata con un certificato Apple, la barra ti avvisa che è uscita una versione nuova e con **Scarica** apre il `.dmg`: lo trascini in Applicazioni come la prima volta. Si spengono da «Prepara Lode» o dal menu dell'icona. Gli aggiornamenti ci sono dalle versioni dopo la 0.3.0: chi ha la 0.3.0 o una precedente scarica la nuova una volta, a mano.
+**Aggiornare.** Installata dal codice, Lode non si aggiorna da sola. Ogni tanto chiudila (menu della sua icona › Esci da Lode) e dal terminale scrivi:
+- **Mac e Linux:** `cd ~/Lode && git pull && cd desktop && npm install`
+- **Windows** (PowerShell): `cd ~\Lode; git pull; cd desktop; npm.cmd install`
 
-### Dal codice
-
-Se vuoi l'ultima versione, o modificare Lode, si installa dal codice in pochi minuti. Scegli il tuo sistema: [Windows](#windows) · [Mac](#mac) · [Linux](#linux).
+Poi riaprila dall'icona. Sul Mac, se avevi compilato la voce per il Neural Engine, rilancia anche `bash ~/Lode/desktop/voce-mac/compila.sh`.
 
 ### Windows
 
@@ -129,18 +126,9 @@ Se vuoi l'ultima versione, o modificare Lode, si installa dal codice in pochi mi
    ```
    Poi **chiudi e riapri PowerShell**, così vede i programmi nuovi. Se `winget` non c'è, scaricali a mano da [nodejs.org](https://nodejs.org) (versione «LTS») e [git-scm.com](https://git-scm.com/download/win).
 
-3. **Scarica Lode e avvialo:**
+3. **Scarica Lode e avvialo** (copia la riga intera; `npm install` scarica qualche centinaio di MB e ci mette qualche minuto):
    ```powershell
-   git clone https://github.com/W1kicartel/Lode.git
-   ```
-   ```powershell
-   cd Lode\desktop
-   ```
-   ```powershell
-   npm install
-   ```
-   ```powershell
-   npm start
+   git clone https://github.com/W1kicartel/Lode.git; cd Lode\desktop; npm.cmd install; npm.cmd start
    ```
 
 4. **La configurazione guidata** si apre da sola. Ti chiede come ti chiami e con un clic installa **Obsidian**, l'**AI locale** (Ollama + Qwen3.5) e la **voce** (Parakeet, o Whisper se il computer ha meno di 6 GB di memoria). Il vault con i tuoi appunti nasce in `Documenti\Lode`. La pillola compare in cima allo schermo; l'icona di Lode è vicino all'orologio, nell'area di notifica.
@@ -177,32 +165,24 @@ Se vuoi l'ultima versione, o modificare Lode, si installa dal codice in pochi mi
 
 2. **Node.js.** Scarica la versione «LTS» da [nodejs.org](https://nodejs.org) e installala.
 
-3. **Scarica Lode:**
+3. **Scarica Lode e avvialo** (copia la riga intera; `npm install` scarica qualche centinaio di MB e ci mette qualche minuto):
    ```bash
-   git clone https://github.com/W1kicartel/Lode.git
-   cd Lode
+   git clone https://github.com/W1kicartel/Lode.git && cd Lode/desktop && npm install && npm start
    ```
 
-4. **La voce migliore (consigliato, Mac con chip Apple).** Compila `lode-voce`, il riconoscimento vocale Parakeet sul Neural Engine. Ci vogliono 3-5 minuti la prima volta:
-   ```bash
-   bash desktop/voce-mac/compila.sh
-   ```
-   Se salti questo passo, Lode usa Parakeet sul processore (sherpa-onnx, la stessa voce di Windows e Linux): scarica il modello, circa 640 MB, ed è un po' più lento del Neural Engine.
-
-5. **Avvia l'app:**
-   ```bash
-   cd desktop
-   npm install
-   npm start
-   ```
-
-6. **La configurazione guidata** si apre da sola:
+4. **La configurazione guidata** si apre da sola:
    - **Obbligatoria.** Come ti chiami, poi un clic installa **Obsidian** (l'installer ufficiale, con la firma verificata), l'**AI locale** (Ollama + Qwen3.5, scelto in base alla memoria del computer) e la **voce**. I download continuano anche mentre vai avanti.
    - **Facoltativa, il setup veloce.** Ateneo e corso, il **libretto incollato da Esse3** (letto anche senza AI), gli esami con le date, l'**orario** (a parole, incollato dal sito o dal calendario `.ics`), quando studi e quanto spesso Lode può proporti cose.
 
    La pillola compare in cima allo schermo. Il vault Obsidian è in `Documenti/Lode`. Ti serve di nuovo la configurazione? Dal menu dell'icona: «Rifai la configurazione…».
 
-7. **Il microfono.** La prima volta che usi la voce, Ripeti o la trascrizione, macOS chiede il permesso: concedilo. Se l'hai negato, si riattiva da *Impostazioni di Sistema → Privacy e sicurezza → Microfono*.
+5. **Il microfono.** La prima volta che usi la voce, Ripeti o la trascrizione, macOS chiede il permesso: concedilo. Se hai avviato Lode dal Terminale lo chiede per il Terminale, se l'hai aperta dall'icona lo chiede per Lode. Se l'hai negato, si riattiva da *Impostazioni di Sistema → Privacy e sicurezza → Microfono*.
+
+6. **La voce migliore (consigliato, Mac con chip Apple).** Lode parte con Parakeet sul processore (sherpa-onnx, la stessa voce di Windows e Linux). Sul Neural Engine è più veloce: chiudi Lode (menu della sua icona › Esci da Lode) e compila `lode-voce`, ci vogliono 3-5 minuti la prima volta:
+   ```bash
+   bash ~/Lode/desktop/voce-mac/compila.sh
+   ```
+   Poi riapri Lode dall'icona.
 
 **Se qualcosa non va sul Mac:**
 - **`npm install` dà `EACCES`:** la cartella della cache di npm appartiene a root (un vecchio difetto di npm). Si sistema con:
@@ -217,28 +197,45 @@ Se vuoi l'ultima versione, o modificare Lode, si installa dal codice in pochi mi
 **Cosa serve:** una distribuzione a 64 bit recente, Node.js 20 o successivo e git (dal gestore pacchetti).
 
 1. **Ollama** su Linux si installa con lo script ufficiale, da [ollama.com/download/linux](https://ollama.com/download/linux). Lode installa da sé Obsidian (AppImage) e il modello.
-2. **Scarica Lode e avvialo:**
+2. **Scarica Lode e avvialo** (copia la riga intera):
    ```bash
-   git clone https://github.com/W1kicartel/Lode.git
-   cd Lode/desktop
-   npm install
-   npm start
+   git clone https://github.com/W1kicartel/Lode.git && cd Lode/desktop && npm install && npm start
    ```
+   Se si ferma con «The SUID sandbox helper binary was found, but is not configured correctly» (succede su alcune distribuzioni, per esempio Ubuntu 24.04), avvialo con `npm start -- --no-sandbox`: l'icona che crea Lode se lo ricorda.
 3. La voce è Parakeet sul processore (Whisper con meno di 6 GB di memoria) e le scorciatoie sono quelle di Windows. Le finestre trasparenti e le scorciatoie globali dipendono dal desktop (GNOME, KDE…): su Wayland alcune potrebbero non funzionare. Raccontaci com'è andata.
+
+### Gli installer (non ancora firmati)
+
+Nella pagina **[Release](https://github.com/W1kicartel/Lode/releases/latest)** ci sono già gli installer per Mac (`.dmg`), Windows (`.exe`) e Linux (`.AppImage`). Non sono ancora firmati con un certificato (Apple 99 $ l'anno; per Windows serve un servizio di firma, vedi [docs/FIRMA.md](docs/FIRMA.md)), quindi macOS e Windows li bloccano alla prima apertura e chiedono di confermare a mano. Quando saranno firmati torneranno la via più semplice, e si aggiorneranno da soli.
+
+<details>
+<summary>Usarli lo stesso</summary>
+
+**Controlla che sia quello vero.** Scarica Lode solo dalla pagina Release di questo repository: un «Lode» passato in un gruppo o preso da un altro sito può avere lo stesso aspetto ed essere un'altra cosa. Accanto a ogni file GitHub mostra la sua impronta SHA-256 (`sha256:…`); dalle versioni dopo la 0.3.0 le stesse impronte sono anche nel file `SHA256SUMS.txt` della Release. Prima di aprirlo, calcola quella del file che hai scaricato e confrontale: devono avere le stesse lettere e cifre (Windows le scrive in maiuscolo). Se sono diverse, non aprirlo.
+
+- **Mac** (Terminale): `shasum -a 256 ~/Downloads/Lode-*.dmg`
+- **Windows** (PowerShell): `Get-FileHash $HOME\Downloads\Lode-*.exe`
+- **Linux**: `sha256sum Lode-*.AppImage`, nella cartella dove l'hai scaricato
+
+Gli installer non sono firmati con un certificato a pagamento (costa ogni anno e Lode è gratis), quindi **la prima volta** il sistema chiede una conferma:
+
+| | Scarica | Primo avvio |
+|---|---|---|
+| **Mac** (chip Apple e Intel) | `Lode-…-mac.dmg` | Apri il `.dmg` e trascina Lode in **Applicazioni**. Aprilo: il Mac dice che non può verificarlo, premi **Fine**. Poi vai in **Impostazioni di Sistema › Privacy e sicurezza**, scorri in fondo e premi **Apri comunque** accanto a «Lode». Serve solo la prima volta. |
+| **Windows** 10 e 11 | `Lode-…-windows.exe` | Aprilo. Se compare «Windows ha protetto il PC», premi **Ulteriori informazioni**, poi **Esegui comunque**. Si installa per il tuo utente, senza permessi di amministratore, e parte da solo. |
+| **Linux** (64 bit) | `Lode-…-linux.AppImage` | Rendilo eseguibile (tasto destro › Proprietà › «Consenti l'esecuzione», oppure `chmod +x Lode-*.AppImage`) e aprilo. L'AI locale su Linux non si installa da sola: prima installa Ollama con lo script di [ollama.com](https://ollama.com/download/linux). |
+
+**Gli aggiornamenti.** Su Windows e Linux (AppImage) Lode si aggiorna da sola: scarica la versione nuova in background e in «Oggi» compare «Lode X.Y.Z è pronta» con **Riavvia ora**; se non premi niente, si installa quando chiudi Lode. Sul Mac, finché l'app non è firmata con un certificato Apple, la barra ti avvisa che è uscita una versione nuova e con **Scarica** apre il `.dmg`: lo trascini in Applicazioni come la prima volta. Si spengono da «Prepara Lode» o dal menu dell'icona. Gli aggiornamenti ci sono dalle versioni dopo la 0.3.0: chi ha la 0.3.0 o una precedente scarica la nuova una volta, a mano.
+
+</details>
 
 ### Per tutti
 
 **Quanto è veloce l'AI locale.** Dipende dal computer. Su un Mac con 8 GB, Qwen3.5 4B scrive circa 20 parole al secondo e le carte da un PDF arrivano in circa mezzo minuto. Su un portatile senza scheda video ci mette di più.
 
-**Aggiornare.** Dalla cartella `Lode`:
-```bash
-git pull
-cd desktop
-npm install
-```
-Sul Mac, dopo l'aggiornamento, rilancia anche `bash desktop/voce-mac/compila.sh` dalla cartella `Lode`.
+**Aggiornare:** vedi [Installa](#installa).
 
-**Disinstallare.** Cancella la cartella `Lode`. I tuoi appunti restano in `Documenti/Lode`: sono tuoi. Obsidian e Ollama sono programmi normali e si disinstallano come gli altri. Il modello si toglie con `ollama rm qwen3.5:4b`.
+**Disinstallare.** Dal menu dell'icona di Lode togli la spunta a «Avvia Lode all'accensione» e all'icona di Lode, poi esci e cancella la cartella `Lode`. I tuoi appunti restano in `Documenti/Lode`: sono tuoi. Obsidian e Ollama sono programmi normali e si disinstallano come gli altri. Il modello si toglie con `ollama rm qwen3.5:4b`.
 
 **Solo nel browser, senza installare.** Per provare libretto, conti, timer, ripasso e giochi, dalla cartella `Lode`:
 ```bash
@@ -290,7 +287,7 @@ Tutto offline. L'audio non resta mai su disco: sul Mac passa a Parakeet in un fi
 - I dati stanno sul tuo computer: nel vault Obsidian (`Documenti/Lode`) e nei file dell'app.
 - Il microfono si accende solo quando lo chiedi: voce, Ripeti in aula se l'hai attivato (o fuori lezione, se lo accendi tu: al massimo 3 ore), trascrizione. Per Ripeti l'audio vive solo in memoria, per 90 secondi.
 - La chiave della tua AI resta su questo computer e parte solo verso il servizio che hai scelto. Non finisce nel vault né nei backup.
-- **Aggiornamenti:** l'app installata chiede a GitHub, poco dopo l'avvio e poi ogni 6 ore, se c'è una versione nuova di Lode, e da lì la scarica. Non manda niente di tuo: né dati, né identificativi, né statistiche. Si spengono da «Prepara Lode» o dal menu dell'icona.
+- **Aggiornamenti:** l'app degli installer (dal codice no) chiede a GitHub, poco dopo l'avvio e poi ogni 6 ore, se c'è una versione nuova di Lode, e da lì la scarica. Non manda niente di tuo: né dati, né identificativi, né statistiche. Si spengono da «Prepara Lode» o dal menu dell'icona.
 - **Registrare una lezione** dipende dal regolamento del tuo ateneo e dal docente: chiedi prima.
 
 ## Sincronizza fra i tuoi computer (sperimentale)

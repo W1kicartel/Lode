@@ -14,10 +14,19 @@ import * as VOCE_ONNX from './voce-onnx.mjs';
 import * as PROGETTO from './progetto.mjs';
 import * as AGGIORNA from './aggiorna.mjs';
 import { creaSincronizzazione } from './sincronizza.mjs';
+import * as ICONA from './collegamento.mjs';
 
 const QUI = dirname(fileURLToPath(import.meta.url));
 const WEB = existsSync(join(QUI, 'web', 'index.html')) ? join(QUI, 'web') : join(QUI, '..');
 const MAC = process.platform === 'darwin', WIN = process.platform === 'win32';
+// installata dal codice (npm start), fuori dalle prove: l'icona per riaprirla e l'avvio all'accensione (collegamento.mjs)
+// (non per chi sviluppa con vault e dati di prova: LODE_DATI, LODE_VAULT)
+const DAL_CODICE = !app.isPackaged && !process.env.LODE_PROVA && !process.env.LODE_CI && !process.env.LODE_DATI && !process.env.LODE_VAULT;
+const datiIcona = () => ({ piattaforma: process.platform, home: app.getPath('home'), appData: app.getPath('appData'), scrivania: app.getPath('desktop'),
+  eseguibile: process.execPath, cartella: app.getAppPath(), argomenti: app.commandLine.hasSwitch('no-sandbox') ? ['--no-sandbox'] : [], versione: app.getVersion() });
+function provaIcona(f, { zitto = false } = {}) {
+  try { return f(); } catch (e) { console.warn('Lode: icona o avvio all\'accensione non riusciti:', e.message); if (!zitto) dialog.showMessageBox({ type: 'warning', title: 'Lode', message: 'Non ci sono riuscito.', detail: e.message, noLink: true }); return false; }
+}
 // Windows: lo stesso id dei collegamenti dell'installer (appId), per notifiche, barra delle applicazioni e avvio automatico
 if (WIN) app.setAppUserModelId(app.isPackaged ? 'it.lode.app' : process.execPath);
 // Gli agganci per le prove (LODE_PROVA, LODE_CONFERMA_AUTO, LODE_PROGETTO, LODE_VAULT, LODE_DATI, LODE_AUDIO_FINTO,
@@ -534,7 +543,11 @@ function creaTray() {
     { label: 'Mostra il vault nella cartella', click: () => shell.openPath(vault()) },
     { label: 'Usa un altro vault…', click: scegliVault },
     { type: 'separator' },
-    { label: 'Avvia Lode all\'accensione', type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin, enabled: app.isPackaged, click: i => app.setLoginItemSettings({ openAtLogin: i.checked }) },
+    DAL_CODICE
+      ? { label: 'Avvia Lode all\'accensione', type: 'checkbox', checked: !!provaIcona(() => ICONA.avvioAttivo(datiIcona(), app), { zitto: true }), click: i => provaIcona(() => ICONA.avvio(datiIcona(), i.checked, app)) }
+      : { label: 'Avvia Lode all\'accensione', type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin, enabled: app.isPackaged, click: i => app.setLoginItemSettings({ openAtLogin: i.checked }) },
+    ...(DAL_CODICE ? [{ label: MAC ? 'Icona di Lode in Applicazioni' : WIN ? 'Icona di Lode nel menu Start e sul desktop' : 'Icona di Lode nel menu delle applicazioni', type: 'checkbox',
+      checked: !!provaIcona(() => ICONA.haIcona(datiIcona()), { zitto: true }), click: i => provaIcona(() => i.checked ? ICONA.creaIcona(datiIcona(), shell) : ICONA.togliIcona(datiIcona())) }] : []),
     ...voceAggiorna(),
     { label: 'Esci da Lode', role: 'quit' },
   ]);
@@ -549,7 +562,11 @@ app.whenReady().then(async () => {
   if (!conf.vault) {
     let documenti; try { documenti = app.getPath('documents'); } catch { documenti = app.getPath('home'); }   // Documenti su OneDrive o in rete non raggiungibile
     conf.vault = join(documenti, 'Lode'); conf.primoAvvio = Date.now(); salvaConf(); if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: true });
+    // dal codice, come l'installer: l'icona per riaprirla senza terminale e l'avvio all'accensione
+    else if (DAL_CODICE) provaIcona(() => { const d = datiIcona(); ICONA.creaIcona(d, shell); ICONA.avvio(d, true, app); }, { zitto: true });
   }
+  // l'icona c'è ma la cartella di Lode è stata spostata (o è un'altra copia): punta di nuovo qui
+  else if (DAL_CODICE) provaIcona(() => { const d = datiIcona(); if (ICONA.haIcona(d) && (WIN || !ICONA.puntaQui(d))) ICONA.creaIcona(d, shell); }, { zitto: true });
   // in sviluppo (npm start, le prove) le librerie della barra si copiano da desktop/node_modules in vendor/ accanto a
   // index.html, se mancano o se package.json ha cambiato versione (desktop/vendor.mjs); nel pacchetto sono già in web/vendor
   if (!app.isPackaged && WEB !== join(QUI, 'web')) try { if ((await import('./vendor.mjs')).vendorAggiornato(join(WEB, 'vendor'))) console.log('Lode: librerie della barra copiate in vendor/'); }

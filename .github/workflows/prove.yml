@@ -56,6 +56,9 @@ jobs:
       # aggiornamenti (desktop/aggiorna.mjs): versioni, installer giusto, latest*.yml, Mac senza firma, finto electron-updater
       - name: Aggiornamenti
         run: node test/aggiorna.mjs
+      # l'icona di Lode per chi la installa dal codice (desktop/collegamento.mjs): su Mac e Linux si crea in una cartella temporanea
+      - name: Icona dal codice
+        run: node test/collegamento.mjs
       # sincronizzazione v2 (docs/SINCRONIZZAZIONE.md): le parti pure del motore, il simulatore che prova se stesso, gli scenari
       # dei problemi noti e un giro di fuzz con semi fissi (riproducibile: un errore si rifà in locale con lo stesso seme)
       - name: Sincronizzazione (motore, simulatore, scenari, fuzz)
