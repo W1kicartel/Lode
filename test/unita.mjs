@@ -296,6 +296,22 @@ if (!AI.errore) {
   prova('voce: nessuno script d\'installazione nei pacchetti di sherpa-onnx', ['sherpa-onnx-node', ...addon].every(a => !lock.packages['node_modules/' + a]?.hasInstallScript));
   const B = pkg.build;
   prova('voce: i due moduli nel pacchetto, l\'addon fuori dall\'asar, il Mac universale senza sherpa', ['voce-onnx.mjs', 'voce-onnx-motore.mjs'].every(f => B.files.includes(f)) && ['win', 'linux'].every(s => B.asarUnpack?.includes(`node_modules/sherpa-onnx-${s}-*/**`)) && B.files.includes('!node_modules/sherpa-onnx-darwin-*{,/**}') && !B.mac.files && B.mac.x64ArchFiles === 'Contents/Resources/bin/lode-voce');
+  // nel pacchetto ci sono tutti i moduli che il main importa (a cascata): nella 0.5.0 mancavano sincronizza.mjs e sync/,
+  // e l'app installata si chiudeva all'avvio. vendor.mjs si importa solo in sviluppo (!app.isPackaged)
+  {
+    const nelPacchetto = f => B.files.some(g => !g.startsWith('!') && (g === f || (g.endsWith('/**') && f.startsWith(g.slice(0, -2)))));
+    const visti = new Set(), mancano = [], coda = ['main.mjs'];
+    while (coda.length) {
+      const f = coda.shift(); if (visti.has(f)) continue; visti.add(f);
+      if (!nelPacchetto(f)) mancano.push(f);
+      const dir = f.includes('/') ? f.slice(0, f.lastIndexOf('/') + 1) : '';
+      for (const m of leggi('desktop/' + f).matchAll(/(?:^|\n)\s*import\s[^'"]*?from\s+['"](\.\/[^'"]+)['"]|\bimport\(\s*['"](\.\/[^'"]+)['"]\s*\)|utilityProcess\.fork\([^)]*?['"]([\w-]+\.mjs)['"]/g)) {
+        const rel = (m[1] || m[2] || ('./' + m[3])).slice(2);
+        if (rel !== 'vendor.mjs') coda.push((dir + rel).replace(/[^/]+\/\.\.\//g, ''));
+      }
+    }
+    prova('pacchetto: tutti i moduli importati dal main sono negli installer (build.files)', !mancano.length && visti.has('sincronizza.mjs') && visti.has('sync/motore.mjs') && visti.has('collegamento.mjs'), 'mancano: ' + mancano.join(', ') + ' · visti: ' + [...visti].join(', '));
+  }
   prova('voce: modello da un commit preciso (mai main o latest), impronte SHA256 complete', /\/resolve\/[0-9a-f]{40}\/$/.test(VO.MODELLO.base) && !/\/(main|latest)\//.test(VO.MODELLO.base) && VO.MODELLO.file.length === 4 && VO.MODELLO.file.every(f => /^[0-9a-f]{64}$/.test(f.sha256) && f.byte > 0));
   prova('voce: il peso detto all\'interfaccia è quello dei file', Math.abs(VO.MODELLO.file.reduce((s, f) => s + f.byte, 0) / 2 ** 20 - VO.PESO_MB) < 10);
   // il job della CI con la cache del modello: la chiave contiene le impronte (cambiano → si riscarica)
