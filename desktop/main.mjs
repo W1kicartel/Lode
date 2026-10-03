@@ -1,7 +1,7 @@
 // Lode, l'app desktop. Una finestra trasparente in cima allo schermo, sopra tutte le altre: dentro c'è solo la barra.
 // I clic passano attraverso tranne che sulla barra. Scorciatoie globali per la cattura in aula. Il vault Obsidian in
 // Documenti/Lode è la memoria: dati di Lode in .lode/dati.json, lezioni in Markdown. Icona nella barra dei menu.
-import { app, BrowserWindow, Menu, ShareMenu, Tray, clipboard, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, net, powerMonitor, screen, shell, utilityProcess } from 'electron';
+import { app, BrowserWindow, Menu, ShareMenu, Tray, clipboard, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, net, powerMonitor, safeStorage, screen, shell, utilityProcess } from 'electron';
 import { existsSync, readFileSync, mkdirSync, writeFileSync, rmSync, renameSync, copyFileSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { totalmem } from 'node:os';
@@ -13,6 +13,7 @@ import * as VOCE from './voce.mjs';
 import * as VOCE_ONNX from './voce-onnx.mjs';
 import * as PROGETTO from './progetto.mjs';
 import * as AGGIORNA from './aggiorna.mjs';
+import { creaSincronizzazione } from './sincronizza.mjs';
 
 const QUI = dirname(fileURLToPath(import.meta.url));
 const WEB = existsSync(join(QUI, 'web', 'index.html')) ? join(QUI, 'web') : join(QUI, '..');
@@ -72,8 +73,12 @@ function creaBarra() {
   barra.webContents.session.setPermissionRequestHandler((_, p, cb) => cb(['media', 'notifications', 'clipboard-sanitized-write'].includes(p)));
   // Alt+F4 (o Ctrl+W) non la distrugge: si richiude e basta. Se ne va solo uscendo da Lode
   barra.on('close', e => { if (!uscendo) { e.preventDefault(); rilascia(); } });
-  barra.on('closed', () => { barra = null; if (!uscendo) creaBarra(); });
-  barra.on('session-end', () => { uscendo = true; scriviTutto(); });   // Windows si spegne o esce l'utente: before-quit non arriva
+  const idBarra = barra.webContents.id;   // preso prima: dopo 'closed' webContents non c'è più
+  barra.on('closed', () => { barra = null; sync.dimenticaFinestra(idBarra); if (!uscendo) creaBarra(); });
+  // Windows si spegne o esce l'utente: before-quit non arriva. I salvataggi che il diario non ha ancora preso (tenuti durante
+  // un'accensione, in fila dietro un lavoro lungo) vanno subito, in modo sincrono, in un file di recupero; poi l'ultima
+  // pubblicazione se Windows ce ne lascia il tempo (prima sync.chiudi() qui non si chiamava affatto, giro 3)
+  barra.on('session-end', () => { uscendo = true; scriviTutto(); sync.salvaPendenti(); sync.chiudi().catch(() => { }); });
 }
 function apriQuadro() {
   if (quadro && !quadro.isDestroyed()) { quadro.show(); quadro.focus(); return; }
@@ -83,7 +88,9 @@ function apriQuadro() {
   quadro.webContents.setWindowOpenHandler(({ url }) => { if (/^https?:/.test(url)) shell.openExternal(url); return { action: 'deny' }; });
   restaLode(quadro);
   if (MAC) app.dock?.show();
-  quadro.on('closed', () => { quadro = null; if (MAC) app.dock?.hide(); });
+  // le BASE della finestra chiusa (fino a 6, MB con anni di dati) si buttano: ogni quadro nuovo ha un webContents.id nuovo
+  const idQuadro = quadro.webContents.id;
+  quadro.on('closed', () => { quadro = null; sync.dimenticaFinestra(idQuadro); if (MAC) app.dock?.hide(); });
 }
 /* ---------- la prima volta: la finestra di benvenuto ---------- */
 let benvenuto = null;
@@ -96,27 +103,50 @@ function apriBenvenuto() {
   restaLode(benvenuto);
   benvenuto.once('ready-to-show', () => { benvenuto.show(); benvenuto.focus(); if (MAC) app.focus({ steal: true }); });
   if (MAC) app.dock?.show();
-  benvenuto.on('closed', () => { benvenuto = null; if (MAC && !quadro) app.dock?.hide(); });
+  const idBenvenuto = benvenuto.webContents.id;
+  benvenuto.on('closed', () => { benvenuto = null; sync.dimenticaFinestra(idBenvenuto); if (MAC && !quadro) app.dock?.hide(); });
 }
 const tutte = () => [barra, quadro, benvenuto].filter(w => w && !w.isDestroyed());
 const manda = (canale, x, tranne) => tutte().forEach(w => { if (w.webContents !== tranne) w.webContents.send(canale, x); });
 
 /* ---------- vault ---------- */
 function info() { const o = V.obsidian(vault()); return { percorso: vault(), nome: vault().split(/[\\/]/).pop(), obsidian: { installato: o.installato, registrato: !!o.registrato }, note: V.notePerLode(vault()) }; }
+// con la sincronizzazione Orario.md lo legge e lo scrive il motore (docs/SINCRONIZZAZIONE.md §9): il watcher gli fa fare un giro
 function avviaVault() {
   guardiano?.chiudi(); guardiano = null;
   let orario = [];
   try { orario = JSON.parse(readFileSync(fileDati(), 'utf8')).orario || []; } catch { }
-  V.crea(vault(), orario);
+  const conSync = sync.acceso();
+  V.crea(vault(), conSync ? null : orario);
   V.registra(vault());
   guardiano = V.guarda(vault(), {
     lezioniCambiate: () => manda('vault:lezioni', V.lezioni(vault())),
-    orarioCambiato: o => manda('vault:orario', o),
+    orarioCambiato: o => { if (!sync.acceso()) manda('vault:orario', o); },
     noteCambiate: () => manda('vault:info', info()),
+    syncCambiato: conSync ? () => sync.cambiato() : null,
   });
   try { guardiano.segnaOrario(readFileSync(join(vault(), 'Orario.md'), 'utf8')); } catch { }
 }
+// il vault cambiato da fuori (spostamento nella cartella cloud, «Uso già Lode su un altro computer», «Smetti su questo computer»)
+async function impostaVault(p, { ricarica = true } = {}) {
+  scriviTutto(); conf.vault = p; salvaConf();
+  await apriVault();
+  if (ricarica) tutte().forEach(w => w.webContents.reload());
+  else { manda('vault:info', info()); manda('vault:lezioni', V.lezioni(vault())); }   // la scheda che aspetta l'esito resta aperta
+}
 async function scegliVault() {
+  // dopo «Smetti» (sincronizzazione senza cartella cloud) il diario è legato al vault: le note si copiano nella cartella scelta e lì
+  // nasce un gruppo locale (sincronizza.mjs, cambiaVaultLocale). Prima qui si rimandava a «Smetti», che rispondeva «non è accesa»
+  if (sync.acceso() && !conf.sync?.cloud) {
+    const r = await dialog.showOpenDialog({ title: 'Dove tenere il vault', buttonLabel: 'Usa questa cartella', properties: ['openDirectory', 'createDirectory'], defaultPath: vault() });
+    if (r.canceled || !r.filePaths[0]) return null;
+    const x = await sync.cambiaVaultLocale(r.filePaths[0]);
+    if (x.esito !== 'ok') { if (!process.env.LODE_PROVA) dialog.showMessageBox({ type: 'warning', title: 'Lode', message: x.errore || 'Non è andata.', noLink: true }); return null; }
+    tutte().forEach(w => w.webContents.reload());
+    return info();
+  }
+  // con la sincronizzazione nel cloud il vault è legato al diario (il gruppo): si cambia con «Smetti su questo computer» o «Uso già Lode»
+  if (sync.acceso()) { if (!process.env.LODE_PROVA) dialog.showMessageBox({ type: 'info', title: 'Lode', message: 'Con la sincronizzazione il vault si cambia da «Sincronizza fra i tuoi computer»', detail: '«Smetti su questo computer» porta il vault fuori dalla cartella cloud.', noLink: true }); return null; }
   const r = await dialog.showOpenDialog({ title: 'Scegli il vault Obsidian', buttonLabel: 'Usa questo vault', properties: ['openDirectory', 'createDirectory'], defaultPath: vault() });
   if (r.canceled || !r.filePaths[0]) return null;
   scriviTutto();   // i dati in sospeso vanno nel vault di prima
@@ -167,7 +197,18 @@ function scrivi(f) {
   } catch (e) { console.error(e); if (x.n < 10) x.t = setTimeout(() => scrivi(f), Math.min(30e3, 1000 * 2 ** x.n++)); }   // poi riprova al prossimo salvataggio o all'uscita
 }
 const scriviTutto = () => [...inSospeso.keys()].forEach(scrivi);   // all'uscita, quando Windows si spegne, prima di cambiare vault
-app.on('before-quit', () => { uscendo = true; scriviTutto(); });
+// la sincronizzazione (desktop/sincronizza.mjs): spenta finché lo studente non la accende, e allora i dati passano dal diario
+const sync = creaSincronizzazione({ app, safeStorage, dialog, powerMonitor, conf: () => conf, salvaConf, vault, impostaVault: (p, o) => impostaVault(p, o), manda, tutte: () => tutte(), scriviTutto: () => scriviTutto(),
+  scriviDati: d => scriviDopo(fileDati(), d) });   // i salvataggi tenuti durante un'accensione che non è riuscita: a dati.json come prima
+sync.registra(ipcMain);
+let syncChiusa = false;
+app.on('before-quit', e => {
+  uscendo = true; scriviTutto();
+  // l'ultima pubblicazione prima di uscire (al massimo 5 s), poi si esce davvero. Anche durante un'accensione (accendendo: conf.sync
+  // non c'è ancora): chiudi() la aspetta, e quello che il diario non ha preso finisce in un file di recupero (prima si usciva
+  // subito e i salvataggi tenuti sparivano, giro 3)
+  if ((sync.acceso() || sync.accendendo()) && !syncChiusa) { e.preventDefault(); syncChiusa = true; sync.chiudi().finally(() => app.quit()); }
+});
 app.whenReady().then(() => { powerMonitor.on('resume', riprovaLettura); powerMonitor.on('unlock-screen', riprovaLettura); });
 
 /* ---------- canali con la barra ---------- */
@@ -178,17 +219,28 @@ let tRilettura = 0;
 function riprovaLettura() {
   clearTimeout(tRilettura); if (!nonLetti.size) return;
   try {
-    const d = leggiDati(); if (!d) throw new Error('vuoto');
+    const d = leggiDati(); if (!d || d.lode2) throw new Error(d ? 'altrove' : 'vuoto');   // il minimo di Lode 2 non è un dato da mostrare
     for (const w of tutte()) if (nonLetti.has(w.webContents.id)) { nonLetti.delete(w.webContents.id); w.webContents.send('dati:cambiati', d); }
     console.log('Lode: dati di nuovo leggibili');
   } catch { tRilettura = setTimeout(riprovaLettura, 30e3); }
 }
-ipcMain.on('dati:leggi', e => {
+ipcMain.on('dati:leggi', (e, vuoto) => {
+  if (sync.acceso()) { e.returnValue = sync.leggi(e.sender.id, vuoto); return; }   // la vista del diario, con la sua versione
   scrivi(fileDati());   // prima quello che aspetta di essere scritto (una finestra che si ricarica rilegge i dati giusti)
+  // un dati.json col segno lode2 con la sincronizzazione spenta su questo computer: i dati di questo vault stanno nel diario di
+  // Lode 2 di un altro computer. La barra lo mostra in sola lettura (i salvataggi vanno in dati.recupero.json, come quando il
+  // file non si legge) e propone «Uso già Lode su un altro computer». Prima la barra lo prendeva per buono e ci scriveva sopra
+  // i dati dello studente, che poi sparivano al collegamento (giro 3)
+  try { const d = leggiDati(); if (d?.lode2) { nonLetti.add(e.sender.id); e.returnValue = { ...d, __errore: 'altrove' }; return; } }
+  catch { }
   try { e.returnValue = leggiDati(); nonLetti.delete(e.sender.id); }
   catch (x) { console.error('Lode: non riesco a leggere i dati', x); nonLetti.add(e.sender.id); e.returnValue = { __errore: x.code || 'lettura' }; tRilettura = setTimeout(riprovaLettura, 15e3); }   // js/dati.js parte vuoto e lo dice
 });
-ipcMain.on('dati:salva', (e, d) => {
+ipcMain.on('dati:salva', (e, d, x) => {
+  // durante l'accensione (migrazione, scrypt, 30 s di attesa) conf.sync non c'è ancora: il salvataggio non va a dati.json (la
+  // migrazione l'ha già letto, e con il vault nel cloud tornerebbe in chiaro), lo tiene la sincronizzazione finché conf.sync c'è
+  if (sync.accendendo()) return void sync.tieni(e.sender.id, d, x);
+  if (sync.acceso()) return void sync.salva(e.sender.id, d, x);   // differenze dalla BASE di quella finestra → eventi nel diario
   if (nonLetti.has(e.sender.id)) {   // niente dati.json, e i dati vuoti non arrivano alle finestre che hanno quelli veri
     scriviDopo(accanto('dati.recupero.json'), d);
     return tutte().forEach(w => { if (w.webContents !== e.sender && nonLetti.has(w.webContents.id)) w.webContents.send('dati:cambiati', d); });
@@ -221,6 +273,7 @@ ipcMain.handle('vault:annota', (_, x) => {
 ipcMain.handle('vault:scrivi', (_, { file, testo }) => {
   file = V.relativo(file);
   if (!/^(Orario|Lode\/[\w ]+)\.md$/.test(file)) throw new Error('file non permesso');
+  if (file === 'Orario.md' && sync.acceso()) return true;   // con la sincronizzazione Orario.md lo scrive il motore, col marcatore
   if (file === 'Orario.md') guardiano?.segnaOrario(testo);
   V.scriviSicuro(V.dentro(vault(), file), testo); return true;
 });
@@ -504,6 +557,7 @@ app.whenReady().then(async () => {
   await V.carica(WEB);
   try { ER = await import(pathToFileURL(join(WEB, 'js', 'errori.js')).href); } catch (x) { console.error('Lode: errori.js non si carica', x); }
   await apriVault();   // se la cartella è bloccata lo dice, e Lode parte comunque
+  await sync.avvia();   // solo se lo studente l'ha accesa: legge il diario e fa il primo giro
   // «Segui il progetto»: gli handler progetto:* e i progetti già seguiti. Ogni comando passa dalla finestra di conferma del sistema
   // (progetto.mjs); conf.progetti sta in userData/config.json, mai nel vault. conf come funzione: leggiConf() la riassegna
   try { progetti = PROGETTO.registra({ ipcMain, dialog, app, conf: () => conf, salvaConf, manda }); } catch (x) { console.error('Lode: progetti non avviati', x); }

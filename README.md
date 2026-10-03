@@ -293,6 +293,24 @@ Tutto offline. L'audio non resta mai su disco: sul Mac passa a Parakeet in un fi
 - **Aggiornamenti:** l'app installata chiede a GitHub, poco dopo l'avvio e poi ogni 6 ore, se c'è una versione nuova di Lode, e da lì la scarica. Non manda niente di tuo: né dati, né identificativi, né statistiche. Si spengono da «Prepara Lode» o dal menu dell'icona.
 - **Registrare una lezione** dipende dal regolamento del tuo ateneo e dal docente: chiedi prima.
 
+## Sincronizza fra i tuoi computer (sperimentale)
+
+> **Nuova e sperimentale.** È spenta finché non la accendi tu. È stata provata a fondo con un simulatore di più computer e un cloud che fa di tutto per rompere le cose (centinaia di migliaia di sequenze, più tre giri di revisione indipendente), ma non ancora da tanti studenti. Prima di accenderla Lode tiene una copia di tutto: il vault di adesso resta dov'è, intatto, e i dati di Lode vanno anche nella cartella «copie» dei dati di Lode. Se qualcosa non torna, [raccontacelo](https://github.com/W1kicartel/Lode/issues).
+
+Facoltativa, nell'app desktop: in **Prepara Lode › Sincronizza fra i tuoi computer** (o scrivi «sincronizza»). Lode usa la cartella cloud che hai già (iCloud Drive, OneDrive, Dropbox, Google Drive, Syncthing): niente account, niente server di Lode. Sposta il vault lì (la cartella di prima resta dov'è, intatta; se lo spostamento si interrompe, riprende da dove era rimasto) e ogni computer scrive solo il suo diario: niente conflitti, niente si perde. Sugli altri computer: **Uso già Lode su un altro computer**, nel benvenuto o in Prepara Lode. Se su quel computer Lode aveva già esami, voti o carte suoi, non spariscono: compaiono in «Dati di un altro primo avvio» nella scheda, e con **Importa le aggiunte** entrano nel gruppo (profilo e impostazioni restano nel file dei dati del vault di prima). Prima di accenderla, aggiorna Lode su tutti i computer.
+
+**La password è facoltativa e si sceglie una volta, all'accensione.** Con la password sono cifrati i dati di Lode nel diario: esami, voti, carte e ripassi, sessioni, profilo, impostazioni. Restano **in chiaro** nella cartella cloud, anche con la password (e le pagine per Obsidian riportano molti di quei dati):
+- appunti, Sbobine, file per Anki, diari dei Progetti;
+- Orario.md con le aule;
+- le pagine che Lode scrive per Obsidian, ricavate proprio da quei dati: Esami (voti, media, CFU e ore studiate per esame), Memoria (ore di studio del mese, in che fascia del giorno studi, la serie di giorni, le definizioni sbagliate e quante volte), Home (il prossimo appello, quante carte ci sono da ripassare), Corsi, Glossario;
+- nomi, dimensioni e orari dei file (quando studi);
+- quanti computer ci sono, quanti file scrive ciascuno e quante azioni ha in ogni file (un file per giorno);
+- il file del gruppo (sale e controllo della password, quando è nato e da quale computer, l'impronta del dati.json di prima);
+- quando è cambiata la password;
+- il dati.json minimo che dice «Aggiorna Lode».
+
+Sul computer il diario di Lode resta in chiaro, protetto solo dal tuo account del sistema; nella cronologia del servizio cloud resta quello che era passato in chiaro prima della password. **Se dimentichi la password non si perde niente**: ogni computer ha i suoi dati sul disco, e con «Ho dimenticato la password» ne scegli una nuova (gli altri computer te la chiederanno). La password si ricorda nel portachiavi del sistema (su Linux senza portachiavi Lode la chiede a ogni avvio). **Smetti su questo computer** copia il vault in una cartella fuori dal cloud: gli altri computer continuano tra loro. Come funziona dentro: [docs/SINCRONIZZAZIONE.md](docs/SINCRONIZZAZIONE.md).
+
 ## Sicurezza
 Hai trovato un problema di sicurezza? Non aprire una issue pubblica: segnalalo in privato, come spiegato in [SECURITY.md](SECURITY.md). Lì c'è anche cosa togliere (nome, chiavi, percorsi, pezzi del vault) prima di incollare un errore o uno screenshot in una issue.
 
@@ -334,9 +352,15 @@ node test/aggiorna.mjs
 node test/controlla-privacy.mjs
 node test/voce-onnx.mjs
 node test/prova-app.mjs
+node test/sync-motore.mjs
+node test/sincronizza-app.mjs
+node test/sync-sim/autoprova.mjs
+node test/sync-sim/scenari.mjs --motore test/sync-sim/motore-v2.mjs
+node test/sync-sim/fuzz.mjs --motore test/sync-sim/motore-v2.mjs --giri 1000 --seme 1
 ```
 - `test/unita.mjs` controlla comandi, formule, note, conti e il file per Anki, più la sicurezza della barra (librerie con versione esatta, Content-Security-Policy, percorsi, backup, dati del vault, chiavi, finestre che restano su Lode) e le parti della voce Parakeet ONNX che non hanno bisogno del modello (scelta del motore, versioni esatte, download con ripresa e impronta SHA256, la fila, il riposo, l'audio lungo a finestre, la chiusura durante l'avvio, il ripiego su Whisper): 168 prove.
 - Informatica: `codice.mjs` (141 prove su «Cosa stampa?»), `verifica-c.mjs` (452 programmi confrontati con il compilatore vero; senza compilatore salta), `progetto.mjs` (119, «Segui il progetto»), `errori.mjs` (218, gli errori spiegati), `diario.mjs` (90, il registro nel vault). Su GitHub girano tutte su Windows, Linux e macOS.
+- La sincronizzazione v2 ([docs/SINCRONIZZAZIONE.md](docs/SINCRONIZZAZIONE.md)): `sync-motore.mjs` prova le parti pure del motore (`desktop/sync/`); `sincronizza-app.mjs` prova l'app vera con Electron, tre computer uno alla volta su una cartella «cloud» temporanea (accensione con e senza password, spostamento interrotto e ripreso, modifiche contemporanee, Orario.md cambiato in Obsidian, «Smetti su questo computer»); `test/sync-sim/` è il simulatore di due o tre computer e di un servizio cloud dispettoso, con gli scenari dei problemi noti e il fuzz che, quando trova un errore, riduce la storia alla più corta e la racconta.
 - `test/aggiorna.mjs` (411 prove) controlla gli aggiornamenti senza Electron e senza rete: versioni con le prerelease, l'installer giusto per sistema e architettura, i `latest*.yml`, il Mac senza firma, un finto electron-updater, e che package.json, preload ed entitlements stiano insieme.
 - `test/voce-onnx.mjs` prova la voce Parakeet ONNX con il modello vero, senza Electron e senza microfono: trascrive le frasi di `test/audio`, misura un minuto di audio e un Ripeti di 90 secondi (su Mac e Linux anche la memoria del processo, che non deve salire), controlla le impronte, la fila, il riposo, la chiusura durante l'avvio e i ripieghi (crash, addon che manca, modello rovinato). Il modello lo cerca in `LODE_MODELLO_ONNX`; con `--scarica` lo scarica lì (circa 640 MB). Senza modello salta. Su GitHub gira su Windows e Linux solo a richiesta («Run workflow» o `[voce]` nel messaggio del commit), con il modello nella cache.
 - `test/controlla-privacy.mjs` guarda i file che finirebbero su GitHub (quelli in git e i nuovi non ignorati) e si ferma se trova chiavi, percorsi con un nome vero (`/Users/<nome>/`, `C:\Users\<nome>\`, `/home/<nome>/`, anche il tuo nome utente), file privati (`.env`, certificati, un vault di prova, foto e risultati delle prove), codice da un CDN o `npx --yes` senza versione esatta, pacchetti di `desktop/package-lock.json` fuori dal registro npm. Lancialo prima di ogni commit: su GitHub gira con le prove unitarie.

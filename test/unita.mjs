@@ -66,6 +66,8 @@ prova('dati: D.codice c\'è sempre', !!D.D.codice && Array.isArray(D.D.codice.ev
 
 // «Esporta per Anki» (js/anki.js): il comando, i campi, i mazzi, i doppioni
 prova('anki: comando', c('esporta per anki')?.tipo === 'anki' && c('esporta per anki').corso === null && c('anki')?.corso === null && c('Esporta per Anki.')?.tipo === 'anki' && c('carte per anki')?.corso === null && c('esporta tutto per anki')?.corso === null && c('esporta tutte le carte su anki')?.corso === null);
+prova('sincronizza: i comandi in italiano', c('sincronizza fra i computer')?.tipo === 'sincronizza' && c('sincronizza')?.cosa === null && c('smetti di sincronizzare')?.cosa === 'smetti' && c('smetti su questo computer')?.cosa === 'smetti' && c('sblocca')?.cosa === 'sblocca' && c('uso già lode su un altro computer')?.cosa === 'collega' && c('smetti di seguire')?.tipo !== 'sincronizza' && c('prepara obsidian')?.tipo === 'prepara', JSON.stringify([c('sincronizza'), c('uso già lode su un altro computer'), c('smetti di seguire')]));
+prova('sincronizza: spegni, password, collega un altro computer', c('spegni la sincronizzazione')?.cosa === 'smetti' && c('disattiva la sincronizzazione')?.cosa === 'smetti' && c('cambia password')?.cosa === 'password' && c('ho dimenticato la password')?.cosa === 'password' && c('accendi la sincronizzazione')?.cosa === null && c('collega un altro computer')?.cosa === 'altro' && c('uso già lode su un altro computer')?.cosa === 'collega', JSON.stringify([c('spegni la sincronizzazione'), c('cambia password'), c('collega un altro computer')]));
 prova('anki: comando con il corso', c('esporta le carte di analisi 2 per anki')?.corso === 'analisi 2' && c('esporta le carte di analisi due per anki')?.corso === 'analisi 2' && c('anki fisica 2')?.corso === 'fisica 2' && c('esporta basi di dati in anki')?.corso === 'basi di dati' && c('le carte di basi di dati per anki')?.corso === 'basi di dati' && c('prepara il mazzo di fisica 2 per anki')?.corso === 'fisica 2' && c('le mie carte per anki')?.corso === null, JSON.stringify(c('esporta le carte di analisi 2 per anki')));
 prova('anki: le domande su anki e «scarica anki» restano all\'AI', ['anki come si usa', 'anki funziona con lode?', 'anki è aperto?', 'anki o lode?', 'anki perché non va', 'scarica anki'].every(f => c(f) === null) && c('scarica le carte per anki')?.tipo === 'anki' && c('crea un mazzo su anki')?.corso === null && c('anki sistemi operativi')?.corso === 'sistemi operativi', ['anki come si usa', 'anki è aperto?', 'scarica anki', 'crea un mazzo su anki'].map(f => JSON.stringify(c(f))).join(' '));
 prova('anki: le altre frasi restano com\'erano', c('ripassa analisi 2')?.tipo === 'ripasso' && c('le carte')?.tipo === 'ripasso' && c('come importo le carte in anki') === null && c('cos\'è anki') === null);
@@ -407,5 +409,89 @@ if (!AI.errore) {
   prova('voce: main.mjs instrada ONNX con il ripiego e lo chiude a riposo e all\'uscita', /voce:prepara[^\n]*suOnnx\(\(\) => voceOnnx\.avvia\(\)\)/.test(main) && /voce:trascrivi[^\n]*suOnnx\(\(\) => voceOnnx\.trascrivi\(audio\)\)/.test(main) && /voce:riposa[^\n]*if \(!voceOnnx\.occupato\(\)\) voceOnnx\.chiudi\(\)/.test(main) && /will-quit[^\n]*voceOnnx\.chiudi\(\)/.test(main) && /processoElectron\(utilityProcess\)/.test(main));
 }
 
+/* ---------- sincronizzazione: dalla barra agli eventi (desktop/sync/differenze.mjs) e il testo unico (js/sync-testi.js) ---------- */
+{
+  const { differenze, normalizza } = await import('../desktop/sync/differenze.mjs'), TS = await import('../js/sync-testi.js');
+  const vuoto = { ...D.VUOTO(), imp: { ...D.VUOTO().imp, chiave: '' } };
+  const V = { v: 1, profilo: { nome: 'Anna' }, esami: [{ id: 'e1', nome: 'Analisi 1', cfu: 9, voto: 27 }], carte: [{ id: 'c1', fronte: 'F', retro: 'R', ease: 2.5, int: 0, rip: 0, scad: '2026-10-03' }],
+    orario: [{ id: 'oabc', corso: 'Analisi 2', giorni: [1], inizio: '09:00', fine: '11:00', aula: '7' }], sessioni: [], lezioni: [], memoria: {}, codice: { memoria: {}, errori: { k: 2 }, eventi: [], diari: {}, opzioni: {} }, imp: {} };
+  const B = normalizza(V, vuoto), dopo = f => { const x = structuredClone(B); f(x); return differenze(B, x, { meta: { 'esami/e1/voto': 'h1' } }); };
+  prova('sync: i valori di partenza della barra non sono differenze (#9)', differenze(B, normalizza(structuredClone(V), vuoto)).length === 0);
+  const v = dopo(x => { x.esami[0].voto = 30; });
+  prova('sync: un voto cambiato è un campo con il prev della finestra (⊕10)', v.length === 1 && v[0].tipo === 'campo' && v[0].percorso === 'esami/e1/voto' && v[0].valore === 30 && v[0].prev === 'h1', JSON.stringify(v));
+  const o = dopo(x => { x.orario = [{ id: 'casuale1', corso: 'Analisi 2', giorni: [1], inizio: '09:00', fine: '11:00', aula: '7' }, { id: 'casuale2', corso: 'Fisica', giorni: [2], inizio: '14:00', fine: '16:00', aula: '' }]; });
+  prova('sync: l\'orario si confronta per lezione, con l\'id o<k> (§9)', o.length === 1 && o[0].tipo === 'crea' && /^o[0-9a-f]{12}$/.test(o[0].id) && o[0].campi.corso === 'Fisica', JSON.stringify(o));
+  const c = dopo(x => { x.codice.errori.k = 5; x.codice.errori.z = 1; });
+  prova('sync: i contatori mandano la differenza', c.length === 2 && c.every(e => e.tipo === 'conta') && c.find(e => e.percorso === 'codice/errori/k').delta === 3, JSON.stringify(c));
+  const x1 = structuredClone(B); x1.carte[0] = { ...x1.carte[0], ease: 2.6, int: 2, rip: 1, scad: '2026-10-05' };
+  const r = differenze(B, x1, { esplicite: [{ tipo: 'ripasso', carta: 'c1', q: 4, giorno: '2026-10-03', ris: { ease: 2.6, int: 2, rip: 1, scad: '2026-10-05' } }] });
+  prova('sync: il ripasso parte con risposta e giorno, una volta sola (§6.6)', r.length === 1 && r[0].tipo === 'ripasso' && r[0].q === 4 && r[0].giorno === '2026-10-03', JSON.stringify(r));
+  const k = dopo(x => { x.esami = []; x.imp.chiave = 'sk-segreta'; x.imp.ultimoSuggerimento = 5; });
+  prova('sync: un esame tolto è un cancella; chiave e suggerimento restano sul computer', k.length === 1 && k[0].tipo === 'cancella' && k[0].id === 'e1', JSON.stringify(k));
+  const ev = dopo(x => { x.codice.eventi = [{ t: 1, tipo: 'errore' }, { t: 2, tipo: 'prova' }]; });
+  prova('sync: i diari dei progetti mandano solo le voci nuove', ev.length === 1 && ev[0].tipo === 'eventi' && ev[0].voci.length === 2, JSON.stringify(ev));
+  const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+  prova('sync: il README dice cosa resta in chiaro con le stesse parole di js/sync-testi.js (#4 #23)', TS.IN_CHIARO.every(t => readme.includes(t)) && readme.includes('Se dimentichi la password non si perde niente'), TS.IN_CHIARO.filter(t => !readme.includes(t)).join(' | '));
+  prova('sync: la riga di stato dice la verità', TS.rigaStato({ acceso: false }).startsWith('Spenta') && TS.rigaStato({ acceso: true, cloud: true, stato: 'password' }) === 'In pausa: scrivi la password per sincronizzare.' && /Sincronizzato con iCloud Drive · cifrato/.test(TS.rigaStato({ acceso: true, cloud: true, stato: 'in_pari', servizio: 'iCloud Drive', cifrato: true })));
+}
+// la barra con la sincronizzazione: una vista nuova che arriva non butta le modifiche non ancora mandate (§7, giro 1). Il gioco
+// delle definizioni e «Cosa stampa?» salvano solo alla fine: prima ogni vista arrivata nel frattempo le cancellava
+{
+  const mandati = [], asc = {}, base = { v: 1, profilo: { nome: 'Ada' }, esami: [], carte: [], orario: [], sessioni: [], memoria: {}, codice: { errori: {} }, imp: {} };
+  globalThis.window = { lodeDesktop: { leggiDati: () => ({ ...structuredClone(base), __ver: 7 }), salvaDati: (d, x) => mandati.push({ d: structuredClone(d), x }), su: (c, f) => { asc[c] = f; } } };
+  const M = await import('../js/dati.js?sync-vista');
+  M.D.memoria.k1 = { giuste: 3 };   // ricorda() senza salva()
+  asc['dati:cambiati']({ ...structuredClone(base), profilo: { nome: 'Ada, da un altro computer' }, __ver: 8 });
+  const prima = mandati.length === 1 && mandati[0].x?.ver === 7 && mandati[0].d.memoria?.k1?.giuste === 3;
+  asc['dati:cambiati']({ ...structuredClone(base), profilo: { nome: 'di nuovo' }, __ver: 9 });   // niente di nuovo qui: niente salva
+  prova('sync: una vista che arriva manda prima le modifiche non salvate, con la versione che la finestra aveva', prima && mandati.length === 1 && M.D.profilo.nome === 'di nuovo', JSON.stringify(mandati.map(m => [m.x?.ver, m.d.memoria])));
+  delete globalThis.window;
+}
+// sincronizzazione, giro 2 delle correzioni. «Annulla» fa l'operazione inversa e tocca solo quello che il comando ha cambiato
+{
+  const p = { esami: [{ id: 'e1', nome: 'Analisi', voto: null }], carte: [], profilo: { nome: 'Ada' } };
+  const q = { esami: [{ id: 'e1', nome: 'Analisi', voto: 30 }], carte: [], profilo: { nome: 'Ada' } };
+  const cur = { esami: [{ id: 'e1', nome: 'Analisi', voto: 30 }], carte: [{ id: 'cQ', fronte: 'fatta su un altro computer' }], profilo: { nome: 'Ada L.' } };
+  D.inverti(p, q, cur);
+  prova('sync: «Annulla» del voto rimette solo il voto; la carta e il nome arrivati dopo restano', cur.esami[0].voto === null && cur.carte.length === 1 && cur.profilo.nome === 'Ada L.', JSON.stringify(cur));
+  const c2 = { esami: [{ id: 'e9', nome: 'Nuovo' }, { id: 'e8', nome: 'arrivato da un altro computer' }] };
+  D.inverti({ esami: [] }, { esami: [{ id: 'e9', nome: 'Nuovo' }] }, c2);
+  prova('sync: «Annulla» di un esame aggiunto toglie solo quello', c2.esami.length === 1 && c2.esami[0].id === 'e8', JSON.stringify(c2));
+}
+// due finestre e una versione potata: il main non confronta mai con un'altra BASE (le modifiche arrivate dopo non tornano indietro)
+{
+  const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os'), { join } = await import('node:path');
+  const T = mkdtempSync(join(tmpdir(), 'lode-unita-sync-'));
+  const env = { LODE_CLOUD: process.env.LODE_CLOUD, LODE_PROVA: process.env.LODE_PROVA, LODE_MACCHINA: process.env.LODE_MACCHINA };
+  Object.assign(process.env, { LODE_CLOUD: join(T, 'cloud'), LODE_PROVA: '1', LODE_MACCHINA: 'm-unita' });
+  try {
+    const { creaSincronizzazione } = await import('../desktop/sincronizza.mjs');
+    const vault = join(T, 'cloud', 'Lode'); mkdirSync(join(vault, '.lode'), { recursive: true });
+    writeFileSync(join(vault, '.lode', 'dati.json'), JSON.stringify({ v: 1, profilo: { nome: 'Ada' }, esami: [{ id: 'e1', nome: 'Analisi', cfu: 9, voto: null }, { id: 'e2', nome: 'Fisica', cfu: 6, voto: null }], carte: [], orario: [], sessioni: [], imp: {}, benvenuto: true }));
+    const ud = join(T, 'ud'); mkdirSync(ud);
+    const conf = { vault }, viste = new Map(), h = {};
+    const finestra = id => ({ webContents: { id, send: (c, v) => { if (c === 'dati:cambiati') viste.set(id, v); } } });
+    const S = creaSincronizzazione({ app: { getPath: () => ud, isPackaged: false }, safeStorage: null, dialog: null, powerMonitor: null, conf: () => conf, salvaConf: () => { }, vault: () => conf.vault, impostaVault: async x => { conf.vault = x; }, manda: () => { }, tutte: () => [finestra(1), finestra(2)] });
+    S.registra({ handle: (c, f) => { h[c] = f; } });
+    const acc = await h['sync:attiva']({}, { i: 0 });
+    const senza = v => { const d = structuredClone(v); delete d.__ver; return d; };
+    const vA = S.leggi(1, {}); let vB = S.leggi(2, {});
+    // B salva 7 volte (ogni salvataggio manda una vista nuova anche ad A): la versione di A, bloccata in un confirm(), si pota
+    for (let n = 0; n < 7; n++) {
+      const d = senza(vB);
+      if (n === 0) d.esami.find(e => e.id === 'e1').voto = 28; else d.esami.push({ id: `n${n}`, nome: `Nuovo ${n}`, cfu: 6, voto: null });
+      await S.salva(2, d, { ver: vB.__ver, ops: [] }); vB = viste.get(2) || vB;
+    }
+    const dA = senza(vA); dA.profilo.nome = 'Ada Lovelace';
+    await S.salva(1, dA, { ver: vA.__ver, ops: [] });
+    const fine = S.leggi(2, {}), st = S.stato();
+    prova('sync: una finestra che salva con una versione potata non riporta indietro voti ed esami arrivati dopo', acc.esito === 'ok' && fine.esami.find(e => e.id === 'e1')?.voto === 28 && fine.esami.some(e => e.id === 'n6') && !!st.recupero, JSON.stringify({ acc: acc.esito, esami: fine.esami.map(e => [e.id, e.voto]), recupero: st.recupero }));
+    await S.chiudi();
+  } finally {
+    for (const [k, v] of Object.entries(env)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
+    try { rmSync(T, { recursive: true, force: true }); } catch { }
+  }
+}
 console.log(`${ok} prove passate, ${ko} fallite`);
 process.exit(ko ? 1 : 0);

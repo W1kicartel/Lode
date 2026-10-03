@@ -29,7 +29,12 @@ export function avvia() {
   document.documentElement.classList.add('benvenuto');
   main = document.querySelector('main'); main.innerHTML = '';
   S.nome = (D.profilo.nome && D.profilo.nome !== 'Giulia') ? D.profilo.nome : '';
-  S.esempio = D.profilo.nome === 'Giulia' || D.esami.some(e => NOMI_ESEMPIO.includes(e.nome) && e.id);
+  // i dati di esempio: dal segno che mette esempio() (js/dati.js), o da «Giulia» insieme ai nomi di esempio per quelli caricati da
+  // una Lode di prima. Prima bastava un esame con un nome di esempio («Analisi 1», «Fisica 1»…), comunissimo anche fra quelli veri:
+  // con la sincronizzazione il benvenuto ripartito su un computer collegato li toglieva a tutti i computer (giro 3). Con la
+  // sincronizzazione accesa la casella non è mai spuntata da sola (S.sync)
+  S.esempio = D.esempio === true || (D.profilo.nome === 'Giulia' && D.esami.some(e => NOMI_ESEMPIO.includes(e.nome) && e.id));
+  S.sync = false; L?.invoca('sync:stato').then(s => { S.sync = !!s?.acceso; }).catch(() => { });
   if (L) { L.su('installa:progresso', x => { S.installa[x.cosa] = x; aggiornaInstalla(); }); Voce.motoreNelMain().then(m => { S.voceMac = m; }); }
   addEventListener('lode:voce', e => { if (e.detail.fase === 'ripiego') S.voceMac = false;   // Whisper si scarica in questa finestra
   S.installa.voce = e.detail.fase === 'pronta' ? { fase: 'fatto', p: 1, testo: `${Voce.NOME_VOCE} è pronto` } : e.detail.fase === 'errore' ? { fase: 'errore', testo: e.detail.testo } : e.detail.fase === 'ripiego' ? { fase: 'scarico', p: 0, testo: e.detail.testo } : { fase: 'scarico', p: e.detail.p, testo: `Scarico la voce · ${Math.round((e.detail.p || 0) * 100)}%` }; aggiornaInstalla(); });
@@ -57,12 +62,42 @@ const P = k => PASSI.find(p => p.k === k);
 function ciao() {
   guscio(`<h1>Ciao.<br>Io sono Lode.</h1>
     <p class="bv-sub">Vivo in una piccola barra in cima allo schermo. In aula non ti faccio perdere niente, a casa ti alleno su quello che stai per dimenticare, e tengo tutto nel tuo Obsidian.</p>
-    <p class="bv-nota">Prima tre cose necessarie (due minuti, più i download). Poi, se vuoi, il setup veloce.</p>`, { avanti: 'Iniziamo', indietro: false });
+    <p class="bv-nota">Prima tre cose necessarie (due minuti, più i download). Poi, se vuoi, il setup veloce.</p>
+    ${L ? '<p class="bv-nota"><button type="button" class="btn ld-piano" id="bv-altro">Uso già Lode su un altro computer <small>(sperimentale)</small></button></p><div id="bv-collega" hidden></div>' : ''}`, { avanti: 'Iniziamo', indietro: false });
+  main.querySelector('#bv-altro')?.addEventListener('click', collega);
+}
+// «Uso già Lode su un altro computer» (docs/SINCRONIZZAZIONE.md §12): si sceglie il vault nella cartella cloud, si scrive la
+// password lì se serve, e Lode è già usabile mentre i dati arrivano. Il setup veloce non serve: profilo e esami arrivano
+// dagli altri computer
+async function collega() {
+  const box = main.querySelector('#bv-collega'); box.hidden = false;
+  const { vault = [] } = await L.invoca('sync:cartelle').catch(() => ({}));
+  box.innerHTML = `<p class="bv-sub">Scegli il vault di Lode nella tua cartella cloud (iCloud Drive, OneDrive, Dropbox, Google Drive).</p>
+    <div class="bv-scelte">${vault.map(v => `<button type="button" class="btn" data-v="${v.i}">${esc(v.nome)} · ${esc(v.servizio)}</button>`).join('')}<button type="button" class="btn" data-v="altro">Scegli il vault…</button></div>
+    <label class="bv-campo"><span>La password dei dati di Lode, se l'hai messa</span><input type="password" id="bv-pw" autocomplete="current-password"></label>
+    <p class="bv-nota" id="bv-esito" aria-live="polite"></p>`;
+  const esito = box.querySelector('#bv-esito');
+  box.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', async () => {
+    box.querySelectorAll('[data-v]').forEach(x => { x.disabled = true; }); esito.textContent = 'Collego…';
+    const pw = box.querySelector('#bv-pw').value || null;
+    const r = await L.invoca('sync:collega', { ...(b.dataset.v === 'altro' ? { scegli: true } : { i: +b.dataset.v }), password: pw }).catch(e => ({ esito: 'errore', errore: e.message }));
+    box.querySelectorAll('[data-v]').forEach(x => { x.disabled = false; });
+    if (r.esito === 'annullato') { esito.textContent = ''; return; }
+    if (r.esito !== 'ok') { esito.textContent = r.errore || 'Non riesco a usare quella cartella.'; return; }
+    box.querySelector('#bv-pw').value = '';
+    const fine = () => { box.innerHTML = '<p class="bv-sub">Ricevo i dati dagli altri computer… Lode è già usabile: arrivano da soli.</p><div class="bv-az"><button type="button" class="btn primary" id="bv-fatto">Inizia</button></div>'; box.querySelector('#bv-fatto').addEventListener('click', () => L.invoca('benvenuto:fatto')); };
+    if (r.stato !== 'password') return fine();
+    esito.textContent = pw ? (r.avviso || 'Password sbagliata: riprova.') : 'I dati di Lode sono protetti da una password: scrivila qui sopra.';
+    const inp = box.querySelector('#bv-pw'); inp.focus();
+    // ok solo quando il gruppo di adesso si è aperto (il main lo dice con esito e stato): «la password di prima», «una Lode più
+    // nuova» e «manomesso» hanno la loro frase. Prima ogni risposta diversa da ok era «Password sbagliata»
+    inp.onkeydown = async e => { if (e.key !== 'Enter' || !inp.value) return; const s = await L.invoca('sync:sblocca', { password: inp.value }); inp.value = ''; if (s.esito === 'ok' && s.stato !== 'password' && s.stato !== 'rigenerato') fine(); else esito.textContent = s.errore || 'Password sbagliata: riprova.'; };
+  }));
 }
 function nome() {
   guscio(`<h1>Come ti chiami?</h1><p class="bv-sub">Solo per salutarti. Resta sul tuo computer.</p>
     <label class="bv-campo grande"><input id="bv-nome" autocomplete="given-name" placeholder="Il tuo nome" value="${esc(S.nome)}" maxlength="40"></label>
-    ${S.esempio ? `<label class="bv-spunta"><input type="checkbox" id="bv-pulisci" checked><span>Togli i dati di esempio di «Giulia» (esami, voti, carte e ore di studio finti). Le cose che hai aggiunto tu restano.</span></label>` : ''}`, { avantiNo: !S.nome });
+    ${S.esempio ? `<label class="bv-spunta"><input type="checkbox" id="bv-pulisci"${S.sync ? '' : ' checked'}><span>Togli i dati di esempio di «Giulia» (esami, voti, carte e ore di studio finti). Le cose che hai aggiunto tu restano.</span></label>` : ''}`, { avantiNo: !S.nome });
   const inp = main.querySelector('#bv-nome'), av = main.querySelector('[data-bv=avanti]');
   inp.addEventListener('input', () => { S.nome = inp.value.trim(); av.disabled = !S.nome; });
   inp.addEventListener('keydown', e => { if (e.key === 'Enter' && S.nome) av.click(); });
@@ -83,7 +118,7 @@ function pulisciEsempio() {
   D.lezioni = []; D.memoria = {};
   D.orario = D.orario.filter(o => !NOMI_ESEMPIO.includes(o.corso));
   D.profilo = { ...vuoto.profilo, cfuTotali: D.profilo.cfuTotali };
-  S.esempio = false;
+  S.esempio = false; delete D.esempio;
   L?.invoca('vault:pulisciCorsi', { nomi: NOMI_ESEMPIO }).catch(() => { });
 }
 function installa() {

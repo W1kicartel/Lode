@@ -545,6 +545,14 @@ button.ld-ripeti-riga:hover{background:rgba(255,255,255,.06)}
 .ld-tuaai .ld-opzioni{margin-top:12px}
 .ld-tuaai .ld-op.scelta{box-shadow:inset 0 0 0 1.5px var(--ink)}
 .ld-ai-chiave,.ld-ai-modello{margin-top:14px}
+/* sincronizza fra i computer: stato, password, l'elenco onesto di cosa resta in chiaro */
+.ld-sync-stato{margin:6px 0 2px;font-size:13.5px;line-height:1.45}
+.ld-sync-stato b{font-weight:600}
+.ld-sync-pw{margin-top:14px}
+.ld-sync-pw .ld-riga-form{margin-top:8px}
+.ld-sync-pw small,.ld-sync small{display:block;margin-top:7px;font-size:12px}
+.ld-sync-lista{margin:4px 0 8px 18px;padding:0;font-size:12.5px;line-height:1.5;color:var(--muted)}
+.ld-piede .ld-piede-dati{display:inline-flex;align-items:center;gap:6px;min-width:0;margin-left:12px}.ld-piede .ld-piede-dati>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ld-ai-chiave small{display:block;margin-top:7px;font-size:12px}
 .ld-ai-chiave small b{color:var(--ink);font-weight:500}
 .ld-spunta-ai{display:flex;gap:9px;align-items:flex-start;margin-top:14px;font-size:12.5px;line-height:1.45;color:var(--muted);cursor:pointer}

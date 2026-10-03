@@ -130,6 +130,16 @@ export function interpreta(frase) {
   { const FORN = { claude: 'anthropic', anthropic: 'anthropic', chatgpt: 'openai', openai: 'openai', gpt: 'openai', gemini: 'google', google: 'google', mistral: 'mistral', groq: 'groq', openrouter: 'openrouter', deepseek: 'deepseek' };
     const m = t.match(/^(?:(?:la )?mia ai|ai|intelligenza artificiale|chiave(?: api)?|api ?key|(?:collega|usa|imposta|aggiungi|metti)(?: la chiave(?: di)?| la mia)? (claude|anthropic|chatgpt|openai|gpt|gemini|google|mistral|groq|openrouter|deepseek|ai|la mia ai|una chiave|chiave))$/);
     if (m) return { tipo: 'ai', fornitore: FORN[m[1]] || null }; }
+  // la sincronizzazione fra i computer: «sincronizza», «sincronizza con icloud», «smetti di sincronizzare», «sblocca»,
+  // «uso già Lode su un altro computer» (prima di «prepara» e di «smetti di seguire», che restano dei progetti)
+  if (/^(?:smetti(?:la)?|basta|spegni|disattiva)(?: di)?(?: la)? sincronizza(?:re|zione)?\b|^smetti su questo (?:computer|pc|mac)\b/.test(t)) return { tipo: 'sincronizza', cosa: 'smetti' };
+  // «cambia password», «ho dimenticato la password»: la scheda accesa, con i bottoni della password
+  if (/^(?:cambia(?:re)?|nuova)(?: la)? password\b|^ho dimenticato(?: la)? password\b/.test(t)) return { tipo: 'sincronizza', cosa: 'password' };
+  if (/^sblocca(?: (?:la )?sincronizzazione| i (?:miei )?dati| lode)?$/.test(t)) return { tipo: 'sincronizza', cosa: 'sblocca' };
+  // «collega un altro computer» è il bottone del §12 sul computer già sincronizzato: le istruzioni per l'altro computer
+  if (/^collega (?:un )?altro (?:computer|pc|mac)\b/.test(t)) return { tipo: 'sincronizza', cosa: 'altro' };
+  if (/^(?:uso gi[aà]|ho gi[aà]|collega(?:mi)?(?: a)?)(?: lode)? (?:su |da |con )?(?:un )?altro (?:computer|pc|mac)\b/.test(t)) return { tipo: 'sincronizza', cosa: 'collega' };
+  if (/^(?:sincronizza(?:zione)?|sincronizzare|sync)\b|^(?:accendi|attiva|gestisci|apri)(?: la)? sincronizzazione\b/.test(t)) return { tipo: 'sincronizza', cosa: null };
   if (/^(?:prepara|configura|installa|setup)\b/.test(t)) return { tipo: 'prepara', cosa: /obsidian/.test(t) ? 'obsidian' : /modello|cervello|ollama|gemma|qwen|ai/.test(t) ? 'cervello' : null };
   // il diario del progetto nel vault: aprirlo, spegnerlo, riaccenderlo
   if ((m = t.match(/^(spegni|non scrivere|accendi|riaccendi|scrivi) (?:il |più il )?diario(?: (?:del|di) (?:progetto)?\s*(.*))?$/))) return { tipo: 'diarioOpz', diario: /accendi|^scrivi/.test(m[1]), progetto: m[2] ? pulisci(m[2]) : null };
@@ -245,5 +255,6 @@ export const ESEMPI = [
   ['spiegami l\'errore', 'copia l\'errore dal terminale: te lo spiego in italiano, un passo alla volta'],
   ['diario del progetto', 'apre in Obsidian il diario di oggi'],
   ['smetti di seguire', 'Lode non guarda più la cartella e toglie le sue copie'],
+  ['sincronizza fra i computer', 'lo stesso Lode su due o tre computer, con la cartella cloud che hai già'],
 ];
 export { D };
