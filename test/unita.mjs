@@ -60,6 +60,7 @@ prova('domanda libera all\'AI', c('spiegami il teorema di Stokes') === null);
 
 // informatica: «Cosa stampa?», «Segui il progetto», «spiegami l'errore», il diario
 prova('cosa stampa', c('cosa stampa')?.tipo === 'stampa' && c('Cosa stampa?')?.tipo === 'stampa' && c('esercizi di C')?.tipo === 'stampa' && c('esercizio di programmazione')?.tipo === 'stampa' && c('allenami su c')?.tipo === 'stampa');
+prova('cosa stampa in Python e in Java', c('cosa stampa python')?.lingua === 'python' && c('Cosa stampa in Java?')?.lingua === 'java' && c('esercizi di python')?.lingua === 'python' && c('allenami su java')?.lingua === 'java' && c('cosa stampa c')?.lingua === 'c' && !c('cosa stampa')?.lingua && c('allenami')?.tipo === 'gioco');
 prova('«allenami» da solo resta il gioco', c('allenami')?.tipo === 'gioco');
 prova('segui progetto', c('segui progetto')?.azione === 'segui' && c('Segui il progetto.')?.azione === 'segui');
 prova('prova il progetto', c('prova il progetto')?.azione === 'prova' && c('compila')?.azione === 'prova' && c('provato?')?.azione === 'provato' && c('cosa è cambiato')?.azione === 'cambiato');
@@ -187,6 +188,43 @@ if (!AI.errore) {
   x = AI.correggiGiudizio({ esito: 'parziale', giudizio: 'Hai definito correttamente la forma esatta, ma manca specificare che P e Q sono le derivate parziali di U.', mancava: '', risposta: esatta, smentite: ['specificare che P e Q sono le derivate parziali di U'] });
   prova('orale: mancanza smentita → giusta', x.esito === 'giusta' && x.giudizio === 'Hai definito correttamente la forma esatta.', JSON.stringify(x));
   prova('orale: mancanze lette dal giudizio', JSON.stringify(AI.mancanze('Bene, ma manca la regolarità del bordo.')) === '["la regolarità del bordo"]');
+  // il «mancava» passa solo se un pezzo del materiale sull'argomento lo dice, con le parole che cambiano il senso al loro posto.
+  // Caso vero (riprese del reel, Qwen3.5 4B, materiale = dati d'esempio): per Green «derivate seconde» passava con le parole
+  // della carta di Schwarz; deve restare solo «Teorema di Green»
+  const esempio = `Carte del ripasso:
+– Che cos'è il gradiente di f(x, y)? → Il vettore delle derivate parziali (∂f/∂x, ∂f/∂y): punta nella direzione di massima crescita.
+– Enuncia il teorema di Schwarz → Se le derivate seconde miste sono continue in un intorno, allora f_xy = f_yx.
+– Condizione per un punto stazionario → Il gradiente si annulla: ∇f(x₀) = 0.
+– Come si classifica un punto stazionario? → Con la matrice hessiana: definita positiva → minimo, definita negativa → massimo, indefinita → sella.
+– Teorema di Green: enunciato → L'integrale di linea su ∂D di P dx + Q dy è uguale all'integrale doppio su D di (∂Q/∂x − ∂P/∂y).
+– Serie geometrica: quando converge? → Per |q| < 1, con somma 1/(1 − q).
+
+Lezioni:
+– Teorema di Green: Lega l'integrale di linea lungo il bordo di un dominio all'integrale doppio sul dominio.
+– ★ Il teorema di Green all'esame lo chiede sempre, con la dimostrazione`;
+  // le carte che Qwen3.5 ha scritto dalle slide, e il testo delle slide com'esce dal PDF (righe spezzate a metà frase)
+  const qwen = `– Quali sono le condizioni per applicare il Teorema di Green? → Il dominio deve essere regolare con bordo orientato positivamente e P, Q devono avere derivate parziali continue.
+– Come si comporta l'integrale di una forma esatta lungo una curva? → Dipende esclusivamente dagli estremi della curva e non dal percorso seguito.`;
+  const slide = `Teorema di Green 
+Sia D un dominio regolare con bordo orientato positivamente (senso
+antiorario). Se P e Q hanno derivate parziali continue, l'integrale di
+linea di P dx + Q dy lungo il bordo di D è uguale all'integrale doppio su
+D di (∂Q/∂x − ∂P/∂y).`;
+  const seconde = "La condizione di continuità delle derivate seconde nell'intorno.";
+  const dm = (cosa, mat, tema) => AI.dalMateriale(cosa, mat, tema);
+  prova('orale: «derivate seconde» per Green non passa con la carta di Schwarz', !dm(seconde, esempio, ['Teorema di Green', 'Come si dimostra il teorema di Green?']));
+  prova('orale: «derivate seconde» per Green non passa con la carta di Green', !dm(seconde, qwen, 'Teorema di Green') && !dm(seconde, slide, 'Teorema di Green'));
+  prova('orale: «seconde» al posto di «parziali» non passa', !dm('La continuità delle derivate seconde di P e Q', slide, 'Teorema di Green'));
+  prova('orale: senza materiale niente «mancava»', !dm('P e Q devono avere derivate parziali continue', '', 'Teorema di Green'));
+  const verde = AI.ripassoOrale({ storico: [{ argomento: 'Teorema di Green', esito: 'parziale', mancava: dm(seconde, esempio, 'Teorema di Green') ? seconde : '' }] });
+  prova('orale: da ripassare resta solo l\'argomento', JSON.stringify(verde) === '["Teorema di Green"]', JSON.stringify(verde));
+  prova('orale: vero dalla carta di Green resta', dm('P e Q devono avere derivate parziali continue', qwen, 'Teorema di Green') && dm('La condizione che P e Q abbiano derivate parziali continue', slide, 'Teorema di Green'));
+  prova('orale: vero dalle slide, titolo due righe sopra', dm('Il bordo deve essere orientato positivamente, in senso antiorario', slide, 'Teorema di Green'));
+  prova('orale: vero su Schwarz resta (seconde e miste ci sono)', dm('Le derivate seconde miste devono essere continue in un intorno', esempio, 'Teorema di Schwarz'));
+  prova('orale: la carta giusta ma su un altro argomento non basta', !dm('Le derivate seconde miste devono essere continue in un intorno', esempio, 'Teorema di Green'));
+  prova('orale: segni al loro posto', dm('Definita negativa vuol dire massimo, indefinita vuol dire sella', esempio, 'Classificazione stazionari') && !dm('Definita positiva vuol dire massimo', esempio, 'Classificazione stazionari'));
+  prova('orale: i numeri devono essere quelli', dm('Converge per |q| < 1 con somma 1/(1 − q)', esempio, 'Serie geometrica') && !dm('Converge per |q| < 2', esempio, 'Serie geometrica'));
+  prova('orale: «solo» ~ «esclusivamente»', dm('Dipende solo dagli estremi della curva', qwen, 'Forma esatta'));
   const rip = AI.ripassoOrale({ storico: [{ argomento: 'Green', esito: 'parziale', mancava: 'La regolarità del bordo' }, { argomento: 'Hessiana', esito: 'giusta' }, { argomento: 'Dini', esito: 'sbagliata', mancava: '' }] });
   prova('orale: da ripassare, prima le peggiori e niente di inventato', JSON.stringify(rip) === '["Dini","Green: la regolarità del bordo"]', JSON.stringify(rip));
 } else console.log('(ai.js non caricabile in Node:', AI.errore.message, ')');

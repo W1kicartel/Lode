@@ -47,6 +47,13 @@ jobs:
         env:
           LODE_CC_OBBLIGATORIO: ${{ runner.os != 'Windows' && '1' || '0' }}
         run: node test/verifica-c.mjs
+      - name: Cosa stampa? in Python e in Java, contro python3 e javac veri
+        # python3 c'è su tutte e tre le macchine (su Windows si chiama python); Java (JDK) è già installato sulle macchine
+        # di GitHub: obbligatorio su Linux, altrove se manca salta con un messaggio
+        env:
+          LODE_PYTHON_OBBLIGATORIO: '1'
+          LODE_JAVA_OBBLIGATORIO: ${{ runner.os == 'Linux' && '1' || '0' }}
+        run: node test/stampa-vero.mjs
       - name: Segui il progetto
         run: node --experimental-vm-modules test/progetto.mjs
       - name: Errori spiegati in italiano

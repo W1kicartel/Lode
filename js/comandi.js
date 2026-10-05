@@ -109,8 +109,10 @@ export function interpreta(frase) {
     const o = leggiOrario(m[1]); if (o) return { tipo: 'orario', ...o };
   }
   if (/^(?:orario|il mio orario|le mie lezioni|lezioni|quando ho lezione|che lezione ho)$/.test(t)) return { tipo: 'vediOrario' };
-  // «Cosa stampa?»: esercizi di C con la risposta calcolata da Lode (prima del gioco: «allenami» da solo resta il gioco)
+  // «Cosa stampa?»: esercizi di C con la risposta calcolata da Lode (prima del gioco: «allenami» da solo resta il gioco).
+  // Anche in Java e in Python: «cosa stampa python», «cosa stampa in java», «esercizi di python», «allenami su java»
   if (/^(?:cosa stampa(?: questo (?:codice|programma))?|esercizio? (?:di )?(?:c|programmazione)|allenami (?:su|in) c)$/.test(t)) return { tipo: 'stampa' };
+  if ((m = t.match(/^(?:cosa stampa(?: questo (?:codice|programma))?(?: (?:in|di))?|esercizio? (?:di|in)|allenami (?:su|in)) (c|java|python)$/))) return { tipo: 'stampa', lingua: m[1] };
   if ((m = t.match(/^(?:gioca(?:mo)?|gioco|giochino|memory|allenami|allenamento|fissa(?:mi)? le definizioni|definizioni)\b\s*(.*)$/))) {
     const r = pulisci(m[1] || ''); return { tipo: 'gioco', corso: r || null };
   }
@@ -250,6 +252,7 @@ export const ESEMPI = [
   ['apri glossario', 'salta a una pagina del vault'],
   ['interrogami su basi di dati', 'simula l\'orale (con l\'AI)'],
   ['cosa stampa', 'esercizi di C: la risposta la calcola Lode, non un\'AI'],
+  ['cosa stampa python', 'gli stessi esercizi in Python (o in Java: «cosa stampa java»)'],
   ['segui progetto', 'guarda la cartella del laboratorio: cosa cambia e se l\'hai provato'],
   ['prova il progetto', 'compila e lancia le prove .in/.out, dopo la tua conferma'],
   ['spiegami l\'errore', 'copia l\'errore dal terminale: te lo spiego in italiano, un passo alla volta'],

@@ -3,7 +3,10 @@
 // - ogni mutante { id, applica(programma), frase(scelta, dati) } è un errore tipico dello studente:
 //   l'uscita del programma mutato è un distrattore, e la frase spiega cosa ha sbagliato chi lo sceglie.
 // Le risposte le calcola esegui(), non un'AI. test/verifica-c.mjs controlla che il compilatore vero stampi lo stesso.
-import { num, car, reale, v, indice, valore, indirizzo, bin, cast, ternario, assegna, incr, chiama, printf, dich, array, espr, blocco, se, mentre, fai, per, scegli, caso, interrompi, continua, ritorna, param, funzione, main, programma, clona, visita, esegui, stampaC, normalizza, ErroreC } from './albero.js';
+// Lingue: ogni modello dice in quali si scrive (lingue: C, Java, Python; albero.js controlla che la stampa sia fedele) e, se
+// serve, le frasi e il concetto che cambiano con la lingua (python: { concetto, frasi, mutanti }, java: { … }).
+// test/stampa-vero.mjs li prova contro python3 e javac/java veri.
+import { num, car, reale, v, indice, valore, indirizzo, bin, cast, ternario, assegna, incr, chiama, printf, dich, array, espr, blocco, se, mentre, fai, per, scegli, caso, interrompi, continua, ritorna, param, funzione, main, programma, clona, visita, esegui, stampaC, stampaIn, normalizza, ErroreC, NOMI_LINGUE } from './albero.js';
 
 /* ---------- il seme ---------- */
 // mulberry32: stessi semi, stessi numeri, su ogni computer
@@ -52,6 +55,10 @@ const cambiaTutti = (p, ...passi) => passi.reduce((q, [segno, f]) => cambia(q, s
 // un programma che stampa solo questo testo: per gli errori che non sono una modifica del codice
 const soloUscita = s => programma(main(espr(printf(s.replace(/%/g, '%%')))));
 const hai = s => 'Hai scelto `' + s + '`';
+const NOME = l => NOMI_LINGUE[l] || 'C';
+const pr = l => l === 'python' ? 'print' : 'printf';
+// il range che stampaPython scrive per un for del C
+const rangeTesto = (a, b, k = 1) => `range(${k === 1 && a === 0 ? b : k === 1 ? `${a}, ${b}` : `${a}, ${b}, ${k}`})`;
 const fila = (a, b) => Array.from({ length: Math.max(0, b - a + 1) }, (_, k) => a + k);
 
 /* ---------- i modelli ---------- */
@@ -178,7 +185,7 @@ export const MODELLI = [
         S(espr(printf('%d %d\n', v('m'), v('p'))), 'stampa')));
     },
     mutanti: [
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'stampa', n => { n.e.arg[2] = bin('+', v('p'), num(1)); }), frase: s => `${hai(s)}: hai contato le posizioni da 1. In C il primo elemento ha indice 0.` },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'stampa', n => { n.e.arg[2] = bin('+', v('p'), num(1)); }), frase: (s, d, l) => `${hai(s)}: hai contato le posizioni da 1. In ${NOME(l)} il primo elemento ha indice 0.` },
       { id: 'maggiore-o-uguale', applica: p => cambia(p, 'cmp', n => { n.op = '>='; }), frase: s => `${hai(s)}: è quello che farebbe \`>=\`. Con \`>\` un massimo uguale non sposta p: resta il primo.` },
       { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.b.v -= 1; }), frase: s => `${hai(s)}: hai lasciato fuori l'ultimo elemento. Anche lui viene confrontato.` },
     ],
@@ -197,7 +204,7 @@ export const MODELLI = [
     },
     mutanti: [
       { id: 'sovrascrittura', applica: p => cambia(p, 'trova', n => blocco({ ...n, segno: undefined }, interrompi())), frase: s => `${hai(s)}: è la prima posizione. Il ciclo non si ferma: ogni volta che trova x riscrive p.` },
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'stampa', n => { n.e.arg[1] = bin('+', v('p'), num(1)); }), frase: s => `${hai(s)}: hai contato le posizioni da 1. In C il primo elemento ha indice 0.` },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'stampa', n => { n.e.arg[1] = bin('+', v('p'), num(1)); }), frase: (s, d, l) => `${hai(s)}: hai contato le posizioni da 1. In ${NOME(l)} il primo elemento ha indice 0.` },
       { id: 'indice-valore', applica: p => cambia(p, 'stampa', n => { n.e.arg[1] = num(p.dati.x); }), frase: s => `${hai(s)}: è il valore cercato, non la sua posizione. p è un indice.` },
     ],
   },
@@ -265,7 +272,7 @@ export const MODELLI = [
   },
   {
     id: 'resto-negativi', cosa: 'questo resto', concetti: ['c:resto'],
-    concetto: 'In C la divisione tronca verso lo zero e il resto ha il segno del dividendo: -7 % 3 fa -1.',
+    concetto: (d, l) => `In ${NOME(l)} la divisione tronca verso lo zero e il resto ha il segno del dividendo: -7 % 3 fa -1.`,
     genera(r) {
       const segni = uno(r, [[-1, 1], [-1, 1], [1, -1]]), b0 = tra(r, 2, 5); let a0; do a0 = tra(r, b0 + 1, 20); while (a0 % b0 === 0);
       const a = segni[0] * a0, b = segni[1] * b0;
@@ -274,8 +281,8 @@ export const MODELLI = [
         espr(printf('%d %d\n', S(bin('/', v('a'), v('b')), 'div'), S(bin('%', v('a'), v('b')), 'mod')))));
     },
     mutanti: [
-      { id: 'resto-col-segno', applica: p => cambiaTutti(p, ['div', n => { n.modo = 'pavimento'; }], ['mod', n => { n.modo = 'divisore'; }]), frase: s => `${hai(s)}: così fa Python, che arrotonda verso il basso. Il C tronca verso lo zero.` },
-      { id: 'resto-col-segno', applica: p => cambia(p, 'mod', n => { n.modo = 'matematico'; }), frase: s => `${hai(s)}: in C il resto non è sempre positivo. Ha il segno del dividendo, cioè di a.` },
+      { id: 'resto-col-segno', applica: p => cambiaTutti(p, ['div', n => { n.modo = 'pavimento'; }], ['mod', n => { n.modo = 'divisore'; }]), frase: (s, d, l) => `${hai(s)}: così fa Python, che arrotonda verso il basso. In ${NOME(l)} si tronca verso lo zero.` },
+      { id: 'resto-col-segno', applica: p => cambia(p, 'mod', n => { n.modo = 'matematico'; }), frase: (s, d, l) => `${hai(s)}: in ${NOME(l)} il resto non è sempre positivo. Ha il segno del dividendo, cioè di a.` },
       { id: 'divisione-intera', applica: p => cambia(p, 'div', n => { n.modo = 'pavimento'; }), frase: s => `${hai(s)}: la divisione tra int tronca verso lo zero, non verso il basso.` },
     ],
   },
@@ -542,7 +549,7 @@ export const MODELLI = [
   },
   {
     id: 'break-continue', cosa: 'questo break e questo continue', concetti: ['c:break-continue'],
-    concetto: '`continue` salta al giro dopo; `break` esce dal ciclo, e il printf di quel giro non arriva.',
+    concetto: (d, l) => `\`continue\` salta al giro dopo; \`break\` esce dal ciclo, e il ${pr(l)} di quel giro non arriva.`,
     genera(r) {
       const n = tra(r, 6, 8), a = tra(r, 1, 2), b = tra(r, a + 2, n - 2);
       return P({ n, a, b }, main(
@@ -555,7 +562,7 @@ export const MODELLI = [
     mutanti: [
       { id: 'break-continue', applica: p => cambia(p, 'cont', () => interrompi()), frase: (s, d) => `${hai(s)}: \`continue\` non esce dal ciclo: salta solo il giro con i = ${d.a}.` },
       { id: 'break-continue', applica: p => cambia(p, 'brk', () => continua()), frase: (s, d) => `${hai(s)}: \`break\` non salta un giro: esce dal ciclo quando i vale ${d.b}.` },
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'brk', () => blocco(espr(printf('%d ', v('i'))), interrompi())), frase: (s, d) => `${hai(s)}: il break arriva prima del printf: ${d.b} non viene stampato.` },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'brk', () => blocco(espr(printf('%d ', v('i'))), interrompi())), frase: (s, d, l) => `${hai(s)}: il break arriva prima del ${pr(l)}: ${d.b} non viene stampato.` },
     ],
   },
   {
@@ -600,39 +607,160 @@ export const MODELLI = [
 ];
 export const modello = id => MODELLI.find(m => m.id === id) || null;
 
+/* ---------- Java e Python ---------- */
+// in quali lingue si scrive ogni modello. Fuori da Java e Python: i puntatori e la variabile nascosta nel blocco (Java non
+// compila una x ridichiarata dentro, Python non ha i blocchi). Fuori solo da Python: ++ dentro un'espressione, lo switch che
+// cade nel case sotto, il do-while, l'else pendente (in Python decide il rientro), i char, i cast e il tipo del risultato
+// (in Python una variabile non ha tipo), il ternario (in Python si scrive x if c else y: è un altro esercizio)
+const TUTTE = ['c', 'java', 'python'], C_JAVA = ['c', 'java'], SOLO_C = ['c'];
+const LINGUE_MODELLI = {
+  'for-minore': TUTTE, 'for-passo': TUTTE, 'for-indietro': TUTTE, 'while-somma': TUTTE, 'while-dimezza': TUTTE, 'while-post': C_JAVA,
+  'array-somma': TUTTE, 'array-massimo': TUTTE, 'array-ultimo': TUTTE, 'media-array': TUTTE, 'divisione-double': C_JAVA,
+  'cast-prima-dopo': C_JAVA, 'diviso-due': TUTTE, 'resto-negativi': TUTTE, 'post-pre': C_JAVA, 'piu-uguale': TUTTE, switch: C_JAVA,
+  cortocircuito: C_JAVA, 'else-pendente': C_JAVA, 'swap-valore': TUTTE, 'swap-indirizzo': SOLO_C, 'valore-e-indirizzo': SOLO_C,
+  'array-in-funzione': TUTTE, 'blocco-ombra': SOLO_C, 'char-ascii': C_JAVA, fattoriale: TUTTE, 'somma-cifre': TUTTE,
+  'ricorsione-ordine': TUTTE, 'annidati-conta': TUTTE, 'annidati-stelle': TUTTE, 'break-continue': TUTTE, 'do-while': C_JAVA, ternario: C_JAVA,
+};
+// quello che cambia con la lingua: il concetto, le frasi (per posizione del mutante; null = quella del C) o tutti i mutanti
+const VARIANTI = {
+  'for-minore': { python: {
+    concetto: d => `\`${rangeTesto(d.a, d.b)}\` si ferma prima di ${d.b}: l'ultimo giro ha i = ${d.b - 1}.`,
+    frasi: [
+      (s, d) => `${hai(s)}: è quello che stamperebbe \`${rangeTesto(d.a, d.b + 1)}\`. range si ferma prima del secondo numero.`,
+      (s, d) => `${hai(s)}: hai saltato il primo giro. range parte proprio da ${d.a}.`,
+      (s, d) => `${hai(s)}: ti sei fermato un giro prima. \`${rangeTesto(d.a, d.b)}\` arriva fino a ${d.b - 1}.`],
+  } },
+  'for-passo': { python: {
+    concetto: d => `\`${rangeTesto(d.a, d.b + 1, d.s)}\` va di ${d.s} in ${d.s} e si ferma prima di ${d.b + 1}: anche ${d.b} viene stampato.`,
+    frasi: [
+      (s, d) => `${hai(s)}: è quello che stamperebbe \`${rangeTesto(d.a, d.b, d.s)}\`. Qui il secondo numero è ${d.b + 1}, quindi anche ${d.b} viene stampato.`,
+      (s, d) => `${hai(s)}: range parte da ${d.a}, non da ${d.a + d.s}. Il passo si aggiunge dopo il primo giro.`],
+  } },
+  'for-indietro': { python: {
+    concetto: d => `\`range(${d.n}, ${d.l}, -1)\` conta all'indietro e si ferma prima di ${d.l}: ${d.l} non viene stampato.`,
+    frasi: [
+      (s, d) => `${hai(s)}: hai stampato anche ${d.l}. range si ferma prima: l'ultimo giro ha i = ${d.l + 1}.`,
+      (s, d) => `${hai(s)}: range parte proprio da ${d.n}: il primo giro stampa ${d.n}.`,
+      (s, d) => `${hai(s)}: ti sei fermato un giro prima. Anche ${d.l + 1} viene stampato.`],
+  } },
+  'while-somma': { python: {
+    concetto: 'Il while esce quando la condizione diventa falsa: dopo `while i < n` la variabile i vale n.',
+    frasi: [null, s => `${hai(s)}: è come se \`i += 1\` venisse prima di \`s += i\`. Qui s somma i e solo dopo i cresce.`, null],
+  } },
+  'while-dimezza': { python: {
+    concetto: '`//` è la divisione intera: 7 // 2 fa 3, e dimezzando si arriva a 1 senza virgole.',
+    frasi: [s => `${hai(s)}: hai tenuto la virgola, come farebbe \`n /= 2\`. \`n //= 2\` è la divisione intera: butta via la parte dopo la virgola.`, null],
+  } },
+  'array-somma': { python: {
+    frasi: [null, (s, d) => `${hai(s)}: hai lasciato fuori l'ultimo. \`range(${d.k})\` arriva fino a ${d.k - 1}: l'ultimo giro legge \`v[${d.k - 1}]\`.`, null],
+  } },
+  'media-array': {
+    python: {
+      concetto: '`s // n` è la divisione intera; `/` in Python tiene sempre la virgola, anche tra due int.',
+      frasi: [
+        (s, d) => `${hai(s)}: \`s // ${d.k}\` è la divisione intera: la parte dopo la virgola si perde.`,
+        s => `${hai(s)}: in Python \`/\` tiene la virgola, non tronca come \`//\`.`,
+        s => `${hai(s)}: \`//\` non arrotonda: va verso il basso.`],
+    },
+    java: { frasi: [(s, d) => `${hai(s)}: \`s / ${d.k}\` è tra due int: in Java (come in C, non come in Python) la divisione resta intera e la parte dopo la virgola si perde.`, null, null] },
+  },
+  'divisione-double': { java: {
+    frasi: [s => `${hai(s)}: \`a / b\` si calcola tra int, prima di finire in m. In Java, come in C, la divisione tra due int tronca: il double riceve un numero già troncato.`, null],
+  } },
+  'diviso-due': { python: {
+    concetto: 'In Python `//` è la divisione intera e `/` tiene sempre la virgola, anche tra due int.',
+    frasi: [
+      s => `${hai(s)}: \`a // 2\` è la divisione intera: dà un int, senza virgola.`,
+      s => `${hai(s)}: in Python \`/\` non tronca come in C o in Java: anche \`a / 2\` tiene la virgola.`,
+      s => `${hai(s)}: \`a // 2\` non arrotonda: va verso il basso.`],
+  } },
+  'resto-negativi': { python: {
+    concetto: 'In Python `//` va verso il basso e il resto ha il segno del divisore: -7 // 3 fa -3 e -7 % 3 fa 2.',
+    mutanti: [
+      { id: 'resto-col-segno', applica: p => cambiaTutti(p, ['div', n => { n.modo = 'zero'; }], ['mod', n => { n.modo = 'dividendo'; }]), frase: s => `${hai(s)}: così fanno il C e Java, che troncano verso lo zero. In Python \`//\` va verso il basso.` },
+      { id: 'resto-col-segno', applica: p => cambia(p, 'mod', n => { n.modo = 'dividendo'; }), frase: s => `${hai(s)}: in Python il resto ha il segno del divisore, cioè di b, non del dividendo.` },
+      { id: 'divisione-intera', applica: p => cambia(p, 'div', n => { n.modo = 'zero'; }), frase: s => `${hai(s)}: \`//\` arrotonda verso il basso, non verso lo zero.` },
+    ],
+  } },
+  'piu-uguale': { python: {
+    frasi: [null, (s, d) => `${hai(s)}: \`range(1, ${d.n + 1})\` arriva fino a ${d.n}: anche i = ${d.n} fa il suo giro.`, null],
+  } },
+  'swap-valore': { python: {
+    concetto: 'La funzione riceve i valori: riassegnare a e b dentro la funzione non tocca x e y.',
+    frasi: [s => `${hai(s)}: a e b sono nomi della funzione. Riassegnarli non cambia x e y.`, s => `${hai(s)}: dentro la funzione lo scambio avviene davvero. Si scambiano a e b, non x e y.`],
+  } },
+  'array-in-funzione': {
+    python: {
+      concetto: 'La lista passa alla funzione così com\'è: `v[n] *= …` cambia proprio a. n invece è un nome della funzione: `n -= 1` non tocca la n di fuori.',
+      frasi: [s => `${hai(s)}: una lista non viene copiata. La funzione lavora sugli stessi elementi di a.`, s => `${hai(s)}: n invece no. Il \`n -= 1\` della funzione non tocca la n di fuori.`],
+    },
+    java: { concetto: 'Un array passa come riferimento: la funzione cambia proprio a. Un int invece passa come copia.' },
+  },
+  'somma-cifre': { python: { concetto: '`n % 10` è l\'ultima cifra, `n // 10` toglie l\'ultima cifra. Il caso base restituisce la cifra che resta.' } },
+  'ricorsione-ordine': { python: {
+    concetto: 'print viene dopo la chiamata: si stampa al ritorno, quindi dal più piccolo al più grande.',
+    frasi: [s => `${hai(s)}: sarebbe così con print prima della chiamata. Qui si stampa al ritorno.`, null],
+  } },
+  'annidati-conta': { python: {
+    concetto: 'Il ciclo interno riparte a ogni giro di quello esterno: `range(i)` fa i giri, cioè 0, 1, 2, …',
+    frasi: [s => `${hai(s)}: è quello che darebbe \`range(i + 1)\`. Con i = 0, \`range(i)\` non fa nessun giro.`, null],
+  } },
+  'annidati-stelle': {
+    python: {
+      concetto: 'Per ogni riga i il ciclo interno stampa i simboli, poi `print()` va a capo.',
+      frasi: [s => `${hai(s)}: un simbolo in più per riga. \`range(i)\` fa i giri, non i + 1.`, null, (s, d) => `${hai(s)}: manca l'ultima riga. \`range(1, ${d.n + 1})\` arriva fino a ${d.n}.`],
+    },
+    java: { concetto: 'Per ogni riga i il ciclo interno stampa i simboli, poi `println()` va a capo.' },
+  },
+};
+for (const m of MODELLI) Object.assign(m, { lingue: LINGUE_MODELLI[m.id] || SOLO_C }, VARIANTI[m.id] || {});
+// i modelli di una lingua
+export const modelliPer = (lingua = 'c') => MODELLI.filter(m => m.lingue.includes(lingua));
+// il modello visto in una lingua: { concetto, mutanti } con le frasi di quella lingua
+export function variante(m, lingua = 'c') {
+  const o = (lingua !== 'c' && m[lingua]) || {};
+  const mutanti = o.mutanti || m.mutanti.map((mu, k) => o.frasi?.[k] ? { ...mu, frase: o.frasi[k] } : mu);
+  return { concetto: o.concetto ?? m.concetto, mutanti };
+}
+
 /* ---------- una domanda pronta ---------- */
 // il testo di un'uscita da mostrare: com'è, oppure «(niente)»; in linea le righe si separano con ⏎
 export const vista = u => normalizza(u) || '(niente)';
 export const inLinea = u => vista(u).split('\n').join(' ⏎ ');
 const righe = u => { const n = normalizza(u); return n ? n.split('\n').length : 0; };
 
-// istanza(modello, seme) → { modello, seme, programma, codice, sorgente, giusta, opzioni, distrattori, scrivi, concetti, concetto }
-// codice: quello che vede lo studente (senza #include); sorgente: il C completo da compilare.
+// istanza(modello, seme, { lingua }) → { modello, lingua, seme, programma, codice, sorgente, giusta, opzioni, distrattori, scrivi, concetti, concetto }
+// codice: quello che vede lo studente (in C senza #include; Java e Python interi); sorgente: il programma completo da eseguire.
 // opzioni: la giusta più al massimo 3 distrattori, mescolati dal seme. Con meno di 2 distrattori scrivi = true: si risponde scrivendo.
-export function istanza(m, seme = 1, { maxPassi = 10000 } = {}) {
+// Un modello che non si scrive in quella lingua dà null. Stesso seme, stesso programma in tutte le lingue (le uscite seguono la lingua)
+export function istanza(m, seme = 1, { maxPassi = 10000, lingua = 'c' } = {}) {
   if (typeof m === 'string') m = modello(m);
-  if (!m) return null;
+  if (!m || !m.lingue.includes(lingua)) return null;
+  const { concetto: conc, mutanti } = variante(m, lingua);
   const r = creaRng(impasta(m.id) ^ Math.imul(seme | 0, 0x9E3779B1));
   for (let tentativo = 0; tentativo < 40; tentativo++) {
     const p = m.genera(r);
-    let giusta;
-    try { giusta = esegui(p, { maxPassi }).uscita; } catch (e) { if (e instanceof ErroreC) continue; throw e; }
+    let giusta, codice, sorgente;
+    try {
+      giusta = esegui(p, { maxPassi, lingua }).uscita;
+      sorgente = stampaIn(p, lingua); codice = lingua === 'c' ? stampaC(p, { include: false }) : sorgente;
+    } catch (e) { if (e instanceof ErroreC) continue; throw e; }
     if (righe(giusta) > 10) continue;
     const viste = new Set([normalizza(giusta)]), distrattori = [];
-    for (const [indiceMutante, mu] of m.mutanti.entries()) {
+    for (const [indiceMutante, mu] of mutanti.entries()) {
       let u;
-      try { u = esegui(mu.applica(p), { maxPassi, tollerante: true }).uscita; } catch (e) { if (e instanceof ErroreC) continue; throw e; }
+      try { u = esegui(mu.applica(p), { maxPassi, tollerante: true, lingua }).uscita; } catch (e) { if (e instanceof ErroreC) continue; throw e; }
       const k = normalizza(u);
       if (viste.has(k) || righe(u) > 10) continue;
       viste.add(k);
-      distrattori.push({ uscita: u, mutante: mu.id, indiceMutante, frase: mu.frase(inLinea(u), p.dati || {}) });
+      distrattori.push({ uscita: u, mutante: mu.id, indiceMutante, frase: mu.frase(inLinea(u), p.dati || {}, lingua) });
     }
     if (!distrattori.length) continue;     // nessun errore cambia l'uscita: con questi numeri non serve, si rigenera
     const scelti = distrattori.length > 3 ? mescola(r, distrattori).slice(0, 3) : distrattori;
     const scrivi = scelti.length < 2;
     const opzioni = scrivi ? [] : mescola(r, [{ uscita: giusta, mutante: null, giusta: true }, ...scelti.map(d => ({ ...d, giusta: false }))]);
-    const concetto = typeof m.concetto === 'function' ? m.concetto(p.dati || {}) : m.concetto;   // alcuni concetti seguono i dati (i++ o i--)
-    return { modello: m.id, cosa: m.cosa, seme, programma: p, codice: stampaC(p, { include: false }), sorgente: stampaC(p), giusta, opzioni, distrattori, scrivi, concetti: [...m.concetti], concetto };
+    const concetto = typeof conc === 'function' ? conc(p.dati || {}, lingua) : conc;   // alcuni concetti seguono i dati (i++ o i--) o la lingua
+    return { modello: m.id, cosa: m.cosa, lingua, seme, programma: p, codice, sorgente, giusta, opzioni, distrattori, scrivi, concetti: [...m.concetti], concetto };
   }
   return null;
 }

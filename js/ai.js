@@ -417,7 +417,7 @@ export async function domandaOrale({ nome, materiale, fatte = [] }) {
 Rispondi solo con la domanda (massimo 30 parole, dai del tu) e l'argomento in 2-4 parole. Niente saluti, niente giudizi.`, materialeOrale(materiale), SCHEMA_DOMANDA, 'chat');
   return { domanda: String(r.domanda || '').trim(), argomento: String(r.argomento || '').trim() };
 }
-export async function giudicaRisposta({ nome, domanda, risposta, materiale }) {
+export async function giudicaRisposta({ nome, domanda, argomento = '', risposta, materiale }) {
   const r = await strutturato(`Sei un docente universitario italiano all'esame orale di «${nome}», severo ma giusto.
 Domanda che hai fatto: «${domanda}»
 Risposta dello studente: «${risposta}»
@@ -444,16 +444,53 @@ Controlla solo questo: lo studente l'ha già detto, anche con parole diverse? Se
     } catch { }
   }
   if (smentite.length) c = correggiGiudizio({ ...base, smentite });
-  // il «mancava» si mostra solo se viene dal materiale dello studente (le sue parole piene ci sono quasi tutte): senza
-  // materiale, o se il modello lo scrive a memoria, un modello piccolo sbaglia («continuità delle derivate seconde» per Green)
-  return { esito: c.esito, giudizio: c.giudizio, mancava: materiale && coperte(c.mancava, materiale) >= .6 ? c.mancava : '' };
+  // il «mancava» si mostra solo se viene dal materiale dello studente (vedi dalMateriale): senza materiale, o se il modello
+  // lo scrive a memoria, un modello piccolo sbaglia; allora in «Da ripassare» resta solo l'argomento
+  return { esito: c.esito, giudizio: c.giudizio, mancava: materiale && dalMateriale(c.mancava, materiale, [argomento, domanda]) ? c.mancava : '' };
+}
+// la frase del modello viene dal materiale se UN pezzo del materiale (una riga col trattino o con «→», cioè una carta, una
+// definizione, una ★; nel testo libero 3 righe di fila) parla dell'argomento della domanda, ha quasi tutte le sue parole
+// piene e TUTTE le parole che cambiano il senso (prime/seconde, numeri, sempre/mai/non, positiva/negativa, miste…), al loro posto.
+// Prima bastavano le parole sparse in tutto il materiale: «la condizione di continuità delle derivate seconde nell'intorno»
+// per Green (falso: bastano le derivate prime) passava con le parole della carta di Schwarz
+const GENERICHE = new Set('teorema teoremi definizione enunciato dimostrazione dimostrare proprieta formula formule concetto regola metodo criterio esempio'.split(' '));
+const NUMERI = /^(?:zero|due|tre|quattro|cinque|dieci|cento|\d+)$/;
+const DISTINTIVE = [/^prim[oaie]$/, /^second[oaie]$/, /^terz[oaie]$/, /^quart[oaie]$/, /^ogni$/, /^tutt[oaie]$/, /^nessun[oa]?$/, /^almeno$/,
+  /^esattamente$/, /^unic(?:[oa]|i|he)$/, /^sempre$/, /^mai$/, /^(?:solo|soltanto|unicamente|esclusivamente)$/, /^non$/, /^positiv/, /^negativ/, /^maggior[ei]$/, /^minor[ei]$/, /^mist[oaie]$/];
+// i numeri devono essere proprio quelli; le altre basta che siano della stessa famiglia (seconde ~ secondo, positiva ~ positivamente)
+const segno = w => NUMERI.test(w) ? w : DISTINTIVE.findIndex(r => r.test(w));
+const fila = s => parolePiane(s).filter(w => (w.length >= 4 && !VUOTE.has(w)) || segno(w) !== -1);
+const uguale = (x, w) => segno(w) !== -1 ? segno(x) === segno(w) : x.startsWith(radice(w));
+// ogni parola distintiva della frase c'è nel pezzo, e vicino (al più 2 parole piene) alla parola più vicina, prima e dopo,
+// che il pezzo ha anche lui: «definita positiva vuol dire massimo» non passa con «definita positiva → minimo, … → massimo»
+const vicine = (cosa, pezzo) => {
+  const c = fila(cosa), p = fila(pezzo), dove = w => p.flatMap((x, i) => uguale(x, w) ? [i] : []);
+  return c.every((d, i) => {
+    if (segno(d) === -1) return true;
+    const qui = dove(d);
+    if (!qui.length) return false;
+    const accanto = verso => { for (let j = i + verso; j >= 0 && j < c.length; j += verso) { const la = dove(c[j]); if (la.length) return la; } return null; };
+    return [accanto(-1), accanto(1)].every(la => !la || la.some(j => qui.some(k => j !== k && Math.abs(j - k) <= 2)));
+  });
+};
+const pezzi = materiale => {
+  const righe = String(materiale || '').split('\n').map(r => r.trim()).filter(Boolean), out = []; let testo = [];
+  const chiudi = () => { for (let i = 0; i < Math.max(1, testo.length - 2); i++) if (testo.length) out.push(testo.slice(i, i + 3).join('\n')); testo = []; };
+  for (const r of righe) if (/^[–\-•*★]|→/.test(r)) { chiudi(); out.push(r); } else testo.push(r);
+  chiudi(); return out;
+};
+export function dalMateriale(cosa, materiale, tema = []) {
+  if (!piene(cosa).length) return false;
+  const t = [tema].flat().map(x => piene(x).filter(w => !GENERICHE.has(w))).find(x => x.length) || [];
+  return pezzi(materiale).some(p => (!t.length || t.filter(w => piana(p).includes(radice(w))).length >= Math.ceil(t.length / 2))
+    && coperte(cosa, p) >= .6 && vicine(cosa, p));
 }
 // Le correzioni del codice al giudizio del modello (provate con Qwen3.5 4B, che a volte scrive «hai omesso i casi
 // semidefiniti» a chi li ha appena nominati):
 // 1. una mancanza che lo studente ha detto davvero (le sue parole sono nella risposta) si toglie dal giudizio e dal «mancava»;
 //    se era l'unico motivo del «parziale», la risposta è giusta;
 // 2. l'esito non può contraddire il giudizio scritto: un errore non è «parziale», una mancanza vera non è «giusta».
-const VUOTE = new Set('della delle dello degli nella nelle nello negli sulla sulle sullo dalla dalle alla alle allo agli questo questa questi queste quello quella quelli anche come quando perche molto sempre tutto tutti tutte ogni caso casi cosa cose ruolo fatto modo parte solo loro sono essere dire detto niente nulla importante proprio bene specificare precisare menzionare citare indicare spiegare'.split(' '));
+const VUOTE = new Set('della delle dello degli nella nelle nello negli sulla sulle sullo dalla dalle alla alle allo agli questo questa questi queste quello quella quelli anche come quando perche molto sempre tutto tutti tutte ogni caso casi cosa cose ruolo fatto modo parte solo loro sono essere dire detto nell dell sull dall quell niente nulla importante proprio bene specificare precisare menzionare citare indicare spiegare'.split(' '));
 const piana = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const radice = w => w.length <= 5 ? w : w.slice(0, Math.max(5, Math.ceil(w.length * .6)));
 // la cosa che «manca» è già nella risposta? (almeno 3 parole piene su 4 ci sono, con la radice: semidefiniti ~ semidefinita)

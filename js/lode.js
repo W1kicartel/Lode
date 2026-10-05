@@ -1509,7 +1509,7 @@ async function esegui(c) {
     case 'riprendiTrascrizione': TR.riprendi(); return mostraFatto({ testo: 'Riprendo a trascrivere.' });
     case 'riordina': return riordinaLezione(c.corso);
     case 'stampa': {   // scritto nel campo: il campo lascia il fuoco, così i tasti 1-4 rispondono subito
-      const s = ST.schedaStampa({ corso: c.corso || corsoInf() });
+      const s = ST.schedaStampa({ corso: c.corso || corsoInf(), lingua: c.lingua });
       if (s && !ST.ultima()?.scrivi && document.activeElement === campo.querySelector('input')) campo.querySelector('input').blur();
       return s;
     }
@@ -1731,7 +1731,7 @@ async function rispostaOrale(testo) {
   if (/^(basta|voto|dammi il voto|ho finito)\b/i.test(testo) || !o.corrente) return chiudiOrale();
   modo('pensa', 'Il prof ascolta…'); segnala('pensa');
   try {
-    const giu = await AI.giudicaRisposta({ nome: o.nome, domanda: o.corrente.domanda, risposta: testo, materiale: o.materiale });
+    const giu = await AI.giudicaRisposta({ nome: o.nome, domanda: o.corrente.domanda, argomento: o.corrente.argomento, risposta: testo, materiale: o.materiale });
     if (g !== GEN || A.orale !== o) return;
     o.storico.push({ ...o.corrente, risposta: testo, ...giu }); o.corrente = null; modo('riposo');
     const r = nuovaRisposta(); r.aggiungi(`**${cap(giu.esito)}.** ${giu.giudizio}${giu.mancava ? `\n\nMancava: ${giu.mancava}` : ''}`); await r.fine();

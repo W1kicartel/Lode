@@ -2,8 +2,8 @@
 // albero.js (semantica del C e stampa del sorgente), modelli.js (20 semi per modello) e la parte pura di stampa.js.
 // Il confronto con un compilatore vero è in test/verifica-c.mjs.
 import * as A from '../js/codice/albero.js';
-import { MODELLI, CONCETTI, MUTANTI, ERRORI, istanza, vista, compatta, creaRng, modello } from '../js/codice/modelli.js';
-import { scegliModelli, preparaManche, valuta, anteprima, scaduti, CHIAVE, schedaStampa, collega, corsoProgrammazione } from '../js/codice/stampa.js';
+import { MODELLI, CONCETTI, MUTANTI, ERRORI, istanza, vista, compatta, creaRng, modello, modelliPer, variante } from '../js/codice/modelli.js';
+import { scegliModelli, preparaManche, valuta, anteprima, scaduti, CHIAVE, schedaStampa, collega, corsoProgrammazione, linguaDi } from '../js/codice/stampa.js';
 
 const { num, car, reale, v, indice, valore, indirizzo, bin, un, cast, ternario, assegna, incr, chiama, printf, dich, array, espr, blocco, se, mentre, fai, per, scegli, caso, interrompi, continua, ritorna, param, funzione, main, programma, esegui, stampaC, normalizza, ErroreC } = A;
 let ok = 0, ko = 0;
@@ -191,6 +191,72 @@ prova('valuta: scritta sbagliata qualunque', (() => { const r = valuta(q, { test
 prova('valuta: niente scritto', !valuta(q, { testo: '   ' }).ok);
 prova('schedaStampa senza collega spiega cosa manca', (() => { try { schedaStampa({}); return false; } catch (e) { return /collega/.test(e.message); } })());
 prova('collega accetta gli attrezzi', (() => { collega({ errori: MUTANTI }); return true; })());
+
+/* ---------- Java e Python ---------- */
+const { stampaJava, stampaPython, stampaIn, scrivibile } = A;
+const outIn = (lingua, ...corpo) => esegui(programma(main(...corpo)), { lingua }).uscita;
+prova('Python: // e % verso il basso', outIn('python', espr(printf('%d %d %d %d', bin('/', num(-7), num(2)), bin('%', num(-7), num(3)), bin('/', num(7), num(-2)), bin('%', num(7), num(-3))))) === '-4 2 -4 -2');
+prova('Python: positivi come in C', outIn('python', espr(printf('%d %d', bin('/', num(7), num(2)), bin('%', num(7), num(3))))) === '3 1');
+prova('Java: / e % come in C', outIn('java', espr(printf('%d %d', bin('/', num(-7), num(2)), bin('%', num(-7), num(3))))) === '-3 -1');
+prova('Python: anche //= e %=', outIn('python', dich('int', ['x', num(-7)]), espr(assegna(v('x'), '/=', num(2))), espr(printf('%d', v('x')))) === '-4');
+prova('Python: il trabocco dei 32 bit si scarta lo stesso', lancia(() => outIn('python', espr(printf('%d', bin('*', num(65536), num(65536))))), 'trabocco'));
+const piccoloPy = programma(main(per(dich('int', ['i', num(0)]), bin('<', v('i'), num(3)), incr(v('i')), espr(printf('%d ', v('i')))), espr(printf('\n'))));
+prova('stampaPython: for → range, printf → print', stampaPython(piccoloPy) === 'for i in range(3):\n    print("%d " % i, end="")\nprint()\n', JSON.stringify(stampaPython(piccoloPy)));
+const ciclo = (init, c, passo) => stampaPython(programma(main(per(dich('int', ['i', num(init)]), c, passo, espr(printf('%d', v('i')))))));
+prova('stampaPython: range col passo e all\'indietro', /for i in range\(1, 11, 3\):/.test(ciclo(1, bin('<=', v('i'), num(10)), assegna(v('i'), '+=', num(3)))) && /for i in range\(5, 1, -1\):/.test(ciclo(5, bin('>', v('i'), num(1)), incr(v('i'), '--'))));
+prova('stampaPython: un for con i cambiato nel corpo diventa while', /i = 0\nwhile i < 9:\n    i \+= 2\n    print\("%d" % i, end=""\)\n    i \+= 1/.test(stampaPython(programma(main(per(dich('int', ['i', num(0)]), bin('<', v('i'), num(9)), incr(v('i')), blocco(espr(assegna(v('i'), '+=', num(2))), espr(printf('%d', v('i'))))))))));
+prova('stampaPython: // tra int, / con un double, and/or/not, elif', (() => { const s = stampaPython(programma(main(dich('int', ['a', num(7)]), dich('double', ['x', reale(2)]), se(bin('&&', bin('>', v('a'), num(0)), un('!', bin('==', v('a'), num(3)))), espr(printf('%d %.1f\n', bin('/', v('a'), num(2)), bin('/', v('a'), v('x')))), se(bin('||', bin('<', v('a'), num(0)), bin('>', v('a'), num(9))), espr(printf('x\n')), espr(printf('y\n'))))))); return s.includes('if a > 0 and not a == 3:') && s.includes('print("%d %.1f" % (a // 2, a / x))') && s.includes('elif a < 0 or a > 9:') && s.includes('else:\n    print("y")'); })());
+prova('stampaJava: class Main, printf, println e print', stampaJava(piccoloPy) === 'public class Main {\n    public static void main(String[] args) {\n        for (int i = 0; i < 3; i++)\n            System.out.printf("%d ", i);\n        System.out.println();\n    }\n}\n', JSON.stringify(stampaJava(piccoloPy)));
+prova('stampaJava: %f fissa il punto decimale, char col cast, %d di un char come (int)', (() => { const s = stampaJava(programma(main(dich('char', ['c', car('a')]), dich('char', ['d', bin('-', v('c'), num(32))]), espr(printf('%c %d %.1f\n', v('d'), v('c'), reale(2.5)))))); return s.startsWith('import java.util.Locale;') && s.includes('Locale.setDefault(Locale.ROOT);') && s.includes('char d = (char)(c - 32);') && s.includes('System.out.printf("%c %d %.1f\\n", d, (int)c, 2.5);'); })());
+prova('stampaJava: array e metodi static', (() => { const s = stampaJava(programma(funzione('int', 'primo', [param('int', 'v', '[]')], ritorna(indice(v('v'), num(0)))), main(array('int', 'a', [4, 5]), espr(printf('%d\n', chiama('primo', v('a'))))))); return s.includes('static int primo(int[] v) {') && s.includes('int[] a = {4, 5};'); })());
+// il filtro: quello che non si scrive fedele lancia ErroreC 'lingua'
+const nonSiScrive = (n, l) => lancia(() => stampaIn(n, l), 'lingua');
+prova('filtro: puntatori solo in C', nonSiScrive(istanza('swap-indirizzo', 1).programma, 'java') && nonSiScrive(istanza('swap-indirizzo', 1).programma, 'python') && scrivibile(istanza('swap-indirizzo', 1).programma, 'c'));
+prova('filtro: do-while e switch non in Python, sì in Java', nonSiScrive(istanza('do-while', 1).programma, 'python') && nonSiScrive(istanza('switch', 1).programma, 'python') && scrivibile(istanza('do-while', 1).programma, 'java') && scrivibile(istanza('switch', 1).programma, 'java'));
+prova('filtro: i++ dentro un\'espressione non in Python', nonSiScrive(istanza('post-pre', 1).programma, 'python') && nonSiScrive(istanza('while-post', 1).programma, 'python'));
+prova('filtro: variabile nascosta nel blocco né in Java né in Python', nonSiScrive(istanza('blocco-ombra', 1).programma, 'java') && nonSiScrive(istanza('blocco-ombra', 1).programma, 'python'));
+prova('filtro: char non in Python', nonSiScrive(istanza('char-ascii', 1).programma, 'python') && scrivibile(istanza('char-ascii', 1).programma, 'java'));
+prova('filtro: un for con continue che non diventa range non in Python', nonSiScrive(programma(main(dich('int', ['i', num(0)]), per(espr(assegna(v('i'), '=', num(0))), bin('<', v('i'), num(5)), incr(v('i')), blocco(se(bin('==', v('i'), num(2)), continua()), espr(printf('%d', v('i'))))))), 'python'));
+prova('filtro: un int come condizione non in Java', nonSiScrive(programma(main(dich('int', ['n', num(1)]), se(v('n'), espr(printf('x'))))), 'java'));
+prova('filtro: un double in un int non in Java né in Python', nonSiScrive(programma(main(dich('int', ['n', reale(2.5)]), espr(printf('%d', v('n'))))), 'java') && nonSiScrive(programma(main(dich('int', ['n', reale(2.5)]), espr(printf('%d', v('n'))))), 'python'));
+prova('filtro: codice dopo un break non in Java', nonSiScrive(programma(main(per(dich('int', ['i', num(0)]), bin('<', v('i'), num(3)), incr(v('i')), blocco(interrompi(), espr(printf('x')))))), 'java'));
+prova('ogni modello dichiara le sue lingue', MODELLI.every(m => m.lingue.includes('c')) && modelliPer('java').length >= 25 && modelliPer('python').length >= 15, `${modelliPer('java').length} Java, ${modelliPer('python').length} Python`);
+prova('fuori dalle sue lingue un modello non dà domande', istanza('swap-indirizzo', 1, { lingua: 'python' }) === null && istanza('do-while', 1, { lingua: 'python' }) === null && istanza('blocco-ombra', 1, { lingua: 'java' }) === null);
+for (const lingua of ['java', 'python']) for (const m of modelliPer(lingua)) {
+  const errori = [];
+  for (let seme = 1; seme <= SEMI; seme++) {
+    const ist = istanza(m, seme, { lingua });
+    if (!ist) { errori.push(`seme ${seme}: nessuna istanza`); continue; }
+    if (ist.lingua !== lingua || ist.codice !== ist.sorgente) errori.push(`seme ${seme}: lingua o codice`);
+    if (esegui(ist.programma, { lingua }).uscita !== ist.giusta) errori.push(`seme ${seme}: giusta diversa da esegui()`);
+    if (!ist.distrattori.length) errori.push(`seme ${seme}: nessun mutante cambia l'uscita`);
+    const tutte = [ist.giusta, ...ist.distrattori.map(d => d.uscita)].map(normalizza);
+    if (new Set(tutte).size !== tutte.length) errori.push(`seme ${seme}: distrattori doppi o uguali alla giusta`);
+    // in Python le spiegazioni parlano Python: niente printf, ++, cast del C, «In C»
+    const testi = [ist.concetto, ...ist.distrattori.map(d => d.frase)].join(' | ');
+    if (lingua === 'python' && /printf|\+\+|--|\(double\)|\bIn C\b|&&/.test(testi.replace(/`[^`]*`/g, x => x.includes('//') ? '' : x))) errori.push(`seme ${seme}: testo da C: ${testi}`);
+    if (lingua === 'java' && /\bIn C\b|\bin C il\b/.test(testi)) errori.push(`seme ${seme}: «In C» in Java: ${testi}`);
+    if (ist.codice.split('\n').length > 22) errori.push(`seme ${seme}: codice di ${ist.codice.split('\n').length} righe`);
+  }
+  prova(`${lingua}: modello ${m.id} (${SEMI} semi)`, !errori.length, errori.slice(0, 2).join('; '));
+}
+const maiUsatiPy = ['java', 'python'].flatMap(lingua => modelliPer(lingua).flatMap(m => {
+  const usati = new Set(), mu = variante(m, lingua).mutanti;
+  for (let seme = 1; seme <= 300 && usati.size < mu.length; seme++) for (const d of istanza(m, seme, { lingua })?.distrattori || []) usati.add(d.indiceMutante);
+  return mu.map((x, k) => usati.has(k) ? null : `${lingua} ${m.id}#${k} (${x.id})`).filter(Boolean);
+}));
+prova('Java e Python: ogni mutante dà almeno un distrattore in 300 semi', !maiUsatiPy.length, maiUsatiPy.join(', '));
+// gli errori tipici cambiano con la lingua: in Python la divisione verso il basso è la risposta giusta, e l'errore è il C
+const rn = Array.from({ length: 30 }, (_, s) => istanza('resto-negativi', s + 1, { lingua: 'python' })).find(x => /-/.test(x.giusta));
+prova('Python: resto-negativi, la giusta è verso il basso', rn && rn.giusta === `${Math.floor(rn.programma.dati.a / rn.programma.dati.b)} ${((rn.programma.dati.a % rn.programma.dati.b) + rn.programma.dati.b) % rn.programma.dati.b}\n` && rn.distrattori.some(d => /il C e Java/.test(d.frase)), rn?.giusta);
+const dd = Array.from({ length: 30 }, (_, s) => istanza('diviso-due', s + 1, { lingua: 'python' })).find(x => x.distrattori.some(d => d.indiceMutante === 1));
+prova('Python: diviso-due mostra a / 2 e a // 2', dd && dd.codice.includes('a // 2, a / 2)') && dd.distrattori.find(d => d.indiceMutante === 1).frase.includes('non tronca come in C o in Java'));
+prova('Java: lo stesso seme dà lo stesso programma del C', istanza('for-minore', 5, { lingua: 'java' }).giusta === istanza('for-minore', 5).giusta);
+prova('lingua dal corso', linguaDi('Programmazione in Python') === 'python' && linguaDi('Fondamenti di Java') === 'java' && linguaDi('Lab di C') === 'c' && linguaDi('Programmazione 1') === 'c' && linguaDi('Tecnologie web: JavaScript') === 'c' && linguaDi('') === 'c');
+prova('corsi che nominano Python o Java sono di programmazione', corsoProgrammazione(['Fisica', 'Fondamenti di Java']) === 'Fondamenti di Java' && corsoProgrammazione(['Python per la data science']) === 'Python per la data science' && corsoProgrammazione(['Tecnologie JavaScript']) === '');
+const pyManche = preparaManche({ seme: 11, oggi: OGGI, lingua: 'python' });
+prova('preparaManche in Python: 5 domande, tutte Python', pyManche.length === 5 && pyManche.every(x => x.lingua === 'python' && modello(x.modello).lingue.includes('python')));
+prova('anteprima in Java: la prima domanda è quella promessa', [1, 2, 3, 4, 5].every(sm => anteprima({ memoria, seme: sm, oggi: OGGI, lingua: 'java' }).modello === preparaManche({ memoria, seme: sm, oggi: OGGI, lingua: 'java' })[0].modello));
 
 console.log(`${ok} prove passate, ${ko} fallite`);
 process.exit(ko ? 1 : 0);

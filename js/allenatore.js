@@ -7,7 +7,7 @@ import { D, salva, prossimi, daGiocare, daRipassare, lezioneOra, prossimaLezione
 import * as F from './focus.js';
 import * as TR from './trascrizione.js';
 import * as AI from './ai.js';
-import { anteprima, scaduti, corsoProgrammazione, RE_PROGRAMMAZIONE } from './codice/stampa.js';
+import { anteprima, scaduti, corsoProgrammazione, linguaDi, RE_PROGRAMMAZIONE } from './codice/stampa.js';
 
 const L = typeof window !== 'undefined' ? window.lodeDesktop : null;
 const OGNI = { poco: 180, normale: 90, spesso: 40 }, MASSIMO = { poco: 3, normale: 6, spesso: 12 };
@@ -45,7 +45,8 @@ export function candidati() {
   // vicino o se ci sono argomenti da ripassare. Con lo stesso seme la scheda parte proprio dalla domanda annunciata
   const corsoInf = corsoProgrammazione([...esami.map(e => e.nome), ...D.orario.map(o => o.corso), ...lezioni().map(l => l.corso)]);
   if (corsoInf) {
-    const e = esami.find(x => RE_PROGRAMMAZIONE.test(x.nome)), seme = Date.now() >>> 0, a = anteprima({ memoria: D.codice?.memoria, seme });
+    // la lingua dal nome del corso, la stessa che userà la scheda: la domanda annunciata è proprio la prima
+    const e = esami.find(x => RE_PROGRAMMAZIONE.test(x.nome)), seme = Date.now() >>> 0, a = anteprima({ memoria: D.codice?.memoria, seme, lingua: linguaDi(e?.nome || corsoInf) });
     const peso = (e ? .8 * urgenza(giorniTra(oggi(), e.data)) : .4) * (scaduti(D.codice?.memoria).length ? 1.5 : 1);
     if (a) out.push({ tipo: 'stampa', esame: e || null, corso: e?.nome || corsoInf, seme, titolo: e?.nome || corsoInf, testo: `${a.testo} 1 minuto`, bottone: 'Prova', peso });
   }

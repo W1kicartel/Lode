@@ -1,10 +1,10 @@
-// «Cosa stampa?»: la scheda con 5 domande di C. Il codice lo genera Lode, la risposta la calcola esegui() (albero.js),
+// «Cosa stampa?»: la scheda con 5 domande di C, Java o Python (la lingua dal nome del corso, o detta nel comando). Il codice lo genera Lode, la risposta la calcola esegui() (albero.js),
 // le opzioni sbagliate sono gli errori tipici (i mutanti di modelli.js). Niente AI: la spiegazione è la frase del mutante.
 // Lo scheletro è quello di schedaGioco in lode.js (capo, ld-prog, manche, ld-esito). Gli attrezzi di lode.js arrivano da
 // collega({ scheda, segnala, entra, tween, dopo, rispostaFissa, ricorda, codice, … }): qui non si importa niente dell'interfaccia,
 // così il file si carica anche in Node (le funzioni pure si provano in test/codice.mjs).
-import { MODELLI, CONCETTI, MUTANTI, istanza, vista, inLinea, compatta, creaRng, mescola } from './modelli.js';
-import { normalizza } from './albero.js';
+import { MODELLI, CONCETTI, MUTANTI, istanza, vista, inLinea, compatta, creaRng, mescola, modelliPer } from './modelli.js';
+import { normalizza, NOMI_LINGUE } from './albero.js';
 
 export const CHIAVE = c => 'stampa|' + c;           // la chiave SM-2 di un concetto in D.codice.memoria
 const due = n => String(n).padStart(2, '0');
@@ -16,8 +16,12 @@ const minuscola = s => /^[A-Z][a-z]/.test(s) ? s[0].toLowerCase() + s.slice(1) :
 
 // i corsi di programmazione (stessa regola di F1 per l'allenatore e per il bottone «Codice»)
 // «laboratorio» da solo no: «Laboratorio di chimica» non è un corso di programmazione. «Lab di C», «Laboratorio di Python» sì
-export const RE_PROGRAMMAZIONE = /programmazione|informatica|algoritm|\blab(?:oratorio)?\s+(?:di\s+)?(?:c|python|java)\b/i;
+// Anche un corso che nomina Python o Java («Fondamenti di Java»): «JavaScript» no
+export const RE_PROGRAMMAZIONE = /programmazione|informatica|algoritm|\blab(?:oratorio)?\s+(?:di\s+)?(?:c|python|java)\b|\bpython\b|\bjava\b/i;
 export const corsoProgrammazione = nomi => (nomi || []).find(n => RE_PROGRAMMAZIONE.test(String(n || ''))) || '';
+// la lingua degli esercizi dal nome del corso: «Programmazione in Python» → 'python', «Fondamenti di Java» → 'java'. Se non si capisce, C
+export const linguaDi = nome => { const t = String(nome || ''); return /\bpython\b/i.test(t) ? 'python' : /\bjava\b/i.test(t) ? 'java' : 'c'; };
+export const nomeLingua = l => NOMI_LINGUE[l] || 'C';
 
 /* ---------- la scelta delle domande (puro) ---------- */
 // i concetti già visti con la scadenza SM-2 arrivata (oggi compreso), dal più vecchio
@@ -41,18 +45,19 @@ export function scegliModelli({ memoria = {}, n = 5, seme = 1, oggi = oggiIso(),
   return scelti;
 }
 // le domande pronte: un'istanza per modello, ognuna col suo seme
-export function preparaManche({ memoria = {}, n = 5, seme = 1, oggi = oggiIso(), modelli = MODELLI } = {}) {
+// lingua: 'c' (di solito), 'java' o 'python': solo i modelli che in quella lingua si scrivono fedeli
+export function preparaManche({ memoria = {}, n = 5, seme = 1, oggi = oggiIso(), lingua = 'c', modelli = modelliPer(lingua) } = {}) {
   const lista = scegliModelli({ memoria, n: modelli.length, seme, oggi, modelli }), out = [];
   for (const [k, m] of lista.entries()) {
     if (out.length >= n) break;
-    const ist = istanza(m, (seme + 7919 * (k + 1)) >>> 0);
+    const ist = istanza(m, (seme + 7919 * (k + 1)) >>> 0, { lingua });
     if (ist) out.push(ist);
   }
   return out;
 }
 // il testo della proposta nella pillola: «Cosa stampa questo for?». Con lo stesso seme, schedaStampa parte proprio da quel modello
-export function anteprima({ memoria = {}, seme = 1, oggi = oggiIso() } = {}) {
-  const m = scegliModelli({ memoria, n: 1, seme, oggi })[0];
+export function anteprima({ memoria = {}, seme = 1, oggi = oggiIso(), lingua = 'c' } = {}) {
+  const m = scegliModelli({ memoria, n: 1, seme, oggi, modelli: modelliPer(lingua) })[0];
   return m ? { modello: m.id, testo: `Cosa stampa ${m.cosa}?` } : null;
 }
 // una risposta: { indice } (0, 1, 2, 3 nelle opzioni) oppure { testo } (scritta)
@@ -80,7 +85,7 @@ export function collega(h = {}) { H = { ...H, ...h }; }
 // la domanda sullo schermo, per le prove: { modello, giusta, indice (1-4, null se si scrive), scrivi, codice }
 export const ultima = () => ULTIMA;
 
-const righeCodice = c => `<pre class="ld-codice" aria-label="Codice C"><code>${c.split('\n').map((r, k) => `<span class="r"><i>${k + 1}</i>${esc(r) || ' '}</span>`).join('')}</code></pre>`;
+const righeCodice = (c, l) => `<pre class="ld-codice" aria-label="Codice ${nomeLingua(l)}"><code>${c.split('\n').map((r, k) => `<span class="r"><i>${k + 1}</i>${esc(r) || ' '}</span>`).join('')}</code></pre>`;
 
 function registraRisposta(ist, r, modo, corso) {
   const q = r.ok ? (modo === 'scritta' ? 5 : 4) : 0;
@@ -94,13 +99,15 @@ function registraRisposta(ist, r, modo, corso) {
   else if (cod) { ev.t = Date.now(); (cod.eventi ||= []).push(ev); if (cod.eventi.length > 2000) cod.eventi.splice(0, cod.eventi.length - 2000); }
 }
 
-export function schedaStampa({ corso = '', n = 5, seme } = {}) {
+// lingua: quella detta nel comando («cosa stampa python»), altrimenti quella del corso, altrimenti C
+export function schedaStampa({ corso = '', n = 5, seme, lingua } = {}) {
   if (!H.scheda || !H.tween || !H.dopo) throw new Error('stampa.js: prima collega({ scheda, entra, tween, dopo, … })');
   const memoria = H.codice?.()?.memoria || {};
   const s0 = seme ?? ((Date.now() ^ Math.floor(Math.random() * 2 ** 31)) >>> 0);
-  const manche = preparaManche({ memoria, n, seme: s0, oggi: oggiIso() });
-  if (!manche.length) { H.rispostaFissa?.('Oggi non riesco a preparare le domande di C. Riprova tra poco.'); return null; }
-  const s = H.scheda('ld-gioco ld-stampa', `<div class="capo"><span class="ld-lbl">Cosa stampa?${corso ? ' · ' + esc(corso) : ''}</span><span class="conto"></span></div><i class="ld-prog"><i></i></i><div class="manche"></div>`);
+  const ling = NOMI_LINGUE[lingua] ? lingua : linguaDi(corso);
+  const manche = preparaManche({ memoria, n, seme: s0, oggi: oggiIso(), lingua: ling });
+  if (!manche.length) { H.rispostaFissa?.(`Oggi non riesco a preparare le domande di ${nomeLingua(ling)}. Riprova tra poco.`); return null; }
+  const s = H.scheda('ld-gioco ld-stampa', `<div class="capo"><span class="ld-lbl">Cosa stampa? · ${nomeLingua(ling)}${corso ? ' · ' + esc(corso) : ''}</span><span class="conto"></span></div><i class="ld-prog"><i></i></i><div class="manche"></div>`);
   const box = s.querySelector('.manche'), conto = s.querySelector('.conto'), pr = s.querySelector('.ld-prog i');
   const turno = s.parentElement;
   let i = 0, punti = 0, stato = null; const t0 = Date.now(), deboli = [];
@@ -125,8 +132,8 @@ export function schedaStampa({ corso = '', n = 5, seme } = {}) {
     if (i >= manche.length) return fine();
     const ist = manche[i];
     conto.textContent = `${i + 1} di ${manche.length}`;
-    ULTIMA = { modello: ist.modello, giusta: vista(ist.giusta), indice: ist.scrivi ? null : ist.opzioni.findIndex(o => o.giusta) + 1, scrivi: ist.scrivi, codice: ist.codice };
-    box.innerHTML = `<p class="dom">${ist.scrivi ? 'Scrivi l\'uscita esatta' : 'Scegli l\'uscita · tasti 1-4'}</p>${righeCodice(ist.codice)}${ist.scrivi
+    ULTIMA = { modello: ist.modello, giusta: vista(ist.giusta), indice: ist.scrivi ? null : ist.opzioni.findIndex(o => o.giusta) + 1, scrivi: ist.scrivi, codice: ist.codice, lingua: ist.lingua };
+    box.innerHTML = `<p class="dom">${ist.scrivi ? 'Scrivi l\'uscita esatta' : 'Scegli l\'uscita · tasti 1-4'}</p>${righeCodice(ist.codice, ist.lingua)}${ist.scrivi
       ? `<div class="ld-riga-form ld-scrivi"><input type="text" aria-label="Cosa stampa il programma" placeholder="Scrivi quello che stampa" autocomplete="off" spellcheck="false"><button type="button" class="btn primary" data-controlla>Controlla <kbd>Invio</kbd></button></div><p class="ld-nota">Più righe? Separale con uno spazio.</p>`
       : `<div class="ld-scelte ld-uscite">${ist.opzioni.map((o, k) => `<button type="button" class="btn${normalizza(o.uscita) ? '' : ' vuota'}" data-o="${k}" aria-label="Risposta ${k + 1}: ${esc(inLinea(o.uscita))}"><kbd>${k + 1}</kbd><span>${esc(vista(o.uscita))}</span></button>`).join('')}</div>`}
       <div class="ld-spiega" hidden></div>`;
@@ -174,7 +181,7 @@ export function schedaStampa({ corso = '', n = 5, seme } = {}) {
     const sec = Math.round((Date.now() - t0) / 1000);
     box.innerHTML = `<div class="ld-esito"><b>${punti}<small>/${tot}</small></b><span>${punti === tot ? 'Tutte giuste. Le risposte le ha calcolate Lode.' : `Da rinforzare: ${nomi.map(esc).join(', ')}. Torna domani.`}</span><small>${sec < 60 ? sec + ' secondi' : Math.round(sec / 60) + ' min'}</small></div>`;
     const b = document.createElement('button'); b.type = 'button'; b.className = 'btn small'; b.textContent = 'Ancora una';
-    b.addEventListener('click', () => { H.ricomincia?.('Ancora una'); schedaStampa({ corso, n }); });
+    b.addEventListener('click', () => { H.ricomincia?.('Ancora una'); schedaStampa({ corso, n, lingua: ling }); });
     box.querySelector('.ld-esito').append(b);
     entra(box, { dy: 8, blur: 6, ms: 480 }); H.segnala?.(punti >= tot - 1 ? 'confermato' : 'quiete');
     if (turno?.dataset) turno.dataset.sintesi = `Cosa stampa? ${punti} su ${tot}`;
