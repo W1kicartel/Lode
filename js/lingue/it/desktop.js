@@ -183,4 +183,17 @@ export default {
   'desktop.esegui-prova-senza-programma': 'non so a quale programma va',
   'desktop.esegui-programma-non-creato': 'Il comando non ha creato il programma da provare.',
   'desktop.esegui-prova-illeggibile': 'non riesco a leggere i file della prova',
+  // moodle.mjs: Moodle in sola lettura
+  'desktop.moodle-risponde': 'Moodle risponde {stato}',
+  'desktop.moodle-errore': 'errore di Moodle',
+  'desktop.moodle-sito-risponde': 'il sito risponde {stato}',
+  'desktop.moodle-non-e-moodle': 'non è un Moodle, o il servizio per le app è spento',
+  'desktop.moodle-non-collegato': 'Moodle non è collegato',
+  'desktop.moodle-accesso-non-riuscito': 'accesso non riuscito',
+  'desktop.moodle-accedi-a': 'Accedi a {sito}',
+  'desktop.moodle-risposta-non-valida': 'risposta di Moodle non valida',
+  'desktop.moodle-tempo-scaduto': 'tempo scaduto',
+  'desktop.moodle-file-non-trovato': 'file non trovato',
+  'desktop.moodle-file-troppo-grande': 'file troppo grande',
+  'desktop.moodle-file-non-su-moodle': 'il file non sta su Moodle',
 };

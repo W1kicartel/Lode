@@ -9,6 +9,7 @@
 // sincronizza e si condivide). Lode legge e basta: non consegna compiti, non scrive nei forum, non cambia niente.
 // La barra non vede indirizzi né token: chiede i file per indice (come la sincronizzazione sceglie le cartelle).
 import { createHash, randomBytes } from 'node:crypto';
+import { t } from './lingua.mjs';
 
 const SERVIZIO = 'moodle_mobile_app', MAX_FILE = 80 * 1048576;
 // «virtuale.unibo.it», «https://virtuale.unibo.it/my/», «elearning.unimib.it/login/index.php» → https://host[/percorso]
@@ -48,9 +49,9 @@ export function client({ sito, token, fetch: f }) {
   async function chiama(funzione, args = {}) {
     const corpo = formParametri({ ...args, wstoken: token, wsfunction: funzione, moodlewsrestformat: 'json' });
     const r = await f(`${sito}/webservice/rest/server.php`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: corpo.toString() });
-    if (!r.ok) throw new Error(`Moodle risponde ${r.status}`);
+    if (!r.ok) throw new Error(t('desktop.moodle-risponde', { stato: r.status }));
     const j = await r.json();
-    if (j && j.exception) { const e = new Error(j.message || j.errorcode || 'errore di Moodle'); e.codice = j.errorcode; throw e; }
+    if (j && j.exception) { const e = new Error(j.message || j.errorcode || t('desktop.moodle-errore')); e.codice = j.errorcode; throw e; }
     return j;
   }
   return {
@@ -77,9 +78,9 @@ export function fileDelCorso(sezioni) {
 // la configurazione pubblica del sito (senza login): nome, tipo di accesso, indirizzo per l'SSO
 export async function configPubblica(sito, f) {
   const r = await f(`${sito}/lib/ajax/service-nologin.php?info=tool_mobile_get_public_config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify([{ index: 0, methodname: 'tool_mobile_get_public_config', args: {} }]) });
-  if (!r.ok) throw new Error(`il sito risponde ${r.status}`);
+  if (!r.ok) throw new Error(t('desktop.moodle-sito-risponde', { stato: r.status }));
   const j = await r.json(), x = Array.isArray(j) ? j[0] : null;
-  if (!x || x.error || !x.data) throw new Error(x?.exception?.message || 'non è un Moodle, o il servizio per le app è spento');
+  if (!x || x.error || !x.data) throw new Error(x?.exception?.message || t('desktop.moodle-non-e-moodle'));
   const d = x.data;
   // typeoflogin: 1 = utente e password nell'app, 2 = nel browser, 3 = nel browser incorporato
   return { nome: testoDaHtml(d.sitename) || sito, sito: (d.httpswwwroot || d.wwwroot || sito).replace(/\/+$/, ''), tipo: d.typeoflogin === 1 ? 'password' : 'browser', lancio: d.launchurl || `${sito}/admin/tool/mobile/launch.php` };
@@ -91,7 +92,7 @@ export function registra({ ipcMain, BrowserWindow, safeStorage, conf, salvaConf,
   const c = () => conf().moodle || null;
   const cifra = t => safeStorage?.isEncryptionAvailable?.() ? { cifrato: safeStorage.encryptString(t).toString('base64') } : null;   // senza portachiavi: solo in memoria, fino all'uscita
   const tokenSalvato = () => { if (token) return token; const m = c(); if (m?.token?.cifrato) { try { token = safeStorage.decryptString(Buffer.from(m.token.cifrato, 'base64')); } catch { } } return token; };
-  const cl = () => { const m = c(), t = tokenSalvato(); if (!m || !t) throw new Error('Moodle non è collegato'); return client({ sito: m.sito, token: t, fetch: f }); };
+  const cl = () => { const m = c(), tk = tokenSalvato(); if (!m || !tk) throw new Error(t('desktop.moodle-non-collegato')); return client({ sito: m.sito, token: tk, fetch: f }); };
   const stato = () => { const m = c(); return m ? { collegato: !!tokenSalvato(), sito: m.sito.replace(/^https?:\/\//, ''), nome: m.nome, utente: m.utente, corsi: m.corsi || {}, ultimo: m.ultimo || 0, memoria: !m.token?.cifrato } : { collegato: false }; };
   async function salvaToken(sito, nome, t) {
     const info = await client({ sito, token: t, fetch: f }).info();
@@ -112,7 +113,7 @@ export function registra({ ipcMain, BrowserWindow, safeStorage, conf, salvaConf,
       const p = await configPubblica(sito, f);
       const r = await f(`${p.sito}/login/token.php`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ username: utente, password, service: SERVIZIO }).toString() });
       const j = await r.json();
-      if (!j.token) return { ok: false, motivo: j.error || 'accesso non riuscito' };
+      if (!j.token) return { ok: false, motivo: j.error || t('desktop.moodle-accesso-non-riuscito') };
       return { ok: true, ...(await salvaToken(p.sito, p.nome, j.token)) };
     } catch (e) { return { ok: false, motivo: e.message }; }
   });
@@ -124,14 +125,14 @@ export function registra({ ipcMain, BrowserWindow, safeStorage, conf, salvaConf,
     const passport = randomBytes(12).toString('hex');
     const url = `${p.lancio}${p.lancio.includes('?') ? '&' : '?'}service=${SERVIZIO}&passport=${passport}&urlscheme=moodlemobile`;
     return new Promise(ok => {
-      const w = finestra = new BrowserWindow({ width: 520, height: 760, title: `Accedi a ${p.nome}`, autoHideMenuBar: true, webPreferences: { partition: 'moodle', contextIsolation: true, nodeIntegration: false, sandbox: true } });
+      const w = finestra = new BrowserWindow({ width: 520, height: 760, title: t('desktop.moodle-accedi-a', { sito: p.nome }), autoHideMenuBar: true, webPreferences: { partition: 'moodle', contextIsolation: true, nodeIntegration: false, sandbox: true } });
       let finito = false;
-      const fine = r => { if (finito) return; finito = true; clearTimeout(t); if (!w.isDestroyed()) w.close(); if (finestra === w) finestra = null; ok(r); };
+      const fine = r => { if (finito) return; finito = true; clearTimeout(scade); if (!w.isDestroyed()) w.close(); if (finestra === w) finestra = null; ok(r); };
       const prova = (e, u) => {
         if (!String(u).startsWith('moodlemobile://')) return;
         e?.preventDefault?.();
         const tk = leggiToken(u, { sito: p.sito, passport });
-        if (!tk) return fine({ ok: false, motivo: 'risposta di Moodle non valida' });
+        if (!tk) return fine({ ok: false, motivo: t('desktop.moodle-risposta-non-valida') });
         salvaToken(p.sito, p.nome, tk).then(s => fine({ ok: true, ...s }), err => fine({ ok: false, motivo: err.message }));
       };
       w.webContents.on('will-navigate', prova); w.webContents.on('will-redirect', prova); w.webContents.on('will-frame-navigate', d => prova(d, d.url));
@@ -139,7 +140,7 @@ export function registra({ ipcMain, BrowserWindow, safeStorage, conf, salvaConf,
       // i popup dell'SSO (SPID, alcuni IdP) restano nella stessa sessione; i link verso altri siti vanno nel browser
       w.webContents.setWindowOpenHandler(() => ({ action: 'allow', overrideBrowserWindowOptions: { autoHideMenuBar: true, webPreferences: { partition: 'moodle', sandbox: true } } }));
       w.on('closed', () => fine({ ok: false, motivo: 'finestra chiusa' }));
-      const t = setTimeout(() => fine({ ok: false, motivo: 'tempo scaduto' }), 15 * 60e3);
+      const scade = setTimeout(() => fine({ ok: false, motivo: t('desktop.moodle-tempo-scaduto') }), 15 * 60e3);
       w.loadURL(url).catch(() => { });
     });
   });
@@ -166,13 +167,13 @@ export function registra({ ipcMain, BrowserWindow, safeStorage, conf, salvaConf,
   ipcMain.handle('moodle:segnaVisti', () => { const m = c(); if (m) { m.ultimo = Date.now(); salvaConf(); } return true; });
   // un file dalla lista appena letta (per indice): i byte alla barra, che lo tratta come un file trascinato
   ipcMain.handle('moodle:scarica', async (_, i) => {
-    const fl = cacheFile[i], t = tokenSalvato(); if (!fl || !t) return { ok: false, motivo: 'file non trovato' };
-    if (fl.mb > MAX_FILE / 1048576) return { ok: false, motivo: 'file troppo grande' };
+    const fl = cacheFile[i], tk = tokenSalvato(); if (!fl || !tk) return { ok: false, motivo: t('desktop.moodle-file-non-trovato') };
+    if (fl.mb > MAX_FILE / 1048576) return { ok: false, motivo: t('desktop.moodle-file-troppo-grande') };
     // il token va solo al sito di Moodle: un indirizzo di un altro host (link esterni nei contenuti) non lo riceve
-    const u = new URL(fl.url); if (u.host !== new URL(c().sito).host) return { ok: false, motivo: 'il file non sta su Moodle' };
-    u.searchParams.set('token', t);
-    const r = await f(u.toString()); if (!r.ok) return { ok: false, motivo: `Moodle risponde ${r.status}` };
-    const b = new Uint8Array(await r.arrayBuffer()); if (b.length > MAX_FILE) return { ok: false, motivo: 'file troppo grande' };
+    const u = new URL(fl.url); if (u.host !== new URL(c().sito).host) return { ok: false, motivo: t('desktop.moodle-file-non-su-moodle') };
+    u.searchParams.set('token', tk);
+    const r = await f(u.toString()); if (!r.ok) return { ok: false, motivo: t('desktop.moodle-risponde', { stato: r.status }) };
+    const b = new Uint8Array(await r.arrayBuffer()); if (b.length > MAX_FILE) return { ok: false, motivo: t('desktop.moodle-file-troppo-grande') };
     return { ok: true, nome: fl.nome, mime: fl.mime || r.headers.get('content-type') || '', dati: b, corso: fl.corso };
   });
   ipcMain.handle('moodle:scadenze', async () => {
