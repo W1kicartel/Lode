@@ -5,6 +5,7 @@
 // così il file si carica anche in Node (le funzioni pure si provano in test/codice.mjs).
 import { MODELLI, CONCETTI, MUTANTI, istanza, vista, inLinea, compatta, creaRng, mescola, modelliPer } from './modelli.js';
 import { normalizza, NOMI_LINGUE } from './albero.js';
+import { t } from '../lingua.js';
 
 export const CHIAVE = c => 'stampa|' + c;           // la chiave SM-2 di un concetto in D.codice.memoria
 const due = n => String(n).padStart(2, '0');
@@ -58,21 +59,21 @@ export function preparaManche({ memoria = {}, n = 5, seme = 1, oggi = oggiIso(),
 // il testo della proposta nella pillola: «Cosa stampa questo for?». Con lo stesso seme, schedaStampa parte proprio da quel modello
 export function anteprima({ memoria = {}, seme = 1, oggi = oggiIso(), lingua = 'c' } = {}) {
   const m = scegliModelli({ memoria, n: 1, seme, oggi, modelli: modelliPer(lingua) })[0];
-  return m ? { modello: m.id, testo: `Cosa stampa ${m.cosa}?` } : null;
+  return m ? { modello: m.id, testo: t('stampa.anteprima', { cosa: m.cosa }) } : null;
 }
 // una risposta: { indice } (0, 1, 2, 3 nelle opzioni) oppure { testo } (scritta)
 export function valuta(ist, risposta = {}) {
   const giusta = vista(ist.giusta);
   if (risposta.indice != null) {
     const o = ist.opzioni[risposta.indice];
-    if (!o) return { ok: false, mutante: null, frase: 'Questa risposta non c\'è.', giusta, scelta: '' };
+    if (!o) return { ok: false, mutante: null, frase: t('stampa.risposta-assente'), giusta, scelta: '' };
     return { ok: !!o.giusta, mutante: o.giusta ? null : o.mutante, frase: o.giusta ? '' : o.frase, giusta, scelta: vista(o.uscita) };
   }
-  const t = compatta(risposta.testo);
-  if (t === compatta(ist.giusta)) return { ok: true, mutante: null, frase: '', giusta, scelta: t };
-  const d = ist.distrattori.find(x => compatta(x.uscita) === t);
-  if (d) return { ok: false, mutante: d.mutante, frase: d.frase.replace(/^Hai scelto/, 'Hai scritto'), giusta, scelta: t };
-  return { ok: false, mutante: null, frase: t ? `Hai scritto \`${t}\`: non è quello che stampa.` : 'Nessuna risposta.', giusta, scelta: t };
+  const sc = compatta(risposta.testo);
+  if (sc === compatta(ist.giusta)) return { ok: true, mutante: null, frase: '', giusta, scelta: sc };
+  const d = ist.distrattori.find(x => compatta(x.uscita) === sc);
+  if (d) return { ok: false, mutante: d.mutante, frase: d.frase.replace(/^Hai scelto/, 'Hai scritto'), giusta, scelta: sc };
+  return { ok: false, mutante: null, frase: sc ? t('stampa.hai-scritto-altro', { uscita: sc }) : t('stampa.nessuna-risposta'), giusta, scelta: sc };
 }
 
 /* ---------- la scheda ---------- */
@@ -85,7 +86,7 @@ export function collega(h = {}) { H = { ...H, ...h }; }
 // la domanda sullo schermo, per le prove: { modello, giusta, indice (1-4, null se si scrive), scrivi, codice }
 export const ultima = () => ULTIMA;
 
-const righeCodice = (c, l) => `<pre class="ld-codice" aria-label="Codice ${nomeLingua(l)}"><code>${c.split('\n').map((r, k) => `<span class="r"><i>${k + 1}</i>${esc(r) || ' '}</span>`).join('')}</code></pre>`;
+const righeCodice = (c, l) => `<pre class="ld-codice" aria-label="${t('stampa.aria-codice', { lingua: nomeLingua(l) })}"><code>${c.split('\n').map((r, k) => `<span class="r"><i>${k + 1}</i>${esc(r) || ' '}</span>`).join('')}</code></pre>`;
 
 function registraRisposta(ist, r, modo, corso) {
   const q = r.ok ? (modo === 'scritta' ? 5 : 4) : 0;
@@ -106,8 +107,8 @@ export function schedaStampa({ corso = '', n = 5, seme, lingua } = {}) {
   const s0 = seme ?? ((Date.now() ^ Math.floor(Math.random() * 2 ** 31)) >>> 0);
   const ling = NOMI_LINGUE[lingua] ? lingua : linguaDi(corso);
   const manche = preparaManche({ memoria, n, seme: s0, oggi: oggiIso(), lingua: ling });
-  if (!manche.length) { H.rispostaFissa?.(`Oggi non riesco a preparare le domande di ${nomeLingua(ling)}. Riprova tra poco.`); return null; }
-  const s = H.scheda('ld-gioco ld-stampa', `<div class="capo"><span class="ld-lbl">Cosa stampa? · ${nomeLingua(ling)}${corso ? ' · ' + esc(corso) : ''}</span><span class="conto"></span></div><i class="ld-prog"><i></i></i><div class="manche"></div>`);
+  if (!manche.length) { H.rispostaFissa?.(t('stampa.non-riesco', { lingua: nomeLingua(ling) })); return null; }
+  const s = H.scheda('ld-gioco ld-stampa', `<div class="capo"><span class="ld-lbl">${t('stampa.titolo')} · ${nomeLingua(ling)}${corso ? ' · ' + esc(corso) : ''}</span><span class="conto"></span></div><i class="ld-prog"><i></i></i><div class="manche"></div>`);
   const box = s.querySelector('.manche'), conto = s.querySelector('.conto'), pr = s.querySelector('.ld-prog i');
   const turno = s.parentElement;
   let i = 0, punti = 0, stato = null; const t0 = Date.now(), deboli = [];
@@ -131,11 +132,11 @@ export function schedaStampa({ corso = '', n = 5, seme, lingua } = {}) {
     pr.style.transform = `scaleX(${(i / manche.length).toFixed(4)})`;
     if (i >= manche.length) return fine();
     const ist = manche[i];
-    conto.textContent = `${i + 1} di ${manche.length}`;
+    conto.textContent = t('stampa.conto', { i: i + 1, n: manche.length });
     ULTIMA = { modello: ist.modello, giusta: vista(ist.giusta), indice: ist.scrivi ? null : ist.opzioni.findIndex(o => o.giusta) + 1, scrivi: ist.scrivi, codice: ist.codice, lingua: ist.lingua };
-    box.innerHTML = `<p class="dom">${ist.scrivi ? 'Scrivi l\'uscita esatta' : 'Scegli l\'uscita · tasti 1-4'}</p>${righeCodice(ist.codice, ist.lingua)}${ist.scrivi
-      ? `<div class="ld-riga-form ld-scrivi"><input type="text" aria-label="Cosa stampa il programma" placeholder="Scrivi quello che stampa" autocomplete="off" spellcheck="false"><button type="button" class="btn primary" data-controlla>Controlla <kbd>Invio</kbd></button></div><p class="ld-nota">Più righe? Separale con uno spazio.</p>`
-      : `<div class="ld-scelte ld-uscite">${ist.opzioni.map((o, k) => `<button type="button" class="btn${normalizza(o.uscita) ? '' : ' vuota'}" data-o="${k}" aria-label="Risposta ${k + 1}: ${esc(inLinea(o.uscita))}"><kbd>${k + 1}</kbd><span>${esc(vista(o.uscita))}</span></button>`).join('')}</div>`}
+    box.innerHTML = `<p class="dom">${ist.scrivi ? t('stampa.scrivi-uscita') : t('stampa.scegli-uscita')}</p>${righeCodice(ist.codice, ist.lingua)}${ist.scrivi
+      ? `<div class="ld-riga-form ld-scrivi"><input type="text" aria-label="${t('stampa.aria-campo')}" placeholder="${t('stampa.segnaposto')}" autocomplete="off" spellcheck="false"><button type="button" class="btn primary" data-controlla>${t('stampa.controlla')}</button></div><p class="ld-nota">${t('stampa.piu-righe')}</p>`
+      : `<div class="ld-scelte ld-uscite">${ist.opzioni.map((o, k) => `<button type="button" class="btn${normalizza(o.uscita) ? '' : ' vuota'}" data-o="${k}" aria-label="${t('stampa.aria-risposta', { n: k + 1, uscita: esc(inLinea(o.uscita)) })}"><kbd>${k + 1}</kbd><span>${esc(vista(o.uscita))}</span></button>`).join('')}</div>`}
       <div class="ld-spiega" hidden></div>`;
     const spiega = box.querySelector('.ld-spiega');
     const st = stato = { ist, risposto: false, passato: false };
@@ -156,10 +157,10 @@ export function schedaStampa({ corso = '', n = 5, seme, lingua } = {}) {
       else { const inp = box.querySelector('.ld-scrivi input'); inp.disabled = true; box.querySelector('[data-controlla]').disabled = true; if (!r.ok) scuoti(inp); }
       spiega.hidden = false;
       if (r.ok) {
-        spiega.innerHTML = '<p class="ok">Giusto · calcolato da Lode</p>';
+        spiega.innerHTML = `<p class="ok">${t('stampa.giusto')}</p>`;
         H.segnala?.('fatto'); H.dopo(950, st.avanti);
       } else {
-        spiega.innerHTML = `<p>${inline(r.frase)}</p><p class="ld-nota">Stampa <code>${esc(inLinea(ist.giusta))}</code>. ${inline(ist.concetto)}</p><div class="az"><button type="button" class="btn primary" data-avanti>${i + 1 < manche.length ? 'Avanti' : 'Vedi com\'è andata'} <kbd>Invio</kbd></button></div>`;
+        spiega.innerHTML = `<p>${inline(r.frase)}</p><p class="ld-nota">${t('stampa.stampa-giusta', { uscita: esc(inLinea(ist.giusta)) })} ${inline(ist.concetto)}</p><div class="az"><button type="button" class="btn primary" data-avanti>${i + 1 < manche.length ? t('stampa.avanti') : t('stampa.com-e-andata')}</button></div>`;
         spiega.querySelector('[data-avanti]').addEventListener('click', () => st.avanti());
         H.segnala?.('quiete');
       }
@@ -179,15 +180,15 @@ export function schedaStampa({ corso = '', n = 5, seme, lingua } = {}) {
     const tot = manche.length, nomi = [...new Set(deboli)].slice(0, 3).map(c => minuscola(CONCETTI[c] || c));
     H.allaFine?.({ punti, tot, deboli: [...new Set(deboli)] });
     const sec = Math.round((Date.now() - t0) / 1000);
-    box.innerHTML = `<div class="ld-esito"><b>${punti}<small>/${tot}</small></b><span>${punti === tot ? 'Tutte giuste. Le risposte le ha calcolate Lode.' : `Da rinforzare: ${nomi.map(esc).join(', ')}. Torna domani.`}</span><small>${sec < 60 ? sec + ' secondi' : Math.round(sec / 60) + ' min'}</small></div>`;
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn small'; b.textContent = 'Ancora una';
-    b.addEventListener('click', () => { H.ricomincia?.('Ancora una'); schedaStampa({ corso, n, lingua: ling }); });
+    box.innerHTML = `<div class="ld-esito"><b>${punti}<small>/${tot}</small></b><span>${punti === tot ? t('stampa.tutte-giuste') : t('stampa.da-rinforzare', { nomi: nomi.map(esc).join(', ') })}</span><small>${sec < 60 ? t('stampa.secondi', { n: sec }) : t('comune.minuti', { m: Math.round(sec / 60) })}</small></div>`;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn small'; b.textContent = t('stampa.ancora-una');
+    b.addEventListener('click', () => { H.ricomincia?.(t('stampa.ancora-una')); schedaStampa({ corso, n, lingua: ling }); });
     box.querySelector('.ld-esito').append(b);
     entra(box, { dy: 8, blur: 6, ms: 480 }); H.segnala?.(punti >= tot - 1 ? 'confermato' : 'quiete');
-    if (turno?.dataset) turno.dataset.sintesi = `Cosa stampa? ${punti} su ${tot}`;
+    if (turno?.dataset) turno.dataset.sintesi = t('stampa.sintesi', { punti, tot });
   };
 
   mostra();
-  if (turno?.dataset) turno.dataset.sintesi = 'Cosa stampa?';
+  if (turno?.dataset) turno.dataset.sintesi = t('stampa.titolo');
   return s;
 }

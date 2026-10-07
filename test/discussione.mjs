@@ -11,7 +11,9 @@ const prova = (nome, cond, dett = '') => { if (cond) ok++; else { ko++; console.
 const SRC = readFileSync(new URL('../js/codice/discussione.js', import.meta.url), 'utf8');
 if (vm.SourceTextModule) { let e = null; try { new vm.SourceTextModule(SRC); } catch (x) { e = x; } prova('modulo valido', !e, e?.message); }
 prova('niente rete nel modulo', !/\bfetch\s*\(|XMLHttpRequest|WebSocket|https?:\/\//.test(SRC));
-prova('mai «scritta dall\'agente»', !/scritt[oa] dall.agente/i.test(SRC) && !/scritt[oa] dall.agente/i.test(readFileSync(new URL('../js/lode.js', import.meta.url), 'utf8')) && !/scritt[oa] dall.agente/i.test(readFileSync(new URL('../js/lingue/it/barra2.js', import.meta.url), 'utf8')));
+// i testi della scheda stanno nel catalogo italiano: la regola vale anche lì
+const CAT = readFileSync(new URL('../js/lingue/it/discussione.js', import.meta.url), 'utf8');
+prova('mai «scritta dall\'agente»', !/scritt[oa] dall.agente/i.test(SRC + CAT) && !/scritt[oa] dall.agente/i.test(readFileSync(new URL('../js/lode.js', import.meta.url), 'utf8')) && !/scritt[oa] dall.agente/i.test(readFileSync(new URL('../js/lingue/it/barra2.js', import.meta.url), 'utf8')));
 const righe = s => s.split('\n');
 
 /* ---------- (1) trova ---------- */

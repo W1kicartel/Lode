@@ -5,6 +5,7 @@
 // lode.js passa i suoi strumenti con collega(), perché quelle funzioni sono interne a lode.js (come stampa.js).
 import { coseNuove, linguaDi, segna, dati, cartaDa, esameDi } from './glossario.js';
 import * as DI from './discussione.js';
+import { t, numero } from '../lingua.js';
 
 const L = globalThis.lodeDesktop || null;
 export const attivo = !!L;
@@ -20,7 +21,7 @@ export const md = t => esc(t).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/
 const piano = t => String(t ?? '').replace(/[`*]/g, '');
 const due = n => String(n).padStart(2, '0');
 export const ora = t => { const d = new Date(t); return `${due(d.getHours())}:${due(d.getMinutes())}`; };
-const invoca = (canale, x) => L ? L.invoca(canale, x).catch(e => ({ errore: e.message })) : Promise.resolve({ errore: 'Seguire un progetto si può solo nell\'app desktop di Lode.' });
+const invoca = (canale, x) => L ? L.invoca(canale, x).catch(e => ({ errore: e.message })) : Promise.resolve({ errore: t('progetto.solo-app') });
 const segnala = (ev, x) => T.segnala?.(ev, x);
 const evento = x => { try { T.evento?.({ t: Date.now(), ...x }); } catch (e) { console.error(e); } };
 const dopo = (ms, f) => (T.dopo ? T.dopo(ms, f) : setTimeout(f, ms));
@@ -71,12 +72,12 @@ export function collega(strumenti = {}) {
 export function lineaPillola(p, adesso = Date.now()) {
   if (!p?.nome || p.manca) return null;
   const MIN = 60e3, fai = (t, testo, pieno) => ({ id: p.id, t, pieno, testo: `${p.nome} · ${testo}`, html: `<b>${esc(p.nome)}</b><span class="ld-tenue">${esc(testo)}</span>` });
-  if (p.provaInCorso) return fai(adesso, 'provo…', true);
+  if (p.provaInCorso) return fai(adesso, t('progetto.provo'), true);
   const up = p.ultimaProva, aggiornata = !!up && up.impronta === p.impronta, recente = p.ultima && adesso - p.ultima < 30 * MIN;
   const quieto = !p.ultima || adesso - p.ultima >= (p.quieteMs || 60e3);
-  if (!quieto && recente && (p.piu || p.meno || p.nFile)) return fai(p.ultima, `${p.nFile ?? p.file?.length ?? 0} file +${p.piu || 0} −${p.meno || 0}`, true);
+  if (!quieto && recente && (p.piu || p.meno || p.nFile)) return { ...fai(p.ultima, t('progetto.file-cambiati', { n: p.nFile ?? p.file?.length ?? 0, piu: p.piu || 0, meno: p.meno || 0 }), true), cambia: true };
   if (aggiornata && (adesso - up.quando < 120 * MIN || recente)) return fai(up.quando, `${up.breve} · ${ora(up.quando)}`, up.esito !== 'ok');
-  if (!aggiornata && p.ultimaCodice && adesso - p.ultimaCodice < 120 * MIN) return fai(p.ultimaCodice, 'fatto · non provato', true);
+  if (!aggiornata && p.ultimaCodice && adesso - p.ultimaCodice < 120 * MIN) return fai(p.ultimaCodice, t('progetto.fatto-non-provato'), true);
   return null;
 }
 // per aggiornaPillola() di lode.js: { html, testo, pieno } del progetto più recente che ha qualcosa da dire, o null
@@ -89,9 +90,9 @@ export function pillola(adesso = Date.now()) {
 export function rigaOggi(adesso = Date.now()) {
   const x = pillola(adesso); if (!x) return null;
   const p = P.get(x.id), r = p.riassunto, e = p.ultimoEsito;
-  if (r && !p.riassuntoVisto && r.vecchio && r.codiceCambiato) return { cls: 'att', t: `${p.nome}: non provato`, d: piano(r.frase), n: '', b: 'Vedi', f: () => { turno('Cosa è cambiato'); schedaFatto(r); } };
-  if (p.ultimaProva && p.ultimaProva.impronta === p.impronta && p.ultimaProva.esito !== 'ok') return { cls: 'urg', t: `${p.nome}: ${p.ultimaProva.breve}`, d: `L'ultima prova, alle ${ora(p.ultimaProva.quando)}`, n: '', b: e ? 'Esito' : 'Prova', f: () => { turno('Provato?'); e?.id === p.id ? schedaEsito(e) : prova(p.id); } };
-  if (x.testo.includes(' file +')) return { cls: 'info', t: `${p.nome}: sta cambiando`, d: x.testo.split(' · ').slice(1).join(' · '), n: '', b: 'Vedi', f: () => { turno('Cosa sta cambiando'); schedaCambia(p.id); } };
+  if (r && !p.riassuntoVisto && r.vecchio && r.codiceCambiato) return { cls: 'att', t: t('progetto.oggi-non-provato', { nome: p.nome }), d: piano(r.frase), n: '', b: t('progetto.vedi'), f: () => { turno(t('progetto.cosa-e-cambiato')); schedaFatto(r); } };
+  if (p.ultimaProva && p.ultimaProva.impronta === p.impronta && p.ultimaProva.esito !== 'ok') return { cls: 'urg', t: t('progetto.oggi-esito', { nome: p.nome, breve: p.ultimaProva.breve }), d: t('progetto.ultima-prova-alle', { ora: ora(p.ultimaProva.quando) }), n: '', b: e ? t('progetto.esito') : t('progetto.prova'), f: () => { turno(t('progetto.provato')); e?.id === p.id ? schedaEsito(e) : prova(p.id); } };
+  if (x.cambia) return { cls: 'info', t: t('progetto.oggi-sta-cambiando', { nome: p.nome }), d: x.testo.split(' · ').slice(1).join(' · '), n: '', b: t('progetto.vedi'), f: () => { turno(t('progetto.cosa-sta-cambiando')); schedaCambia(p.id); } };
   return null;
 }
 
@@ -145,14 +146,14 @@ function recente() {
   const t = p => Math.max(p.ultima || 0, p.ultimaProva?.quando || 0, p.vista || 0);
   return [...P.values()].filter(p => p.nome).sort((a, b) => t(b) - t(a))[0] || null;
 }
-const SERVE_SEGUITO = 'Serve un progetto seguito nell\'app: scrivi «segui progetto».';
+const SERVE_SEGUITO = t('progetto.serve-seguito');
 export async function esegui(c) {
   if (c.azione === 'segui') return segui();
   if (c.azione === 'discussione' && !attivo) return risposta(SERVE_SEGUITO);
   if (!attivo) return segui();
   if (!P.size) { const r = await invoca('progetto:stato'); for (const x of r.progetti || []) metti(x); }
   const p = trova(c.nome);
-  if (!p) return risposta(c.nome && P.size ? `Non seguo nessun progetto che si chiama «${c.nome}».` : c.azione === 'discussione' ? SERVE_SEGUITO : 'Non seguo nessun progetto. Scrivi **segui progetto** e scegli la cartella del laboratorio.');
+  if (!p) return risposta(c.nome && P.size ? t('progetto.non-seguo-nome', { nome: c.nome }) : c.azione === 'discussione' ? SERVE_SEGUITO : t('progetto.non-seguo-niente'));
   if (c.azione === 'discussione') return DI.scheda(p, T, invoca);
   if (c.azione === 'cambiato') return schedaCambia(p.id);
   if (c.azione === 'provato') return schedaProvato(p.id);
@@ -161,45 +162,45 @@ export async function esegui(c) {
 }
 
 /* ---------- seguire ---------- */
-const CAPITO = 'Lode guarda i file e verifica se il codice è provato: non scrive codice al posto tuo. Se usi un agente o un\'AI, cosa è permesso lo decide il tuo corso: chiedi al docente. Il diario è un registro per te, non una prova per il prof: è quello che Lode ha visto, e non sa chi ha scritto le righe. Per una consegna valutata segna il progetto come "valutato": Lode ti dirà dove guardare e cosa vuol dire un errore, ma non ti mostrerà la correzione.';
+const CAPITO = t('progetto.capito-testo');
 // la prima volta, una volta sola: cosa fa Lode e cosa no
 function schedaCapito() {
   return new Promise(fatto => {
-    const s = T.scheda('ld-progetto ld-pcapito', `<span class="ld-lbl">Prima di cominciare</span><p class="ld-ptesto">${esc(CAPITO)}</p><div class="az"><button type="button" class="btn primary" data-capito>Ho capito</button></div>`);
-    s.setAttribute('role', 'dialog'); s.setAttribute('aria-label', 'Prima di cominciare');
+    const s = T.scheda('ld-progetto ld-pcapito', `<span class="ld-lbl">${t('progetto.prima-di-cominciare')}</span><p class="ld-ptesto">${esc(CAPITO)}</p><div class="az"><button type="button" class="btn primary" data-capito>${t('progetto.ho-capito')}</button></div>`);
+    s.setAttribute('role', 'dialog'); s.setAttribute('aria-label', t('progetto.prima-di-cominciare'));
     bottone(s, '[data-capito]', b => { b.disabled = true; segnaCapito(); fatto(); });
   });
 }
 export async function segui() {
-  if (!attivo) return risposta('Seguire un progetto si può solo nell\'**app desktop** di Lode: lì guardo la cartella del tuo laboratorio.');
+  if (!attivo) return risposta(t('progetto.solo-app-desktop'));
   const r = await invoca('progetto:scegli');
-  if (r.annullato) return risposta('Va bene, non seguo niente.');
+  if (r.annullato) return risposta(t('progetto.va-bene-non-seguo'));
   if (r.errore) return risposta(r.errore, { errore: true });
-  if (r.gia) { risposta(`Seguo già **${r.nome}**.`); const p = [...P.values()].find(x => x.nome === r.nome); return p ? schedaCambia(p.id) : null; }
+  if (r.gia) { risposta(t('progetto.seguo-gia', { nome: r.nome })); const p = [...P.values()].find(x => x.nome === r.nome); return p ? schedaCambia(p.id) : null; }
   if (!leggiCapito()) await schedaCapito();
   return schedaSegui(r);
 }
 function schedaSegui(r) {
   const corsi = T.corsiPossibili?.() || [];
-  const s = T.scheda('ld-conf ld-progetto ld-psegui', `<h3>Seguo <b>${esc(r.nome)}</b>?</h3>
-    <p class="ld-ptesto">Guardo i file e tengo le versioni nella cartella di Lode: io nella tua cartella non scrivo. I comandi che confermi (per esempio make) sì, come dal terminale. Non so chi scrive le righe (tu, un agente o un copia-incolla): ti dico cosa è cambiato e se l'hai provato.</p>
-    ${L?.piattaforma === 'win32' ? '<p class="ld-nota">Mentre la seguo, Windows non ti lascia rinominare o spostare la cartella: prima scrivi «smetti di seguire».</p>' : ''}
-    <div class="ld-riga-form"><span class="ld-lbl">Corso</span><select aria-label="Corso">${['', ...corsi].map(c => `<option value="${esc(c)}">${c ? esc(c) : 'Nessun corso'}</option>`).join('')}</select></div>
-    <div class="ld-preset"><button type="button" class="ld-chip larga" role="switch" aria-checked="false" data-valutato><b>Progetto valutato (consegna)</b><span>Ti dico dove guardare, ma niente correzioni pronte</span></button><button type="button" class="ld-chip larga" role="switch" aria-checked="false" data-nodiario><b>Non scrivere il diario di questo progetto</b><span>Nel vault non finiscono nomi di file né di funzioni</span></button></div>
-    <p class="ld-nota">${r.file === 1 ? '1 file' : `${r.file} file`} · ${esc(r.percorso)}</p>
-    <div class="az"><button type="button" class="btn primary" data-si>Segui</button><button type="button" class="btn ld-piano" data-no>Annulla</button></div>`);
-  s.setAttribute('role', 'alertdialog'); s.setAttribute('aria-label', `Seguo ${r.nome}?`);
+  const s = T.scheda('ld-conf ld-progetto ld-psegui', `<h3>${t('progetto.seguo-domanda', { nome: esc(r.nome) })}</h3>
+    <p class="ld-ptesto">${t('progetto.seguo-spiega')}</p>
+    ${L?.piattaforma === 'win32' ? `<p class="ld-nota">${t('progetto.nota-windows')}</p>` : ''}
+    <div class="ld-riga-form"><span class="ld-lbl">${t('progetto.corso')}</span><select aria-label="${t('progetto.corso')}">${['', ...corsi].map(c => `<option value="${esc(c)}">${c ? esc(c) : t('progetto.nessun-corso')}</option>`).join('')}</select></div>
+    <div class="ld-preset"><button type="button" class="ld-chip larga" role="switch" aria-checked="false" data-valutato><b>${t('progetto.valutato')}</b><span>${t('progetto.valutato-spiega')}</span></button><button type="button" class="ld-chip larga" role="switch" aria-checked="false" data-nodiario><b>${t('progetto.no-diario')}</b><span>${t('progetto.no-diario-spiega')}</span></button></div>
+    <p class="ld-nota">${t('progetto.n-file', { n: r.file })} · ${esc(r.percorso)}</p>
+    <div class="az"><button type="button" class="btn primary" data-si>${t('progetto.segui')}</button><button type="button" class="btn ld-piano" data-no>${t('progetto.annulla')}</button></div>`);
+  s.setAttribute('role', 'alertdialog'); s.setAttribute('aria-label', t('progetto.seguo-aria', { nome: r.nome }));
   // il corso di programmazione, se c'è; se no il primo
   if (corsi.length) s.querySelector('select').selectedIndex = 1 + Math.max(0, corsi.findIndex(c => /programmazione|informatica|algoritm|\blab(?:oratorio)?\s+(?:di\s+)?(?:c|python|java)\b/i.test(c)));
   const chip = s.querySelector('[data-valutato]'), noDiario = s.querySelector('[data-nodiario]');
   for (const c of [chip, noDiario]) c.addEventListener('click', () => { const on = c.getAttribute('aria-checked') !== 'true'; c.setAttribute('aria-checked', on); c.classList.toggle('on', on); T.premi?.(c); });
-  bottone(s, '[data-no]', () => { s.querySelectorAll('button').forEach(b => { b.disabled = true; }); T.mostraFatto?.({ testo: 'Annullato.', nota: 'Non seguo niente.', no: true }, s); });
+  bottone(s, '[data-no]', () => { s.querySelectorAll('button').forEach(b => { b.disabled = true; }); T.mostraFatto?.({ testo: t('progetto.annullato'), nota: t('progetto.non-seguo-niente-nota'), no: true }, s); });
   bottone(s, '[data-si]', async () => {
     s.querySelectorAll('button').forEach(b => { b.disabled = true; });
     const x = await invoca('progetto:segui', { token: r.token, corso: s.querySelector('select').value || null, valutato: chip.getAttribute('aria-checked') === 'true' });
     if (x.errore) { s.querySelectorAll('button').forEach(b => { b.disabled = false; }); return risposta(x.errore, { errore: true }); }
     metti(x); aggiorna(); evento({ tipo: 'segui', id: x.id, nome: x.nome, corso: x.corso, valutato: x.valutato, diario: noDiario.getAttribute('aria-checked') !== 'true' });
-    T.mostraFatto?.({ testo: `Seguo ${x.nome}.`, nota: 'Ti dico cosa cambia e se l\'hai provato. Le versioni le tengo nella cartella di Lode.', sintesi: `seguo ${x.nome}` }, s);
+    T.mostraFatto?.({ testo: t('progetto.seguo-fatto', { nome: x.nome }), nota: t('progetto.seguo-fatto-nota'), sintesi: t('progetto.seguo-sintesi', { nome: x.nome }) }, s);
   });
   s.querySelector('[data-si]').focus({ preventScroll: true });
   return s;
@@ -211,33 +212,33 @@ export function discussione(id) {
 }
 export function schedaSmetti(id) {
   const p = P.get(id); if (!p) return null;
-  const s = T.scheda('ld-conf ld-progetto', `<h3>Smetto di seguire <b>${esc(p.nome)}</b>?</h3>
-    <p class="ld-ptesto">Tolgo le copie che ho tenuto nella cartella di Lode. I tuoi file non li tocco.</p>
-    <div class="az"><button type="button" class="btn primary" data-si>Smetti di seguire</button><button type="button" class="btn ld-piano" data-no>Annulla</button></div>`);
-  bottone(s, '[data-no]', () => T.mostraFatto?.({ testo: 'Annullato.', nota: `Continuo a seguire ${p.nome}.`, no: true }, s));
+  const s = T.scheda('ld-conf ld-progetto', `<h3>${t('progetto.smetto-domanda', { nome: esc(p.nome) })}</h3>
+    <p class="ld-ptesto">${t('progetto.smetto-spiega')}</p>
+    <div class="az"><button type="button" class="btn primary" data-si>${t('progetto.smetti-di-seguire')}</button><button type="button" class="btn ld-piano" data-no>${t('progetto.annulla')}</button></div>`);
+  bottone(s, '[data-no]', () => T.mostraFatto?.({ testo: t('progetto.annullato'), nota: t('progetto.continuo-a-seguire', { nome: p.nome }), no: true }, s));
   bottone(s, '[data-si]', async () => {
     const r = await invoca('progetto:smetti', { id }); if (r.errore) return risposta(r.errore, { errore: true });
     P.delete(id); aggiorna(); evento({ tipo: 'smetti', id, nome: p.nome });
-    T.mostraFatto?.({ testo: `Non seguo più ${p.nome}.`, nota: 'Le copie di Lode sono andate. I tuoi file non li ho toccati.', sintesi: `smesso ${p.nome}` }, s);
+    T.mostraFatto?.({ testo: t('progetto.non-seguo-piu', { nome: p.nome }), nota: t('progetto.non-seguo-piu-nota'), sintesi: t('progetto.smesso-sintesi', { nome: p.nome }) }, s);
   });
   return s;
 }
 
 /* ---------- «Cosa sta cambiando» e il diff ---------- */
-const etichetta = f => f.stato === 'nuovo' ? 'nuovo' : f.stato === 'tolto' ? 'tolto' : f.grande ? 'file grande: solo i conteggi' : !f.piu && !f.meno ? 'solo spazi o a capo' : 'cambiato';
-const rigaFile = (f, i) => `<div class="ld-riga ${f.stato}" data-i="${i}"><i class="ld-seg"></i><div class="t"><b>${esc(f.rel)}</b><span>${etichetta(f)}</span></div><span class="n">+${f.piu} −${f.meno}</span><button type="button" class="btn small" data-diff="${i}" aria-expanded="false">Diff</button></div>`;
+const etichetta = f => f.stato === 'nuovo' ? t('progetto.etichetta-nuovo') : f.stato === 'tolto' ? t('progetto.etichetta-tolto') : f.grande ? t('progetto.etichetta-grande') : !f.piu && !f.meno ? t('progetto.etichetta-spazi') : t('progetto.etichetta-cambiato');
+const rigaFile = (f, i) => `<div class="ld-riga ${f.stato}" data-i="${i}"><i class="ld-seg"></i><div class="t"><b>${esc(f.rel)}</b><span>${etichetta(f)}</span></div><span class="n">+${f.piu} −${f.meno}</span><button type="button" class="btn small" data-diff="${i}" aria-expanded="false">${t('progetto.diff')}</button></div>`;
 // il diff in Geist Mono, bianco e nero: righe aggiunte con la barra bianca, tolte tenui e barrate, 3 righe di contesto
 export function htmlDiff(d) {
   if (d.errore) return `<p class="ld-nota">${esc(d.errore)}</p>`;
-  if (d.grande) return `<p class="ld-nota">File grande (+${d.piu} −${d.meno}): il dettaglio non lo mostro.</p>`;
-  if (!d.blocchi?.length) return '<p class="ld-nota">Cambiano solo spazi in fondo alle righe o gli a capo.</p>';
+  if (d.grande) return `<p class="ld-nota">${t('progetto.diff-grande', { piu: d.piu, meno: d.meno })}</p>`;
+  if (!d.blocchi?.length) return `<p class="ld-nota">${t('progetto.diff-solo-spazi')}</p>`;
   const riga = r => `<div class="r${r.t === '+' ? ' piu' : r.t === '-' ? ' meno' : ''}"><i>${r.t === '+' ? '+' : r.na ?? ''}</i><i>${r.t === '-' ? '−' : r.nb ?? ''}</i><span>${esc(r.s) || ' '}</span></div>`;
-  return `<div class="ld-diff" role="region" aria-label="Modifiche a ${esc(d.rel)}">${d.blocchi.map((b, i) => (i ? '<div class="salto">···</div>' : '') + b.righe.map(riga).join('')).join('')}${d.tagliato ? '<div class="salto">… il resto non lo mostro</div>' : ''}</div>`;
+  return `<div class="ld-diff" role="region" aria-label="${t('progetto.diff-aria', { file: esc(d.rel) })}">${d.blocchi.map((b, i) => (i ? '<div class="salto">···</div>' : '') + b.righe.map(riga).join('')).join('')}${d.tagliato ? `<div class="salto">${t('progetto.diff-tagliato')}</div>` : ''}</div>`;
 }
 // opz.da / opz.a: un tratto preciso (dal riassunto); senza, dall'ultimo «Visto» a adesso
 export async function schedaCambia(id, opz = {}) {
   const p = P.get(id);
-  const s = T.scheda('ld-progetto ld-pcambia', `<div class="capo"><span class="ld-lbl">${esc(opz.titolo || 'Cosa sta cambiando')}</span><span class="ld-tenue">${esc(p?.nome || '')}</span></div><div class="ld-pfile"></div><div class="az"></div>`);
+  const s = T.scheda('ld-progetto ld-pcambia', `<div class="capo"><span class="ld-lbl">${esc(opz.titolo || t('progetto.cosa-sta-cambiando'))}</span><span class="ld-tenue">${esc(p?.nome || '')}</span></div><div class="ld-pfile"></div><div class="az"></div>`);
   if (!opz.da) schedeCambia.set(id, s);
   await riempiCambia(s, id, opz);
   return s;
@@ -246,21 +247,21 @@ async function riempiCambia(s, id, opz = {}) {
   const r = await invoca('progetto:diff', { id, da: opz.da, a: opz.a });
   const box = s.querySelector('.ld-pfile'), az = s.querySelector('.az'), p = P.get(id) || {};
   if (r.errore) { box.innerHTML = `<p class="ld-nota">${esc(r.errore)}</p>`; return; }
-  const dal = !opz.da && p.vista ? ` dalle ${ora(p.vista)}` : '';
-  box.innerHTML = r.file.length ? r.file.map(rigaFile).join('') : `<p class="ld-ptesto">${opz.da ? 'Niente di diverso.' : `Niente di nuovo${dal ? dal : ''}.`}</p>`;
-  if (r.file.length && dal) s.querySelector('.capo .ld-tenue').textContent = `${p.nome}${dal}`;
+  const dal = !opz.da && p.vista ? ora(p.vista) : '';
+  box.innerHTML = r.file.length ? r.file.map(rigaFile).join('') : `<p class="ld-ptesto">${opz.da ? t('progetto.niente-di-diverso') : dal ? t('progetto.niente-di-nuovo-dalle', { ora: dal }) : t('progetto.niente-di-nuovo')}</p>`;
+  if (r.file.length && dal) s.querySelector('.capo .ld-tenue').textContent = t('progetto.nome-dalle', { nome: p.nome, ora: dal });
   box.querySelectorAll('[data-diff]').forEach(b => b.addEventListener('click', async () => {
     const riga = b.closest('.ld-riga'), aperto = riga.nextElementSibling?.classList.contains('ld-pdiff');
-    if (aperto) { riga.nextElementSibling.remove(); b.setAttribute('aria-expanded', 'false'); b.textContent = 'Diff'; return; }
+    if (aperto) { riga.nextElementSibling.remove(); b.setAttribute('aria-expanded', 'false'); b.textContent = t('progetto.diff'); return; }
     b.disabled = true;
     const f = r.file[+b.dataset.diff], d = await invoca('progetto:diff', { id, rel: f.rel, da: opz.da, a: opz.a });
     const el = document.createElement('div'); el.className = 'ld-pdiff'; el.innerHTML = htmlDiff({ ...d, rel: f.rel });
     riga.after(el); T.entra?.(el, { dy: 4, blur: 4, ms: 320 });
-    b.disabled = false; b.setAttribute('aria-expanded', 'true'); b.textContent = 'Chiudi';
+    b.disabled = false; b.setAttribute('aria-expanded', 'true'); b.textContent = t('progetto.chiudi');
   }));
   const vecchio = p.vecchio !== false;
-  az.innerHTML = `<button type="button" class="btn${vecchio ? ' primary' : ''}" data-prova>Prova adesso</button>${opz.da ? '' : '<button type="button" class="btn ld-piano" data-visto>Visto</button>'}${vecchio ? '' : '<span class="ld-tenue">provato</span>'}`;
-  bottone(az, '[data-prova]', () => { turno('Prova il progetto'); prova(id); });
+  az.innerHTML = `<button type="button" class="btn${vecchio ? ' primary' : ''}" data-prova>${t('progetto.prova-adesso')}</button>${opz.da ? '' : `<button type="button" class="btn ld-piano" data-visto>${t('progetto.visto')}</button>`}${vecchio ? '' : `<span class="ld-tenue">${t('progetto.provato-breve')}</span>`}`;
+  bottone(az, '[data-prova]', () => { turno(t('progetto.prova-il-progetto')); prova(id); });
   bottone(az, '[data-visto]', () => visto(id, s));
 }
 // un evento nuovo: la scheda «Cosa sta cambiando» aperta si aggiorna (senza perdere il diff che lo studente sta leggendo)
@@ -274,20 +275,20 @@ async function visto(id, s) {
   const r = await invoca('progetto:visto', { id }); if (r.errore) return risposta(r.errore, { errore: true });
   metti(r); const p = P.get(id); if (p) p.riassuntoVisto = true; aggiorna();
   schedeCambia.delete(id);
-  T.mostraFatto?.({ testo: 'Visto.', nota: 'Da qui in poi ti mostro solo le modifiche nuove.', sintesi: 'visto' }, s?.isConnected ? s : null);
+  T.mostraFatto?.({ testo: t('progetto.visto-fatto'), nota: t('progetto.visto-nota'), sintesi: t('progetto.visto-sintesi') }, s?.isConnected ? s : null);
 }
 
 /* ---------- «Fatto. In parole semplici» ---------- */
 export function schedaFatto(r) {
   const p = metti({ id: r.id }); p.riassuntoVisto = true;
-  const s = T.scheda('ld-progetto ld-pfatto', `<div class="capo"><span class="ld-lbl">Fatto. In parole semplici</span><span class="ld-tenue">${esc(r.nome)}</span></div>
+  const s = T.scheda('ld-progetto ld-pfatto', `<div class="capo"><span class="ld-lbl">${t('progetto.fatto-titolo')}</span><span class="ld-tenue">${esc(r.nome)}</span></div>
     <p class="ld-ptesto">${md(r.frase)}</p>
     ${r.punti?.length ? `<ul>${r.punti.map(x => `<li>${md(x)}</li>`).join('')}</ul>` : ''}
     <p class="provato">${md(r.provatoTesto)}</p>
     <p class="ld-nota">${esc(r.nota)}</p>
-    <div class="az"><button type="button" class="btn${r.vecchio ? ' primary' : ''}" data-prova>Prova adesso</button><button type="button" class="btn" data-diff>Vedi le modifiche</button><button type="button" class="btn ld-piano" data-visto>Visto</button></div>`);
-  bottone(s, '[data-prova]', () => { turno('Prova il progetto'); prova(r.id); });
-  bottone(s, '[data-diff]', () => { turno('Vedi le modifiche'); schedaCambia(r.id, { da: r.base, a: r.fine, titolo: `Modifiche · ${ora(r.da)}–${ora(r.a)}` }); });
+    <div class="az"><button type="button" class="btn${r.vecchio ? ' primary' : ''}" data-prova>${t('progetto.prova-adesso')}</button><button type="button" class="btn" data-diff>${t('progetto.vedi-le-modifiche')}</button><button type="button" class="btn ld-piano" data-visto>${t('progetto.visto')}</button></div>`);
+  bottone(s, '[data-prova]', () => { turno(t('progetto.prova-il-progetto')); prova(r.id); });
+  bottone(s, '[data-diff]', () => { turno(t('progetto.vedi-le-modifiche')); schedaCambia(r.id, { da: r.base, a: r.fine, titolo: t('progetto.modifiche-tratto', { da: ora(r.da), a: ora(r.a) }) }); });
   bottone(s, '[data-visto]', () => visto(r.id, s));
   coseNuoveDi(r.id, { da: r.base, a: r.fine }).then(l => mostraCoseNuove(s, l));
   return s;
@@ -296,12 +297,12 @@ export function schedaFatto(r) {
 export async function schedaProvato(id) {
   const r = await invoca('progetto:stato', { id }); if (r.errore) return risposta(r.errore, { errore: true });
   const p = metti(r.progetti[0]), up = p.ultimaProva;
-  if (up && !p.vecchio) return risposta(`**Sì**: il codice di ${p.nome} è quello provato alle ${ora(up.quando)} (${up.breve}).`);
-  const s = T.scheda('ld-progetto', `<p class="ld-ptesto">${up ? `<b>No</b>: dopo l'ultima prova (${ora(up.quando)}) il codice di ${esc(p.nome)} è cambiato${p.ultimaCodice ? `, l'ultima volta alle ${ora(p.ultimaCodice)}` : ''}.` : `<b>No</b>: ${esc(p.nome)} con Lode non l'hai ancora provato.`}</p>
-    <p class="ld-nota">Non so chi ha scritto le righe: so solo se il codice di adesso è passato da una prova.</p>
-    <div class="az"><button type="button" class="btn primary" data-prova>Prova adesso</button><button type="button" class="btn ld-piano" data-cambia>Cosa è cambiato</button></div>`);
-  bottone(s, '[data-prova]', () => { turno('Prova il progetto'); prova(id); });
-  bottone(s, '[data-cambia]', () => { turno('Cosa è cambiato'); schedaCambia(id); });
+  if (up && !p.vecchio) return risposta(t('progetto.provato-si', { nome: p.nome, ora: ora(up.quando), breve: up.breve }));
+  const s = T.scheda('ld-progetto', `<p class="ld-ptesto">${up ? (p.ultimaCodice ? t('progetto.provato-no-cambiato-alle', { ora: ora(up.quando), nome: esc(p.nome), ultima: ora(p.ultimaCodice) }) : t('progetto.provato-no-cambiato', { ora: ora(up.quando), nome: esc(p.nome) })) : t('progetto.provato-no-mai', { nome: esc(p.nome) })}</p>
+    <p class="ld-nota">${t('progetto.provato-nota')}</p>
+    <div class="az"><button type="button" class="btn primary" data-prova>${t('progetto.prova-adesso')}</button><button type="button" class="btn ld-piano" data-cambia>${t('progetto.cosa-e-cambiato')}</button></div>`);
+  bottone(s, '[data-prova]', () => { turno(t('progetto.prova-il-progetto')); prova(id); });
+  bottone(s, '[data-cambia]', () => { turno(t('progetto.cosa-e-cambiato')); schedaCambia(id); });
   return s;
 }
 
@@ -309,20 +310,20 @@ export async function schedaProvato(id) {
 // la prima volta (o se il progetto è cambiato): il comando che userebbe Lode, con [Usa questo] e [Cambia].
 // cambiato: true se i file hanno cambiato forma, 'lancia' se ora ci sono prove da lanciare e prima si compilava soltanto
 function schedaComando(p, x, cambiato) {
-  const titolo = x.manca ? `Per provare ${p.nome} manca ${x.manca.cosa}` : `Come provo ${p.nome}?`;
+  const titolo = x.manca ? t('progetto.comando-manca', { nome: p.nome, cosa: x.manca.cosa }) : t('progetto.comando-come', { nome: p.nome });
   const casi = x.testoCasi ? (x.testoCasi.startsWith('poi') ? `, ${esc(x.testoCasi)}.` : `. ${esc(x.testoCasi)}`) : '.';
   const s = T.scheda('ld-conf ld-progetto ld-pcomando', `<h3>${esc(titolo)}</h3>
-    ${x.manca ? `<p class="ld-ptesto">${md(x.manca.come)}</p>` : `<p class="ld-ptesto">${cambiato === 'lancia' ? 'Adesso ci sono prove .in/.out: per lanciare il programma mi serve un nuovo sì. ' : cambiato ? 'I file del progetto sono cambiati: il comando di prima non basta più. ' : ''}Per provare userei <code>${esc(x.testo)}</code>${casi}</p>`}
+    ${x.manca ? `<p class="ld-ptesto">${md(x.manca.come)}</p>` : `<p class="ld-ptesto">${cambiato === 'lancia' ? t('progetto.comando-lancia') + ' ' : cambiato ? t('progetto.comando-cambiato') + ' ' : ''}${t('progetto.comando-userei', { comando: esc(x.testo) })}${casi}</p>`}
     ${(x.note || []).map(n => `<p class="ld-nota">${esc(n)}</p>`).join('')}
-    <p class="ld-nota">Eseguo solo il comando che confermi nella finestra del sistema, mai uno proposto da un agente. Non è una sandbox: il programma gira sul tuo computer, come dal terminale, e può scrivere file nella tua cartella.</p>
-    <div class="az">${x.manca ? '<button type="button" class="btn primary" data-riprova>Riprova</button>' : '<button type="button" class="btn primary" data-usa>Usa questo</button>'}<button type="button" class="btn" data-cambia>${x.manca ? 'Scrivo io il comando' : 'Cambia'}</button></div>
-    <div class="ld-riga-form" hidden><input type="text" data-testo aria-label="Comando per provare" spellcheck="false" autocomplete="off"><button type="button" class="btn primary" data-mio>Usa questo comando</button></div>`);
+    <p class="ld-nota">${t('progetto.comando-nota')}</p>
+    <div class="az">${x.manca ? `<button type="button" class="btn primary" data-riprova>${t('progetto.riprova')}</button>` : `<button type="button" class="btn primary" data-usa>${t('progetto.usa-questo')}</button>`}<button type="button" class="btn" data-cambia>${x.manca ? t('progetto.scrivo-io') : t('progetto.cambia')}</button></div>
+    <div class="ld-riga-form" hidden><input type="text" data-testo aria-label="${t('progetto.comando-aria')}" spellcheck="false" autocomplete="off"><button type="button" class="btn primary" data-mio>${t('progetto.usa-questo-comando')}</button></div>`);
   const conferma = async testo => {
     s.querySelectorAll('button').forEach(b => { b.disabled = true; });
     const r = await invoca('progetto:conferma', { id: p.id, testo });
-    if (r.annullato) return T.mostraFatto?.({ testo: 'Non eseguo niente.', nota: 'Il comando non l\'hai confermato.', no: true }, s);
+    if (r.annullato) return T.mostraFatto?.({ testo: t('progetto.non-eseguo'), nota: t('progetto.non-confermato'), no: true }, s);
     if (r.errore) { s.querySelectorAll('button').forEach(b => { b.disabled = false; }); return risposta(r.errore, { errore: true }); }
-    await T.mostraFatto?.({ testo: 'Comando confermato.', nota: 'Per questo progetto lo uso sempre, finché i file non cambiano forma.', sintesi: 'comando confermato' }, s);
+    await T.mostraFatto?.({ testo: t('progetto.comando-confermato'), nota: t('progetto.comando-confermato-nota'), sintesi: t('progetto.comando-confermato-sintesi') }, s);
     prova(p.id);
   };
   bottone(s, '[data-usa]', () => conferma(null));
@@ -340,56 +341,56 @@ function schedaComando(p, x, cambiato) {
 function uscita(x) {
   const pre = uscite.get(x.id); if (!pre?.isConnected) return;
   pre.hidden = false;
-  if (x.fase === 'caso' && x.caso !== pre._caso) { pre._caso = x.caso; pre.textContent += `\n— prova ${nomeCaso(x.caso)} —\n`; }
+  if (x.fase === 'caso' && x.caso !== pre._caso) { pre._caso = x.caso; pre.textContent += `\n${t('progetto.uscita-caso', { caso: nomeCaso(x.caso) })}\n`; }
   pre.textContent = (pre.textContent + x.testo).slice(-16000);
   pre.scrollTop = pre.scrollHeight;
 }
 export async function prova(id) {
-  const p = P.get(id); if (!p) return risposta('Non seguo questo progetto.');
+  const p = P.get(id); if (!p) return risposta(t('progetto.non-seguo-questo'));
   let s = null;
   const attesa = setTimeout(() => {   // se la prova dura, si vede che lavora e scorre l'uscita
-    s = T.scheda('ld-progetto ld-pesito', `<div class="capo"><span class="ld-lbl">Provato? · ${esc(p.nome)}</span><span class="ld-tenue">provo…</span></div><pre class="ld-puscita" aria-live="polite" hidden></pre>`);
+    s = T.scheda('ld-progetto ld-pesito', `<div class="capo"><span class="ld-lbl">${t('progetto.provato')} · ${esc(p.nome)}</span><span class="ld-tenue">${t('progetto.provo')}</span></div><pre class="ld-puscita" aria-live="polite" hidden></pre>`);
     uscite.set(id, s.querySelector('.ld-puscita')); segnala('pensa');
   }, 250);
   const r = await invoca('progetto:prova', { id });
   clearTimeout(attesa); uscite.delete(id);
-  if (r.inCorso) return risposta('Sto già provando questo progetto: un attimo.');
+  if (r.inCorso) return risposta(t('progetto.sto-gia-provando'));
   if (r.errore) { s?.remove(); segnala('quiete'); return risposta(r.errore, { errore: true }); }
   if (r.serveConferma) { s?.remove(); return schedaComando(p, r.proposta, r.lancia ? 'lancia' : !!r.cambiato); }
   return schedaEsito(r, s);
 }
 const nomeCaso = n => String(n || '').split('/').pop();
-const fmt = v => v == null ? 'niente' : v === '' ? 'una riga vuota' : `<code>${esc(v.length > 120 ? v.slice(0, 120) + '…' : v)}</code>`;
+const fmt = v => v == null ? t('progetto.niente') : v === '' ? t('progetto.riga-vuota') : `<code>${esc(v.length > 120 ? v.slice(0, 120) + '…' : v)}</code>`;
 function fraseCaso(c) {
-  const n = `Prova ${esc(nomeCaso(c.nome))}`;
-  if (c.ok) return `${n}${c.codice ? ` · passa, ma il programma esce con il codice ${c.codice}` : ''}`;
-  if (c.errore) return `${n}: ${esc(c.errore)}`;
-  if (c.scaduto) return `${n}: non è finita in tempo. Un ciclo che non si ferma, o il programma aspetta altro input?`;
-  if (c.troncato) return `${n}: ha scritto troppo (oltre 200 KB) e l'ho fermata.`;
-  if (c.crash) return `${n}: il programma si è fermato con un errore${c.segnale ? ` (${esc(c.segnale)})` : c.codice != null ? ` (codice ${c.codice})` : ''}.`;
-  return `${n} · riga ${c.riga}: atteso ${fmt(c.atteso)}, ottenuto ${fmt(c.ottenuto)}`;
+  const caso = esc(nomeCaso(c.nome));
+  if (c.ok) return c.codice ? t('progetto.caso-ok-codice', { caso, codice: c.codice }) : t('progetto.caso-ok', { caso });
+  if (c.errore) return t('progetto.caso-errore', { caso, errore: esc(c.errore) });
+  if (c.scaduto) return t('progetto.caso-scaduto', { caso });
+  if (c.troncato) return t('progetto.caso-troncato', { caso });
+  if (c.crash) return c.segnale ? t('progetto.caso-crash-segnale', { caso, segnale: esc(c.segnale) }) : c.codice != null ? t('progetto.caso-crash-codice', { caso, codice: c.codice }) : t('progetto.caso-crash', { caso });
+  return t('progetto.caso-diverso', { caso, riga: c.riga, atteso: fmt(c.atteso), ottenuto: fmt(c.ottenuto) });
 }
-const VERBI = { python: ['La sintassi è a posto', 'Errore di sintassi'], make: ['make è andato', 'make non è andato'] };
+const VERBI = { python: [t('progetto.sintassi-ok'), t('progetto.sintassi-errore')], make: [t('progetto.make-ok'), t('progetto.make-errore')] };
 export function htmlEsito(e) {
-  const [si, no] = VERBI[e.tipo] || ['Compila', 'Non compila'];
-  const sec = e.durata ? ` · ${(e.durata / 1000).toFixed(1).replace('.', ',')} s` : '';
+  const [si, no] = VERBI[e.tipo] || [t('progetto.compila'), t('progetto.non-compila')];
+  const sec = e.durata ? ` · ${t('progetto.durata', { s: numero(e.durata / 1000, 1) })}` : '';
   let grande, frase;
-  if (e.esito === 'ok') { grande = e.tot ? `${e.ok}<small>/${e.tot}</small>` : '✓'; frase = e.tot ? `${si} e passa ${e.tot === 1 ? 'la prova' : `tutte le ${e.tot} prove`}.` : `${si}. Non ci sono prove .in/.out: il programma non l'ho lanciato.`; }
-  else if (e.esito === 'prove') { const k = e.tot - e.ok; grande = `${e.ok}<small>/${e.tot}</small>`; frase = `${k === 1 ? 'Una prova non passa' : `${k} prove non passano`} su ${e.tot}.`; }
-  else if (e.esito === 'non-compila') { grande = '✗'; frase = `${no}${e.primo?.file ? `: ${esc(nomeCaso(e.primo.file))}${e.primo.riga ? `, riga ${e.primo.riga}` : ''}` : ''}.${e.messaggio ? ' ' + esc(e.messaggio) : ''}`; }
-  else { grande = '✗'; frase = esc(e.messaggio || 'La prova non è partita.'); }
+  if (e.esito === 'ok') { grande = e.tot ? `${e.ok}<small>/${e.tot}</small>` : '✓'; frase = e.tot ? t('progetto.esito-passa', { si, n: e.tot }) : t('progetto.esito-senza-prove', { si }); }
+  else if (e.esito === 'prove') { const k = e.tot - e.ok; grande = `${e.ok}<small>/${e.tot}</small>`; frase = t('progetto.esito-non-passano', { n: k, tot: e.tot }); }
+  else if (e.esito === 'non-compila') { grande = '✗'; frase = `${e.primo?.file ? (e.primo.riga ? t('progetto.non-compila-file-riga', { no, file: esc(nomeCaso(e.primo.file)), riga: e.primo.riga }) : t('progetto.non-compila-file', { no, file: esc(nomeCaso(e.primo.file)) })) : t('progetto.non-compila-frase', { no })}${e.messaggio ? ' ' + esc(e.messaggio) : ''}`; }
+  else { grande = '✗'; frase = esc(e.messaggio || t('progetto.non-partita')); }
   const casi = [...(e.casi || [])].sort((a, b) => a.ok - b.ok);
   const male = casi.filter(c => !c.ok).slice(0, 8), bene = casi.filter(c => c.ok);
   const errori = e.esito === 'non-compila' || e.esito === 'errore' ? (e.compilazione?.stderr || e.compilazione?.stdout || '').split('\n').slice(0, 30).join('\n').trim() : '';
-  return `<div class="capo"><span class="ld-lbl">Provato? · ${esc(e.nome || '')}</span><span class="ld-tenue">${ora(e.quando)}${sec}</span></div>
+  return `<div class="capo"><span class="ld-lbl">${t('progetto.provato')} · ${esc(e.nome || '')}</span><span class="ld-tenue">${ora(e.quando)}${sec}</span></div>
     <div class="ld-esito"><b>${grande}</b><span>${frase}</span></div>
     ${errori ? `<pre class="ld-puscita">${esc(errori)}</pre>` : ''}
     ${male.map(c => `<div class="ld-pcaso no"><span class="s">✗</span><span>${fraseCaso(c)}</span></div>`).join('')}
-    ${bene.length ? `<div class="ld-pcaso"><span class="s">✓</span><span>${bene.length === 1 ? fraseCaso(bene[0]) : `Passano: ${bene.slice(0, 12).map(c => esc(nomeCaso(c.nome))).join(', ')}${bene.length > 12 ? '…' : ''}`}</span></div>` : ''}
-    ${e.saltati?.length ? `<p class="ld-nota">${e.saltati.length === 1 ? 'Una prova saltata' : `${e.saltati.length} prove saltate`}: ${esc(e.saltati[0].motivo)}.</p>` : ''}
-    ${e.compilazione?.avvisi && e.esito !== 'non-compila' ? `<p class="ld-nota">${e.compilazione.avvisi === 1 ? '1 avviso' : `${e.compilazione.avvisi} avvisi`} del compilatore.</p>` : ''}
-    ${e.cambiatoDurante ? '<p class="ld-nota"><b>Il codice è cambiato mentre provavo: rifaccio?</b></p>' : ''}
-    <div class="az"><button type="button" class="btn${e.cambiatoDurante ? ' primary' : ''}" data-rifai>${e.cambiatoDurante ? 'Rifai' : 'Prova di nuovo'}</button><button type="button" class="btn ld-piano" data-cambia>Cosa è cambiato</button></div>`;
+    ${bene.length ? `<div class="ld-pcaso"><span class="s">✓</span><span>${bene.length === 1 ? fraseCaso(bene[0]) : `${t('progetto.passano', { nomi: bene.slice(0, 12).map(c => esc(nomeCaso(c.nome))).join(', ') })}${bene.length > 12 ? '…' : ''}`}</span></div>` : ''}
+    ${e.saltati?.length ? `<p class="ld-nota">${t('progetto.saltate', { n: e.saltati.length, motivo: esc(e.saltati[0].motivo) })}</p>` : ''}
+    ${e.compilazione?.avvisi && e.esito !== 'non-compila' ? `<p class="ld-nota">${t('progetto.avvisi', { n: e.compilazione.avvisi })}</p>` : ''}
+    ${e.cambiatoDurante ? `<p class="ld-nota">${t('progetto.cambiato-durante')}</p>` : ''}
+    <div class="az"><button type="button" class="btn${e.cambiatoDurante ? ' primary' : ''}" data-rifai>${e.cambiatoDurante ? t('progetto.rifai') : t('progetto.prova-di-nuovo')}</button><button type="button" class="btn ld-piano" data-cambia>${t('progetto.cosa-e-cambiato')}</button></div>`;
 }
 // l'esito della prova; dove: la scheda «provo…» da sostituire
 export function schedaEsito(e, dove) {
@@ -397,8 +398,8 @@ export function schedaEsito(e, dove) {
   let s;
   if (dove?.isConnected) { dove.innerHTML = htmlEsito(e); s = dove; T.entra?.(s, { dy: 4, blur: 4, ms: 360 }); }
   else s = T.scheda('ld-progetto ld-pesito', htmlEsito(e));
-  bottone(s, '[data-rifai]', () => { turno('Prova di nuovo'); prova(e.id); });
-  bottone(s, '[data-cambia]', () => { turno('Cosa è cambiato'); schedaCambia(e.id); });
+  bottone(s, '[data-rifai]', () => { turno(t('progetto.prova-di-nuovo')); prova(e.id); });
+  bottone(s, '[data-cambia]', () => { turno(t('progetto.cosa-e-cambiato')); schedaCambia(e.id); });
   if (e.esito === 'non-compila' || e.casi?.some(c => c.crash || c.scaduto)) T.spiegaErrore?.(e);   // F3: l'errore spiegato, sotto
   return s;
 }
@@ -434,15 +435,15 @@ export async function coseNuoveDi(id, opz = {}) {
     return coseNuove(file, { visti: D.codice?.glossario?.visti || {}, carte: D.carte || [] }).map(x => ({ ...x, id }));
   } catch (e) { console.warn('Lode: cose nuove', e); return []; }
 }
-const NOTA_CN = 'Dal dizionario di Lode: solo funzioni della libreria standard. Non vede le idee, solo i nomi.';
+const NOTA_CN = t('progetto.nota-cose-nuove');
 // l'HTML della sezione (puro: si prova in Node). Ogni voce è chiusa: il nome; un clic apre file, riga e la domanda
 export function htmlCoseNuove(lista) {
   if (!lista?.length) return '';
-  const voce = (x, i) => `<div class="voce" data-i="${i}"><button type="button" class="apri" aria-expanded="false"><code>${esc(x.voce.k)}</code><span class="ld-tenue">${esc(x.rel)}, riga ${esc(x.riga)}</span></button>
-    <div class="corpo" hidden><p class="dove"><b>${esc(x.rel)}, riga ${esc(x.riga)}</b></p><pre class="riga">${esc(x.testo)}</pre>
-    <p class="dom"><span class="ld-tenue">Domanda da orale:</span> ${esc(x.voce.d)}</p>
-    <div class="az"><button type="button" class="btn small" data-risposta>Risposta</button></div></div></div>`;
-  return `<p class="tit">Cose nuove: ${lista.map(x => `<code>${esc(x.voce.k)}</code>`).join(', ')}</p>${lista.map(voce).join('')}<p class="ld-nota">${esc(NOTA_CN)}</p>`;
+  const voce = (x, i) => `<div class="voce" data-i="${i}"><button type="button" class="apri" aria-expanded="false"><code>${esc(x.voce.k)}</code><span class="ld-tenue">${t('progetto.file-riga', { file: esc(x.rel), riga: esc(x.riga) })}</span></button>
+    <div class="corpo" hidden><p class="dove"><b>${t('progetto.file-riga', { file: esc(x.rel), riga: esc(x.riga) })}</b></p><pre class="riga">${esc(x.testo)}</pre>
+    <p class="dom"><span class="ld-tenue">${t('progetto.domanda-orale')}</span> ${esc(x.voce.d)}</p>
+    <div class="az"><button type="button" class="btn small" data-risposta>${t('progetto.risposta')}</button></div></div></div>`;
+  return `<p class="tit">${t('progetto.cose-nuove', { nomi: lista.map(x => `<code>${esc(x.voce.k)}</code>`).join(', ') })}</p>${lista.map(voce).join('')}<p class="ld-nota">${esc(NOTA_CN)}</p>`;
 }
 // «Mettila nel ripasso»: la carta (domanda davanti, risposta e fonte dietro) nell'esame del corso, e la voce non torna più
 export async function mettiNelRipasso(x, DA) {
@@ -464,17 +465,17 @@ export function mostraCoseNuove(s, lista) {
     bottone(el, '[data-risposta]', b => {
       const az = b.parentElement, p = document.createElement('p'); p.className = 'risp'; p.textContent = x.voce.r;
       az.before(p);
-      az.innerHTML = '<button type="button" class="btn small primary" data-carta>Mettila nel ripasso</button><button type="button" class="btn small ld-piano" data-so>La so già</button>';
+      az.innerHTML = `<button type="button" class="btn small primary" data-carta>${t('progetto.mettila-nel-ripasso')}</button><button type="button" class="btn small ld-piano" data-so>${t('progetto.la-so-gia')}</button>`;
       T.entra?.(p, { dy: 4, blur: 4, ms: 320 });
       bottone(az, '[data-carta]', async () => {
         az.querySelectorAll('button').forEach(y => { y.disabled = true; });
         await mettiNelRipasso(x);
-        if (T.mostraFatto) T.mostraFatto({ testo: 'Nel ripasso.' }, az); else az.innerHTML = '<p class="ld-nota">Nel ripasso.</p>';
+        if (T.mostraFatto) T.mostraFatto({ testo: t('progetto.nel-ripasso') }, az); else az.innerHTML = `<p class="ld-nota">${t('progetto.nel-ripasso')}</p>`;
       });
       bottone(az, '[data-so]', async () => {
         az.querySelectorAll('button').forEach(y => { y.disabled = true; });
         await segna(x.voce.k, 'so');
-        corpo.remove(); apri.disabled = true; apri.removeAttribute('aria-expanded'); apri.querySelector('.ld-tenue').textContent = 'la sai già';
+        corpo.remove(); apri.disabled = true; apri.removeAttribute('aria-expanded'); apri.querySelector('.ld-tenue').textContent = t('progetto.la-sai-gia');
       });
     });
   });
