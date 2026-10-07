@@ -557,7 +557,7 @@ export default {
   'errori.py-attributo.concetto': 'métodos y tipos',
   'errori.py-ricorsione.etichetta': 'recursión sin fin',
   'errori.py-ricorsione.frase': 'la función se llama a sí misma demasiadas veces',
-  'errori.py-ricorsione.dove': `Mira la función{funzione} {allaRiga}: ¿dónde está el caso base, y cada llamada se acerca a él?`,
+  'errori.py-ricorsione.dove': `Mira la función{funzione} {allaRiga}: ¿dónde está el caso base? ¿Cada llamada se acerca a él?`,
   'errori.py-ricorsione.cosa': 'Toda función recursiva necesita un caso base: una condición en la que devuelve un valor sin volver a llamarse. Y cada llamada tiene que acercarse al caso base (por ejemplo `n - 1`, no `n + 1`). Python se detiene después de unas 1000 llamadas una dentro de otra.',
   'errori.py-ricorsione.concetto': 'recursividad',
   'errori.py-modulo.etichetta': 'módulo que no está',
