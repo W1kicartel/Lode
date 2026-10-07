@@ -31,7 +31,8 @@ export function formatoNumero(x, s = sis()) {
 // sistema: lo si sostituisce con un voto italiano di comodo (27), il riconoscitore riconosce la frase, e al posto del 27 si
 // rimette il voto vero. Lo stesso per «quanto mi serve per 1,5»: l'obiettivo diventa 100 e poi torna quello detto.
 const SEGNO = 27, SEGNO_SERVE = 100;
-const PEZZI = /(?<![\p{L}\d,.])(\d{1,3}(?:[.,]\d{1,2})?(?:\s*\/\s*\d{1,3})?(?:\s*%)?|[A-F][+\-−–]?|[a-f][+\-−–])(?![\p{L}\d])/gu;
+// (non i numeri attaccati a «:»: «2:1» è una classe del Regno Unito, «14:30» un orario)
+const PEZZI = /(?<![\p{L}\d,.:])(\d{1,3}(?:[.,]\d{1,2})?(?:\s*\/\s*\d{1,3})?(?:\s*%)?|[A-F][+\-−–]?|[a-f][+\-−–])(?![\p{L}\d:])/gu;
 const pezzi = testo => [...String(testo || '').matchAll(PEZZI)].map(m => ({ x: m[1], i: m.index }));
 const metti = (testo, p, con) => testo.slice(0, p.i) + con + testo.slice(p.i + p.x.length);
 // il voto detto che il sistema non ha, com'è stato detto («28», «27,5»): non «28,0» del formato di un altro sistema
@@ -60,10 +61,23 @@ export function interpretaVoti(testo, interpreta) {
   }
   return votiNelSistema(testo, interpreta);
 }
+// una lettera degli Stati Uniti detta come voto («I got an A- in physics»): i riconoscitori la danno come punteggio GPA (3,7),
+// che fuori dagli Stati Uniti non è il voto detto
+const LETTERA_DETTA = /(?:^|\s)([abcdf][+\-−–]?)\s+(?:in|on|for|at|em|en|im|bei|a)\s/i;
 function votiNelSistema(testo, interpreta) {
   const c = interpreta(testo);
-  if (italiano()) return c;
+  // in Italia valgono i voti italiani (18-30) e le basi di laurea (66-110), come prima: un «8,5», un «72» o un «A-» che un
+  // riconoscitore capisce (sono i voti degli altri sistemi) resta all'AI e non si segna
+  if (italiano()) {
+    if (c && (c.tipo === 'voto' || c.tipo === 'simula') && !S.valido(c.voto, 'it')) return null;
+    if (c?.tipo === 'serve' && !(c.base >= 66 && c.base <= 110)) return null;
+    return c;
+  }
   const s = sis();
+  if (c && (c.tipo === 'voto' || c.tipo === 'simula') && s.cod !== 'us') {
+    const l = String(testo).match(LETTERA_DETTA);
+    if (l && S.leggiVoto(l[1], 'us')?.voto === c.voto) return { ...c, voto: null, lode: false, fuoriScala: true, detto: l[1].toUpperCase().replace(/[−–]/g, '-') };
+  }
   if (c && (c.tipo === 'voto' || c.tipo === 'simula') && S.valido(c.voto, s)) return { ...c, lode: !!c.lode && s.lode && c.voto === s.max };
   if (!c || c.tipo === 'voto' || c.tipo === 'simula') {
     for (const p of pezzi(testo)) {

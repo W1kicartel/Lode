@@ -7,7 +7,7 @@ import { t, elenco, numero, LINGUE, lingua as linguaOra, usa, imposta } from './
 import { t as tn } from './lingua.js';   // t() dove una variabile locale si chiama già t (arrivaTurno, schedaTurno, piedeSync, schedaNote)
 import { numeroCorto, oraBreve } from './parole.js';   // numeri e ore nella forma della lingua
 import { RIDOTTO, attendi, comprimi, conta, dopo, entra, h, lineare, morbido, ogni, premi, tween } from './motore.js';
-import { ESEMPI, interpreta, dice } from './comandi.js';
+import { esempi, interpreta, dice } from './comandi.js';
 import * as F from './focus.js';
 import * as AI from './ai.js';
 import * as Voce from './voce.js';
@@ -685,7 +685,7 @@ function schedaRipasso(esameId) {
 function chiudiRipasso() { A.ripasso = null; }
 
 function schedaAiuto() {
-  const s = scheda('ld-aiuto', `<span class="ld-lbl">${t('barra1.prova-a-scrivere')}</span>${ESEMPI.map(([f, d]) => `<button type="button" class="ld-es-cmd" data-cmd="${esc(f.replace(' …', ''))}"><b>${esc(f)}</b><span>${esc(d)}</span></button>`).join('')}
+  const s = scheda('ld-aiuto', `<span class="ld-lbl">${t('barra1.prova-a-scrivere')}</span>${esempi().map(([f, d]) => `<button type="button" class="ld-es-cmd" data-cmd="${esc(f.replace(' …', ''))}"><b>${esc(f)}</b><span>${esc(d)}</span></button>`).join('')}
     ${AI.attiva() ? '' : `<p class="ld-nota">${t('barra1.aiuto-senza-ai')}</p>`}`);
   s.querySelectorAll('[data-cmd]').forEach(b => b.addEventListener('click', () => { const t = b.dataset.cmd; if (t.endsWith('=')) { const i = campo.querySelector('input'); i.value = t + ' '; i.focus(); } else invia(t); }));
   if (A.turno) A.turno.dataset.sintesi = t('barra1.sintesi-comandi');

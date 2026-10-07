@@ -351,5 +351,32 @@ await L.usa('it');
   prova('AI: in italiano con il sistema italiano il prompt di sempre', AI.sistemaDiBase().includes('di uno studente universitario italiano.\nParli italiano, dai del tu'));
 }
 
+/* ---------- 5. i voti degli altri sistemi detti a un riconoscitore che li capisce (l'inglese di riserva) ---------- */
+// docs/LINGUE.md, «I voti»: il riconoscitore dà il numero detto, il sistema decide. In Italia un 72, un 8,5 o un A- restano
+// all'AI come prima; fuori dall'Italia valgono se il sistema li ha, una lettera fuori dagli Stati Uniti si dice e non si segna
+{
+  Dm.sostituisci(Dm.esempio()); D().profilo.sistema = 'it';
+  for (const f of ['I got 72 in physics 2', 'I got 8.5 in physics 2', 'I got an A- in physics 2', 'what if I get 72 in physics 2', 'what do I need for 2.0', 'what do I need for 7'])
+    prova(`it: «${f}» nel sistema italiano resta all'AI`, cmd(f) === null, JSON.stringify(cmd(f)));
+  prova('it: «I got 28 in physics 2» nel sistema italiano è un 28', cmd('I got 28 in physics 2')?.voto === 28);
+  prova('it: «what do I need for 110» nel sistema italiano è la base 110', cmd('what do I need for 110')?.base === 110);
+  D().profilo.sistema = 'uk';
+  prova('uk: «I got 72% in physics 2» è un 72', cmd('I got 72% in physics 2')?.voto === 72);
+  prova('uk: «what do I need for a first» è 70', cmd('what do I need for a first')?.base === 70 && !cmd('what do I need for a first').fuoriScala);
+  prova('uk: «what do I need to get a 2:1» è 60', cmd('what do I need to get a 2:1')?.base === 60);
+  const a = cmd('I got an A- in physics 2');
+  prova('uk: «I got an A- in physics 2» non è un 3,7 %', a?.tipo === 'voto' && a.fuoriScala === true && a.detto === 'A-', JSON.stringify(a));
+  D().profilo.sistema = 'us';
+  prova('us: «I got an A- in physics 2» è un A− (3,7)', cmd('I got an A- in physics 2')?.voto === 3.7);
+  prova('us: «what if I get an A in physics 2» è un A (4)', cmd('what if I get an A in physics 2')?.voto === 4);
+  prova('us: «what do I need for 3.5» è 3,5', cmd('what do I need for 3.5')?.base === 3.5);
+  D().profilo.sistema = 'de';
+  prova('de: «I got 1.7 in physics 2» è un 1,7', cmd('I got 1.7 in physics 2')?.voto === 1.7);
+  prova('de: «I got 2.5 in physics 2» non c\'è in Germania', cmd('I got 2.5 in physics 2')?.fuoriScala === true);
+  D().profilo.sistema = 'br';
+  prova('br: «what do I need for 7» è 7', cmd('what do I need for 7')?.base === 7);
+  D().profilo.sistema = 'it';
+}
+
 console.log(`libretto-sistemi: ${ok} prove passate, ${ko} fallite`);
 process.exit(ko ? 1 : 0);

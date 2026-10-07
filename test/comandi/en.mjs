@@ -232,10 +232,31 @@ export const CASI = [
   ['Sprache Japanisch', { tipo: 'lingua', codice: null }],
   ['idioma japonês', { tipo: 'lingua', codice: null }],
   ['switch to Japanese', { tipo: 'lingua', codice: null }],
+  // i voti degli altri sistemi: il numero detto (8.5, 1.7, 72 %), le lettere come punteggio GPA, gli obiettivi a parole
+  // (docs/LINGUE.md, «I voti»: se il sistema scelto li ha lo decide js/libretto.js)
+  ['I got 72 in physics 2', { tipo: 'voto', voto: 72, lode: false, esame: E('Physics 2'), nomeDetto: 'physics 2' }],
+  ['I got 72% in physics 2', { tipo: 'voto', voto: 72, lode: false, esame: E('Physics 2'), nomeDetto: 'physics 2' }],
+  ['I got 8.5 in databases', { tipo: 'voto', voto: 8.5, lode: false, esame: E('Databases'), nomeDetto: 'databases' }],
+  ['I got an A- in calculus 2', { tipo: 'voto', voto: 3.7, lode: false, esame: E('Calculus 2'), nomeDetto: 'calculus 2' }],
+  ['I got a B+ in databases', { tipo: 'voto', voto: 3.3, lode: false, esame: E('Databases'), nomeDetto: 'databases' }],
+  ['what if I get 1.7 in calculus 2', { tipo: 'simula', voto: 1.7, lode: false, esame: E('Calculus 2'), nomeDetto: 'calculus 2' }],
+  ['what if I get an A in calculus 2', { tipo: 'simula', voto: 4, lode: false, esame: E('Calculus 2'), nomeDetto: 'calculus 2' }],
+  ['what if I get 80 in physics 2', { tipo: 'simula', voto: 80, lode: false, esame: E('Physics 2'), nomeDetto: 'physics 2' }],
+  ['what do I need for a first', { tipo: 'serve', base: 70 }],
+  ['What do I need to get a 2:1?', { tipo: 'serve', base: 60 }],
+  ['what do I need for first class honours', { tipo: 'serve', base: 70 }],
+  ['what do I need for a 2:2', { tipo: 'serve', base: 50 }],
+  ['what do I need for 2.0', { tipo: 'serve', base: 2 }],
+  ['what GPA do I need for 3.5', { tipo: 'serve', base: 3.5 }],
+  ['what do I need for summa cum laude', { tipo: 'serve', base: 3.9 }],
+  ['what do I need for 110 cum laude', { tipo: 'serve', base: 110 }],
 ];
 
 // frasi che non sono comandi: restano all'AI
 export const NON = [
+  // senza verbo, una cifra sola non è un voto
+  '2 in physics is hard',
+
   // dalla verifica: «an» non è Analisi, «studying» non è sempre un timer, «today»/«my exams» solo da soli
   'I have an exam tomorrow',
   'i have a test tomorrow',

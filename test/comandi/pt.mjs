@@ -277,10 +277,23 @@ export const CASI = [
   ['Sprache Japanisch', { tipo: 'lingua', codice: null }],
   ['idioma japonês', { tipo: 'lingua', codice: null }],
   ['muda a língua para japonês', { tipo: 'lingua', codice: null }],
+  // as notas do Brasil (0-10) e dos outros sistemas: o número dito (se o sistema tem, decide js/libretto.js)
+  ['tirei 8,5 em mecânica', { tipo: 'voto', voto: 8.5, lode: false, esame: E('Mecânica'), nomeDetto: 'mecânica' }],
+  ['tirei 7 em cálculo 2', { tipo: 'voto', voto: 7, lode: false, esame: E('Cálculo 2'), nomeDetto: 'cálculo 2' }],
+  ['tirei nota 10 em bases de dados', { tipo: 'voto', voto: 10, lode: false, esame: E('Bases de dados'), nomeDetto: 'bases de dados' }],
+  ['9,5 em direito civil', { tipo: 'voto', voto: 9.5, lode: false, esame: E('Direito civil'), nomeDetto: 'direito civil' }],
+  ['e se eu tirar 9 em cálculo 2', { tipo: 'simula', voto: 9, lode: false, esame: E('Cálculo 2'), nomeDetto: 'cálculo 2' }],
+  ['e se eu tirar 8,5 em mecânica', { tipo: 'simula', voto: 8.5, lode: false, esame: E('Mecânica'), nomeDetto: 'mecânica' }],
+  ['quanto preciso para 7', { tipo: 'serve', base: 7 }],
+  ['que média preciso para 8,5', { tipo: 'serve', base: 8.5 }],
+  ['quanto preciso para 14', { tipo: 'serve', base: 14 }],
 ];
 
 // frasi che non sono comandi: restano all'AI
 export const NON = [
+  // uma cifra só, sem verbo, não é uma nota
+  '2 em mecânica',
+
   'explica o teorema de Stokes',
   'o que significa erro padrão',
   'explica o erro relativo',

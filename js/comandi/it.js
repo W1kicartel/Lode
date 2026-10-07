@@ -338,12 +338,14 @@ export function leggiLavoro(testo) {
   return null;
 }
 
+// gli esempi della barra («Prova a scrivere»): {voto}, {obiettivo} e {simula} sono i voti del sistema scelto
+// (riempiEsempi() di js/comandi/comune.js, esempi() di js/comandi.js)
 export const ESEMPI = [
   ['focus 50 su analisi 2', 'parte il timer e conta le ore'],
-  ['ho preso 28 in fisica', 'segna il voto e ricalcola la media'],
+  ['ho preso {voto} in fisica', 'segna il voto e ricalcola la media'],
   ['esame basi di dati il 15 gennaio 9 cfu', 'aggiunge l\'appello'],
-  ['quanto mi serve per 110', 'la media che ti serve da qui alla fine'],
-  ['se prendo 30 in analisi 2', 'simula la media'],
+  ['quanto mi serve per {obiettivo}', 'la media che ti serve da qui alla fine'],
+  ['se prendo {simula} in analisi 2', 'simula la media'],
   ['programma di analisi 2', 'incolla il programma: mappa degli argomenti e piano fino all\'appello'],
   ['domande uscite di analisi 2: …', 'quelle del gruppo del corso: salgono nel piano'],
   ['temi d\'esame di analisi 2: …', 'gli esercizi di un compito vecchio: uno al giorno, sugli argomenti di oggi'],
