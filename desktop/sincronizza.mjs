@@ -14,6 +14,7 @@ import { join, dirname, basename, relative, isAbsolute, delimiter } from 'node:p
 import { creaMotore, MINIMO, scrittoDaVecchia } from './sync/motore.mjs';
 import { LISTE } from './sync/schema.mjs';
 import { differenze, normalizza } from './sync/differenze.mjs';
+import { t } from './lingua.mjs';
 
 const MAC = process.platform === 'darwin', WIN = process.platform === 'win32';
 // p sta dentro cartella? Si confrontano i percorsi veri (realpath): un vault raggiunto da un collegamento a una cartella
@@ -150,11 +151,11 @@ async function verificaCopia(da, a) {
 // un errore della copia in una frase per lo studente (prima arrivava in inglese, col percorso completo che contiene il suo nome)
 function fraseCopia(x) {
   const f = x?.file || (x?.path ? basename(x.path) : '');
-  if (OCCUPATO.includes(x?.code)) return `Un file è usato da un altro programma${f ? ` (${f})` : ''}: chiudilo e riprova. Il vault di prima è intatto.`;
-  if (x?.code === 'ENOSPC') return 'Il disco della cartella cloud è pieno. Il vault di prima è intatto.';
-  if (x?.code === 'EACCES') return `Lode non ha il permesso di leggere o scrivere un file${f ? ` (${f})` : ''}. Il vault di prima è intatto.`;
-  if (x?.code === 'COPIA') return `La copia di ${f} non è venuta uguale: riprova. Il vault di prima è intatto.`;
-  return 'La copia del vault non è riuscita: riprova. Il vault di prima è intatto.';
+  if (OCCUPATO.includes(x?.code)) return f ? t('desktop.sync-file-occupato-nome', { file: f }) : t('desktop.sync-file-occupato');
+  if (x?.code === 'ENOSPC') return t('desktop.sync-disco-pieno');
+  if (x?.code === 'EACCES') return f ? t('desktop.sync-permesso-nome', { file: f }) : t('desktop.sync-permesso');
+  if (x?.code === 'COPIA') return t('desktop.sync-copia-diversa', { file: f });
+  return t('desktop.sync-copia-non-riuscita');
 }
 
 // un dati.json v1 con dati veri (esami, carte, sessioni, lezioni… o un nome): quello di un computer che usava Lode da solo
@@ -348,7 +349,7 @@ export function creaSincronizzazione({ app, safeStorage, dialog, powerMonitor, c
   // col vault nel cloud, dopo i 30 s di attesa) e si spegne con conf.sync scritto; i salvataggi tenuti nel frattempo vanno al
   // diario se conf.sync c'è, se no a dati.json come prima (lì la barra lavorava ancora)
   async function attiva(x = {}) {
-    if (accensione || copiando) return { esito: 'errore', errore: 'Sto già accendendo la sincronizzazione: aspetta che finisca.' };
+    if (accensione || copiando) return { esito: 'errore', errore: t('desktop.sync-sto-accendendo') };
     accensione = attivaDentro(x);
     try { return await accensione; } finally { accensione = null; accendo = false; rilasciaTenuti(); }
   }
@@ -371,28 +372,28 @@ export function creaSincronizzazione({ app, safeStorage, dialog, powerMonitor, c
     const cartelle = cartelleCloud();
     let cloud = cartelle[i]?.percorso || null, nome = cartelle[i]?.servizio || null;
     if (!cloud && (scegli || process.env.LODE_SCEGLI)) {
-      const r = process.env.LODE_SCEGLI ? { filePaths: [process.env.LODE_SCEGLI] } : await dialog.showOpenDialog({ title: 'La cartella che si sincronizza', buttonLabel: 'Sincronizza qui', properties: ['openDirectory', 'createDirectory'] });
+      const r = process.env.LODE_SCEGLI ? { filePaths: [process.env.LODE_SCEGLI] } : await dialog.showOpenDialog({ title: t('desktop.sync-cartella-titolo'), buttonLabel: t('desktop.sync-sincronizza-qui'), properties: ['openDirectory', 'createDirectory'] });
       cloud = r.canceled ? null : r.filePaths?.[0] || null; nome = cloud ? (servizioDi(cloud)?.servizio || basename(cloud)) : null;
     }
     if (!cloud) return { esito: 'annullato' };
-    if (password != null && String(password).length < 8) return { esito: 'errore', errore: 'La password deve avere almeno 8 caratteri.' };
+    if (password != null && String(password).length < 8) return { esito: 'errore', errore: t('desktop.sync-password-corta') };
     const da = vault();
     // uno spostamento cominciato con la password si riprende solo con la password: prima la ripresa senza password lo finiva in
     // chiaro, e tutti i dati andavano nella cartella cloud senza avviso
     const sp0 = spostamento();
-    if (sp0?.cifrata && sp0.da === da && sp0.cloud === cloud && !password) return { esito: 'password', errore: 'Lo spostamento era cominciato con la password: scrivila di nuovo.' };
+    if (sp0?.cifrata && sp0.da === da && sp0.cloud === cloud && !password) return { esito: 'password', errore: t('desktop.sync-spostamento-con-password') };
     scriviTutto();   // il dati.json in sospeso va sul disco prima della migrazione
-    if (!(await datiLeggibili(da))) return { esito: 'errore', errore: 'Il file dei dati di Lode è usato da un altro programma (un antivirus?): riprova tra poco.' };
+    if (!(await datiLeggibili(da))) return { esito: 'errore', errore: t('desktop.sync-dati-occupati') };
     const prima = conf().sync;
     // il vault è già nella cartella cloud: niente da spostare (il dati.json di prima resta nella cronologia del servizio)
     if (dentro(cloud, da)) {
       return inFila(async () => {
         if (!motore || fermo) await apri();
-        if (fermo) return { esito: 'errore', errore: 'Il diario di Lode su questo computer non si legge.' };
+        if (fermo) return { esito: 'errore', errore: t('desktop.sync-diario-illeggibile') };
         giri();
         if (MAC && !prova) try { execFileSync('brctl', ['download', join(da, '.lode')], { timeout: 10000 }); } catch { }
         // §8.1: con il vault nel cloud si aspetta un giro prima di creare un gruppo (un altro computer potrebbe averlo già fatto)
-        if (!prova) { avanza('Controllo se un altro computer sincronizza già questo vault…'); await new Promise(r => setTimeout(r, 30000)); await motore.arrivati(); }
+        if (!prova) { avanza(t('desktop.sync-controllo-altro-computer')); await new Promise(r => setTimeout(r, 30000)); await motore.arrivati(); }
         // da qui i salvataggi della barra si tengono (accendo): nei 30 s andavano ancora a dati.json, e scriviTutto li porta nella
         // migrazione. Prima accendo valeva già durante l'attesa e un'uscita lì perdeva i tenuti (giro 3)
         accendo = true;
@@ -407,19 +408,19 @@ export function creaSincronizzazione({ app, safeStorage, dialog, powerMonitor, c
           try { rmSync(join(app.getPath('userData'), 'sync', 'corrente.json'), { force: true }); } catch { }
           return { esito: 'errore', errore: frasePassword(r.codice) };
         }
-        if (!pronto()) { conf().sync = prima; salvaConf(); return { esito: 'aspetta', errore: 'Aspetto che i dati di Lode arrivino dal cloud (il file dei dati non si legge ancora): riprova tra poco.' }; }
+        if (!pronto()) { conf().sync = prima; salvaConf(); return { esito: 'aspetta', errore: t('desktop.sync-aspetto-dati') }; }
         conf().sync = { motore: true, cloud }; salvaConf();
         accendo = false; rilasciaTenuti();   // i salvataggi tenuti: in fila dietro a questa, prima di quelli che arrivano dopo
         await impostaVault(da, { ricarica: false });   // il watcher di prima non sapeva della sincronizzazione: riparte col motore
         spingi(true);
-        if (r?.codice === 'chiave_sbagliata') return { esito: 'sbagliata', errore: 'Su questo vault la sincronizzazione è già accesa con un\'altra password: scrivi quella.' };
-        if (password && motore.stato().stato === 'password') return { esito: 'password', errore: 'Su questo vault la sincronizzazione è già accesa con la password: scrivila.' };
-        return r?.rifiutata ? { esito: 'errore', errore: 'Non riesco ad accendere la sincronizzazione qui.' } : { esito: 'ok', servizio: nome, giaDentro: true };
+        if (r?.codice === 'chiave_sbagliata') return { esito: 'sbagliata', errore: t('desktop.sync-altra-password') };
+        if (password && motore.stato().stato === 'password') return { esito: 'password', errore: t('desktop.sync-gia-con-password') };
+        return r?.rifiutata ? { esito: 'errore', errore: t('desktop.sync-non-accendo') } : { esito: 'ok', servizio: nome, giaDentro: true };
       });
     }
     // una cartella dentro il vault (scelta per sbaglio con «Un'altra cartella…», per esempio Allegati): la copia finirebbe dentro
     // il vault stesso, Allegati/Lode/Allegati/Lode/… fino a ENAMETOOLONG. Prima si accettava
-    if (dentro(da, cloud)) return { esito: 'errore', errore: 'Questa cartella è dentro il vault: scegline una fuori, per esempio la cartella di iCloud Drive, OneDrive o Dropbox.' };
+    if (dentro(da, cloud)) return { esito: 'errore', errore: t('desktop.sync-cartella-dentro-vault') };
     // un vault di Lode già sincronizzato in quella cartella: è «Uso già Lode su un altro computer»
     const a0 = join(cloud, 'Lode');
     if (existsSync(join(a0, '.lode', 'sync'))) return { esito: 'esiste', servizio: nome };
@@ -430,11 +431,11 @@ export function creaSincronizzazione({ app, safeStorage, dialog, powerMonitor, c
     // 1. i dati di Lode passano nel diario, qui, fuori dal cloud (migrazione, §8.2: dati.json resta in copie/ e il minimo al suo posto)
     const r1 = await inFila(async () => {
       if (!motore || fermo) { await apri(); giri(); }
-      if (fermo) return { esito: 'errore', errore: 'Il diario di Lode su questo computer non si legge.' };
+      if (fermo) return { esito: 'errore', errore: t('desktop.sync-diario-illeggibile') };
       accendo = true; scriviTutto();   // da qui la migrazione legge dati.json: i salvataggi dopo si tengono
       if (!motore.stato().gruppo) await motore.attiva({ modo: 'nuovo' });
       // il gruppo non è nato: la configurazione torna com'era e la barra resta su dati.json (prima restava accesa sul motore vuoto)
-      if (!motore.stato().gruppo) { conf().sync = prima; salvaConf(); return { esito: 'errore', errore: 'I dati di Lode non si leggono ancora (cartella non raggiungibile?): riprova tra poco.' }; }
+      if (!motore.stato().gruppo) { conf().sync = prima; salvaConf(); return { esito: 'errore', errore: t('desktop.sync-dati-non-ancora') }; }
       if (!conf().sync?.motore) { conf().sync = { motore: true, cloud: null }; salvaConf(); }
       spingi(true);   // da qui le finestre lavorano sul diario: ricevono la vista (e la loro BASE) prima di copiare
       return null;
@@ -447,17 +448,17 @@ export function creaSincronizzazione({ app, safeStorage, dialog, powerMonitor, c
     // metà li perdeva (chiudi() aspetta al massimo 5 s). Lo spostamento resta in spostamento.json e si riprende
     copiando = true;
     try {
-      avanza('Copio il vault…');
-      await copiaNote(da, a, { dopo: n => { if (process.env.LODE_SYNC_CRASH === 'copia' && n === 3) process.kill(process.pid, 'SIGKILL'); if (n % 50 === 0) avanza(`Copio il vault… ${n} file`); } });
+      avanza(t('desktop.sync-copio-vault'));
+      await copiaNote(da, a, { dopo: n => { if (process.env.LODE_SYNC_CRASH === 'copia' && n === 3) process.kill(process.pid, 'SIGKILL'); if (n % 50 === 0) avanza(t('desktop.sync-copio-vault-file', { n })); } });
       await verificaCopia(da, a);
     } catch (x) { console.error('Lode: copia del vault', x); return { esito: 'errore', errore: fraseCopia(x) }; }
     finally { copiando = false; }
     return inFila(async () => {
-      if (!motore || fermo) return { esito: 'errore', errore: 'Il diario di Lode su questo computer non si legge.' };
+      if (!motore || fermo) return { esito: 'errore', errore: t('desktop.sync-diario-illeggibile') };
       // 3. il gruppo nuovo, già cifrato se c'è la password: nella cartella cloud non arriva mai un evento in chiaro (#20)
-      avanza(password ? 'Cifro e pubblico i dati di Lode…' : 'Pubblico i dati di Lode…');
+      avanza(password ? t('desktop.sync-cifro-pubblico') : t('desktop.sync-pubblico'));
       const r = await motore.trasloca({ destinazione: a, password: password || null });
-      if (!r?.ok) return { esito: 'errore', errore: 'Non riesco a creare i dati di Lode nella cartella cloud. Il vault di prima è intatto.' };
+      if (!r?.ok) return { esito: 'errore', errore: t('desktop.sync-non-creo-dati') };
       await finisciSpostamento({ a, cloud });
       spingi(true);
       return { esito: 'ok', servizio: nome, da: basename(da), a };
@@ -471,13 +472,13 @@ export function creaSincronizzazione({ app, safeStorage, dialog, powerMonitor, c
     const elenco = cartelleCloud().flatMap(c => vaultNelCloud(c).map(p => ({ p, servizio: c.servizio })));
     let v = elenco[i]?.p || null;
     if (!v && (scegli || process.env.LODE_SCEGLI_VAULT)) {
-      const r = process.env.LODE_SCEGLI_VAULT ? { filePaths: [process.env.LODE_SCEGLI_VAULT] } : await dialog.showOpenDialog({ title: 'Il vault di Lode nella cartella cloud', buttonLabel: 'Usa questo vault', properties: ['openDirectory'] });
+      const r = process.env.LODE_SCEGLI_VAULT ? { filePaths: [process.env.LODE_SCEGLI_VAULT] } : await dialog.showOpenDialog({ title: t('desktop.sync-vault-nel-cloud'), buttonLabel: t('desktop.usa-questo-vault'), properties: ['openDirectory'] });
       v = r.canceled ? null : r.filePaths?.[0] || null;
     }
     if (!v) return { esito: 'annullato' };
     // una cartella qualunque (il vault di prima, una cartella vuota) non è un vault sincronizzato: prima si accettava e Lode
     // restava «in arrivo» per sempre, con la barra vuota e nessuna strada per tornare indietro
-    if (!existsSync(join(v, '.lode', 'sync'))) return { esito: 'errore', errore: 'In questa cartella non c\'è un vault di Lode sincronizzato: scegli la cartella «Lode» dentro la cartella cloud (sull\'altro computer: «Sincronizza fra i tuoi computer»).' };
+    if (!existsSync(join(v, '.lode', 'sync'))) return { esito: 'errore', errore: t('desktop.sync-non-e-vault-sincronizzato') };
     const prima = conf().sync;
     // dopo «Smetti su questo computer» (cloud null) il motore ha un gruppo locale: lo lascia e si unisce al vault scelto, con
     // tutti i suoi eventi. Prima rispondeva «prima Smetti», cioè proprio quello che lo studente aveva appena fatto. Lo stesso
@@ -485,7 +486,7 @@ export function creaSincronizzazione({ app, safeStorage, dialog, powerMonitor, c
     if (motore && !fermo && motore.stato().gruppo && (!conf().sync?.cloud || motore.stato().stato === 'sparito')) {
       return inFila(async () => {
         const r = await motore.ricollega({ vault: v });
-        if (!r?.ok) return { esito: 'errore', errore: 'Adesso non si può: riprova tra poco.' };
+        if (!r?.ok) return { esito: 'errore', errore: t('desktop.sync-riprova-tra-poco') };
         conf().sync = { motore: true, cloud: servizioDi(v)?.percorso || dirname(v) }; salvaConf(); benvenutoFatto();
         await impostaVault(v, { ricarica: false });
         const sb = password ? await motore.sblocca(password) : null;
@@ -493,7 +494,7 @@ export function creaSincronizzazione({ app, safeStorage, dialog, powerMonitor, c
         return { esito: 'ok', servizio: servizioDi(v)?.servizio || basename(dirname(v)), stato: motore.stato().stato, ...(sb && !sb.ok ? { avviso: frasePassword(sb.codice) } : {}) };
       });
     }
-    if (motore && !fermo && pronto()) return { esito: 'errore', errore: 'Su questo computer Lode usa già il diario di un altro vault: prima «Smetti su questo computer».' };
+    if (motore && !fermo && pronto()) return { esito: 'errore', errore: t('desktop.sync-diario-altro-vault') };
     // il vault di adesso ha i dati di un computer che usava Lode da solo (dati.json v1 con esami, carte…): non spariscono. Entrano
     // nel gruppo come importa secondari (6.7): non cambiano niente da soli e compaiono in «Dati di un altro primo avvio» con
     // [importa le aggiunte]. Il dati.json resta comunque dov'è. Prima Lode passava al vault del cloud e i dati di questo computer
@@ -508,14 +509,14 @@ export function creaSincronizzazione({ app, safeStorage, dialog, powerMonitor, c
     const indietro = async errore => { conf().sync = prima; salvaConf(); motore = null; await impostaVault(da, { ricarica: false }); return { esito: 'errore', errore }; };
     return inFila(async () => {
       await apri(); giri();
-      if (fermo) { conf().sync = prima; salvaConf(); return { esito: 'errore', errore: 'Il diario di Lode su questo computer non si legge.' }; }
+      if (fermo) { conf().sync = prima; salvaConf(); return { esito: 'errore', errore: t('desktop.sync-diario-illeggibile') }; }
       const r = await motore.attiva({ modo: 'unisciti', password: password || null, importa });
       if (['chiaro', 'manomesso', 'parametri'].includes(r?.codice)) return indietro(frasePassword(r.codice));
       spingi(true); tutte().forEach(w => { if (w.webContents !== chi) w.webContents.reload(); });
       benvenutoFatto();
       const s = motore.stato();
       return { esito: 'ok', servizio: servizioDi(v)?.servizio || basename(dirname(v)), stato: s.stato,
-        ...(r?.codice === 'chiave_sbagliata' ? { avviso: 'Password sbagliata: scrivila di nuovo.' } : {}),
+        ...(r?.codice === 'chiave_sbagliata' ? { avviso: t('desktop.sync-password-sbagliata-di-nuovo') } : {}),
         ...(importa ? { importati: LISTE.reduce((n, l) => n + (Array.isArray(importa[l]) ? importa[l].length : 0), 0), vaultPrima: basename(da) } : {}) };
     });
   }
@@ -526,25 +527,25 @@ export function creaSincronizzazione({ app, safeStorage, dialog, powerMonitor, c
   // le risposte di sblocca e dell'unione con la password, in una frase per lo studente
   function frasePassword(codice) {
     switch (codice) {
-      case 'vecchia': return 'Questa è la password di prima: su un altro computer è cambiata, scrivi quella nuova.';
-      case 'parametri': return 'Questo vault è stato protetto da una Lode più nuova: aggiornala.';
-      case 'manomesso': return 'La password è giusta, ma il file del gruppo nella cartella cloud è stato cambiato da fuori: non lo uso. Controlla la cartella cloud.';
-      case 'chiaro': return 'Il gruppo nella cartella cloud non è cifrato: sull\'altro computer la sincronizzazione è senza password, o il file del gruppo è stato manomesso. Se sull\'altro computer non hai messo la password, riprova senza.';
-      default: return 'Password sbagliata.';
+      case 'vecchia': return t('desktop.sync-password-vecchia');
+      case 'parametri': return t('desktop.sync-lode-piu-nuova');
+      case 'manomesso': return t('desktop.sync-gruppo-manomesso');
+      case 'chiaro': return t('desktop.sync-gruppo-in-chiaro');
+      default: return t('desktop.sync-password-sbagliata');
     }
   }
   // «Scegli il vault» dopo «Smetti» (conf.sync con cloud null): il diario è legato al vault, quindi non si cambia cartella e basta.
   // Le note si copiano nella cartella scelta (mai cancellato niente) e lì nasce un gruppo locale con tutti gli eventi. Prima
   // «Scegli il vault» rimandava a «Smetti», che rispondeva «la sincronizzazione non è accesa»: un vicolo cieco
   async function cambiaVaultLocale(dest) {
-    if (!motore || fermo || conf().sync?.cloud) return { esito: 'errore', errore: 'Adesso non si può.' };
-    if (cartelleCloud().some(c => dentro(c.percorso, dest))) return { esito: 'errore', errore: 'Questa cartella è in una cartella cloud: per sincronizzare usa «Sincronizza fra i tuoi computer».' };
+    if (!motore || fermo || conf().sync?.cloud) return { esito: 'errore', errore: t('desktop.sync-adesso-non-si-puo') };
+    if (cartelleCloud().some(c => dentro(c.percorso, dest))) return { esito: 'errore', errore: t('desktop.sync-cartella-in-cloud') };
     const da = vault();
-    if (dentro(da, dest) || dentro(dest, da)) return { esito: 'errore', errore: 'Scegli una cartella fuori dal vault di adesso.' };
+    if (dentro(da, dest) || dentro(dest, da)) return { esito: 'errore', errore: t('desktop.sync-fuori-dal-vault') };
     try { if (existsSync(da)) { await copiaNote(da, dest); await verificaCopia(da, dest); } } catch (x) { return { esito: 'errore', errore: fraseCopia(x) }; }
     return inFila(async () => {
       const r = await motore.trasloca({ destinazione: dest });
-      if (!r?.ok) return { esito: 'errore', errore: 'Non riesco a spostare i dati di Lode in quella cartella. Il vault di prima è intatto.' };
+      if (!r?.ok) return { esito: 'errore', errore: t('desktop.sync-non-sposto-dati') };
       try { mkdirSync(join(dest, '.lode'), { recursive: true }); writeFileSync(join(dest, '.lode', 'dati.json'), JSON.stringify(MINIMO(motore.stato().gruppo), null, 1)); } catch { }
       await impostaVault(dest, { ricarica: false });
       spingi(true);
@@ -626,36 +627,36 @@ export function creaSincronizzazione({ app, safeStorage, dialog, powerMonitor, c
         return r.ok ? { esito: 'ok', ricordata: pc.disponibile(), stato: st } : { esito: r.codice === 'chiave_sbagliata' ? 'sbagliata' : r.codice || 'sbagliata', errore: frasePassword(r.codice), stato: st };
       }));
       // «importa le aggiunte» (6.7): i record di un altro primo avvio (un computer che usava Lode da solo) diventano record veri
-      ipcMain.handle('sync:importaAggiunte', () => inFila(async () => { const r = await motore?.importaAggiunte?.(); spingi(true); giroDopo(); return r?.ok ? { esito: 'ok', importati: r.importati } : { esito: 'errore', errore: 'Adesso non si può: riprova tra poco.' }; }));
+      ipcMain.handle('sync:importaAggiunte', () => inFila(async () => { const r = await motore?.importaAggiunte?.(); spingi(true); giroDopo(); return r?.ok ? { esito: 'ok', importati: r.importati } : { esito: 'errore', errore: t('desktop.sync-riprova-tra-poco') }; }));
       // cambio password e «Ho dimenticato la password» sono la stessa rigenerazione (§10.4, 10.5): un gruppo nuovo, cifrato
       ipcMain.handle('sync:cifra', (_, { password } = {}) => inFila(async () => {
         if (!motore) return { esito: 'errore' };
-        if (String(password || '').length < 8) return { esito: 'errore', errore: 'La password deve avere almeno 8 caratteri.' };
+        if (String(password || '').length < 8) return { esito: 'errore', errore: t('desktop.sync-password-corta') };
         const r = await motore.cifra(String(password)); spingi(true);
-        return r.ok ? { esito: 'ok', ricordata: pc.disponibile() } : { esito: 'errore', errore: 'Adesso non si può: riprova tra poco.' };
+        return r.ok ? { esito: 'ok', ricordata: pc.disponibile() } : { esito: 'errore', errore: t('desktop.sync-riprova-tra-poco') };
       }));
       ipcMain.handle('sync:dimentica', () => inFila(async () => { await motore?.dimentica(); spingi(true); return { esito: 'ok' }; }));
       ipcMain.handle('sync:toglila', () => inFila(async () => { const r = await motore?.toglila(); spingi(true); return { esito: r?.ok ? 'ok' : 'errore', tolte: r?.tolte || 0 }; }));
       ipcMain.handle('sync:giro', () => giro().then(() => stato()));
       // «Smetti su questo computer» (§11): il vault copiato in una cartella fuori dal cloud, un gruppo locale in chiaro
       ipcMain.handle('sync:smetti', async () => {
-        if (fermo && conf().sync?.cloud) return { esito: 'errore', errore: 'Il diario di Lode su questo computer non si legge: prima «Riprova».' };
-        if (!motore || fermo || !conf().sync?.cloud) return { esito: 'errore', errore: 'Su questo computer la sincronizzazione non è accesa.' };
+        if (fermo && conf().sync?.cloud) return { esito: 'errore', errore: t('desktop.sync-diario-illeggibile-riprova') };
+        if (!motore || fermo || !conf().sync?.cloud) return { esito: 'errore', errore: t('desktop.sync-non-accesa') };
         // il vault non c'è più dove Lode lo cercava (spostato: stato `sparito`): copiarlo darebbe un vault vuoto. Prima «Smetti»
         // rispondeva ok e portava Lode su una cartella vuota dicendo «il vault ora è fuori dalla cartella cloud»
-        if (!existsSync(vault())) return { esito: 'errore', errore: 'Il vault non è più dove Lode lo cercava: se l\'hai spostato, usa «Trova il vault» e scegli la cartella spostata.' };
-        const r = process.env.LODE_SCEGLI_SMETTI ? { filePaths: [process.env.LODE_SCEGLI_SMETTI] } : await dialog.showOpenDialog({ title: 'Dove tenere il vault, fuori dalla cartella cloud', buttonLabel: 'Tieni qui il vault', properties: ['openDirectory', 'createDirectory'] });
+        if (!existsSync(vault())) return { esito: 'errore', errore: t('desktop.sync-vault-spostato-scegli') };
+        const r = process.env.LODE_SCEGLI_SMETTI ? { filePaths: [process.env.LODE_SCEGLI_SMETTI] } : await dialog.showOpenDialog({ title: t('desktop.sync-dove-fuori-cloud'), buttonLabel: t('desktop.sync-tieni-qui'), properties: ['openDirectory', 'createDirectory'] });
         const base = r.canceled ? null : r.filePaths?.[0];
         if (!base) return { esito: 'annullato' };
-        if (cartelleCloud().some(c => dentro(c.percorso, base)) || dentro(conf().sync.cloud, base)) return { esito: 'errore', errore: 'Scegli una cartella fuori dalla cartella cloud.' };
+        if (cartelleCloud().some(c => dentro(c.percorso, base)) || dentro(conf().sync.cloud, base)) return { esito: 'errore', errore: t('desktop.sync-fuori-dal-cloud') };
         const dest = [join(base, 'Lode'), ...[2, 3, 4, 5, 6, 7, 8, 9].map(k => join(base, `Lode ${k}`))].find(p => !existsSync(p)) || join(base, `Lode ${Date.now()}`);
         // i rifiuti del motore, in una frase
         const frase = x => {
-          if (x?.motivo === 'sorgente') return 'Il vault non è più dove Lode lo cercava: se l\'hai spostato, usa «Trova il vault».';
-          if (x?.motivo === 'in_arrivo') return 'Le ultime modifiche di questo computer non sono ancora nella cartella cloud (sta arrivando un cambio dagli altri computer): riprova tra poco.';
-          if (x?.motivo === 'password') return 'Le modifiche fatte in pausa resterebbero solo su questo computer: scrivi la password prima di smettere (o «Ho dimenticato la password»).';
-          if (x?.motivo === 'segnaposti') return `Alcune note non sono scaricate su questo computer (${x.mancano.slice(0, 3).join(', ')}${x.mancano.length > 3 ? ` e altre ${x.mancano.length - 3}` : ''}): aprile o scaricale dal servizio cloud, poi riprova.`;
-          return 'Adesso non si può: riprova tra poco.';
+          if (x?.motivo === 'sorgente') return t('desktop.sync-vault-spostato');
+          if (x?.motivo === 'in_arrivo') return t('desktop.sync-cambio-in-arrivo');
+          if (x?.motivo === 'password') return t('desktop.sync-smetti-serve-password');
+          if (x?.motivo === 'segnaposti') return x.mancano.length > 3 ? t('desktop.sync-note-non-scaricate-altre', { note: x.mancano.slice(0, 3).join(', '), n: x.mancano.length - 3 }) : t('desktop.sync-note-non-scaricate', { note: x.mancano.join(', ') });
+          return t('desktop.sync-riprova-tra-poco');
         };
         // 1. i controlli (in fila); 2. la copia delle note FUORI dalla fila (con GB di allegati dura minuti: prima stava in fila e i
         // salvataggi della barra dietro di lei si perdevano a un'uscita, chiudi() aspetta 5 s, giro 3); 3. in fila il motore
@@ -668,11 +669,11 @@ export function creaSincronizzazione({ app, safeStorage, dialog, powerMonitor, c
         });
         if (!x0?.ok) return { esito: 'errore', errore: frase(x0) };
         copiando = true;
-        try { avanza('Copio il vault fuori dalla cartella cloud…'); await copiaNote(vault(), dest); await verificaCopia(vault(), dest); }
+        try { avanza(t('desktop.sync-copio-fuori-cloud')); await copiaNote(vault(), dest); await verificaCopia(vault(), dest); }
         catch (x) { console.error('Lode: copia del vault (Smetti)', x); return { esito: 'errore', errore: fraseCopia(x) }; }
         finally { copiando = false; }
         return inFila(async () => {
-          if (!motore || fermo) return { esito: 'errore', errore: 'Il diario di Lode su questo computer non si legge.' };
+          if (!motore || fermo) return { esito: 'errore', errore: t('desktop.sync-diario-illeggibile') };
           const x = await motore.smetti({ destinazione: dest, copiata: true });
           if (!x?.ok) return { esito: 'errore', errore: frase(x) };
           conf().sync = { motore: true, cloud: null }; salvaConf();
