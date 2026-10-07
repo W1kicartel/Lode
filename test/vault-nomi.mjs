@@ -256,6 +256,88 @@ VA.crea(EN, [{ corso: 'Calculus 2', giorni: [1, 3], inizio: '09:00', fine: '11:0
   NM.impostaNomi('it');
 }
 
+/* ---------- i testi delle note nella lingua del vault, non in quella della barra (js/vault.js, js/tasca.js) ---------- */
+{
+  const VB = await import('../js/vault.js');
+  Dm.sostituisci(Dm.esempio());
+  const T0 = Dm.oggi(), e0 = Dm.D.esami.find(e => e.cfu) || Dm.D.esami[0], carta = [{ id: 'k1', esameId: null, fronte: 'f', retro: 'r', scad: T0 }];
+  // vault italiano, barra italiana: tIn è t, i testi sono quelli di sempre
+  NM.impostaNomi('it');
+  prova('note it: tIn in italiano è t', LI.tIn('it', 'vault.titolo-oggi') === LI.t('vault.titolo-oggi') && LI.tIn('it', 'vault.n-lezioni', { n: 2 }) === LI.t('vault.n-lezioni', { n: 2 }) && LI.elencoIn('it', 'comune.mesi').join() === LI.elenco('comune.mesi').join() && LI.numeroIn('it', 2.5) === LI.numero(2.5));
+  prova('note it: le date sono quelle di sempre', Dm.dataLungaIn('it', '2026-02-12') === Dm.dataLunga('2026-02-12') && Dm.dataBreveIn('it', '2026-02-12') === Dm.dataBreve('2026-02-12'), Dm.dataLungaIn('it', '2026-02-12'));
+  const homeIt = VB._note.home(), memIt = VB._note.memoria();
+  prova('note it: Home in italiano', homeIt.includes(`## ${LI.t('vault.titolo-oggi')}`) && homeIt.startsWith(`> ${Dm.dataLunga(T0).replace(/^./, x => x.toUpperCase())}`), homeIt.slice(0, 80));
+  prova('note it: Memoria in italiano', memIt.includes(`# ${LI.t('vault.memoria-titolo')}`) && memIt.includes(`## ${LI.t('vault.titolo-in-breve')}`));
+  prova('note it: tasca in italiano', T.scriviNota([], [], 'g', T0).includes(LI.t('tasca.nota-vuota')) && T.scriviNota(carta, [], 'g', T0).includes(LI.t('tasca.nota-capo', { data: Dm.dataLunga(Dm.piuGiorni(T0, 1)) })));
+  // un catalogo non ancora caricato: l'italiano, mai la chiave
+  prova('note: catalogo non caricato → italiano', LI._cataloghi.fr ? true : LI.tIn('fr', 'vault.titolo-oggi') === LI.t('vault.titolo-oggi'));
+  // vault nato in inglese, barra in italiano: titoli e testi tutti inglesi
+  await LI.caricaLingua('en');
+  NM.impostaNomi('en');
+  const en = (k, p) => LI.tIn('en', k, p);
+  prova('note en: tIn legge il catalogo inglese', en('vault.titolo-oggi') !== LI.t('vault.titolo-oggi') && en('vault.titolo-oggi') === LI._cataloghi.en['vault.titolo-oggi'] && LI.lingua === 'it');
+  prova('note en: i plurali inglesi', en('vault.n-lezioni', { n: 1 }) === LI._cataloghi.en['vault.n-lezioni'].one.replace('{n}', '1') && en('vault.n-lezioni', { n: 3 }) === LI._cataloghi.en['vault.n-lezioni'].other.replace('{n}', '3'));
+  const home = VB._note.home(), esami = VB._note.esami(), mem = VB._note.memoria(), corso = VB._note.corso(e0.nome), glos = VB._note.glossario();
+  prova('note en: la Home ha i titoli e la data in inglese', home.includes(`## ${en('vault.titolo-oggi')}`) && home.includes(`## ${en('vault.titolo-corsi')}`) && !home.includes(`## ${LI.t('vault.titolo-oggi')}`) && home.startsWith(`> ${Dm.dataLungaIn('en', T0).replace(/^./, x => x.toUpperCase())}`), home.slice(0, 120));
+  prova('note en: Esami in inglese', esami.includes(`## ${en('vault.titolo-prossimi-appelli')}`) && esami.includes(`## ${en('vault.titolo-libretto')}`) && !esami.includes(`## ${LI.t('vault.titolo-libretto')}`), esami.slice(0, 120));
+  prova('note en: Memoria in inglese', mem.includes(`# ${en('vault.memoria-titolo')}`) && mem.includes(`## ${en('vault.titolo-in-breve')}`) && !mem.includes(`## ${LI.t('vault.titolo-in-breve')}`) && mem.includes('## Notes for Lode'));
+  prova('note en: la pagina del corso in inglese', corso.startsWith('[[Home]] · [[Exams]]') && corso.includes(en('vault.corso-cfu', { cfu: e0.cfu })) && !corso.includes(LI.t('vault.corso-cfu', { cfu: e0.cfu })), corso.slice(0, 160));
+  prova('note en: il glossario non ha testi italiani', glos !== LI.t('vault.glossario-vuoto') && (glos === en('vault.glossario-vuoto') || !glos.includes(` · ${LI.t('vault.n-definizioni', { n: 1 }).replace(/^1 /, '')}`)), glos.slice(0, 120));
+  const vuota = T.scriviNota([], [], 'g', T0), piena = T.scriviNota(carta, [], 'g', T0);
+  prova('note en: la tasca vuota in inglese', vuota.includes(en('tasca.nota-vuota')) && !vuota.includes(LI.t('tasca.nota-vuota')), vuota);
+  prova('note en: la tasca con la data in inglese', piena.includes(en('tasca.nota-capo', { data: Dm.dataLungaIn('en', Dm.piuGiorni(T0, 1)) })) && piena.includes(`## 1 · ${en('tasca.senza-corso')}`), piena.slice(0, 160));
+  // la barra cambia lingua: le note restano nella lingua del vault
+  await LI.usa('de');
+  prova('note en, barra in tedesco: la Home resta inglese', VB._note.home().includes(`## ${en('vault.titolo-oggi')}`) && LI.tIn('en', 'vault.titolo-oggi') === LI._cataloghi.en['vault.titolo-oggi']);
+  await LI.usa('it');
+  NM.impostaNomi('it');
+}
+
+/* ---------- vault:pulisciCorsi: i testi di Lode nella nota di un corso, in tutte le lingue ---------- */
+{
+  prova('corso: la frase delle prime versioni (italiana) non è dello studente', VA.scrittoNelCorso('---\ntipo: corso\n---\n# Analisi 2\n\nLe lezioni di questo corso compaiono qui sotto, nei **collegamenti in entrata** (backlink).\nLode raccoglie da ogni lezione le ★ da esame e le definizioni.\n') === '');
+  for (const cod of NM.LINGUE_NOMI) {
+    NM.impostaNomi(cod);
+    const nota = M.notaCorso('Corso X', { cfu: 6 }) + '\n%% lode:corso %%\nriquadro\n%% /lode:corso %%\n';
+    prova(`corso ${cod}: la nota nuova è vuota`, VA.scrittoNelCorso(nota) === '', VA.scrittoNelCorso(nota));
+    prova(`corso ${cod}: il commento senza i %% è di Lode`, VA.scrittoNelCorso(nota.replace(/%% (.*?) %%/, '$1')) === '');
+    prova(`corso ${cod}: il testo dello studente resta`, VA.scrittoNelCorso(nota + '\nil mio appunto\n') === 'il mio appunto');
+  }
+  NM.impostaNomi('it');
+  prova('corso: il main usa scrittoNelCorso', /vault:pulisciCorsi[\s\S]{0,300}V\.scrittoNelCorso\(/.test(readFileSync(new URL('../desktop/main.mjs', import.meta.url), 'utf8')));
+}
+
+/* ---------- un computer che entra nel gruppo crea il vault nella lingua del vault, non in quella della sua barra ---------- */
+{
+  const SI = await import('../desktop/sincronizza.mjs');
+  const A = nuovaCartella('gruppo-a');
+  VA.crea(A, [], 'en');   // il primo computer, con la barra in inglese
+  writeFileSync(join(A, '.lode', 'dati.json'), '{"v":1}');
+  const cloud = join(nuovaCartella('gruppo-cloud'), 'Lode');
+  await SI.copiaNote(A, cloud);   // «Sincronizza»: il vault va nella cartella cloud
+  prova('gruppo: vault.json passa nel cloud, il resto di .lode no', JSON.parse(leggi(cloud, '.lode/vault.json')).lingua === 'en' && !existsSync(join(cloud, '.lode', 'dati.json')) && existsSync(join(cloud, 'Welcome.md')));
+  // il secondo computer ha la barra in italiano: entra nel gruppo e crea il vault (avviaVault → crea con la lingua della barra)
+  VA.crea(cloud, null, 'it');
+  prova('gruppo: il secondo computer usa i nomi inglesi', VA.nomi().lingua === 'en' && JSON.parse(leggi(cloud, '.lode/vault.json')).lingua === 'en' && !['Lezioni', 'Corsi', 'Benvenuto.md', 'Lode/Memoria.md'].some(x => existsSync(join(cloud, x))));
+  // dal cloud è arrivato solo vault.json (le note sono ancora in viaggio): conta quello
+  const solo = nuovaCartella('gruppo-solo');
+  mkdirSync(join(solo, '.lode')); writeFileSync(join(solo, '.lode', 'vault.json'), leggi(A, '.lode/vault.json'));
+  VA.crea(solo, null, 'it');
+  prova('gruppo: con il solo vault.json il vault nasce inglese', existsSync(join(solo, 'Lectures')) && /^# Welcome/.test(leggi(solo, 'Welcome.md')) && !existsSync(join(solo, 'Lezioni')) && !existsSync(join(solo, 'Benvenuto.md')));
+  // un servizio che non copia .lode (Obsidian Sync): le tracce delle cartelle (linguaDalleTracce)
+  const tracce = nuovaCartella('gruppo-tracce');
+  for (const d of ['Lectures', 'Courses', 'Templates']) mkdirSync(join(tracce, d));
+  writeFileSync(join(tracce, 'Home.md'), '# Home\n');
+  VA.crea(tracce, null, 'it');
+  prova('gruppo: senza vault.json valgono le tracce delle cartelle', VA.linguaDalleTracce(tracce) === 'en' && JSON.parse(leggi(tracce, '.lode/vault.json')).lingua === 'en' && !existsSync(join(tracce, 'Lezioni')));
+  // copiaNote non sostituisce il vault.json che la destinazione ha già (la decisione presa resta)
+  const gia = nuovaCartella('gruppo-gia');
+  VA.crea(gia, [], 'de');
+  await SI.copiaNote(A, gia);
+  prova('gruppo: il vault.json della destinazione resta', JSON.parse(leggi(gia, '.lode/vault.json')).lingua === 'de');
+  NM.impostaNomi('it');
+}
+
 for (const d of temp) rmSync(d, { recursive: true, force: true });
 NM.impostaNomi('it');
 console.log(`${ok} prove passate, ${ko} fallite`);

@@ -2,9 +2,12 @@
 // In fondo al file c'è il marcatore (⊕6), con l'hash del testo sopra e le chiavi delle righe che Lode ci aveva messo:
 //   <!-- lode2 n=<eventi piegati> x=<xor delle h, 8 hex> t=<ms>.<c> h=<sha del testo sopra, 16 hex> righe=<k1>,<k2>… -->
 // k è l'hash corto della chiave della lezione, e l'id della lezione è «o<k>»: la stessa riga dà lo stesso id dappertutto.
-import { orarioMd, leggiOrario } from '../../js/markdown.js';
 import { sha, conImpronta, lezioniVive } from './piega.mjs';
 import { chiaveLezione } from './schema.mjs';
+import { daWeb } from '../web.mjs';
+
+// js/markdown.js dalla cartella dell'interfaccia (desktop/web.mjs): nel pacchetto «../../js» non c'è
+const { orarioMd, leggiOrario } = await daWeb('js/markdown.js');
 
 export const kLezione = o => sha(chiaveLezione(o), 12);
 export const idLezione = o => 'o' + kLezione(o);

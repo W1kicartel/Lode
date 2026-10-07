@@ -20,9 +20,9 @@ import * as AGGIORNA from './aggiorna.mjs';
 import { creaSincronizzazione } from './sincronizza.mjs';
 import * as ICONA from './collegamento.mjs';
 import { t, usa, LINGUE, linguaDiPartenza, daFissare } from './lingua.mjs';
+import { WEB } from './web.mjs';   // desktop/web nel pacchetto (e in sviluppo dopo prepara.mjs), se no la radice del progetto
 
 const QUI = dirname(fileURLToPath(import.meta.url));
-const WEB = existsSync(join(QUI, 'web', 'index.html')) ? join(QUI, 'web') : join(QUI, '..');
 const MAC = process.platform === 'darwin', WIN = process.platform === 'win32';
 // installata dal codice (npm start), fuori dalle prove: l'icona per riaprirla e l'avvio all'accensione (collegamento.mjs)
 // (non per chi sviluppa con vault e dati di prova: LODE_DATI, LODE_VAULT)
@@ -294,7 +294,7 @@ ipcMain.handle('vault:pulisciCorsi', (_, { nomi }) => {
   let tolte = 0;
   for (const n of nomi) {
     const p = V.dentro(vault(), `${V.nomi().cartelle.corsi}/${n.replace(/[\\/:*?"<>|#^[\]]/g, ' ').trim()}.md`);
-    try { const t = readFileSync(p, 'utf8').replace(/%% lode:corso %%[\s\S]*?%% \/lode:corso %%/, '').replace(/^---[\s\S]*?---/, '').replace(/^# .*$/m, '').replace(/%%[\s\S]*?%%/g, '').replace(/Le lezioni di questo corso[\s\S]*?definizioni\./, '').trim(); if (!t) { rmSync(p); tolte++; } } catch { }
+    try { if (!V.scrittoNelCorso(readFileSync(p, 'utf8'))) { rmSync(p); tolte++; } } catch { }   // i testi di Lode in tutte le lingue (vault.mjs)
   }
   return tolte;
 });

@@ -10,9 +10,9 @@
 // il segno di ogni carta scritta (scad, rip, int, ease) e una carta col segno cambiato si salta (r.gia). Senza, «sapevo»
 // sul telefono dopo «sapevo» sul computer gonfierebbe l'intervallo SM-2 (6 giorni → 15).
 // Funzioni pure (scegli, scriviNota, leggiNota, impronta) provate in test/tasca.mjs; aggiorna() prende un vault finto.
-import { D, dataLunga, oggi, piuGiorni, rispondi, salva, id } from './dati.js';
+import { D, dataLungaIn, oggi, piuGiorni, rispondi, salva, id } from './dati.js';
 import * as V from './vault.js';
-import { t } from './lingua.js';
+import { tIn } from './lingua.js';
 import { nomi, nomiDi, fileNota, rx } from './nomi.js';
 
 // il nome della nota nei vault italiani (e in quelli nati prima delle lingue); il vault aperto usa il suo (js/nomi.js)
@@ -37,11 +37,13 @@ export function scegli(carte, T, esami = []) {
 // Il titolo, il callout e le caselle hanno le parole del vault (js/nomi.js): «sapevo»/«non sapevo» in un vault italiano
 export function scriviNota(carte, esami, giro, T) {
   const N = nomi(), P = N.parole, callout = P.risposta.toLowerCase();
-  const capo = `# ${N.titoli.ripassoInTasca}\n${t('tasca.nota-capo', { data: dataLunga(piuGiorni(T, 1)) })}\n`;
+  // il testo nella lingua del vault, come i titoli (js/vault.js, tv): con la barra in un'altra lingua la nota resta una sola lingua
+  const tv = (k, p) => tIn(N.lingua, k, p);
+  const capo = `# ${N.titoli.ripassoInTasca}\n${tv('tasca.nota-capo', { data: dataLungaIn(N.lingua, piuGiorni(T, 1)) })}\n`;
   const fine = `<!-- lode-tasca giro:${giro} -->\n`;
-  if (!carte.length) return `# ${N.titoli.ripassoInTasca}\n${t('tasca.nota-vuota')}\n\n${fine}`;
+  if (!carte.length) return `# ${N.titoli.ripassoInTasca}\n${tv('tasca.nota-vuota')}\n\n${fine}`;
   const blocchi = carte.map((c, i) => {
-    const corso = (esami || []).find(e => e.id === c.esameId)?.nome || t('tasca.senza-corso');
+    const corso = (esami || []).find(e => e.id === c.esameId)?.nome || tv('tasca.senza-corso');
     const fronte = String(c.fronte).replace(/\s*\n\s*/g, ' ').trim();
     const retro = String(c.retro || '').replace(/\r\n?/g, '\n').trim().split('\n').map(r => (r.trim() ? '> ' + r.replace(/\s+$/, '') : '>')).join('\n') || '>';
     return `## ${i + 1} · ${corso}\n**${fronte}**\n\n> [!${callout}]- ${P.risposta}\n${retro}\n\n- [ ] ${P.sapevo}\n- [ ] ${P.nonSapevo}\n<!-- lode-carta:${c.id} -->\n`;

@@ -69,15 +69,17 @@ export function imposta(cod) {
   return true;
 }
 
-function cerca(chiave) {
-  const v = CAT[lingua]?.[chiave] ?? CAT.it[chiave];
+function cerca(chiave, cod = lingua) {
+  const v = CAT[cod]?.[chiave] ?? CAT.it[chiave];
   if (v == null) { if (typeof console !== 'undefined') console.warn('testo mancante: ' + chiave); return chiave; }
   return v;
 }
 const metti = (s, p) => (p ? String(s).replace(/\{(\w+)\}/g, (x, k) => (k in p ? String(p[k]) : x)) : String(s));
 let regole = null, regoleDi = null;
-function forma(v, n) {
+const regoleAltre = {};
+function forma(v, n, cod = lingua) {
   if (typeof v !== 'object') return v;
+  if (cod !== lingua) { regoleAltre[cod] ||= new Intl.PluralRules(LINGUE[cod].locale); return v[n === 0 && 'zero' in v ? 'zero' : regoleAltre[cod].select(n)] ?? v.other; }
   if (regoleDi !== lingua) { regole = new Intl.PluralRules(locale()); regoleDi = lingua; }
   return v[n === 0 && 'zero' in v ? 'zero' : regole.select(n)] ?? v.other;
 }
@@ -89,6 +91,24 @@ export function t(chiave, p) {
 }
 // un elenco dal catalogo (es. i nomi dei mesi): sempre un array
 export function elenco(chiave) { const v = cerca(chiave); return Array.isArray(v) ? v : [v]; }
+
+// I testi in un'altra lingua: le note che Lode scrive nel vault (Memoria, Home, Esami, i corsi, In tasca) sono nella lingua
+// del VAULT, quella dei titoli (js/nomi.js, .lode/vault.json), non in quella della barra (docs/LINGUE.md, «Il vault»).
+// caricaLingua(cod) carica il catalogo (async, una volta sola); tIn ed elencoIn sono sincroni come t ed elenco: con la
+// lingua della barra sono t ed elenco, con un catalogo non ancora caricato (o una lingua che Lode non conosce) l'italiano
+export async function caricaLingua(cod) {
+  if (!Object.hasOwn(LINGUE, cod) || (CAT[cod] && Object.keys(CAT[cod]).length)) return;
+  CAT[cod] = cod === 'it' ? CAT.it : await carica(cod);
+}
+const caricata = cod => (Object.hasOwn(LINGUE, cod) && CAT[cod] && Object.keys(CAT[cod]).length ? cod : 'it');
+export function tIn(cod, chiave, p) {
+  if (cod === lingua) return t(chiave, p);
+  const c = caricata(cod), v = cerca(chiave, c);
+  return metti(typeof v === 'object' && !Array.isArray(v) ? forma(v, Number(p?.n ?? 1), c) : v, p);
+}
+export function elencoIn(cod, chiave) { if (cod === lingua) return elenco(chiave); const v = cerca(chiave, caricata(cod)); return Array.isArray(v) ? v : [v]; }
+export const numeroIn = (cod, x, dec = 1) => Number(x).toLocaleString(LINGUE[caricata(cod)].locale, { minimumFractionDigits: dec, maximumFractionDigits: dec });
+
 // c'è la chiave? (nella lingua scelta o in italiano)
 export const esiste = chiave => (CAT[lingua]?.[chiave] ?? CAT.it[chiave]) != null;
 

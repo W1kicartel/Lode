@@ -318,6 +318,15 @@ export { scriviSicuro };
 // i nomi del vault aperto, per main.mjs e la barra (vault:info): la tabella intera, il file di una nota alla radice
 // («Orario.md», «Timetable.md»…) e le regex dei percorsi che la barra può chiedere
 export const nomi = () => N();
+// quello che lo studente ha scritto nella nota di un corso (vault:pulisciCorsi in main.mjs: i corsi di esempio se ne vanno
+// solo se è vuoto). Si tolgono il riquadro di Lode, il frontmatter, il titolo, i commenti %% … %% e i testi che Lode stesso ci
+// ha scritto: la frase delle prime versioni, solo italiana («Le lezioni di questo corso compaiono qui sotto…»), e il commento
+// del corso del catalogo vaultnomi in tutte e sei le lingue, anche rimasto senza i %% intorno
+export function scrittoNelCorso(testo) {
+  let t = String(testo).normalize('NFC').replace(/%% lode:corso %%[\s\S]*?%% \/lode:corso %%/, '').replace(/^---[\s\S]*?---/, '').replace(/^# .*$/m, '').replace(/%%[\s\S]*?%%/g, '').replace(/Le lezioni di questo corso[\s\S]*?definizioni\./, '');
+  for (const cod of NM.LINGUE_NOMI) t = t.replace(new RegExp(NM.rx(NM.nomiDi(cod).commenti.corso), 'g'), '');
+  return t.trim();
+}
 export const fileNota = k => NM.fileNota(k);
 export function permessi() {
   const n = N(), C = n.cartelle, x = s => NM.rx(s), nota = k => x(n.note[k]);

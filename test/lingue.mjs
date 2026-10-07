@@ -50,7 +50,8 @@ const file = d => readdirSync(new URL(d, R), { withFileTypes: true }).flatMap(e 
 const usate = new Set();
 for (const f of [...file('js/'), ...file('desktop/').filter(f => !f.includes('node_modules') && !f.startsWith('desktop/web/'))]) {
   const s = readFileSync(new URL(f, R), 'utf8').replace(/^\s*\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
-  for (const m of s.matchAll(/\b(?:t|elenco|tn)\(\s*'([a-z][\w-]*\.[\w.-]+)'/g)) { usate.add(m[1]); prova(`${f}: chiave ${m[1]} in italiano`, m[1] in IT); }
+  // anche tv('…') (i testi delle note nella lingua del vault, js/vault.js e js/tasca.js) e tIn(cod, '…') / elencoIn(cod, '…')
+  for (const m of s.matchAll(/\b(?:t|elenco|tn|tv)\(\s*'([a-z][\w-]*\.[\w.-]+)'|\b(?:tIn|elencoIn)\([^,()]+,\s*'([a-z][\w-]*\.[\w.-]+)'/g)) { const k = m[1] || m[2]; usate.add(k); prova(`${f}: chiave ${k} in italiano`, k in IT); }
 }
 prova('ci sono chiavi usate', usate.size > 0);
 // cache del service worker
