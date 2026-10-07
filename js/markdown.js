@@ -4,7 +4,7 @@
 // del plugin Spaced Repetition) o in un callout «> [!definizione] Gradiente». Lode le trova e ne fa giochi e ripasso.
 // I nomi (cartelle, sezioni, giorni dell'orario) sono quelli del vault aperto (js/nomi.js): in un vault nato in inglese
 // la sezione è «★ For the exam», in uno italiano (o che esisteva già prima delle lingue) «★ Da esame».
-import { nomi, nomiDi } from './nomi.js';
+import { nomi, nomiDi, LINGUE_NOMI } from './nomi.js';
 const IT = nomiDi('it');
 // SEZIONI si legge ogni volta dal vault aperto (getter): chi la importa non cambia
 export const SEZIONI = Object.defineProperties({}, Object.fromEntries(Object.keys(IT.sezioni).map(k => [k, { enumerable: true, get: () => nomi().sezioni[k] }])));
@@ -79,10 +79,14 @@ const pulisciRiga = r => r.replace(/^\s*(?:[-*+]|\d+[.)])\s+(\[[ x]\]\s+)?/, '')
 
 // il nome del vault aperto, quello italiano (le note scritte prima o a mano) e gli alias di sempre
 const lettere = s => String(s).normalize('NFC').replace(/[^\p{L}]/gu, '').toLowerCase();
-function trovaSezione(sez, chiave) {
-  const nome = lettere(SEZIONI[chiave]), nomeIt = lettere(IT.sezioni[chiave]);
+// (ogniLingua: anche quelli delle altre lingue, per i vault non italiani e per le sbobine ricevute da un compagno che ha il
+// vault in un'altra lingua; in un vault italiano le note di sempre si leggono esattamente come prima)
+let TUTTE = null;
+const tutte = chiave => (TUTTE ||= Object.fromEntries(Object.keys(IT.sezioni).map(k => [k, new Set(LINGUE_NOMI.map(c => lettere(nomiDi(c).sezioni[k])))])))[chiave] || new Set();
+function trovaSezione(sez, chiave, ogniLingua = false) {
+  const nome = lettere(SEZIONI[chiave]), altre = ogniLingua ? tutte(chiave) : new Set([lettere(IT.sezioni[chiave])]);
   const alias = { stella: ['daesame', 'importante', 'esame'], definizione: ['definizioni', 'glossario'], domanda: ['domande', 'domandeperilprof'], appunti: ['appunti', 'note'], trascrizione: ['trascrizione'] }[chiave] || [];
-  const k = Object.keys(sez).find(k => { const x = lettere(k); return x === nome || x === nomeIt || alias.includes(x); });
+  const k = Object.keys(sez).find(k => { const x = lettere(k); return x === nome || alias.includes(x); }) || Object.keys(sez).find(k => altre.has(lettere(k)));
   return k ? sez[k] : [];
 }
 export function leggiDefinizione(r) {
@@ -95,11 +99,11 @@ export function leggiDefinizione(r) {
 
 export function leggiLezione(testo, file) {
   const { fm, corpo } = frontmatter(senzaCommenti(String(testo)));
-  const sez = sezioni(corpo);
+  const sez = sezioni(corpo), ogni = nomi().lingua !== 'it' || fm.sbobina === 'ricevuta', trova = k => trovaSezione(sez, k, ogni);
   const corso = (fm.corso || '').replace(/^\[\[|\]\]$/g, '') || (file || '').split('/').slice(-2, -1)[0] || '';
   const ora = (fm.ora || '').split(/[–-]/);
   const definizioni = [];
-  for (const r of trovaSezione(sez, 'definizione')) { const d = leggiDefinizione(r); if (d) definizioni.push(d); }
+  for (const r of trova('definizione')) { const d = leggiDefinizione(r); if (d) definizioni.push(d); }
   // in tutto il file: «termine :: definizione» e i callout di definizione
   const visti = new Set(definizioni.map(d => d.t.toLowerCase()));
   const righe = corpo.split(/\r?\n/);
@@ -110,9 +114,9 @@ export function leggiLezione(testo, file) {
     if (c) { const testoC = []; for (let j = i + 1; j < righe.length && /^>/.test(righe[j]); j++) testoC.push(righe[j].replace(/^>\s?/, '')); d = { t: c[1].trim(), d: testoC.join(' ').trim() }; }
     if (d && d.d && !visti.has(d.t.toLowerCase())) { visti.add(d.t.toLowerCase()); definizioni.push(d); }
   });
-  const elenco = k => trovaSezione(sez, k).filter(r => /^\s*(?:[-*+]|\d+[.)])\s+/.test(r) && !/::/.test(r)).map(pulisciRiga).filter(Boolean);
-  const appunti = trovaSezione(sez, 'appunti').join('\n').trim();
-  const trascrizione = trovaSezione(sez, 'trascrizione').map(r => r.replace(/^\*\*\d\d:\d\d\*\*\s*/, '')).join(' ').replace(/\s+/g, ' ').trim();
+  const elenco = k => trova(k).filter(r => /^\s*(?:[-*+]|\d+[.)])\s+/.test(r) && !/::/.test(r)).map(pulisciRiga).filter(Boolean);
+  const appunti = trova('appunti').join('\n').trim();
+  const trascrizione = trova('trascrizione').map(r => r.replace(/^\*\*\d\d:\d\d\*\*\s*/, '')).join(' ').replace(/\s+/g, ' ').trim();
   return { file, corso, data: /^\d{4}-\d\d-\d\d$/.test(fm.data || '') ? fm.data : (file || '').match(/(\d{4}-\d\d-\d\d)/)?.[1] || null,
     inizio: ora[0]?.trim() || null, fine: ora[1]?.trim() || null, aula: fm.aula || null,
     definizioni, stelle: elenco('stella'), domande: elenco('domanda'), parole: appunti.split(/\s+/).filter(Boolean).length, appunti: appunti.slice(0, 4000),

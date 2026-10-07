@@ -34,6 +34,7 @@ for (const cod of NM.LINGUE_NOMI) {
   prova(`${cod}: note alla radice tutte diverse`, new Set(Object.values(N.note).map(x => x.toLowerCase())).size === Object.values(N.note).length);
   prova(`${cod}: sette giorni e cinque colonne`, N.orario.giorni.length === 7 && N.orario.colonne.length === 5);
   prova(`${cod}: i giorni brevi non si confondono`, N.orario.giorni.every((g, i) => N.orario.giorni.findIndex(b => g.startsWith(b)) === i), N.orario.giorni.join());
+  prova(`${cod}: nessuna sezione ha il nome di un'altra sezione in un'altra lingua`, Object.entries(N.sezioni).every(([k, v]) => NM.LINGUE_NOMI.every(c => Object.entries(NM.nomiDi(c).sezioni).every(([k2, v2]) => k2 === k || v2.replace(/[^\p{L}]/gu, '').toLowerCase() !== v.replace(/[^\p{L}]/gu, '').toLowerCase()))));
   prova(`${cod}: le caselle della tasca sono diverse`, N.parole.sapevo.toLowerCase() !== N.parole.nonSapevo.toLowerCase());
   prova(`${cod}: la cartella di Lode resta «Lode»`, N.cartelle.lode === 'Lode');
   prova(`${cod}: il benvenuto ha la firma`, NM.nomiDi(cod).testi.benvenuto.includes('{firma}') && N.testi.benvenutoFirma.includes('**Lode**'));
@@ -97,6 +98,7 @@ VA.crea(EN, [{ corso: 'Calculus 2', giorni: [1, 3], inizio: '09:00', fine: '11:0
   prova('en: le definizioni si rileggono', lz[0]?.definizioni[0]?.t === 'Limit');
   prova('en: la trascrizione si rilegge', /today we talk about limits/.test(lz[0]?.trascrizione || '') && lz[0].paroleTrascritte > 5);
   prova('en: una nota scritta prima coi titoli italiani si legge lo stesso', M.leggiLezione('---\ndata: 2026-02-13\n---\n## ★ Da esame\n- vecchia\n', 'Lectures/Calculus 2/x.md').stelle.join() === 'vecchia');
+  prova('en: una sbobina tedesca ricevuta si legge', M.leggiLezione('---\ndata: 2026-02-13\n---\n## ★ Prüfungsrelevant\n- Satz\n## Transkript\n**10:00** hallo welt\n', 'f.md').stelle.join() === 'Satz');
   prova('en: «Notes tidied up by Lode» conta come riordinata', M.leggiLezione('---\ndata: 2026-02-13\n---\n## Notes tidied up by Lode\nx\n', 'f.md').riordinata);
   // la sbobina condivisa prende le sezioni inglesi
   const sb = SB.crea(testo, { autore: 'Anna' });
@@ -173,6 +175,8 @@ VA.crea(EN, [{ corso: 'Calculus 2', giorni: [1, 3], inizio: '09:00', fine: '11:0
   VA.annota(IT, { file, chiave: 'stella', riga: '- 10:00 il teorema del limite' });
   prova('vecchio: i nomi dei file composti di sempre', NM.nomeFile('sbobina', { data: '2026-02-12', corso: 'X' }) === '2026-02-12 X · sbobina' && NM.nomeFile('sbobinaDi', { data: '2026-02-12', corso: 'X', da: 'Anna' }) === '2026-02-12 X · sbobina di Anna' && NM.nomi().file.originale === 'file originale');
   prova('vecchio: la ★ va in «★ Da esame»', /## ★ Da esame\n- 10:00 il teorema del limite/.test(leggi(IT, file)));
+  prova('vecchio: una sezione inglese in una nota italiana resta com\'era (non si legge)', M.leggiLezione('---\ndata: 2026-02-13\n---\n## ★ For the exam\n- x\n', 'f.md').stelle.length === 0);
+  prova('vecchio: una sbobina ricevuta in inglese si legge', M.leggiLezione('---\ndata: 2026-02-13\nsbobina: ricevuta\n---\n## ★ For the exam\n- x\n', 'f.md').stelle.join() === 'x');
   prova('vecchio: la lezione si rilegge', VA.lezioni(IT)[0]?.stelle.join() === '10:00 il teorema del limite');
   prova('vecchio: le note per Lode si leggono', VA.notePerLode(IT) === 'frasi brevi');
   prova('vecchio: la tasca scrive «sapevo»', T.scriviNota([{ id: 'k1', fronte: 'Limite?', retro: 'Un valore', scad: Dm.oggi() }], [], 'g2', Dm.oggi()).includes('> [!risposta]- Risposta\n> Un valore\n\n- [ ] sapevo\n- [ ] non sapevo'));
