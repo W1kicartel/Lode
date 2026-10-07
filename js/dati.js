@@ -38,14 +38,22 @@ const chiaveLocale = () => { try { return localStorage.getItem('lode:chiave') ||
 // cambiato sistema: i voti di prima non si buttano, restano nel libretto da correggere e non contano nella media, vedi
 // validi()); in Italia il controllo è quello di sempre
 const ID = /^[\w-]{1,40}$/, DATA = /^\d{4}-\d{2}-\d{2}$/;
-const votoInForma = (v, sis) => v !== null && v !== '' && (S.sistema(sis).cod === 'it' ? Number.isInteger(+v) && +v >= 18 && +v <= 30 : Number.isFinite(+v) && +v >= 0 && +v <= 100) ? +v : null;
-const inForma = (e, sis) => e && typeof e === 'object' ? { ...e, cfu: Number(e.cfu) || 6, voto: votoInForma(e.voto, sis),
+// Un voto scritto con un altro sistema (e.sistema, messo da cambiaSistema) si tiene com'è anche in Italia: un 8,5 della
+// Spagna non diventa null tornando al sistema italiano
+const votoInForma = (v, sis, da) => v !== null && v !== '' && (S.sistema(sis).cod === 'it' && !(da && da !== 'it') ? Number.isInteger(+v) && +v >= 18 && +v <= 30 : Number.isFinite(+v) && +v >= 0 && +v <= 100) ? +v : null;
+const inForma = (e, sis) => e && typeof e === 'object' ? { ...e, cfu: Number(e.cfu) || 6, voto: votoInForma(e.voto, sis, e.sistema),
   ...(e.oreObiettivo != null ? { oreObiettivo: Number(e.oreObiettivo) || null } : {}) } : e;
 // i dati di Lode letti dal disco: .lode/dati.json nel vault (che si sincronizza o si condivide: chi può scriverci può
 // metterci di tutto) o localStorage nel browser. Non passano da backupValido(), che rifiuterebbe tutto per un solo esame
 // storto: qui l'esame con un id strano (virgolette, HTML: finirebbe in un data-e="…") si scarta, gli altri restano
 // il profilo con i campi che mancano; un sistema dei voti sconosciuto (o assente, nei dati di prima) vale l'Italia
-export function profiloInForma(p) { const x = { ...VUOTO().profilo, ...p }; if (!CODICI.includes(x.sistema)) x.sistema = 'it'; return x; }
+// Fuori dall'Italia, la prima volta, i crediti di una laurea che sono ancora quelli italiani di partenza (180, mai scelti:
+// totaliScelti manca) diventano quelli del sistema (240 in Spagna e in Brasile, 360 nel Regno Unito, 120 negli Stati Uniti)
+export function profiloInForma(p) {
+  const x = { ...VUOTO().profilo, ...p }; if (!CODICI.includes(x.sistema)) x.sistema = 'it';
+  if (x.sistema !== 'it' && !x.totaliScelti) { if (!(Number(x.cfuTotali) > 0) || +x.cfuTotali === 180) x.cfuTotali = S.sistema(x.sistema).totali; x.totaliScelti = true; }
+  return x;
+}
 // i voti si controllano con il sistema del profilo già in forma
 function unisci(d) { if (!(d && d.v === 1)) return null; const profilo = profiloInForma(d.profilo); return { ...VUOTO(), ...d, esami: Array.isArray(d.esami) ? d.esami.filter(e => e && typeof e === 'object' && ID.test(e.id)).map(e => inForma(e, profilo.sistema)) : [], profilo, imp: { ...VUOTO().imp, ...d.imp }, codice: { ...VUOTO().codice, ...d.codice } }; }
 // Un backup da importare (magari passato da un compagno) si controlla tutto e, se qualcosa non torna, si rifiuta: non si
@@ -190,8 +198,27 @@ export function registraVoto(esameId, { voto, lode = false, idoneita = false, da
   const e = esame(esameId); if (!e) return null;
   const s = S.sistema(sistemaVoti());   // la lode solo con il massimo del sistema (30 in Italia, 10 la Matrícula in Spagna)
   Object.assign(e, { voto: idoneita ? null : voto, lode: !!lode && s.lode && voto === s.max, idoneita: !!idoneita, fatto: true, data });
+  delete e.sistema;   // il voto nuovo è del sistema di adesso
   salva(); return e;
 }
+// Cambia il sistema dei voti (benvenuto, Impostazioni). Nessun voto si perde: quelli scritti con il sistema di prima restano
+// com'erano, con accanto il loro sistema (e.sistema), si mostrano in quel sistema e non contano nei conti del sistema nuovo;
+// tornando al loro sistema contano di nuovo. I crediti di una laurea diventano quelli del sistema nuovo (chi li vuole
+// diversi li sceglie accanto). Non salva: lo fa chi chiama. Restituisce true se il sistema è cambiato
+export function cambiaSistema(cod) {
+  const nuovo = S.sistema(cod).cod, prima = sistemaVoti();
+  if (nuovo === prima) return false;
+  for (const e of D.esami) {
+    if (e.voto == null || e.idoneita) continue;
+    if (!e.sistema) e.sistema = prima;
+    if (e.sistema === nuovo) delete e.sistema;
+  }
+  Object.assign(D.profilo, { sistema: nuovo, cfuTotali: S.sistema(nuovo).totali });
+  if (nuovo !== 'it') D.profilo.totaliScelti = true;
+  return true;
+}
+// il voto dell'esame è stato scritto con un altro sistema dei voti (prima di cambiarlo)? Allora non conta nei conti
+export const altroSistema = e => !!e?.sistema && e.voto != null && !e.idoneita && e.sistema !== sistemaVoti();
 
 /* ---------- media e laurea ---------- */
 // I conti passano da js/sistemi.js, con il sistema dei voti scelto (profilo.sistema, l'Italia se non c'è): in Italia sono
@@ -202,12 +229,14 @@ export const sistemaVoti = () => S.sistema(D.profilo?.sistema).cod;
 const opzVoti = () => ({ sistema: sistemaVoti(), lode: D.profilo.lode, totali: D.profilo.cfuTotali });
 const senzaFinale = m => { const { finale, ...r } = m; return r; };
 // fuori dall'Italia un voto che il sistema non ha (un 28 rimasto da prima del cambio di sistema) non entra nei conti
-const validi = lista => { const s = sistemaVoti(); return s === 'it' ? lista : lista.filter(e => e.voto == null || e.idoneita || S.valido(Number(e.voto), s)); };
+// (e nemmeno uno scritto con un altro sistema, che si riconosce da e.sistema: in Italia con i dati di sempre non c'è mai)
+const validi = lista => { const s = sistemaVoti(); return s === 'it' ? (lista.some(altroSistema) ? lista.filter(e => !altroSistema(e)) : lista) : lista.filter(e => !altroSistema(e) && (e.voto == null || e.idoneita || S.valido(Number(e.voto), s))); };
 export function media(lista = fatti()) { return senzaFinale(S.media(validi(lista), opzVoti())); }
 // il voto finale della media ponderata nel sistema scelto: { tipo, valore, max, mention | classe } oppure null
 export const votoFinale = (m = media()) => S.finale(m.ponderata, sistemaVoti());
 // i crediti presi: in Italia tutti gli esami dati (come sempre); altrove un esame non superato (5,0, suspenso, F) non li dà
-export const cfuFatti = () => { const s = S.sistema(sistemaVoti()); return fatti().filter(e => s.cod === 'it' || e.voto == null || e.idoneita || S.superato(Number(e.voto), s)).reduce((x, e) => x + e.cfu, 0); };
+// (un esame superato con un altro sistema, prima di cambiarlo, i crediti li dà: superato nel suo sistema)
+export const cfuFatti = () => { const s = S.sistema(sistemaVoti()); return fatti().filter(e => s.cod === 'it' || e.voto == null || e.idoneita || (altroSistema(e) ? S.superato(Number(e.voto), e.sistema) : S.superato(Number(e.voto), s))).reduce((x, e) => x + e.cfu, 0); };
 // che media serve nei CFU che mancano per arrivare a una base di partenza (es. 100/110). Fuori dall'Italia l'obiettivo è il
 // voto finale del sistema (la media, la moyenne, la Gesamtnote, il GPA…). 6 CFU circa di prova finale, senza voto (Italia)
 export function serve(baseObiettivo) { return S.serve(baseObiettivo, validi(fatti()), opzVoti()); }

@@ -7,6 +7,8 @@ export default {
   'libretto.serve-impossibile': 'Chegar a <b>{obiettivo}</b> não dá mais: mire em {punta}.',
   'libretto.obiettivo-fuori': 'No sistema {sistema}, o objetivo vai de {da} a {a}.',
   'libretto.simula-esito': 'Média <b>{media}</b> <span class="{classe}">{delta}</span> · {finale} <b>{valore}</b>',
+  'libretto.voto-altro-sistema': "{voto} ({sistema}): não conta neste sistema",
+  'libretto.totali-opzione': '{n} {crediti}',
   'libretto.simula': 'Com **{voto}** em {nome}, sua média vai de {prima} para **{dopo}** ({delta}): {finale} **{valore}**.',
   'libretto.simula-primo': 'Com {voto} em **{nome}**, sua média começaria em **{media}**: {finale} **{valore}**.',
   'libretto.sintesi-media-finale': 'média {media}, {finale} {valore}',

@@ -7,6 +7,8 @@ export default {
   'libretto.serve-impossibile': '<b>{obiettivo}</b>, ce n\'est plus possible : vise {punta}.',
   'libretto.obiettivo-fuori': 'Avec le système {sistema}, l\'objectif va de {da} à {a}.',
   'libretto.simula-esito': 'Moyenne <b>{media}</b> <span class="{classe}">{delta}</span> · {finale} <b>{valore}</b>',
+  'libretto.voto-altro-sistema': "{voto} ({sistema}) : ne compte pas dans ce système",
+  'libretto.totali-opzione': '{n} {crediti}',
   'libretto.simula': 'Avec **{voto}** en {nome}, ta moyenne passe de {prima} à **{dopo}** ({delta}) : {finale} **{valore}**.',
   'libretto.simula-primo': 'Avec {voto} en **{nome}**, ta moyenne partirait de **{media}** : {finale} **{valore}**.',
   'libretto.sintesi-media-finale': 'moyenne {media}, {finale} {valore}',

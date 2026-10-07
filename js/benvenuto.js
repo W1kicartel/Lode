@@ -5,7 +5,7 @@
 // FACOLTATIVO, il «setup veloce»: ateneo e corso, libretto (incollato da Esse3), esami da dare, orario delle lezioni
 // (scritto, incollato o da un file .ics del calendario dell'ateneo), come studi e quanto spesso Lode può proporti cose.
 // Tutto resta nel vault dello studente. Si può rifare quando si vuole dal menu dell'icona.
-import { D, DESKTOP, NOMI_ESEMPIO, aggiungiEsame, eEsempio, nomeVero, togliEsempio, aggiungiOrario, esc, id, norm, oggi, salva, sostituisci } from './dati.js';
+import { D, DESKTOP, NOMI_ESEMPIO, aggiungiEsame, cambiaSistema, eEsempio, nomeVero, togliEsempio, aggiungiOrario, esc, id, norm, oggi, salva, sostituisci } from './dati.js';
 import { entra, tween, h } from './motore.js';
 import * as V from './vault.js';
 import * as AI from './ai.js';
@@ -13,7 +13,7 @@ import * as Voce from './voce.js';
 import { leggiOrario as orarioDaFrase, leggiData } from './comandi.js';
 import { GIORNI_BREVI } from './markdown.js';
 import { t, elenco, numero, LINGUE, lingua as linguaOra, imposta } from './lingua.js';
-import { CODICI, nomeSistema, predefinito } from './sistemi.js';
+import { CODICI, SISTEMI, nomeSistema, nomeCrediti, opzioniTotali, predefinito } from './sistemi.js';
 import * as LB from './libretto.js';
 
 const L = DESKTOP ? window.lodeDesktop : null;
@@ -83,7 +83,8 @@ function lingua() {
     imposta(linguaOra);
     // solo in memoria: lo scrive il passo «nome» (qui il vault non è ancora scelto, e «Uso già Lode su un altro computer»
     // nel passo dopo porta i dati suoi)
-    if (!D.imp.benvenuto && !S.sistemaScelto) D.profilo.sistema = predefinito(linguaOra);
+    // (con i crediti di una laurea del sistema: 240 ECTS in Spagna, 360 credits nel Regno Unito; in italiano restano 180)
+    if (!D.imp.benvenuto && !S.sistemaScelto) cambiaSistema(predefinito(linguaOra));
   };
 }
 function ciao() {
@@ -196,20 +197,34 @@ function veloce() {
     <ul class="bv-lista">${elenco('benvenuto.veloce-lista').map(x => `<li>${x}</li>`).join('')}</ul>
     <p class="bv-nota">${t('benvenuto.veloce-nota')}</p>`, { avanti: t('benvenuto.facciamolo'), salta: true });
 }
+// i crediti di una laurea fra cui scegliere, nel sistema dei voti: in Italia le opzioni di sempre (triennale, magistrale…),
+// altrove i numeri del sistema con il nome dei suoi crediti («240 ECTS», «120 credit hours»)
+const opzioniCfu = (cod, scelto) => (cod === 'it' ? [[180, t('benvenuto.tipo-180')], [120, t('benvenuto.tipo-120')], [300, t('benvenuto.tipo-300')], [360, t('benvenuto.tipo-360')]]
+  : opzioniTotali(cod, scelto).map(v => [v, t('libretto.totali-opzione', { n: numero(v, v % 1 ? 1 : 0), crediti: nomeCrediti(cod) })]))
+  .map(([v, x]) => `<option value="${v}"${scelto === v ? ' selected' : ''}>${x}</option>`).join('');
 function corso() {
-  const p = D.profilo;
+  const p = D.profilo, sis0 = p.sistema || predefinito(linguaOra);
   guscio(`<h1>${t('benvenuto.corso-titolo')}</h1>
     <div class="bv-griglia">
       <label class="bv-campo tutta"><span>${t('benvenuto.ateneo')}</span><input id="bv-ateneo" list="bv-atenei" value="${esc(p.ateneo || '')}" placeholder="${t('benvenuto.ateneo-segnaposto')}"><datalist id="bv-atenei">${ATENEI.map(a => `<option value="${esc(a)}">`).join('')}</datalist></label>
       <label class="bv-campo tutta"><span>${t('benvenuto.corso')}</span><input id="bv-corso" value="${esc(p.corso || '')}" placeholder="${t('benvenuto.corso-segnaposto')}"></label>
-      <label class="bv-campo"><span>${t('benvenuto.tipo')}</span><select id="bv-cfu">${[[180, t('benvenuto.tipo-180')], [120, t('benvenuto.tipo-120')], [300, t('benvenuto.tipo-300')], [360, t('benvenuto.tipo-360')]].map(([v, x]) => `<option value="${v}"${p.cfuTotali === v ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
+      <label class="bv-campo"><span>${t('benvenuto.tipo')}</span><select id="bv-cfu">${opzioniCfu(sis0, p.cfuTotali)}</select></label>
       <label class="bv-campo"><span>${t('benvenuto.anno')}</span><select id="bv-anno">${elenco('benvenuto.anni').map((a, i) => `<option value="${i + 1}"${p.anno === i + 1 ? ' selected' : ''}>${a}</option>`).join('')}</select></label>
-      <label class="bv-campo"><span>${t('benvenuto.lode-vale')}</span><select id="bv-lode">${[30, 31, 32, 33].map(v => `<option${p.lode === v ? ' selected' : ''}>${v}</option>`).join('')}</select><small>${t('benvenuto.lode-nota')}</small></label>
-      <label class="bv-campo"><span>${t('sistemi.scelta')}</span><select id="bv-sistema">${CODICI.map(c => `<option value="${c}"${(p.sistema || predefinito(linguaOra)) === c ? ' selected' : ''}>${esc(nomeSistema(c))}</option>`).join('')}</select><small>${t('impostazioni.sistema-nota')}</small></label>
+      <label class="bv-campo"${sis0 === 'it' ? '' : ' hidden'}><span>${t('benvenuto.lode-vale')}</span><select id="bv-lode">${[30, 31, 32, 33].map(v => `<option${p.lode === v ? ' selected' : ''}>${v}</option>`).join('')}</select><small>${t('benvenuto.lode-nota')}</small></label>
+      <label class="bv-campo"><span>${t('sistemi.scelta')}</span><select id="bv-sistema">${CODICI.map(c => `<option value="${c}"${sis0 === c ? ' selected' : ''}>${esc(nomeSistema(c))}</option>`).join('')}</select><small>${t('impostazioni.sistema-nota')}</small></label>
     </div>`, { salta: true });
+  // un altro sistema: i crediti di una laurea di quel sistema, e «la lode vale» solo in Italia
+  main.querySelector('#bv-sistema').addEventListener('change', ev => {
+    const c = ev.target.value;
+    main.querySelector('#bv-cfu').innerHTML = opzioniCfu(c, c === sis0 ? p.cfuTotali : SISTEMI[c]?.totali);
+    main.querySelector('#bv-lode').closest('label').hidden = c !== 'it';
+  });
   P('corso').salva = () => {
-    const v = id => main.querySelector('#' + id).value;
-    Object.assign(D.profilo, { ateneo: v('bv-ateneo').trim(), corso: v('bv-corso').trim(), cfuTotali: +v('bv-cfu'), anno: +v('bv-anno'), lode: +v('bv-lode'), sistema: CODICI.includes(v('bv-sistema')) ? v('bv-sistema') : 'it' }); S.sistemaScelto = true; salva();
+    const v = id => main.querySelector('#' + id).value, sistema = CODICI.includes(v('bv-sistema')) ? v('bv-sistema') : 'it';
+    cambiaSistema(sistema);   // i voti di prima restano col loro sistema; poi i crediti scelti qui
+    Object.assign(D.profilo, { ateneo: v('bv-ateneo').trim(), corso: v('bv-corso').trim(), cfuTotali: +v('bv-cfu'), anno: +v('bv-anno'), lode: +v('bv-lode'), sistema }); S.sistemaScelto = true;
+    if (sistema !== 'it') D.profilo.totaliScelti = true;
+    salva();
   };
 }
 // il libretto: incollato dalla pagina «Libretto» di Esse3 (o simili) oppure riga per riga

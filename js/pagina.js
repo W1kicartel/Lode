@@ -1,13 +1,13 @@
 // La pagina sotto la barra: il quadro della carriera a colpo d'occhio. Media, base di laurea, CFU, ore della settimana,
 // i prossimi appelli con il piano, il libretto e i mazzi del ripasso. Tutto il resto si fa dalla barra in alto.
-import { D, DESKTOP, VUOTO, backupValido, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esempio, esc, esporta, fatti, giorniTra, media, minuti, num, obiettivo, oggi, ore, piano, prossimi, salva, serie, settimana, sostituisci, traQuanto } from './dati.js';
+import { D, DESKTOP, VUOTO, backupValido, cambiaSistema, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esempio, esc, esporta, fatti, giorniTra, media, minuti, num, obiettivo, oggi, ore, piano, prossimi, salva, serie, settimana, sostituisci, traQuanto } from './dati.js';
 import { azioni, TASTI } from './lode.js';
 import { conta, tween } from './motore.js';
 import * as AI from './ai.js';
 import * as PG from './programma.js';
 import * as F from './focus.js';
 import { t, elenco, LINGUE, lingua, imposta } from './lingua.js';
-import { CODICI, nomeSistema } from './sistemi.js';
+import { CODICI, SISTEMI, nomeSistema, opzioniTotali } from './sistemi.js';
 import * as LB from './libretto.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -77,7 +77,7 @@ function libretto() {
   const m = media();
   if (!LB.italiano()) return librettoSistema(lista);
   return `<table><thead><tr><th>${t('pagina.col-esame')}</th><th class="num">${t('pagina.col-cfu')}</th><th class="num">${t('pagina.col-voto')}</th><th class="num">${t('pagina.col-data')}</th><th></th></tr></thead><tbody>
-    ${lista.map(e => `<tr><td>${esc(e.nome)}</td><td class="num">${esc(e.cfu)}</td><td class="num"><span class="voto">${e.idoneita ? `<span class="tenue">${t('pagina.idoneo')}</span>` : e.lode ? t('pagina.voto-lode', { voto: esc(e.voto) }) : esc(e.voto)}</span></td><td class="num tenue">${e.data ? esc(dataBreve(e.data)) : ''}</td><td class="num"><button class="x" data-a="modifica" data-e="${esc(e.id)}" aria-label="${t('pagina.modifica-esame', { nome: esc(e.nome) })}">⋯</button></td></tr>`).join('')}
+    ${lista.map(e => `<tr><td>${esc(e.nome)}</td><td class="num">${esc(e.cfu)}</td><td class="num"><span class="voto">${e.idoneita ? `<span class="tenue">${t('pagina.idoneo')}</span>` : LB.altroSistema(e) ? `<span class="tenue">${esc(LB.votoAltro(e))}</span>` : e.lode ? t('pagina.voto-lode', { voto: esc(e.voto) }) : esc(e.voto)}</span></td><td class="num tenue">${e.data ? esc(dataBreve(e.data)) : ''}</td><td class="num"><button class="x" data-a="modifica" data-e="${esc(e.id)}" aria-label="${t('pagina.modifica-esame', { nome: esc(e.nome) })}">⋯</button></td></tr>`).join('')}
   </tbody></table><div class="tbl-piede"><span>${t('pagina.libretto-esami', { n: esc(lista.length), cfu: esc(cfuFatti()) })}</span><span>${t('pagina.libretto-media', { media: m.ponderata ? esc(num(m.ponderata, 2)) : '—', base: m.base ? esc(num(m.base, 1)) : '—' })}</span></div>`;
 }
 // il libretto fuori dall'Italia (js/libretto.js): i voti come si scrivono nel sistema, i crediti col loro nome, il voto finale
@@ -112,27 +112,32 @@ function finestraEsame(id) {
     <div class="campi"><label class="tutta">${t('pagina.campo-nome')}<input name="nome" required value="${esc(e?.nome || '')}" placeholder="${t('pagina.esempio-esame')}"></label>
       ${LB.italiano() ? `<label>${t('pagina.campo-cfu')}<input name="cfu" type="number" min="1" max="30" value="${esc(e?.cfu || 6)}"></label>` : `<label>${t('libretto.campo-crediti', { crediti: esc(LB.crediti()) })}<input name="cfu" type="number" min="1" max="60" step="any" value="${esc(e?.cfu || LB.sis().esame)}"></label>`}
       <label>${e?.fatto ? t('pagina.campo-data') : t('pagina.campo-data-appello')}<input name="data" type="date" value="${esc(e?.data || '')}"></label>
-      ${!LB.italiano() ? `<label>${t('pagina.campo-voto')} <small>${t('libretto.campo-voto-nota', { esempio: esc(LB.votoEsempio()) })}</small><input name="voto" value="${esc(e?.fatto && (e.voto != null || e.idoneita) ? LB.votoEsame(e) : '')}" placeholder="${esc(LB.votoEsempio())}" autocomplete="off"></label>` : ''}
-      ${LB.italiano() ? `<label>${t('pagina.campo-voto')} <small>${t('pagina.campo-voto-nota')}</small><select name="voto"><option value="">—</option>${Array.from({ length: 13 }, (_, i) => 18 + i).map(v => `<option${e?.voto === v ? ' selected' : ''}>${v}</option>`).join('')}<option value="L"${e?.lode ? ' selected' : ''}>${t('pagina.trenta-e-lode')}</option><option value="I"${e?.idoneita ? ' selected' : ''}>${t('pagina.idoneita')}</option></select></label>` : ''}
+      ${!LB.italiano() ? `<label>${t('pagina.campo-voto')} <small>${t('libretto.campo-voto-nota', { esempio: esc(LB.votoEsempio()) })}</small><input name="voto" value="${esc(e?.fatto && (e.voto != null || e.idoneita) ? (LB.altroSistema(e) ? LB.votoScritto(e) : LB.votoEsame(e)) : '')}" placeholder="${esc(LB.votoEsempio())}" autocomplete="off"></label>` : ''}
+      ${LB.italiano() ? `<label>${t('pagina.campo-voto')} <small>${t('pagina.campo-voto-nota')}</small><select name="voto"><option value="">—</option>${Array.from({ length: 13 }, (_, i) => 18 + i).map(v => `<option${e?.voto === v ? ' selected' : ''}>${v}</option>`).join('')}<option value="L"${e?.lode ? ' selected' : ''}>${t('pagina.trenta-e-lode')}</option><option value="I"${e?.idoneita ? ' selected' : ''}>${t('pagina.idoneita')}</option>${LB.altroSistema(e) ? `<option value="X" selected>${esc(LB.votoAltro(e))}</option>` : ''}</select></label>` : ''}
       <label>${t('pagina.campo-ore')} <small>${t('pagina.campo-ore-nota')}</small><input name="ore" type="number" min="1" max="500" value="${esc(e ? obiettivo(e) : '')}" placeholder="${t('pagina.ore-segnaposto')}"></label></div>
     <div class="piedi">${e ? `<button class="btn piano" value="elimina">${t('pagina.elimina')}</button>` : ''}<div class="dx"><button class="btn piano" value="annulla" formnovalidate>${t('pagina.annulla')}</button><button class="btn primary" value="salva">${t('pagina.salva')}</button></div></div>`,
   (f, azione) => {
     if (azione === 'elimina') { if (!confirm(t('pagina.conferma-elimina', { nome: e.nome }))) return false; D.esami = D.esami.filter(x => x.id !== e.id); salva(); toast(t('pagina.esame-eliminato')); return; }
     if (!LB.italiano()) return salvaEsameSistema(e, f);
     const v = f.get('voto'), x = e || aggiungiEsame({ nome: f.get('nome'), cfu: +f.get('cfu') });
+    // «X»: il voto scritto con un altro sistema resta com'è (non si perde correggendo il nome o la data)
     Object.assign(x, { nome: String(f.get('nome')).trim(), cfu: +f.get('cfu') || 6, data: f.get('data') || null, oreObiettivo: f.get('ore') ? +f.get('ore') : null,
-      voto: v === 'L' ? 30 : v && v !== 'I' ? +v : null, lode: v === 'L', idoneita: v === 'I', fatto: !!v });
+      ...(v === 'X' ? {} : { voto: v === 'L' ? 30 : v && v !== 'I' ? +v : null, lode: v === 'L', idoneita: v === 'I', fatto: !!v }) });
+    if (v !== 'X') delete x.sistema;
     if (x.fatto && !x.data) x.data = oggi();
     salva(); toast(e ? t('pagina.salvato') : t('pagina.esame-aggiunto'));
   });
 }
 // salva l'esame della finestra fuori dall'Italia: il voto scritto si legge nel sistema dei voti (8,5 · 16/20 · 2,3 · A− · idoneo)
 function salvaEsameSistema(e, f) {
-  const scritto = String(f.get('voto') || '').trim(), r = scritto ? LB.leggiVoto(scritto) : null;
-  if (scritto && !r) { toast(t('libretto.voto-non-letto', { voto: scritto, esempio: LB.votoEsempio() })); return false; }
+  const scritto = String(f.get('voto') || '').trim();
+  // il voto scritto con un altro sistema, lasciato com'era: resta com'è
+  const resta = e && LB.altroSistema(e) && scritto === LB.votoScritto(e), r = scritto && !resta ? LB.leggiVoto(scritto) : null;
+  if (scritto && !r && !resta) { toast(t('libretto.voto-non-letto', { voto: scritto, esempio: LB.votoEsempio() })); return false; }
   const x = e || aggiungiEsame({ nome: f.get('nome'), cfu: +f.get('cfu') || LB.sis().esame });
   Object.assign(x, { nome: String(f.get('nome')).trim(), cfu: +f.get('cfu') || LB.sis().esame, data: f.get('data') || null, oreObiettivo: f.get('ore') ? +f.get('ore') : null,
-    voto: r && !r.idoneita ? r.voto : null, lode: !!r?.lode, idoneita: !!r?.idoneita, fatto: !!r });
+    ...(resta ? {} : { voto: r && !r.idoneita ? r.voto : null, lode: !!r?.lode, idoneita: !!r?.idoneita, fatto: !!r }) });
+  if (!resta) delete x.sistema;
   if (x.fatto && !x.data) x.data = oggi();
   salva(); toast(e ? t('pagina.salvato') : t('pagina.esame-aggiunto'));
 }
@@ -141,7 +146,7 @@ function finestraImpostazioni() {
     <div class="campi"><label>${t('pagina.campo-tuo-nome')}<input name="nome" value="${esc(D.profilo.nome)}" placeholder="${t('pagina.esempio-nome')}"></label>
       <label>${t('pagina.campo-corso')}<input name="corso" value="${esc(D.profilo.corso)}" placeholder="${t('pagina.esempio-corso')}"></label>
       <label>${t('pagina.campo-cfu-laurea')}<select name="cfuTotali">${(LB.italiano() ? [180, 120, 300, 360] : LB.opzioniTotali()).map(v => `<option${D.profilo.cfuTotali === v ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
-      <label>${t('pagina.campo-lode-vale')}<select name="lode">${[30, 31, 32, 33].map(v => `<option${D.profilo.lode === v ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
+      <label${LB.italiano() ? '' : ' hidden'}>${t('pagina.campo-lode-vale')}<select name="lode">${[30, 31, 32, 33].map(v => `<option${D.profilo.lode === v ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
       <label>${t('impostazioni.lingua')}<select name="lingua">${Object.entries(LINGUE).map(([c, l]) => `<option value="${c}"${c === lingua ? ' selected' : ''}>${esc(l.nome)}</option>`).join('')}</select></label>
       <label>${t('sistemi.scelta')} <small>${t('impostazioni.sistema-nota')}</small><select name="sistema">${CODICI.map(c => `<option value="${c}"${(D.profilo.sistema || 'it') === c ? ' selected' : ''}>${esc(nomeSistema(c))}</option>`).join('')}</select></label>
       <label>${t('pagina.campo-focus')}<input name="focus" type="number" min="5" max="180" value="${esc(D.imp.focus)}"></label>
@@ -160,7 +165,10 @@ function finestraImpostazioni() {
     if (azione === 'azzera') { if (!confirm(t('pagina.conferma-azzera'))) return false;
       const tolta = AI.FORNITORI[AI.scollegaFornitore()]; sostituisci(VUOTO());
       toast(tolta ? t('pagina.dati-cancellati-chiave', { nome: tolta.nome, sito: tolta.sito }) : t('pagina.dati-cancellati')); return; }
-    Object.assign(D.profilo, { nome: String(f.get('nome')).trim(), corso: String(f.get('corso')).trim(), cfuTotali: +f.get('cfuTotali'), lode: +f.get('lode'), sistema: CODICI.includes(f.get('sistema')) ? f.get('sistema') : 'it' });
+    // il sistema nuovo prima (i voti di prima restano col loro sistema, i crediti diventano quelli del sistema), poi i crediti scelti
+    const sistema = CODICI.includes(f.get('sistema')) ? f.get('sistema') : 'it'; cambiaSistema(sistema);
+    Object.assign(D.profilo, { nome: String(f.get('nome')).trim(), corso: String(f.get('corso')).trim(), cfuTotali: +f.get('cfuTotali'), lode: +f.get('lode'), sistema });
+    if (sistema !== 'it') D.profilo.totaliScelti = true;
     const nuova = String(f.get('lingua') || lingua);
     const chiave = String(f.get('chiave')).trim(), forn = String(f.get('fornitore') || '');
     Object.assign(D.imp, { focus: Math.max(5, +f.get('focus') || 25), pausa: Math.max(1, +f.get('pausa') || 5), suoni: !!f.get('suoni'), voceAlta: !!f.get('voceAlta'), aspetto: f.get('chiaro') ? 'chiaro' : 'scuro' });
@@ -171,6 +179,12 @@ function finestraImpostazioni() {
     // un'altra lingua: si salva e si ricarica (nell'app tutte le finestre, dal processo principale; nel browser questa
     // pagina), ma dopo la prova della chiave, che altrimenti si perderebbe a metà
     if (nuova !== lingua && Object.hasOwn(LINGUE, nuova)) prova.finally(() => setTimeout(() => { imposta(nuova); if (!DESKTOP) location.reload(); }, 600));
+  });
+  // un altro sistema scelto qui: i crediti di una laurea del sistema (240 ECTS, 360 credits…) e «la lode vale» solo in Italia
+  d.querySelector('[name=sistema]').addEventListener('change', ev => {
+    const c = ev.target.value, scelto = c === (D.profilo.sistema || 'it') ? D.profilo.cfuTotali : SISTEMI[c]?.totali;
+    d.querySelector('[name=cfuTotali]').innerHTML = opzioniTotali(c, scelto).map(v => `<option${scelto === v ? ' selected' : ''}>${v}</option>`).join('');
+    d.querySelector('[name=lode]').closest('label').hidden = c !== 'it';
   });
   d.querySelector('[name=nome]').focus();
 }

@@ -29,6 +29,11 @@ export const SISTEMI = {
     voti: [0, 0.7, 1, 1.3, 1.7, 2, 2.3, 2.7, 3, 3.3, 3.7, 4] },
 };
 export const CODICI = Object.keys(SISTEMI);
+// i crediti di una laurea fra cui scegliere (benvenuto, Impostazioni), quelli di primo livello per primi: in Italia le
+// opzioni di sempre (triennale, magistrale, ciclo unico); attuale (profilo.cfuTotali) si aggiunge se non c'è
+const TOTALI = { it: [180, 120, 300, 360], es: [240, 180, 300, 360], fr: [180, 120, 300], de: [180, 210, 240, 120], pt: [180, 240, 300, 360],
+  br: [240, 180, 300, 360], uk: [360, 480, 180], us: [120, 128, 180] };
+export const opzioniTotali = (s, attuale) => { const c = sistema(s).cod, n = Number(attuale); return [...new Set([...TOTALI[c], ...(n > 0 ? [n] : [])])]; };
 // il sistema dato (codice o oggetto); un codice sconosciuto vale l'Italia, come i dati di prima che non hanno profilo.sistema
 export const sistema = s => (s && typeof s === 'object' ? s : SISTEMI[s] || SISTEMI.it);
 // il sistema predefinito per la lingua della barra: l'inglese va al Regno Unito, il portoghese al Brasile (la lingua è il
