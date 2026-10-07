@@ -72,7 +72,7 @@ function cartaEsame(e) {
 }
 function libretto() {
   const lista = fatti().sort((a, b) => (b.data || '').localeCompare(a.data || ''));
-  if (!lista.length) return `<p style="margin:0;padding:18px 16px;color:var(--muted);font-size:14px">${t('pagina.libretto-vuoto')}</p>`;
+  if (!lista.length) return `<p style="margin:0;padding:18px 16px;color:var(--muted);font-size:14px">${LB.italiano() ? t('pagina.libretto-vuoto') : t('libretto.libretto-vuoto', { voto: esc(LB.votoEsempio()) })}</p>`;
   const m = media();
   if (!LB.italiano()) return librettoSistema(lista);
   return `<table><thead><tr><th>${t('pagina.col-esame')}</th><th class="num">${t('pagina.col-cfu')}</th><th class="num">${t('pagina.col-voto')}</th><th class="num">${t('pagina.col-data')}</th><th></th></tr></thead><tbody>
@@ -139,7 +139,7 @@ function finestraImpostazioni() {
   const d = finestra(`<h2>${t('pagina.impostazioni')}</h2><p>${t('pagina.impostazioni-aiuto')}</p>
     <div class="campi"><label>${t('pagina.campo-tuo-nome')}<input name="nome" value="${esc(D.profilo.nome)}" placeholder="${t('pagina.esempio-nome')}"></label>
       <label>${t('pagina.campo-corso')}<input name="corso" value="${esc(D.profilo.corso)}" placeholder="${t('pagina.esempio-corso')}"></label>
-      <label>${t('pagina.campo-cfu-laurea')}<select name="cfuTotali">${[180, 120, 300, 360].map(v => `<option${D.profilo.cfuTotali === v ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
+      <label>${t('pagina.campo-cfu-laurea')}<select name="cfuTotali">${(LB.italiano() ? [180, 120, 300, 360] : LB.opzioniTotali()).map(v => `<option${D.profilo.cfuTotali === v ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
       <label>${t('pagina.campo-lode-vale')}<select name="lode">${[30, 31, 32, 33].map(v => `<option${D.profilo.lode === v ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
       <label>${t('pagina.campo-focus')}<input name="focus" type="number" min="5" max="180" value="${esc(D.imp.focus)}"></label>
       <label>${t('pagina.campo-pausa')}<input name="pausa" type="number" min="1" max="60" value="${esc(D.imp.pausa)}"></label>

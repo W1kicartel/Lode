@@ -21,6 +21,7 @@ export default {
   'libretto.incolla-sotto': 'Abra seu histórico no portal da faculdade, selecione tudo, copie e cole aqui: uma linha por matéria, com nome, créditos e nota. Ou escreva você mesmo, por exemplo «{esempio}».',
   'libretto.alla-laurea': '{n} {crediti} para se formar',
   'libretto.campo-crediti': 'Créditos ({crediti})',
+  'libretto.libretto-vuoto': 'Nenhuma matéria ainda. Escreva na barra <kbd>tirei {voto} em física</kbd>.',
   'libretto.riga-esempio': '{nome}, {n} {crediti}, {voto}',
   'libretto.esame-esempio': 'Cálculo 1',
 };

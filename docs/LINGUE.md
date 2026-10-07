@@ -88,6 +88,10 @@ Le funzioni di libretto, media, «quanto mi serve» ed «e se prendo…» passan
 - **«Quanto mi serve»:** diventa «che media mi serve nei crediti che mancano per arrivare a X», nella scala del sistema. Nel tedesco migliore = più basso.
 - **Base di laurea × 110 / 30:** solo per `it`.
 - **Libretto incollato:** il lettore di Esse3 resta per l'italiano. Per gli altri c'è un lettore generico di tabelle (nome · crediti · voto) che riconosce la scala del sistema.
+- **Dove si aggancia:** `js/dati.js` (`media`, `serve`, `simula`, `cfuFatti`, `registraVoto`, `votoFinale`, `sistemaVoti`) legge `D.profilo.sistema` (l'Italia se manca) e passa da `sistemi.js`; `media()`, `serve()` e `simula()` restituiscono gli oggetti di prima. Fuori dall'Italia le schede del libretto (`js/lode.js`), la pagina (`js/pagina.js`) e il benvenuto (`js/benvenuto.js`) prendono numeri e frasi da `js/libretto.js` (catalogo `libretto`); in Italia restano sul codice e sulle frasi di sempre.
+- **Il voto detto nella barra:** `interpretaVoti()` di `js/libretto.js` prova i pezzi della frase che si leggono come voto del sistema («8,5», «16/20», «2,3», «A−», «65 %») al posto di un voto italiano di comodo, così i riconoscitori restano quelli di oggi. Un voto che il sistema non ha si dice e non si segna; uno non sufficiente non va nel libretto (nel GPA la F sì).
+- **Cambio di sistema:** fuori dall'Italia i voti letti dal disco si tengono anche se non sono della scala (un 28 rimasto dall'Italia): restano nel libretto da correggere e non contano nei conti.
+- **Prove:** `node test/libretto-sistemi.mjs`.
 
 ## Il vault
 

@@ -21,6 +21,7 @@ export default {
   'libretto.incolla-sotto': 'Abre tu expediente en la web de la universidad, selecciona todo, copia y pégalo aquí: una línea por asignatura, con nombre, créditos y nota. O escríbelas tú, por ejemplo «{esempio}».',
   'libretto.alla-laurea': '{n} {crediti} para terminar la carrera',
   'libretto.campo-crediti': 'Créditos ({crediti})',
+  'libretto.libretto-vuoto': 'Aún no hay asignaturas. Escribe en la barra <kbd>saqué un {voto} en física</kbd>.',
   'libretto.riga-esempio': '{nome}, {n} {crediti}, {voto}',
   'libretto.esame-esempio': 'Cálculo 1',
 };

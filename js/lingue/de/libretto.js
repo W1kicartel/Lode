@@ -21,6 +21,7 @@ export default {
   'libretto.incolla-sotto': 'Öffne deinen Notenspiegel im Uni-Portal, markier alles, kopier es und füg es hier ein: eine Zeile pro Prüfung, mit Name, Credits und Note. Oder schreib sie selbst, zum Beispiel «{esempio}».',
   'libretto.alla-laurea': 'noch {n} {crediti} bis zum Abschluss',
   'libretto.campo-crediti': 'Credits ({crediti})',
+  'libretto.libretto-vuoto': 'Noch keine Prüfungen. Schreib in die Leiste <kbd>ich habe eine {voto} in Physik</kbd>.',
   'libretto.riga-esempio': '{nome}, {n} {crediti}, {voto}',
   'libretto.esame-esempio': 'Analysis 1',
 };

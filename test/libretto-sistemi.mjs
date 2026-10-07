@@ -128,6 +128,12 @@ const CASI = {
     incolla: 'Course\tCredits\tGrade\nMATH 221 Calculus I\t4\tA-\nPHYS 201 Physics\t4\tB\nCHEM 101 Chemistry\t3\tC+\nHIST 100 History\t3\tF',
     attesi: [['Calculus I', 4, 3.7], ['Physics', 4, 3], ['Chemistry', 3, 2.3], ['History', 3, 0]] },
 };
+// la frase di esempio della pagina quando il libretto è vuoto («ho preso 8,5 in fisica», «I got A− in physics»…): la barra
+// la capisce, con il voto d'esempio del sistema
+function esempioVuoto() {
+  const f = L.t('libretto.libretto-vuoto', { voto: LB.votoEsempio() }).match(/<kbd>(.*)<\/kbd>/)?.[1], c = f && cmd(f);
+  return c?.tipo === 'voto' && c.voto === LB.leggiVoto(LB.votoEsempio()).voto && !c.fuoriScala;
+}
 // quello che fa la barra con il comando del voto (esegui → votoSistema in js/lode.js), senza la scheda
 function registra(c) {
   if (c.fuoriScala || !LB.valido(c.voto)) return 'non valido';
@@ -189,6 +195,9 @@ for (const [cod, K] of Object.entries(CASI)) {
   prova(`${cod}: un voto nel libretto si scrive come nel sistema`, Dm.fatti().every(e => LB.votoEsame(e) === S.formato(e.voto, s, { lode: e.lode, idoneita: e.idoneita })));
   // la finestra della pagina: il voto scritto come sul libretto, e l'esempio si rilegge
   prova(`${cod}: l'esempio della pagina si rilegge`, LB.leggiVoto(LB.votoEsempio())?.voto != null && LB.rigaEsempio().includes(LB.votoEsempio()));
+  prova(`${cod}: il comando d'esempio del libretto vuoto è un voto`, esempioVuoto(), L.t('libretto.libretto-vuoto', { voto: LB.votoEsempio() }));
+  const tot = LB.opzioniTotali();
+  prova(`${cod}: crediti della laurea nelle impostazioni`, tot[0] === s.totali && tot.includes(K.totali) && tot.includes(180) && new Set(tot).size === tot.length, tot.join());
   // il libretto incollato nel benvenuto: il lettore generico, voti senza arrotondare
   if (!B.errore) {
     const lib = B.librettoIncollato(K.incolla);
@@ -216,9 +225,31 @@ Dm.sostituisci({ ...Dm.VUOTO(), profilo: { ...Dm.VUOTO().profilo, sistema: 'de' 
 prova('de: il 5,0 non conta', Dm.media().ponderata === 1.7 && Dm.cfuFatti() === 10 && Dm.votoFinale().valore === 1.7);
 prova('de: «quanto mi serve per 1,0» è un obiettivo giusto, «per 0,7» no', cmd('quanto mi serve per 1,0')?.base === 1 && cmd('quanto mi serve per 0,7')?.fuoriScala === true);
 // i dati letti dal disco fuori dall'Italia: voti del sistema sì, voti fuori scala no
-for (const [cod, v, atteso] of [['es', 8.5, 8.5], ['es', '7,5', null], ['es', 11, null], ['fr', 16.25, 16.25], ['fr', 21, null], ['de', 2.3, 2.3], ['de', 2.5, null], ['us', 3.7, 3.7], ['us', 3.5, null], ['uk', 65, 65], ['uk', 101, null], ['br', 9.5, 9.5], ['pt', 18, 18]]) {
-  Dm.sostituisci({ ...Dm.VUOTO(), profilo: { ...Dm.VUOTO().profilo, sistema: cod }, esami: [{ id: 'x1', nome: 'X', cfu: 6, voto: v, fatto: true }] });
+// (un voto che il sistema non ha si tiene, come numero, ma non conta: lo studente ha cambiato sistema e lo corregge)
+for (const [cod, v, atteso, conta] of [['es', 8.5, 8.5, true], ['es', '7,5', null], ['es', 'A', null], ['es', 11, 11, false], ['es', 28, 28, false], ['fr', 16.25, 16.25, true], ['fr', 21, 21, false], ['de', 2.3, 2.3, true], ['de', 2.5, 2.5, false],
+  ['us', 3.7, 3.7, true], ['us', 3.5, 3.5, false], ['us', 28, 28, false], ['uk', 65, 65, true], ['uk', 101, null], ['uk', -3, null], ['br', 9.5, 9.5, true], ['pt', 18, 18, true]]) {
+  Dm.sostituisci({ ...Dm.VUOTO(), profilo: { ...Dm.VUOTO().profilo, sistema: cod }, esami: [{ id: 'x1', nome: 'X', cfu: 6, voto: v, fatto: true }, { id: 'x2', nome: 'Y', cfu: 6, voto: null, fatto: false }] });
   prova(`${cod}: voto ${JSON.stringify(v)} dal disco → ${atteso}`, D().esami[0].voto === atteso, String(D().esami[0].voto));
+  if (atteso != null) {
+    const s = S.sistema(cod), m = Dm.media();
+    prova(`${cod}: voto ${JSON.stringify(v)} ${conta ? 'conta' : 'non conta'} nella media`, conta ? m.n === (s.bocciatiInMedia || S.superato(atteso, s) ? 1 : 0) : m.n === 0 && Dm.serve(LB.obiettivo()).cfu === (D().profilo.cfuTotali || s.totali) - Dm.cfuFatti() && Dm.simula('x2', s.max).prima.n === 0, JSON.stringify(m));
+  }
+}
+// cambio di sistema: dall'Italia alla Spagna i voti italiani restano (da correggere), la media spagnola parte vuota
+Dm.sostituisci(Dm.esempio());
+const votiIt = Dm.fatti().map(e => e.voto);
+D().profilo.sistema = 'es'; Dm.sostituisci(structuredClone(D()));
+uguale('it → es: i voti restano', Dm.fatti().map(e => e.voto), votiIt);
+prova('it → es: non contano nella media spagnola', Dm.media().n === 0 && Dm.votoFinale() === null);
+
+// ogni LB.<funzione> usata da lode.js, pagina.js e benvenuto.js c'è in js/libretto.js (le schede non girano in node)
+{
+  const { readFileSync } = await import('node:fs');
+  for (const f of ['lode.js', 'pagina.js', 'benvenuto.js']) {
+    const usate = [...new Set([...readFileSync(new URL('../js/' + f, import.meta.url), 'utf8').matchAll(/\bLB\.(\w+)/g)].map(m => m[1]))];
+    const mancano = usate.filter(n => typeof LB[n] !== 'function');
+    prova(`${f}: le funzioni di js/libretto.js ci sono (${usate.length})`, usate.length > 2 && !mancano.length, mancano.join(', '));
+  }
 }
 
 /* ---------- 3. le altre lingue con il loro sistema ---------- */
@@ -240,7 +271,17 @@ for (const [lin, cod, nome, frasi, serveInizio] of LINGUE) {
   const ts = LB.testoServe(LB.obiettivo());
   prova(`${lin}/${cod}: «quanto mi serve» nella lingua della barra`, ts.startsWith(serveInizio) && !ts.includes('{'), ts);
   prova(`${lin}/${cod}: crediti e voto finale nella lingua della barra`, LB.crediti() === S.nomeCrediti(cod) && !LB.crediti().startsWith('sistemi.'));
+  prova(`${lin}/${cod}: il comando d'esempio del libretto vuoto è un voto`, esempioVuoto(), L.t('libretto.libretto-vuoto', { voto: LB.votoEsempio() }));
   prova(`${lin}/${cod}: esempio della riga nella lingua della barra`, !LB.rigaEsempio().includes('{') && LB.rigaEsempio().includes(LB.votoEsempio()), LB.rigaEsempio());
+}
+// ogni lingua della barra con ogni sistema (la lingua non è il paese): la frase d'esempio del libretto vuoto, «quanto mi
+// serve» e «e se prendo» detti con il voto del sistema
+for (const lin of ['it', 'en', 'es', 'fr', 'de', 'pt']) {
+  await L.usa(lin); await C.carica(lin);
+  for (const cod of Object.keys(CASI)) {
+    Dm.sostituisci({ ...Dm.VUOTO(), profilo: { ...Dm.VUOTO().profilo, sistema: cod } });
+    prova(`${lin}/${cod}: il comando d'esempio del libretto vuoto è un voto`, esempioVuoto(), L.t('libretto.libretto-vuoto', { voto: LB.votoEsempio() }));
+  }
 }
 await L.usa('it');
 

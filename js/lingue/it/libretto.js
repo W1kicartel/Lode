@@ -22,6 +22,7 @@ export default {
   'libretto.incolla-sotto': 'Apri il libretto sul portale dell\'ateneo, seleziona tutto, copia e incolla qui: una riga per esame, con nome, crediti e voto. Oppure scrivili tu, per esempio «{esempio}».',
   'libretto.alla-laurea': '{n} {crediti} alla laurea',
   'libretto.campo-crediti': 'Crediti ({crediti})',
+  'libretto.libretto-vuoto': 'Nessun esame dato. Scrivi nella barra <kbd>ho preso {voto} in fisica</kbd>.',
   'libretto.riga-esempio': '{nome}, {n} {crediti}, {voto}',
   'libretto.esame-esempio': 'Analisi 1',
 };

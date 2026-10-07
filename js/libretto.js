@@ -152,3 +152,6 @@ export function testoObiettivoFuori(s = sis()) {
   const [da, a] = s.migliore === 'basso' ? [s.min, s.sufficienza] : [s.sufficienza, s.max];
   return t('libretto.obiettivo-fuori', { sistema: S.nomeSistema(s), da: formatoNumero(da, s), a: formatoNumero(a, s) });
 }
+// i crediti di una laurea fra cui scegliere nelle impostazioni: quelli del sistema per primi (240 in Spagna e in Brasile,
+// 360 nel Regno Unito, 120 negli Stati Uniti), più quelli che hai già
+export const opzioniTotali = (s = sis()) => [...new Set([s.totali, 180, 240, 120, 300, 360, Number(D.profilo.cfuTotali) || s.totali])];

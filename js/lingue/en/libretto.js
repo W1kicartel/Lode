@@ -21,6 +21,7 @@ export default {
   'libretto.incolla-sotto': 'Open your transcript on the university portal, select all, copy and paste it here: one line per exam, with name, credits and grade. Or type them yourself, for example «{esempio}».',
   'libretto.alla-laurea': '{n} {crediti} to graduation',
   'libretto.campo-crediti': 'Credits ({crediti})',
+  'libretto.libretto-vuoto': 'No exams yet. Type in the bar <kbd>I got {voto} in physics</kbd>.',
   'libretto.riga-esempio': '{nome}, {n} {crediti}, {voto}',
   'libretto.esame-esempio': 'Calculus 1',
 };

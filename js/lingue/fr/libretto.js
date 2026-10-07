@@ -21,6 +21,7 @@ export default {
   'libretto.incolla-sotto': 'Ouvre ton relevé de notes sur l\'ENT de ta fac, sélectionne tout, copie et colle ici : une ligne par matière, avec le nom, les crédits et la note. Ou écris-les toi-même, par exemple «{esempio}».',
   'libretto.alla-laurea': '{n} {crediti} avant le diplôme',
   'libretto.campo-crediti': 'Crédits ({crediti})',
+  'libretto.libretto-vuoto': 'Aucune matière pour l\'instant. Écris dans la barre <kbd>j\'ai eu {voto} en physique</kbd>.',
   'libretto.riga-esempio': '{nome}, {n} {crediti}, {voto}',
   'libretto.esame-esempio': 'Analyse 1',
 };

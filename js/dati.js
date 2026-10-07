@@ -25,9 +25,11 @@ export const DESKTOP = typeof window !== 'undefined' && !!window.lodeDesktop;
 const chiaveLocale = () => { try { return localStorage.getItem('lode:chiave') || ''; } catch { return ''; } };
 // cfu, voto e ore sempre in forma (un numero, un voto intero 18-30 o null): arrivano anche da un libretto letto dall'AI, da
 // un backup o da un dati.json di un vault sincronizzato, e finiscono nelle pagine. Fuori dall'Italia (profilo.sistema) il voto
-// è un numero nella scala del sistema (8.5, 16, 2.3, 3.7: js/sistemi.js); in Italia il controllo è quello di sempre
+// è un numero (8.5, 16, 2.3, 3.7: js/sistemi.js) e si tiene anche se non è della scala del sistema (lo studente ha appena
+// cambiato sistema: i voti di prima non si buttano, restano nel libretto da correggere e non contano nella media, vedi
+// validi()); in Italia il controllo è quello di sempre
 const ID = /^[\w-]{1,40}$/, DATA = /^\d{4}-\d{2}-\d{2}$/;
-const votoInForma = (v, sis) => v !== null && v !== '' && (!sis || sis === 'it' ? Number.isInteger(+v) && +v >= 18 && +v <= 30 : S.valido(+v, sis)) ? +v : null;
+const votoInForma = (v, sis) => v !== null && v !== '' && (!sis || sis === 'it' ? Number.isInteger(+v) && +v >= 18 && +v <= 30 : Number.isFinite(+v) && +v >= 0 && +v <= 100) ? +v : null;
 const inForma = (e, sis) => e && typeof e === 'object' ? { ...e, cfu: Number(e.cfu) || 6, voto: votoInForma(e.voto, sis),
   ...(e.oreObiettivo != null ? { oreObiettivo: Number(e.oreObiettivo) || null } : {}) } : e;
 // i dati di Lode letti dal disco: .lode/dati.json nel vault (che si sincronizza o si condivide: chi può scriverci può
@@ -186,19 +188,21 @@ export function registraVoto(esameId, { voto, lode = false, idoneita = false, da
 export const sistemaVoti = () => D.profilo?.sistema || 'it';
 const opzVoti = () => ({ sistema: sistemaVoti(), lode: D.profilo.lode, totali: D.profilo.cfuTotali });
 const senzaFinale = m => { const { finale, ...r } = m; return r; };
-export function media(lista = fatti()) { return senzaFinale(S.media(lista, opzVoti())); }
+// fuori dall'Italia un voto che il sistema non ha (un 28 rimasto da prima del cambio di sistema) non entra nei conti
+const validi = lista => { const s = sistemaVoti(); return s === 'it' ? lista : lista.filter(e => e.voto == null || e.idoneita || S.valido(Number(e.voto), s)); };
+export function media(lista = fatti()) { return senzaFinale(S.media(validi(lista), opzVoti())); }
 // il voto finale della media ponderata nel sistema scelto: { tipo, valore, max, mention | classe } oppure null
 export const votoFinale = (m = media()) => S.finale(m.ponderata, sistemaVoti());
 // i crediti presi: in Italia tutti gli esami dati (come sempre); altrove un esame non superato (5,0, suspenso, F) non li dà
 export const cfuFatti = () => { const s = S.sistema(sistemaVoti()); return fatti().filter(e => s.cod === 'it' || e.voto == null || e.idoneita || S.superato(Number(e.voto), s)).reduce((x, e) => x + e.cfu, 0); };
 // che media serve nei CFU che mancano per arrivare a una base di partenza (es. 100/110). Fuori dall'Italia l'obiettivo è il
 // voto finale del sistema (la media, la moyenne, la Gesamtnote, il GPA…). 6 CFU circa di prova finale, senza voto (Italia)
-export function serve(baseObiettivo) { return S.serve(baseObiettivo, fatti(), opzVoti()); }
+export function serve(baseObiettivo) { return S.serve(baseObiettivo, validi(fatti()), opzVoti()); }
 // se prendo X in quell'esame, come cambia la media? (fuori dall'Italia anche meglio: true se la media migliora, in
 // Germania quando scende)
 export function simula(esameId, voto, lode = false) {
   const e = esame(esameId); if (!e) return null;
-  const x = S.simula(e, voto, lode, fatti(), opzVoti());
+  const x = S.simula(e, voto, lode, validi(fatti()), opzVoti());
   const r = { prima: senzaFinale(x.prima), dopo: senzaFinale(x.dopo), delta: x.delta };
   return sistemaVoti() === 'it' ? r : { ...r, meglio: x.meglio };
 }
