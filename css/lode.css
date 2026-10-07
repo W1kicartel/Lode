@@ -775,3 +775,19 @@ button.ld-ripeti-riga:hover{background:rgba(255,255,255,.06)}
 .ld-turno-ag code{font:500 12px var(--mono)}
 .ld-turno-ag blockquote{margin:6px 0 10px;padding:6px 0 6px 12px;border-left:2px solid var(--ld-riga);font-size:12.5px;color:var(--muted)}
 .ld-turno-ag .az{display:flex;gap:8px;margin-top:8px}
+
+/* Cose nuove (glossario) */
+.ld-cosenuove{margin:12px 0 4px;padding-top:10px;border-top:1px solid var(--ld-riga)}
+.ld-cosenuove .tit{margin:0 0 6px;font-size:13.5px;font-weight:500}
+.ld-cosenuove code{font:500 12px var(--mono)}
+.ld-cosenuove .voce{border-top:1px solid var(--ld-riga)}
+.ld-cosenuove .apri{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:baseline;gap:10px;width:100%;min-height:36px;padding:8px 0}
+.ld-cosenuove .apri:focus-visible{outline:1px solid var(--ink);outline-offset:2px;border-radius:4px}
+.ld-cosenuove .apri:disabled{cursor:default;opacity:.6}
+.ld-cosenuove .apri .ld-tenue{margin-left:auto;font:500 11px var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ld-cosenuove .corpo{padding:0 0 10px}
+.ld-cosenuove .corpo p{margin:4px 0;font-size:13.5px;line-height:1.5}
+.ld-cosenuove .riga{margin:4px 0 8px;padding:6px 10px;border-radius:9px;background:rgba(255,255,255,.025);box-shadow:inset 0 0 0 1px var(--ld-filo),inset 2px 0 0 #fff;font:12px/1.6 var(--mono);color:rgba(245,245,245,.9);white-space:pre-wrap;overflow-wrap:anywhere}
+.ld-cosenuove .risp{padding:8px 11px;border-radius:9px;background:rgba(255,255,255,.07)}
+.ld-cosenuove .az{display:flex;gap:8px;margin-top:6px}
+.ld-cosenuove>.ld-nota{margin-top:6px}

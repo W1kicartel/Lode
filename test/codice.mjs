@@ -4,6 +4,8 @@
 import * as A from '../js/codice/albero.js';
 import { MODELLI, CONCETTI, MUTANTI, ERRORI, istanza, vista, compatta, creaRng, modello, modelliPer, variante } from '../js/codice/modelli.js';
 import { scegliModelli, preparaManche, valuta, anteprima, scaduti, CHIAVE, schedaStampa, collega, corsoProgrammazione, linguaDi } from '../js/codice/stampa.js';
+import * as G from '../js/codice/glossario.js';
+import { coseNuoveDi, htmlCoseNuove, mostraCoseNuove, mettiNelRipasso } from '../js/codice/progetto.js';
 
 const { num, car, reale, v, indice, valore, indirizzo, bin, un, cast, ternario, assegna, incr, chiama, printf, dich, array, espr, blocco, se, mentre, fai, per, scegli, caso, interrompi, continua, ritorna, param, funzione, main, programma, esegui, stampaC, normalizza, ErroreC } = A;
 let ok = 0, ko = 0;
@@ -257,6 +259,101 @@ prova('corsi che nominano Python o Java sono di programmazione', corsoProgrammaz
 const pyManche = preparaManche({ seme: 11, oggi: OGGI, lingua: 'python' });
 prova('preparaManche in Python: 5 domande, tutte Python', pyManche.length === 5 && pyManche.every(x => x.lingua === 'python' && modello(x.modello).lingue.includes('python')));
 prova('anteprima in Java: la prima domanda è quella promessa', [1, 2, 3, 4, 5].every(sm => anteprima({ memoria, seme: sm, oggi: OGGI, lingua: 'java' }).modello === preparaManche({ memoria, seme: sm, oggi: OGGI, lingua: 'java' })[0].modello));
+
+/* ---------- glossario: «Cose nuove» (js/codice/glossario.js), il dizionario fisso e le voci nuove di un diff ---------- */
+{
+  const V = G.VOCI, chiavi = new Set(V.map(v => v.l + '|' + v.k));
+  prova('glossario: almeno 55 voci', V.length >= 55, V.length);
+  prova('glossario: ogni voce ha k, lingua, cerca, domanda con «?» e risposta corta', V.every(v => v.k && ['c', 'java', 'python'].includes(v.l) && v.cerca instanceof RegExp && /\?$/.test(v.d) && v.r.trim() && v.r.length <= 260), V.filter(v => !(v.r.length <= 260 && /\?$/.test(v.d))).map(v => v.k).join(', '));
+  prova('glossario: niente coppie k+lingua doppie, e k unica (visti è per chiave)', chiavi.size === V.length && new Set(V.map(v => v.k)).size === V.length);
+  prova('glossario: c\'è ogni lingua (C ≥ 20, Java ≥ 15, Python ≥ 15)', V.filter(v => v.l === 'c').length >= 20 && V.filter(v => v.l === 'java').length >= 15 && V.filter(v => v.l === 'python').length >= 15);
+  prova('glossario: domande e risposte su una riga, con le «virgolette basse» se servono', V.every(v => !/\n/.test(v.d + v.r) && !/[“”]/.test(v.d + v.r)));
+  const rif = (rel, ...righe) => { let na = 0, nb = 0; return { rel, blocchi: [{ righe: righe.map(([t, x]) => ({ t, s: x, na: t === '+' ? undefined : ++na, nb: t === '-' ? undefined : ++nb })) }] }; };
+  const k = l => l.map(x => x.voce.k).join(',');
+  let r = G.coseNuove([rif('lab3/lista.c', [' ', 'void cresci(int **p, int n) {'], ['+', '  p2 = realloc(p, n);'], [' ', '}'])]);
+  prova('glossario: realloc in una riga + → trovata, con file e riga', r.length === 1 && r[0].voce.k === 'realloc' && r[0].rel === 'lab3/lista.c' && r[0].riga === 2 && r[0].testo === 'p2 = realloc(p, n);', JSON.stringify(r));
+  r = G.coseNuove([rif('lista.c', [' ', '  q = realloc(q, m);'], ['+', '  p = realloc(p, n);'])]);
+  prova('glossario: c\'era già nel contesto → niente', !r.length, k(r));
+  r = G.coseNuove([rif('lista.c', ['-', '  q = realloc(q, m);'], ['+', '  p = realloc(p, n);'])]);
+  prova('glossario: c\'era già in una riga tolta → niente', !r.length, k(r));
+  r = G.coseNuove([rif('lista.c', ['+', 'int realloc(int x) {'], ['+', '  return x;'], ['+', '}'], ['+', '  y = realloc(3);'])]);
+  prova('glossario: una funzione dello studente con lo stesso nome → niente (falso allarme)', !r.length, k(r));
+  r = G.coseNuove([rif('u.c', ['+', 'static size_t strlen(const char *s);']), rif('m.c', ['+', '  n = strlen(s);'])]);
+  prova('glossario: la definizione in un altro file della stessa lingua conta', !r.length, k(r));
+  r = G.coseNuove([rif('lista.c', ['+', '  // p = realloc(p, n);'], ['+', '  printf("realloc(p, n) fallita\\n");'], ['+', '/* free(p);'], ['+', '   strtok(s, ",") */'], ['+', ' * qsort(v, n, 4, f);'])]);
+  prova('glossario: solo in un commento o tra virgolette → niente', !r.length, k(r));
+  r = G.coseNuove([rif('lista.c', ['+', '  if (strcmp(a, "free(") == 0) free(a); // strtok(']), rif('n.c', ['+', '  return x; /* fine */ memcpy(d, s, n);'])]);
+  prova('glossario: il codice vero accanto a stringhe e commenti si vede', k(r) === 'free,strcmp,memcpy' || k(r) === 'strcmp,free,memcpy', k(r));
+  r = G.coseNuove([rif('es.py', ['+', 'for i, x in enumerate(v):'], ['+', '    print(f"{i}: {x}")'], ['+', '    # zip(a, b)'])]);
+  prova('glossario: Python, enumerate e f-string (zip nel commento no)', k(r) === 'enumerate,f-string', k(r));
+  r = G.coseNuove([rif('src/Rubrica.java', ['+', '    mappa.computeIfAbsent(k, x -> new ArrayList<>()).add(v);'])]);
+  prova('glossario: Java, computeIfAbsent', k(r) === 'computeIfAbsent' && r[0].riga === 1, k(r));
+  r = G.coseNuove([rif('Lista.java', ['+', '    public int compareTo(Voto o) {'], ['+', '        try (Scanner in = new Scanner(f)) {'], ['+', '        Iterator<Integer> it = v.iterator(); it.remove();'], ['+', '        v.remove(1);'])]);
+  prova('glossario: Java, try-with-resources, Iterator.remove e List.remove distinti', k(r) === 'try-with-resources,Iterator.remove,List.remove', k(r));
+  r = G.coseNuove([rif('m.py', ['+', 'def f(x, v=[]):'], ['+', '    return [y for r in m for y in r]'], ['+', 'if a is b: pass'], ['+', 'if a is None: pass'], ['+', 's = t[::-1]'])]);
+  prova('glossario: Python, default mutabile, comprehension annidata, is, [::-1]', k(r) === 'default mutabile,list comprehension annidata,is e ==,[::-1]', k(r));
+  r = G.coseNuove([rif('m.py', ['+', 'def zip(a, b):'], ['+', '    return list(zip(a, b))'], ['+', 'class Counter:'], ['+', 'c = Counter()'])]);
+  prova('glossario: Python, def zip e class Counter dello studente → niente', !r.length, k(r));
+  r = G.coseNuove([rif('note.txt', ['+', 'p = realloc(p, n);']), rif('README.md', ['+', 'usa `strtok(s, " ")`'])]);
+  prova('glossario: file non C/Java/Python → niente', !r.length, k(r));
+  r = G.coseNuove([rif('a.c', ['+', 'a = malloc(1); b = calloc(1, 2); c = realloc(a, 3); free(b);'], ['+', 'strcpy(d, s); strcat(d, s); n = strlen(d); x = atoi(d);'])]);
+  prova('glossario: 8 voci nuove → al massimo 5, nell\'ordine del diff', r.length === 5 && k(r) === 'malloc,calloc,realloc,free,strcpy', k(r));
+  r = G.coseNuove([rif('a.c', ['+', 'p = realloc(p, n);']), rif('b.c', ['+', 'q = realloc(q, n);'])]);
+  prova('glossario: la stessa voce in due file → una volta sola (la prima)', r.length === 1 && r[0].rel === 'a.c', JSON.stringify(r));
+  const realloc = V.find(v => v.k === 'realloc');
+  r = G.coseNuove([rif('a.c', ['+', 'p = realloc(p, n); t = strtok(s, ",");'])], { visti: { realloc: { g: '2026-10-01', come: 'so' } } });
+  prova('glossario: una voce in visti → saltata', k(r) === 'strtok', k(r));
+  r = G.coseNuove([rif('a.c', ['+', 'p = realloc(p, n); t = strtok(s, ",");'])], { carte: [{ fronte: realloc.d, retro: 'x' }] });
+  prova('glossario: una carta con la stessa domanda → saltata', k(r) === 'strtok', k(r));
+  r = G.coseNuove([{ ...rif('a.c', ['+', 'p = realloc(p, n);']), tagliato: true }, { ...rif('b.c', ['+', 'p = realloc(p, n);']), grande: true }]);
+  prova('glossario: diff tagliato o grande → si salta il file', !r.length, k(r));
+  prova('glossario: static dentro una funzione sì, una funzione static no', k(G.coseNuove([rif('a.c', ['+', '    static int conta = 0;'])])) === 'static locale' && !G.coseNuove([rif('a.c', ['+', 'static int conta(int x) {'])]).length);
+  prova('glossario: la riga mostrata è tagliata a 120 caratteri', G.coseNuove([rif('a.c', ['+', '   p = malloc(' + 'x'.repeat(300) + ');'])])[0].testo.length === 120);
+  prova('glossario: linguaDi', G.linguaDi('lista.h') === 'c' && G.linguaDi('src/main.c') === 'c' && G.linguaDi('Main.java') === 'java' && G.linguaDi('es.py') === 'python' && G.linguaDi('LEGGIMI.md') === null && G.linguaDi('Makefile') === null && G.linguaDi('') === null);
+  prova('glossario: niente blocchi o file storti non rompono', G.coseNuove([{ rel: 'a.c' }, null, { rel: 'b.c', blocchi: [{}] }].filter(Boolean)).length === 0 && G.coseNuove().length === 0);
+  // la carta e l'esame
+  const x = G.coseNuove([rif('lab3/lista.c', ['+', 'p2 = realloc(p, n);'])])[0], c = G.cartaDa(x);
+  prova('glossario: la carta ha la domanda davanti e la fonte dietro', c.fronte === realloc.d && c.retro === realloc.r + '\n\nDa: lab3/lista.c, riga 1');
+  const esami = [{ id: 'a1', nome: 'Analisi 1' }, { id: 'p1', nome: 'Programmazione 1' }, { id: 'f1', nome: 'Fondamenti di Java', fatto: true }, { id: 'l1', nome: 'Laboratorio di algoritmi' }];
+  prova('glossario: esame della carta: il corso del progetto, se no programmazione, se no nessuno', G.esameDi(esami, 'Laboratorio di algoritmi') === 'l1' && G.esameDi(esami, null) === 'p1' && G.esameDi(esami, 'Fondamenti di Java') === 'p1' && G.esameDi([{ id: 'a1', nome: 'Analisi 1' }]) === null && G.esameDi() === null);
+  // segna: D.codice.glossario nasce qui, e salva una volta
+  const finto = { D: { codice: { memoria: {} } }, salvati: 0 }; finto.salva = () => finto.salvati++; finto.oggi = () => '2026-10-07';
+  await G.segna('realloc', 'carta', finto); await G.segna('strtok', 'so', finto);
+  prova('glossario: segna scrive visti con giorno e modo, e salva', finto.D.codice.glossario.visti.realloc.g === '2026-10-07' && finto.D.codice.glossario.visti.realloc.come === 'carta' && finto.D.codice.glossario.visti.strtok.come === 'so' && finto.salvati === 2 && finto.D.codice.memoria);
+  r = G.coseNuove([rif('a.c', ['+', 'p = realloc(p, n); t = strtok(s, ",");'])], { visti: finto.D.codice.glossario.visti });
+  prova('glossario: dopo segna la voce non torna', !r.length, k(r));
+  // dalla barra: coseNuoveDi chiede il diff al main (qui finto) e salta i file non C/Java/Python, grandi, tagliati o in errore
+  const chiamate = [], diffs = {
+    'lista.c': rif('lista.c', ['+', 't = strtok(s, " ");']), 'note.txt': rif('note.txt', ['+', 'free(p)']), 'Big.java': rif('Big.java', ['+', 'x.stream()']),
+    'tagliato.py': { ...rif('tagliato.py', ['+', 'zip(a, b)']), tagliato: true }, 'rotto.c': { errore: 'non trovato' },
+  };
+  const finta = async (canale, a) => { chiamate.push(a); if (!a.rel) return { file: [{ rel: 'lista.c', stato: 'cambiato', piu: 1, meno: 0 }, { rel: 'note.txt', stato: 'cambiato', piu: 1 }, { rel: 'Big.java', stato: 'cambiato', piu: 900, grande: true }, { rel: 'tagliato.py', stato: 'nuovo', piu: 3000 }, { rel: 'rotto.c', stato: 'cambiato', piu: 1 }, { rel: 'via.c', stato: 'tolto', meno: 4 }] }; return diffs[a.rel]; };
+  const l = await coseNuoveDi('p1', { da: 10, a: 20, invoca: finta, dati: { D: { codice: {}, carte: [] } } });
+  prova('barra: coseNuoveDi trova strtok con file, riga e progetto', l.length === 1 && l[0].voce.k === 'strtok' && l[0].rel === 'lista.c' && l[0].riga === 1 && l[0].id === 'p1', JSON.stringify(l));
+  prova('barra: coseNuoveDi chiede solo i file C/Java/Python non grandi e non tolti, con lo stesso tratto', chiamate.filter(a => a.rel).map(a => a.rel).join(',') === 'lista.c,tagliato.py,rotto.c' && chiamate.every(a => a.id === 'p1' && a.da === 10 && a.a === 20), JSON.stringify(chiamate));
+  const tanti = async (c, a) => a.rel ? rif(a.rel, ['+', 'x = 1;']) : { file: Array.from({ length: 15 }, (_, i) => ({ rel: `f${i}.c`, stato: 'cambiato', piu: 1 })) };
+  let n = 0; await coseNuoveDi('p1', { invoca: async (c, a) => { if (a.rel) n++; return tanti(c, a); }, dati: { D: { codice: {} } } });
+  prova('barra: coseNuoveDi guarda al massimo 10 file', n === 10, n);
+  const avviso = console.warn; console.warn = () => { };
+  prova('barra: coseNuoveDi, se il main non risponde o fuori dal desktop → [] in silenzio', (await coseNuoveDi('p1', { invoca: async () => { throw new Error('giù'); }, dati: { D: {} } })).length === 0 && (await coseNuoveDi('p1')).length === 0);
+  prova('barra: coseNuoveDi con un diff senza blocchi → []', (await coseNuoveDi('p1', { invoca: async (c, a) => a.rel ? { rel: a.rel } : { file: [{ rel: 'a.c', piu: 1 }] }, dati: { D: {} } })).length === 0);
+  console.warn = avviso;
+  // «Mettila nel ripasso» con il vero dati.js (localStorage finto): la carta in D.carte, poi la voce non torna
+  globalThis.localStorage ||= { getItem: () => null, setItem() { }, removeItem() { } };
+  globalThis.addEventListener ||= () => { }; globalThis.dispatchEvent ||= () => { }; globalThis.CustomEvent ||= class { };
+  const DA = await G.dati();
+  DA.D.esami.push({ id: 'prg', nome: 'Programmazione 1', cfu: 12 });
+  const turno = await coseNuoveDi('p1', { invoca: async (c, a) => a.rel ? rif('lab3/lista.c', [' ', 'int main() {'], ['+', '  char *t = strtok(s, " ");']) : { file: [{ rel: 'lab3/lista.c', stato: 'cambiato', piu: 1 }] } });
+  const carta = turno.length === 1 && await mettiNelRipasso(turno[0]);
+  const strtok = V.find(v => v.k === 'strtok');
+  prova('barra: «Mettila nel ripasso» crea la carta con la domanda e la fonte, nell\'esame di programmazione', carta && DA.D.carte.includes(carta) && carta.fronte === strtok.d && carta.retro === strtok.r + '\n\nDa: lab3/lista.c, riga 2' && carta.esameId === 'prg', JSON.stringify(carta));
+  prova('barra: dopo «Mettila nel ripasso» la voce non ricompare', DA.D.codice.glossario.visti.strtok.come === 'carta' && (await coseNuoveDi('p1', { invoca: async (c, a) => a.rel ? rif('altro.c', ['+', 't = strtok(NULL, " ");']) : { file: [{ rel: 'altro.c', stato: 'cambiato', piu: 1 }] } })).length === 0);
+  // la sezione: niente se la lista è vuota; i testi giusti, con l'HTML scappato
+  const scheda = { children: [], append() { throw new Error('non doveva toccare'); } };
+  prova('barra: lista vuota → la scheda resta com\'è', mostraCoseNuove(scheda, []) === null && mostraCoseNuove(scheda, null) === null && htmlCoseNuove([]) === '');
+  const h = htmlCoseNuove(G.coseNuove([rif('lab3/lista.c', ['+', 'p2 = realloc(p, n); if (a < b) t = strtok(s, ",");'])]));
+  prova('barra: la sezione ha titolo, file e riga, domanda e i bottoni', h.includes('Cose nuove: <code>realloc</code>, <code>strtok</code>') && h.includes('<b>lab3/lista.c, riga 1</b>') && h.includes('Domanda da orale:') && h.includes('data-risposta>Risposta<') && h.includes('Non vede le idee, solo i nomi.') && h.includes('if (a &lt; b)') && !h.includes(realloc.r), h);
+}
 
 console.log(`${ok} prove passate, ${ko} fallite`);
 process.exit(ko ? 1 : 0);
