@@ -88,7 +88,7 @@ export default {
   'benvenuto.leggo-libretto': 'Leyendo el expediente…',
   'benvenuto.leggo': 'Leyendo…',
   'benvenuto.esami-trovati': 'Exámenes encontrados: {n}. Revisa y confirma.',
-  'benvenuto.esami-non-trovati': 'No he encontrado exámenes: prueba a escribirlos uno por línea.',
+  'benvenuto.esami-non-trovati': 'No he encontrado exámenes: intenta escribirlos uno por línea.',
   'benvenuto.col-esame': 'Examen',
   'benvenuto.col-cfu': 'Créditos',
   'benvenuto.col-voto': 'Nota',
@@ -122,7 +122,7 @@ export default {
   'benvenuto.calendario-vuoto': 'En el calendario no he encontrado clases semanales.',
   'benvenuto.leggo-orario': 'Leyendo el horario…',
   'benvenuto.lezioni-trovate': 'Clases encontradas: {n}.',
-  'benvenuto.lezioni-non-trovate': 'No he encontrado clases: prueba a escribirlas una a una.',
+  'benvenuto.lezioni-non-trovate': 'No he encontrado clases: intenta escribirlas una a una.',
   // hábitos
   'benvenuto.abitudini-titolo': '¿Cómo estudias?',
   'benvenuto.abitudini-sotto': 'Lode te propone repasos, juegos y preguntas rápidas en momentos al azar del día, cuando estás en el ordenador. Dime cada cuánto y cuándo dejarte en paz.',
@@ -144,7 +144,7 @@ export default {
   'benvenuto.ripeti-in-aula': 'En clase activa «Repite» solo (el último minuto y medio, solo en memoria). Pregunta al profe si se puede grabar.',
   // fin
   'benvenuto.fine-titolo': 'Listo, {nome}.',
-  'benvenuto.fine-sotto': 'Lode ahora vive arriba de la pantalla. Pasa el ratón por encima para abrirla, mantén pulsado <b>{tasti}</b> para hablarle, arrastra encima un PDF o una foto de la pizarra.',
+  'benvenuto.fine-sotto': 'Lode ahora vive arriba de la pantalla. Pasa el cursor por encima para abrirla, mantén pulsado <b>{tasti}</b> para hablarle, arrastra encima un PDF o una foto de la pizarra.',
   'benvenuto.fine-esami': 'Exámenes en tu expediente: {fatti}; te quedan {dare}',
   'benvenuto.fine-esami-prossimo': 'Exámenes en tu expediente: {fatti}; te quedan {dare} · el próximo es {nome}',
   'benvenuto.fine-lezioni': 'Clases a la semana en tu horario: {n}',

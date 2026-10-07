@@ -315,7 +315,7 @@ export default {
   'errori.fuori-array.concetto': 'arrays e índices',
   'errori.argomenti-formato.etichetta': 'los `%` y los valores no cuadran',
   'errori.argomenti-formato.frase': 'en la cadena hay más `%` que valores',
-  'errori.argomenti-formato.frase-2': 'pasas más valores que `%` hay en la cadena',
+  'errori.argomenti-formato.frase-2': 'pasas más valores de los que piden los `%` de la cadena',
   'errori.argomenti-formato.dove': `Mira la cadena {allaRiga} y cuenta los \`%\` y los valores después de la coma.`,
   'errori.argomenti-formato.cosa': 'Cada `%d`, `%f`, `%c`… en la cadena de `printf` (o `scanf`) toma el valor siguiente, en orden. El número de `%` y el número de valores después de la cadena tienen que ser iguales.',
   'errori.argomenti-formato.concetto': 'printf y los formatos',

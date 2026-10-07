@@ -135,8 +135,8 @@ export default {
   // la píldora en español distingue una tarjeta de varias
   'barra1.pillola-carte': { one: '{n} tarjeta', other: '{n} tarjetas' },
   'barra1.pillola-da-ripassare': { one: 'tarjeta para repasar', other: 'tarjetas para repasar' },
-  'barra1.passa-qui-sopra': 'pasa el ratón por aquí',
-  'barra1.aria-pillola': 'Lode: {testo}{ripeti}. Pasa el ratón por encima o pulsa {tasti}.',
+  'barra1.passa-qui-sopra': 'pasa el cursor por aquí',
+  'barra1.aria-pillola': 'Lode: {testo}{ripeti}. Pasa el cursor por encima o pulsa {tasti}.',
   // la conversación, «Hecho.», «Confirmar / Cancelar»
   'barra1.altre-righe': { one: '{n} línea', other: '{n} líneas' },
   'barra1.altro': 'más',
@@ -217,7 +217,7 @@ export default {
   'barra1.sintesi-carte-ripassate': { one: '{n} tarjeta repasada', other: '{n} tarjetas repasadas' },
   'barra1.sintesi-ripasso-di': { one: 'repaso de {n} tarjeta', other: 'repaso de {n} tarjetas' },
   // los comandos para probar
-  'barra1.prova-a-scrivere': 'Prueba a escribir',
+  'barra1.prova-a-scrivere': 'Intenta escribir',
   'barra1.aiuto-senza-ai': 'Con el cerebro local (gratis) o tu IA (escribe «IA») también puedes pedir explicaciones, crear tarjetas con los PDF y hacer que te pregunten.',
   'barra1.sintesi-comandi': 'comandos',
   // Horario

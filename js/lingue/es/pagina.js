@@ -17,7 +17,7 @@ export default {
   'pagina.sottotitolo': 'asistente de estudio',
   'pagina.esporta': 'Exportar',
   'pagina.impostazioni': 'Ajustes',
-  'pagina.suggerimento': 'Pasa el ratón por la barra de arriba, pulsa <kbd>/</kbd> para escribir o mantén pulsado <kbd>{tasti}</kbd> para hablar.',
+  'pagina.suggerimento': 'Pasa el cursor por la barra de arriba, pulsa <kbd>/</kbd> para escribir o mantén pulsado <kbd>{tasti}</kbd> para hablar.',
   // los números
   'pagina.media-ponderata': 'Media ponderada',
   'pagina.media-dettaglio': { one: 'aritmética {media} · {n} nota', other: 'aritmética {media} · {n} notas' },
@@ -134,5 +134,5 @@ export default {
   'pagina.backup-importato': 'Copia de seguridad importada',
   'pagina.non-backup': 'Este archivo no es una copia de seguridad de Lode',
   'pagina.conferma-esempio': '¿Cargar los datos de ejemplo en lugar de los tuyos?',
-  'pagina.esempio-caricato': 'Datos de ejemplo cargados: pasa el ratón por la barra de arriba',
+  'pagina.esempio-caricato': 'Datos de ejemplo cargados: pasa el cursor por la barra de arriba',
 };

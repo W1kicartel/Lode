@@ -163,7 +163,7 @@ export default {
   'barra3.temi-illeggibile': 'No puedo leer el texto de este archivo. Pégalo con {cmd} y el texto debajo.',
   'barra3.aggiungi-prima-esame': 'Primero añade el examen, por ejemplo: «examen cálculo 2 el 15 de enero 9 créditos».',
   'barra3.non-trovo-esame-aggiungi': 'No encuentro el examen **{nome}**. Añádelo primero, por ejemplo: «examen {nome} el 15 de enero 9 créditos».',
-  'barra3.aggiungi-esame-compito': 'Primero añade un examen, por ejemplo: «examen cálculo 2 el 15 de enero 9 créditos». Después pega un examen viejo.',
+  'barra3.aggiungi-esame-compito': 'Primero añade un examen, por ejemplo: «examen cálculo 2 el 15 de enero 9 créditos». Después pega un examen anterior.',
   'barra3.prova-invito': '¿Quieres hacer un examen entero, con el tiempo de verdad?',
   'barra3.prova-generale': 'Simulacro de examen',
   'barra3.prova-generale-di': 'Simulacro de examen de {nome}',
@@ -248,7 +248,7 @@ export default {
   'barra3.si-lascio': 'Sí, lo dejo',
   'barra3.no-continuo': 'No, sigo',
   'barra3.prova-lasciata': 'Dejado: no he apuntado nada. Cuando quieras repetirlo, escribe «simulacro de examen de {nome}».',
-  'barra3.prova-consegnato': 'Entregado. Coge la hoja y, para cada ejercicio, dime tú cómo te fue.',
+  'barra3.prova-consegnato': 'Entregado. Toma la hoja y, para cada ejercicio, dime tú cómo te fue.',
   'barra3.prova-come-andato': 'Cómo te fue el ejercicio {n}',
   'barra3.prova-esito-tuo': 'Lode no corrige: el resultado lo eliges tú.',
   'barra3.prova-sintesi-esito': 'simulacro de examen de {nome}: {fatti} de {n}',
@@ -338,7 +338,7 @@ export default {
 
   // enviar, archivos, voz
   'barra3.crea-carte-da-file': 'Crea las tarjetas de repaso con este archivo.',
-  'barra3.niente-spiegazione': 'Vale, sin explicación.',
+  'barra3.niente-spiegazione': 'De acuerdo, sin explicación.',
   'barra3.non-so-senza-ai': 'Esto todavía no sé hacerlo sin IA. Esto es lo que entiendo:',
   'barra3.foto': 'foto',
   'barra3.togli-file': 'Quitar {nome}',
@@ -359,7 +359,7 @@ export default {
   'barra3.preparo-voce': 'Preparando la voz',
 
   // conexiones, atajos y avisos
-  'barra3.piu-tardi': 'Vale, más tarde',
+  'barra3.piu-tardi': 'De acuerdo, más tarde',
   'barra3.trascrivi-lezione': 'Transcribe la clase',
   'barra3.fine-trascrizione': 'Fin de la transcripción',
   'barra3.ripeti': 'Repite',
