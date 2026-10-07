@@ -1,0 +1,21 @@
+// Lode's wardrobe (English).
+export default {
+  'guardaroba.titolo': "Wardrobe",
+  'guardaroba.aiuto': "An accessory for Lode, the diamond at the top of the window. From the bar too: “put on the crown”, “take off the hat”, “wardrobe”.",
+  'guardaroba.scheda-aiuto': "Tap an accessory and Lode tries it on.",
+  'guardaroba.nessuno': "None",
+  'guardaroba.messo': "New look: {nome}.",
+  'guardaroba.tolto': "No accessories: Lode is back to basics.",
+  'guardaroba.tocco': "Mortarboard",
+  'guardaroba.alloro': "Laurel wreath",
+  'guardaroba.corona': "Little crown",
+  'guardaroba.berretto': "Bobble hat",
+  'guardaroba.mago': "Wizard hat",
+  'guardaroba.cuffie': "Headphones",
+  'guardaroba.occhiali': "Round glasses",
+  'guardaroba.fiocco': "Bow",
+  'guardaroba.festa': "Party hat",
+  'guardaroba.aureola': "Halo",
+  'guardaroba.basco': "Beret",
+  'guardaroba.cilindro': "Top hat",
+};

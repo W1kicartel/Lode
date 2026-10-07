@@ -1,0 +1,21 @@
+// O guarda-roupa do Lode (português do Brasil).
+export default {
+  'guardaroba.titolo': "Guarda-roupa",
+  'guardaroba.aiuto': "Um acessório para o Lode, o losango no alto da janela. Também pela barra: «coloca a coroa», «tira o chapéu», «guarda-roupa».",
+  'guardaroba.scheda-aiuto': "Toque num acessório e o Lode experimenta na hora.",
+  'guardaroba.nessuno': "Nenhum",
+  'guardaroba.messo': "Visual novo: {nome}.",
+  'guardaroba.tolto': "Sem acessórios: o Lode volta a ser como era.",
+  'guardaroba.tocco': "Capelo",
+  'guardaroba.alloro': "Coroa de louros",
+  'guardaroba.corona': "Coroinha",
+  'guardaroba.berretto': "Gorro de lã",
+  'guardaroba.mago': "Chapéu de mago",
+  'guardaroba.cuffie': "Fones de ouvido",
+  'guardaroba.occhiali': "Óculos redondos",
+  'guardaroba.fiocco': "Laço",
+  'guardaroba.festa': "Chapeuzinho de festa",
+  'guardaroba.aureola': "Auréola",
+  'guardaroba.basco': "Boina",
+  'guardaroba.cilindro': "Cartola",
+};

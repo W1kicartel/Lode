@@ -91,6 +91,10 @@ jobs:
       # altro sistema voti detti nella barra, media, voto finale, «quanto mi serve», «e se prendo», libretto incollato
       - name: Libretto nei sistemi dei voti
         run: node test/libretto-sistemi.mjs
+      # il guardaroba di Lode (js/guardaroba.js): gli accessori del personaggio, piccoli e grandi, solo in scala di grigi, i nomi
+      # nelle sei lingue, D.imp.accessorio nei dati e nei backup, «metti la corona» / «togli il cappello» / «guardaroba» in ogni lingua
+      - name: Guardaroba del personaggio
+        run: node test/guardaroba.mjs
       - name: Formule dette a voce (italiano e inglese)
         run: node test/formule.mjs
       # la scelta della lingua e del sistema dei voti: chi usa già Lode resta in italiano, il benvenuto, le Impostazioni, «lingua …»,

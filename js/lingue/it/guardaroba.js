@@ -1,0 +1,21 @@
+// Il guardaroba di Lode (italiano, lingua di partenza): gli accessori del personaggio, le Impostazioni, la barra.
+export default {
+  'guardaroba.titolo': "Guardaroba",
+  'guardaroba.aiuto': "Un accessorio per Lode, il rombo in cima alla finestra. Anche dalla barra: «metti la corona», «togli il cappello», «guardaroba».",
+  'guardaroba.scheda-aiuto': "Tocca un accessorio: Lode lo prova subito.",
+  'guardaroba.nessuno': "Nessuno",
+  'guardaroba.messo': "Nuovo look: {nome}.",
+  'guardaroba.tolto': "Niente accessori: Lode torna com’è.",
+  'guardaroba.tocco': "Tocco",
+  'guardaroba.alloro': "Corona d'alloro",
+  'guardaroba.corona': "Coroncina",
+  'guardaroba.berretto': "Berretto di lana",
+  'guardaroba.mago': "Cappello da mago",
+  'guardaroba.cuffie': "Cuffie",
+  'guardaroba.occhiali': "Occhiali tondi",
+  'guardaroba.fiocco': "Fiocco",
+  'guardaroba.festa': "Cappellino da festa",
+  'guardaroba.aureola': "Aureola",
+  'guardaroba.basco': "Basco",
+  'guardaroba.cilindro': "Cilindro",
+};

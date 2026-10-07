@@ -13,7 +13,7 @@
 // I numeri detti a voce («vingt-huit», «quatre-vingt-dix», «septante») diventano cifre solo qui dentro: numeri non si
 // esporta, perché le formule dettate (js/formule.js) valgono solo in italiano e in inglese (docs/LINGUE.md).
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta, accessorioDetto } from './comune.js';
 
 const GIORNI = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 const MESI = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout', 'septembre', 'octobre', 'novembre', 'decembre'];
@@ -140,8 +140,21 @@ const apostrofi = s => s.replace(/[’`]/g, "'").replace(/\bj(?:ai| ai)\b/gi, "j
 // chiant», «oral demain, stressé», «révise jamais assez», «jouer au foot ce soir»
 const COMMENTO = /^(?:c'est|c est|c'etait|ca|est|me|m'|trop|jamais|pas|plus|quand|comment|pourquoi|demain|aujourd'hui|ce soir|ce matin|cette semaine|(?:au|a la|a l'|aux|avec|chez) )/;
 
+// la garde-robe (js/guardaroba.js) : « mets la couronne », « enlève le chapeau », « garde-robe » (mots sans accents ni apostrophes)
+const ART_G = '(?:(?:le|la|l|les|un|une|ton|ta|tes|mon|ma|son|sa) )?';
+export const GUARDAROBA = {
+  nomi: { toque: 'tocco', mortier: 'tocco', 'chapeau de diplome': 'tocco', 'toque de diplome': 'tocco', 'couronne de laurier': 'alloro', 'couronne de lauriers': 'alloro', lauriers: 'alloro', laurier: 'alloro',
+    couronne: 'corona', 'petite couronne': 'corona', diademe: 'corona', bonnet: 'berretto', 'bonnet a pompon': 'berretto', 'bonnet de laine': 'berretto', 'chapeau de magicien': 'mago', 'chapeau de sorcier': 'mago', 'chapeau de mage': 'mago',
+    casque: 'cuffie', 'casque audio': 'cuffie', ecouteurs: 'cuffie', lunettes: 'occhiali', 'lunettes rondes': 'occhiali', noeud: 'fiocco', ruban: 'fiocco', 'chapeau de fete': 'festa', 'chapeau pointu': 'festa',
+    aureole: 'aureola', beret: 'basco', 'haut de forme': 'cilindro', 'chapeau haut de forme': 'cilindro' },
+  metti: [`(?:mets|mets toi|mets moi|porte|essaie|essaye|enfile) ${ART_G}NOME`],
+  togli: [`(?:enleve|enlever|retire|retirer|ote|oter)(?: toi| moi)? ${ART_G}NOME`, 'sans (?:chapeau|accessoires?)'],
+  generico: 'chapeau|chapeaux|accessoire|accessoires',
+  apri: '(?:(?:ouvre|ouvrir|montre moi|voir) )?(?:la |ma )?(?:garde robe|penderie|vestiaire)|change(?:r)? (?:de |le )?(?:chapeau|accessoire)|chapeaux|accessoires',
+};
 export function interpreta(frase) {
   const grezzo0 = apostrofi(String(frase || '').trim()); if (!grezzo0) return null;
+  { const a = accessorioDetto(grezzo0, GUARDAROBA); if (a) return a; }
   // informatica: «explique-moi l'erreur», anche con l'errore incollato dopo. Solo se dopo «erreur» non c'è niente, ci sono i
   // due punti o un a capo, o c'è davvero un errore del compilatore: «explique-moi l'erreur relative» resta all'AI
   let e0;

@@ -231,6 +231,16 @@ export const CASI = [
   ['Sprache Japanisch', { tipo: 'lingua', codice: null }],
   ['idioma japonês', { tipo: 'lingua', codice: null }],
   ['cambia lingua in giapponese', { tipo: 'lingua', codice: null }],
+  // il guardaroba (js/guardaroba.js): mettere, togliere, aprire la scelta
+  ['metti la corona', { tipo: 'accessorio', id: 'corona' }],
+  ['Metti il tocco.', { tipo: 'accessorio', id: 'tocco' }],
+  ["mettiti la corona d'alloro", { tipo: 'accessorio', id: 'alloro' }],
+  ['indossa gli occhiali', { tipo: 'accessorio', id: 'occhiali' }],
+  ['metti il cappello a cilindro', { tipo: 'accessorio', id: 'cilindro' }],
+  ['togli il cappello', { tipo: 'accessorio', id: null }],
+  ['togli le cuffie', { tipo: 'accessorio', id: null }],
+  ['guardaroba', { tipo: 'accessorio', apri: true }],
+  ['apri il guardaroba', { tipo: 'accessorio', apri: true }],
 ];
 
 // frasi che non sono comandi: restano all'AI
@@ -257,6 +267,9 @@ export const NON = [
   'play con me',
   'cards per analisi 2',
   'review del codice di lab3',
+  // il guardaroba: altri vestiti e altri «metti» non sono accessori
+  'togli il cappotto',
+  'metti la corona di spine nel riassunto di storia',
 ];
 
 // l'inglese di riserva con la barra in italiano: le frasi inglesi restano comandi, anche con il nome italiano di un esame del

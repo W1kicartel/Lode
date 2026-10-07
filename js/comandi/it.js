@@ -7,7 +7,7 @@
 // barra è in un'altra lingua: le frasi italiane si capiscono sempre.
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
 import { interpreta as interpretaProgetto } from '../codice/progetto.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, linguaDetta, linguaIgnota, linguaIgnotaDetta } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, linguaDetta, linguaIgnota, linguaIgnotaDetta, accessorioDetto } from './comune.js';
 import COMUNE from '../lingue/it/comune.js';
 
 const GIORNI = COMUNE['comune.giorni'], MESI = COMUNE['comune.mesi'];
@@ -62,8 +62,21 @@ for (const [w, v] of Object.entries({ ...PAROLE_NUM })) if (v < 100) PAROLE_NUM[
 const SENTITO = { guale: 'uguale', priso: 'preso', presso: 'preso', fucus: 'focus', focos: 'focus', ripasa: 'ripassa' };
 export const numeri = t => t.replace(/\b[a-zà]+\b/g, w => SENTITO[w.toLowerCase()] || ((w in PAROLE_NUM && !/^(un|una)$/.test(w)) ? String(PAROLE_NUM[w]) : w));
 
+// il guardaroba (js/guardaroba.js): «metti la corona», «togli il cappello», «guardaroba» (parole senza accenti né apostrofi)
+const ART = '(?:(?:il|la|lo|l|i|gli|le|un|una|uno|il tuo|la tua|i tuoi|le tue) )?';
+export const GUARDAROBA = {
+  nomi: { tocco: 'tocco', 'tocco da laureato': 'tocco', 'cappello da laureato': 'tocco', 'cappello di laurea': 'tocco', 'corona d alloro': 'alloro', 'corona di alloro': 'alloro', alloro: 'alloro',
+    corona: 'corona', coroncina: 'corona', berretto: 'berretto', 'berretto di lana': 'berretto', 'cappello di lana': 'berretto', berretta: 'berretto', 'cappello da mago': 'mago', 'cappello del mago': 'mago',
+    cuffie: 'cuffie', cuffia: 'cuffie', occhiali: 'occhiali', 'occhiali tondi': 'occhiali', occhialini: 'occhiali', fiocco: 'fiocco', fiocchetto: 'fiocco', 'cappellino da festa': 'festa', 'cappello da festa': 'festa',
+    cappellino: 'festa', aureola: 'aureola', basco: 'basco', cilindro: 'cilindro', 'cappello a cilindro': 'cilindro' },
+  metti: [`(?:metti|mettiti|mettigli|indossa|prova|voglio) ${ART}NOME(?: a lode)?`],
+  togli: [`(?:togli|togliti|togligli|levati|leva|via) ${ART}NOME`, '(?:senza|niente) (?:cappello|accessori|accessorio)'],
+  generico: 'cappello|cappelli|accessorio|accessori',
+  apri: '(?:(?:apri|mostrami|vedi|apri il|il) )?(?:il )?guardaroba|cambia (?:il )?(?:cappello|accessorio)|(?:i )?cappelli|(?:gli )?accessori',
+};
 export function interpreta(frase) {
   const grezzo0 = String(frase || '').trim(); if (!grezzo0) return null;
+  { const a = accessorioDetto(grezzo0, GUARDAROBA); if (a) return a; }
   // informatica. «spiegami l'errore», anche con l'errore incollato dopo (su più righe: qui le righe restano com'erano).
   // Solo se dopo «errore» non c'è niente, ci sono i due punti o un a capo, o c'è davvero un errore del compilatore:
   // «cosa vuol dire errore standard» o «spiegami l'errore relativo» restano domande per l'AI

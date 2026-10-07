@@ -867,3 +867,35 @@ button.ld-ripeti-riga:hover{background:rgba(255,255,255,.06)}
 .ld-prova-fine{margin-top:8px;padding-top:6px;border-top:1px solid var(--ld-riga)}
 .ld-prova-invito{margin:8px 0 0;font-size:12.5px;color:var(--ld-tenue)}
 .ld-prova-invito .btn{margin-left:6px;vertical-align:baseline}
+
+/* ---------- il guardaroba (js/guardaroba.js): il personaggio con l'accessorio, nelle carte delle Impostazioni e della barra ----------
+   Le carte stanno sempre su vetro nero, come la pillola (anche nell'aspetto chiaro): gli accessori sono disegnati per quel fondo.
+   Al passaggio del cursore il rombo fa un saltello e la nappa o il pompon oscillano; l'aureola galleggia; gli occhi sbattono. */
+.gr-pers{display:block;overflow:visible}
+.gr-pers .acc-molla,.gr-pers .gr-salta,.gr-pers .acc-fluttua{transform-origin:0 0}
+.gr-pers .gr-occhio{transform-box:fill-box;transform-origin:50% 50%}
+.gr-griglia{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.gr-carta{all:unset;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px 9px;border-radius:14px;cursor:pointer;
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,0) 50%),#101010;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);color:#F5F5F5;
+  font-size:12.5px;font-weight:500;letter-spacing:-.005em;text-align:center;transition:box-shadow .25s,background-color .25s}
+.gr-carta:hover{box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
+.gr-carta:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.gr-carta[aria-pressed="true"]{box-shadow:inset 0 0 0 1.5px #FFFFFF,0 0 0 3px rgba(255,255,255,.08)}
+.gr-carta span{line-height:1.25;min-height:2.5em;display:flex;align-items:center}
+.ld-guardaroba .gr-griglia{grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px;margin-top:8px}
+.ld-guardaroba .gr-carta{padding:6px 4px 5px;border-radius:11px;font-size:11px;gap:0}
+.ld-guardaroba .gr-carta span{min-height:2.3em}
+@media (prefers-reduced-motion:no-preference){
+  .gr-pers .gr-occhio{animation:gr-sbatti 4.6s infinite}
+  .gr-pers .acc-fluttua{animation:gr-fluttua 3.2s ease-in-out infinite}
+  .gr-carta:hover .gr-salta{animation:gr-salto .9s cubic-bezier(.3,.7,.4,1)}
+  .gr-carta:hover .acc-molla[data-tipo="appesa"]{animation:gr-nappa 1.5s cubic-bezier(.3,.7,.4,1)}
+  .gr-carta:hover .acc-molla[data-tipo="ritta"]{animation:gr-pompon 1.3s cubic-bezier(.3,.7,.4,1)}
+}
+@keyframes gr-sbatti{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.12)}}
+@keyframes gr-fluttua{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes gr-salto{0%{transform:translateY(0)}28%{transform:translateY(-12px)}56%{transform:translateY(0)}72%{transform:translateY(-3px)}100%{transform:translateY(0)}}
+@keyframes gr-nappa{0%{transform:rotate(0)}22%{transform:rotate(-22deg)}46%{transform:rotate(16deg)}66%{transform:rotate(-8deg)}84%{transform:rotate(3deg)}100%{transform:rotate(0)}}
+@keyframes gr-pompon{0%{transform:rotate(0)}25%{transform:rotate(14deg)}50%{transform:rotate(-10deg)}72%{transform:rotate(5deg)}100%{transform:rotate(0)}}
+.gr-sezione h3{margin:0 0 2px;font-size:15px;font-weight:600;letter-spacing:-.01em}
+.gr-sezione>p{margin:0 0 12px;color:var(--muted);font-size:13px}

@@ -297,6 +297,15 @@ export const CASI = [
   ['was brauche ich für 2,0', { tipo: 'serve', base: 2 }],
   ['welchen Schnitt brauch ich für 1,5', { tipo: 'serve', base: 1.5 }],
   ['was brauche ich für die Bestnote', { tipo: 'serve', base: 1 }],
+  // il guardaroba (js/guardaroba.js): mettere, togliere, aprire la scelta
+  ['setz die Krone auf', { tipo: 'accessorio', id: 'corona' }],
+  ['Setz den Doktorhut auf.', { tipo: 'accessorio', id: 'tocco' }],
+  ['zieh die Bommelmütze an', { tipo: 'accessorio', id: 'berretto' }],
+  ['trag die runde Brille', { tipo: 'accessorio', id: 'occhiali' }],
+  ['nimm den Hut ab', { tipo: 'accessorio', id: null }],
+  ['Hut ab', { tipo: 'accessorio', id: null }],
+  ['Kleiderschrank', { tipo: 'accessorio', apri: true }],
+  ['öffne den Kleiderschrank', { tipo: 'accessorio', apri: true }],
 ];
 
 // frasi che non sono comandi: restano all'AI
@@ -348,4 +357,7 @@ export const NON = [
   'Timer ist kaputt',
   'Plan mir die Woche',
   'Was ist der Unterschied zwischen ECTS und LP?',
+  // il guardaroba: altri vestiti e altri «metti» non sono accessori
+  'zieh die Jacke aus',
+  'setz mir einen Termin für Analysis auf die Liste',
 ];

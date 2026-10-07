@@ -10,7 +10,7 @@
 // spagnola 0-10, con i decimali). Come leggerli lo decide il sistema dei voti (js/sistemi.js), non qui.
 // «Notas» in spagnolo sono i voti (il libretto), non gli appunti: gli appunti sono «apuntes».
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta, accessorioDetto } from './comune.js';
 
 const GIORNI = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
 const MESI = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -136,8 +136,21 @@ const votoDetto = (x, lode) => {
   return { voto: v, lode: !!lode && (v === 30 || v === 10) };
 };
 
+// el armario (js/guardaroba.js): «ponte la corona», «quítate el sombrero», «armario» (palabras sin tildes)
+const ART_G = '(?:(?:el|la|los|las|un|una|tu|tus|mi) )?';
+export const GUARDAROBA = {
+  nomi: { birrete: 'tocco', 'birrete de graduacion': 'tocco', 'gorro de graduacion': 'tocco', 'corona de laurel': 'alloro', laurel: 'alloro', laureles: 'alloro',
+    corona: 'corona', coronita: 'corona', gorro: 'berretto', 'gorro de lana': 'berretto', 'gorrito de lana': 'berretto', 'sombrero de mago': 'mago', 'gorro de mago': 'mago',
+    auriculares: 'cuffie', cascos: 'cuffie', gafas: 'occhiali', 'gafas redondas': 'occhiali', lentes: 'occhiali', anteojos: 'occhiali', lazo: 'fiocco', lacito: 'fiocco', mono: 'fiocco',
+    'gorrito de fiesta': 'festa', 'gorro de fiesta': 'festa', 'sombrero de fiesta': 'festa', aureola: 'aureola', halo: 'aureola', boina: 'basco', chistera: 'cilindro', 'sombrero de copa': 'cilindro' },
+  metti: [`(?:ponte|ponle|pon|ponme|ponerte|usa|lleva|prueba|probar) ${ART_G}NOME`],
+  togli: [`(?:quitate|quitale|quita|quitar|sacate|saca) ${ART_G}NOME`, 'sin (?:sombrero|accesorios?)'],
+  generico: 'sombrero|sombreros|accesorio|accesorios',
+  apri: '(?:(?:abre|abrir|muestrame|ver) )?(?:el |mi )?(?:armario|guardarropa|vestidor|ropero)|cambia(?:r)? (?:el |de )?(?:sombrero|accesorio)|sombreros|accesorios',
+};
 export function interpreta(frase) {
   const grezzo0 = String(frase || '').trim(); if (!grezzo0) return null;
+  { const a = accessorioDetto(grezzo0, GUARDAROBA); if (a) return a; }
   // informatica: «explícame el error», anche con l'errore incollato dopo. Solo se dopo «error» non c'è niente, ci sono i due
   // punti o un a capo, o c'è davvero un errore del compilatore: «qué significa error estándar» resta all'AI
   let e0;

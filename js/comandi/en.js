@@ -6,7 +6,7 @@
 // riconoscitore della lingua scelta non capisce. Se la frase non è un comando ritorna null e (se c'è la chiave) ci pensa l'AI.
 // I voti restano quelli detti (28, 30 cum laude): come leggerli lo decide il sistema dei voti (js/sistemi.js), non qui.
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, hh, linguaDetta, linguaIgnota, linguaIgnotaDetta, VOTO_CIFRE, VOTO_SOLO, VOTO_LETTERA, numeroVoto, obiettivoDetto } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, hh, linguaDetta, linguaIgnota, linguaIgnotaDetta, VOTO_CIFRE, VOTO_SOLO, VOTO_LETTERA, numeroVoto, obiettivoDetto, accessorioDetto } from './comune.js';
 
 const GIORNI = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const MESI = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
@@ -113,8 +113,21 @@ const OBIETTIVI = [
   [/\bmagna cum laude$/, 3.7],
   [/\bcum laude$/, 3.5],
 ];
+// the wardrobe (js/guardaroba.js): “put on the crown”, “take off the hat”, “wardrobe” (words without accents or apostrophes)
+const ART_G = '(?:(?:the|a|an|my|your|his|her) )?';
+export const GUARDAROBA = {
+  nomi: { mortarboard: 'tocco', 'graduation cap': 'tocco', 'grad cap': 'tocco', 'square academic cap': 'tocco', 'laurel wreath': 'alloro', 'laurel crown': 'alloro', laurels: 'alloro', laurel: 'alloro',
+    crown: 'corona', 'little crown': 'corona', tiara: 'corona', beanie: 'berretto', 'bobble hat': 'berretto', 'woolly hat': 'berretto', 'wooly hat': 'berretto', 'knit hat': 'berretto', 'pom pom hat': 'berretto',
+    'wizard hat': 'mago', 'wizards hat': 'mago', 'wizard s hat': 'mago', headphones: 'cuffie', headset: 'cuffie', glasses: 'occhiali', 'round glasses': 'occhiali', specs: 'occhiali', spectacles: 'occhiali',
+    bow: 'fiocco', 'hair bow': 'fiocco', ribbon: 'fiocco', 'party hat': 'festa', halo: 'aureola', beret: 'basco', 'top hat': 'cilindro' },
+  metti: [`(?:put on|wear|try on|equip) ${ART_G}NOME`, `put ${ART_G}NOME on`],
+  togli: [`(?:take off|remove|lose|ditch) ${ART_G}NOME`, `take ${ART_G}NOME off`, '(?:no|without) (?:hat|accessory|accessories)'],
+  generico: 'hat|hats|accessory|accessories',
+  apri: '(?:(?:open|show|show me) )?(?:the |my )?wardrobe|change (?:the |my )?(?:hat|accessory)|hats|accessories',
+};
 export function interpreta(frase) {
   const grezzo0 = String(frase || '').trim(); if (!grezzo0) return null;
+  { const a = accessorioDetto(grezzo0, GUARDAROBA); if (a) return a; }
   // informatica: «explain the error», anche con l'errore incollato dopo. Solo se dopo «error» non c'è niente, ci sono i due
   // punti o un a capo, o c'è davvero un errore del compilatore: «what does standard error mean» resta all'AI
   let e0;

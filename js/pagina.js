@@ -9,6 +9,7 @@ import * as F from './focus.js';
 import { t, elenco, LINGUE, lingua, imposta } from './lingua.js';
 import { CODICI, SISTEMI, nomeSistema, opzioniTotali } from './sistemi.js';
 import * as LB from './libretto.js';
+import * as GR from './guardaroba.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -119,6 +120,7 @@ function finestraEsame(id) {
   (f, azione) => {
     if (azione === 'elimina') { if (!confirm(t('pagina.conferma-elimina', { nome: e.nome }))) return false; D.esami = D.esami.filter(x => x.id !== e.id); salva(); toast(t('pagina.esame-eliminato')); return; }
     if (!LB.italiano()) return salvaEsameSistema(e, f);
+    const eraFatto = !!e?.fatto;
     const v = f.get('voto'), x = e || aggiungiEsame({ nome: f.get('nome'), cfu: +f.get('cfu') });
     // «X»: il voto scritto con un altro sistema resta com'è (non si perde correggendo il nome o la data)
     Object.assign(x, { nome: String(f.get('nome')).trim(), cfu: +f.get('cfu') || 6, data: f.get('data') || null, oreObiettivo: f.get('ore') ? +f.get('ore') : null,
@@ -126,6 +128,7 @@ function finestraEsame(id) {
     if (v !== 'X') delete x.sistema;
     if (x.fatto && !x.data) x.data = oggi();
     salva(); toast(e ? t('pagina.salvato') : t('pagina.esame-aggiunto'));
+    if (v && v !== 'I' && v !== 'X' && !eraFatto) GR.festeggia(v === 'L');
   });
 }
 // salva l'esame della finestra fuori dall'Italia: il voto scritto si legge nel sistema dei voti (8,5 · 16/20 · 2,3 · A− · idoneo)
@@ -134,12 +137,14 @@ function salvaEsameSistema(e, f) {
   // il voto scritto con un altro sistema, lasciato com'era: resta com'è
   const resta = e && LB.altroSistema(e) && scritto === LB.votoScritto(e), r = scritto && !resta ? LB.leggiVoto(scritto) : null;
   if (scritto && !r && !resta) { toast(t('libretto.voto-non-letto', { voto: scritto, esempio: LB.votoEsempio() })); return false; }
+  const nuovoVoto = !!r && !r.idoneita && !e?.fatto;
   const x = e || aggiungiEsame({ nome: f.get('nome'), cfu: +f.get('cfu') || LB.sis().esame });
   Object.assign(x, { nome: String(f.get('nome')).trim(), cfu: +f.get('cfu') || LB.sis().esame, data: f.get('data') || null, oreObiettivo: f.get('ore') ? +f.get('ore') : null,
     ...(resta ? {} : { voto: r && !r.idoneita ? r.voto : null, lode: !!r?.lode, idoneita: !!r?.idoneita, fatto: !!r }) });
   if (!resta) delete x.sistema;
   if (x.fatto && !x.data) x.data = oggi();
   salva(); toast(e ? t('pagina.salvato') : t('pagina.esame-aggiunto'));
+  if (nuovoVoto) GR.festeggia(!!r.lode);
 }
 function finestraImpostazioni() {
   const d = finestra(`<h2>${t('pagina.impostazioni')}</h2><p>${t('pagina.impostazioni-aiuto')}</p>
@@ -158,6 +163,9 @@ function finestraImpostazioni() {
       <label>${t('pagina.campo-chiave')} <small>${t('pagina.campo-chiave-nota')}</small><input name="chiave" type="password" autocomplete="off" value="${esc(D.imp.chiave)}" placeholder="${t('pagina.chiave-segnaposto')}"></label>
       <label class="spunta tutta"><input type="checkbox" name="voceAlta"${D.imp.voceAlta ? ' checked' : ''}>${t('pagina.voce-alta')}</label></div>
     <p class="stato-ai" style="margin:10px 0 0">${D.imp.chiave ? t('pagina.ai-attiva', { nome: esc(AI.FORNITORI[AI.fornitore()].nome) }) : t('pagina.senza-chiave')}</p>
+    <hr>
+    <section class="gr-sezione" aria-labelledby="gr-titolo"><h3 id="gr-titolo">${t('guardaroba.titolo')}</h3><p>${t('guardaroba.aiuto')}</p>
+      <div class="gr-griglia">${[null, ...GR.IDS].map(id => cartaGuardaroba(id)).join('')}</div></section>
     <div class="piedi"><button class="btn piano" value="azzera">${t('pagina.cancella-tutto')}</button><div class="dx"><button class="btn piano" value="annulla" formnovalidate>${t('pagina.annulla')}</button><button class="btn primary" value="salva">${t('pagina.salva')}</button></div></div>`,
   (f, azione, dlg) => {
     // «Cancella tutto» cancella anche le chiavi: prima si scollega (D.imp.chiave vuota, via 'lode:chiavi'; senza chiave
@@ -186,7 +194,18 @@ function finestraImpostazioni() {
     d.querySelector('[name=cfuTotali]').innerHTML = opzioniTotali(c, scelto).map(v => `<option${scelto === v ? ' selected' : ''}>${v}</option>`).join('');
     d.querySelector('[name=lode]').closest('label').hidden = c !== 'it';
   });
+  // il guardaroba: la scelta vale subito (la mascotte la indossa mentre la finestra è ancora aperta) e si salva
+  d.querySelector('.gr-griglia').addEventListener('click', ev => {
+    const b = ev.target.closest('.gr-carta'); if (!b) return;
+    D.imp.accessorio = GR.inForma(b.dataset.acc || null); salva(); GR.cambiato(D.imp.accessorio);
+    d.querySelectorAll('.gr-carta').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  });
   d.querySelector('[name=nome]').focus();
+}
+// una carta del guardaroba: il personaggio grande con l'accessorio (animato al passaggio del cursore) e il nome
+function cartaGuardaroba(id) {
+  const a = GR.accessorio(id);
+  return `<button type="button" class="gr-carta${a ? '' : ' gr-nessuno'}" data-acc="${esc(id || '')}" aria-pressed="${(D.imp.accessorio || null) === (id || null)}">${GR.personaggio(id, 104)}<span>${esc(a ? t(a.chiave) : t('guardaroba.nessuno'))}</span></button>`;
 }
 export function applicaAspetto() { document.documentElement.dataset.aspetto = D.imp.aspetto === 'chiaro' ? 'chiaro' : 'scuro'; }
 

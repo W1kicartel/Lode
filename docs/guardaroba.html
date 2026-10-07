@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Guardaroba di Lode</title>
+<!-- Anteprima per chi sviluppa (fuori dalla cache di sw.js): tutti gli accessori di js/guardaroba.js a 20, 40, 120 e 200 px,
+     su vetro nero come la pillola, animati. Si apre da un server locale nella cartella del progetto:
+     python3 -m http.server 8000, poi http://localhost:8000/docs/guardaroba.html (?piccola o ?grande per una parte sola). -->
+<link rel="stylesheet" href="../css/lode.css">
+<style>
+  :root{--ink:#F5F5F5;color-scheme:dark}
+  body{margin:0;padding:28px;background:#0A0A0A;color:#F5F5F5;font:14px/1.45 Geist,system-ui,sans-serif}
+  h1{font-size:20px;font-weight:600;letter-spacing:-.02em;margin:0 0 4px}
+  p{color:#A1A1A1;margin:0 0 22px}
+  .tab{display:grid;grid-template-columns:110px 44px 70px 150px 236px;align-items:end;gap:0 18px}
+  .tab>div{padding:14px 0;border-bottom:1px solid #1C1C1C;display:flex;align-items:flex-end;justify-content:center}
+  .tab .nome{justify-content:flex-start;align-self:stretch;align-items:center;color:#D6D6D6;font-weight:500}
+  .tab .capo{color:#6E6E6E;font-size:12px;border-bottom-color:#2A2A2A;align-items:center}
+  .pillole{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 26px}
+  .pill{position:relative;width:200px;height:36px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,0) 38%),rgba(14,14,14,.9);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 0 0 1px rgba(255,255,255,.11);display:flex;align-items:center;gap:10px;padding-left:18px;margin-top:18px;font-size:13px;font-weight:500}
+  .pill .gr-pers{filter:drop-shadow(0 2px 6px rgba(0,0,0,.55)) drop-shadow(0 0 10px rgba(255,255,255,.18))}
+  .grande-griglia{display:grid;grid-template-columns:repeat(4,200px);gap:14px}
+  .grande-griglia .gr-carta{padding:14px 8px 12px}
+</style>
+</head>
+<body>
+<h1>Guardaroba di Lode</h1>
+<p>Ogni accessorio a 20 e 40 px (disegno piccolo), a 120 e 200 px (disegno grande). Passa con il cursore sulle carte: saltello, nappa e pompon.</p>
+<div class="pillole" id="pillole"></div>
+<div class="tab" id="tab"></div>
+<div class="grande-griglia" id="carte" style="margin-top:30px"></div>
+<script type="module">
+  import { ACCESSORI, personaggio } from '../js/guardaroba.js';
+  // misura = la gemma in px: la cornice del personaggio è larga 112/100 della gemma
+  const pers = (id, gemma) => personaggio(id, Math.round(gemma * 1.12));
+  const NOMI = { tocco: 'Tocco', alloro: "Corona d'alloro", corona: 'Coroncina', berretto: 'Berretto di lana', mago: 'Cappello da mago', cuffie: 'Cuffie', occhiali: 'Occhiali tondi', fiocco: 'Fiocco', festa: 'Cappellino da festa', aureola: 'Aureola', basco: 'Basco', cilindro: 'Cilindro' };
+  const q = location.search;
+  document.getElementById('pillole').innerHTML = [null, ...ACCESSORI.map(a => a.id)].map(id => `<div class="pill">${pers(id, 21)}<span>${id ? NOMI[id] : 'Nessuno'}</span></div>`).join('');
+  document.getElementById('tab').innerHTML = ['', '20 px', '40 px', '120 px', '200 px'].map(x => `<div class="capo">${x}</div>`).join('')
+    + ACCESSORI.map(a => `<div class="nome">${NOMI[a.id]}</div><div>${pers(a.id, 20)}</div><div>${pers(a.id, 40)}</div><div>${pers(a.id, 120)}</div><div>${pers(a.id, 200)}</div>`).join('');
+  document.getElementById('carte').innerHTML = ACCESSORI.map(a => `<button class="gr-carta" type="button">${pers(a.id, 150)}<span>${NOMI[a.id]}</span></button>`).join('');
+  if (q.includes('piccola')) { document.getElementById('tab').remove(); document.getElementById('carte').remove(); }
+  if (q.includes('grande')) { document.getElementById('pillole').remove(); document.getElementById('tab').remove(); }
+  if (q.includes('tabella')) { document.getElementById('pillole').remove(); document.getElementById('carte').remove(); }
+</script>
+</body>
+</html>

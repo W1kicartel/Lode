@@ -38,6 +38,7 @@ import * as DI from './codice/diario.js';
 import * as DC from './codice/discussione.js';
 import { ERRORI } from './codice/modelli.js';
 import * as ER from './errori.js';
+import * as GR from './guardaroba.js';
 import * as TS from './sync-testi.js';
 import * as LB from './libretto.js';
 const BRIDGE = DESKTOP ? window.lodeDesktop : null;
@@ -1628,7 +1629,7 @@ async function votoSistema(c) {
   const dopo = media(), d = prima.ponderata != null && dopo.ponderata != null ? dopo.ponderata - prima.ponderata : null;
   const v = c.tipo === 'idoneita' ? t('barra2.idoneita') : LB.votoEsame(e);
   await mostraFatto({ testo: c.tipo === 'idoneita' ? t('barra2.idoneita-registrata', { nome: e.nome }) : t('barra2.voto-in', { voto: v, nome: e.nome }), nota: nuovo ? t('libretto.nuovo-esame', { n: e.cfu, crediti: LB.crediti() }) : (d != null ? t('barra2.media-diff', { media: LB.formatoMedia(dopo.ponderata), segno: LB.segno(d), diff: LB.formatoMedia(Math.abs(d)) }) : ''), annulla: ann, sintesi: t('barra2.sintesi-voto', { nome: e.nome, voto: v }) });
-  segnala('fatto'); aggiornaTutto();
+  segnala('fatto'); aggiornaTutto(); if (c.tipo === 'voto') GR.festeggia(!!c.lode);
   if (c.tipo === 'voto' && LB.ottimo(c.voto)) rispostaFissa(t('barra2.bel-colpo'));
   return schedaLibretto();
 }
@@ -1651,7 +1652,7 @@ async function esegui(c) {
       registraVoto(e.id, c.tipo === 'idoneita' ? { idoneita: true } : { voto: c.voto, lode: c.lode });
       const dopo = media(), d = prima.ponderata != null && dopo.ponderata != null ? dopo.ponderata - prima.ponderata : null;
       await mostraFatto({ testo: c.tipo === 'idoneita' ? t('barra2.idoneita-registrata', { nome: e.nome }) : c.lode ? t('barra2.voto-lode-in', { voto: c.voto, nome: e.nome }) : t('barra2.voto-in', { voto: c.voto, nome: e.nome }), nota: nuovo ? t('barra2.nuovo-esame-6-cfu') : (d != null ? t('barra2.media-diff', { media: num(dopo.ponderata, 2), segno: d >= 0 ? '+' : '−', diff: num(Math.abs(d), 2) }) : ''), annulla: ann, sintesi: t('barra2.sintesi-voto', { nome: e.nome, voto: c.tipo === 'idoneita' ? t('barra2.idoneita') : c.voto }) });
-      segnala('fatto'); aggiornaTutto();
+      segnala('fatto'); aggiornaTutto(); if (c.tipo === 'voto') GR.festeggia(!!c.lode);
       if (c.voto >= 28 || c.lode) rispostaFissa(c.lode ? t('barra2.trenta-e-lode') : t('barra2.bel-colpo'));
       return schedaLibretto();
     }
@@ -1747,7 +1748,30 @@ async function esegui(c) {
     case 'diario': return apriDiario(c.progetto);
     case 'diarioOpz': return opzioneDiario(c);
     case 'lingua': return cambiaLingua(c.codice);
+    case 'accessorio': return c.apri ? schedaGuardaroba() : vesti(c.id);
   }
+}
+
+// il guardaroba (js/guardaroba.js): «metti la corona», «togli il cappello» (id null), «guardaroba» (la scheda con le carte)
+function vesti(id) {
+  D.imp.accessorio = GR.inForma(id); salva(); GR.cambiato(D.imp.accessorio);
+  const a = GR.accessorio(D.imp.accessorio);
+  return mostraFatto({ testo: a ? t('guardaroba.messo', { nome: t(a.chiave) }) : t('guardaroba.tolto') });
+}
+function cartaGuardaroba(id, px) {
+  const a = GR.accessorio(id), nome = a ? t(a.chiave) : t('guardaroba.nessuno');
+  return `<button type="button" class="gr-carta${a ? '' : ' gr-nessuno'}" data-acc="${esc(id || '')}" aria-pressed="${(D.imp.accessorio || null) === (id || null)}">${GR.personaggio(id, px)}<span>${esc(nome)}</span></button>`;
+}
+function schedaGuardaroba() {
+  const s = scheda('ld-guardaroba', `<b>${t('guardaroba.titolo')}</b><p class="ld-nota">${t('guardaroba.scheda-aiuto')}</p><div class="gr-griglia">${[null, ...GR.IDS].map(id => cartaGuardaroba(id, 48)).join('')}</div>`);
+  s.setAttribute('role', 'group'); s.setAttribute('aria-label', t('guardaroba.titolo'));
+  s.addEventListener('click', e => {
+    const b = e.target.closest('.gr-carta'); if (!b) return;
+    D.imp.accessorio = GR.inForma(b.dataset.acc || null); salva(); GR.cambiato(D.imp.accessorio);
+    s.querySelectorAll('.gr-carta').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  });
+  if (A.turno) A.turno.dataset.sintesi = t('guardaroba.titolo');
+  return s;
 }
 
 // «lingua inglese», «language italian»…: prima la conferma nella lingua NUOVA, poi si salva e si ricarica (nell'app ricarica

@@ -1,0 +1,21 @@
+// Lodes Kleiderschrank (Deutsch).
+export default {
+  'guardaroba.titolo': "Kleiderschrank",
+  'guardaroba.aiuto': "Ein Accessoire für Lode, die Raute oben im Fenster. Auch über die Leiste: „setz die Krone auf“, „nimm den Hut ab“, „Kleiderschrank“.",
+  'guardaroba.scheda-aiuto': "Tipp ein Accessoire an, Lode probiert es gleich an.",
+  'guardaroba.nessuno': "Keins",
+  'guardaroba.messo': "Neuer Look: {nome}.",
+  'guardaroba.tolto': "Keine Accessoires: Lode ist wieder ganz er selbst.",
+  'guardaroba.tocco': "Doktorhut",
+  'guardaroba.alloro': "Lorbeerkranz",
+  'guardaroba.corona': "Krönchen",
+  'guardaroba.berretto': "Bommelmütze",
+  'guardaroba.mago': "Zauberhut",
+  'guardaroba.cuffie': "Kopfhörer",
+  'guardaroba.occhiali': "Runde Brille",
+  'guardaroba.fiocco': "Schleife",
+  'guardaroba.festa': "Partyhütchen",
+  'guardaroba.aureola': "Heiligenschein",
+  'guardaroba.basco': "Baskenmütze",
+  'guardaroba.cilindro': "Zylinder",
+};

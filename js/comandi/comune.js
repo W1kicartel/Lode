@@ -183,3 +183,19 @@ export function riempiEsempi(ESEMPI, sistema, { virgola = true, voti = {} } = {}
   };
   return ESEMPI.map(([frase, cosa]) => [frase.replace(/\{(voto|obiettivo|simula)\}/g, (_, k) => scrivi(k)), cosa]);
 }
+
+// Il guardaroba (js/guardaroba.js): «metti la corona», «togli il cappello», «guardaroba» in ogni lingua. Ogni riconoscitore
+// dà le sue parole: nomi (detto → id dell'accessorio, già senza accenti né apostrofi), i modi di metterlo e di toglierlo
+// (NOME al posto del nome), le parole generiche per «il cappello» e i modi di aprire il guardaroba. La frase si confronta
+// tutta (^…$): «metti la corona» sì, «metti la corona di spine nel riassunto» no (va all'AI).
+// { tipo: 'accessorio', id } mette (id) o toglie (null); { tipo: 'accessorio', apri: true } apre la scelta
+export function accessorioDetto(frase, { nomi, metti, togli, generico, apri }) {
+  const t = norm(String(frase || '').replace(/œ/g, 'oe').replace(/Œ/g, 'oe').replace(/ß/g, 'ss').replace(/æ/g, 'ae'));
+  if (!t || t.length > 60) return null;
+  const tutti = Object.keys(nomi).sort((a, b) => b.length - a.length).join('|');
+  if (new RegExp(`^(?:${apri})$`).test(t)) return { tipo: 'accessorio', apri: true };
+  for (const re of togli) if (new RegExp(`^${re.replace('NOME', `(?:${tutti}|${generico})`)}$`).test(t)) return { tipo: 'accessorio', id: null };
+  let m;
+  for (const re of metti) if ((m = t.match(new RegExp(`^${re.replace('NOME', `(${tutti})`)}$`)))) return { tipo: 'accessorio', id: nomi[m[1]] };
+  return null;
+}

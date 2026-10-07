@@ -1,0 +1,21 @@
+// El armario de Lode (español).
+export default {
+  'guardaroba.titolo': "Armario",
+  'guardaroba.aiuto': "Un accesorio para Lode, el rombo de arriba de la ventana. También desde la barra: «ponte la corona», «quítate el sombrero», «armario».",
+  'guardaroba.scheda-aiuto': "Toca un accesorio y Lode se lo prueba.",
+  'guardaroba.nessuno': "Ninguno",
+  'guardaroba.messo': "Nuevo look: {nome}.",
+  'guardaroba.tolto': "Sin accesorios: Lode vuelve a ser como era.",
+  'guardaroba.tocco': "Birrete",
+  'guardaroba.alloro': "Corona de laurel",
+  'guardaroba.corona': "Coronita",
+  'guardaroba.berretto': "Gorro de lana",
+  'guardaroba.mago': "Sombrero de mago",
+  'guardaroba.cuffie': "Auriculares",
+  'guardaroba.occhiali': "Gafas redondas",
+  'guardaroba.fiocco': "Lazo",
+  'guardaroba.festa': "Gorrito de fiesta",
+  'guardaroba.aureola': "Aureola",
+  'guardaroba.basco': "Boina",
+  'guardaroba.cilindro': "Chistera",
+};

@@ -273,6 +273,15 @@ export const CASI = [
   ['Sprache Japanisch', { tipo: 'lingua', codice: null }],
   ['idioma japonês', { tipo: 'lingua', codice: null }],
   ['cambia el idioma a japonés', { tipo: 'lingua', codice: null }],
+  // il guardaroba (js/guardaroba.js): mettere, togliere, aprire la scelta
+  ['ponte la corona', { tipo: 'accessorio', id: 'corona' }],
+  ['Ponte el birrete.', { tipo: 'accessorio', id: 'tocco' }],
+  ['ponte el gorro de lana', { tipo: 'accessorio', id: 'berretto' }],
+  ['usa las gafas redondas', { tipo: 'accessorio', id: 'occhiali' }],
+  ['quítate el sombrero', { tipo: 'accessorio', id: null }],
+  ['quita la boina', { tipo: 'accessorio', id: null }],
+  ['armario', { tipo: 'accessorio', apri: true }],
+  ['abre el armario', { tipo: 'accessorio', apri: true }],
 ];
 
 // frasi che non sono comandi: restano all'AI (in spagnolo e anche per l'inglese di riserva)
@@ -317,6 +326,9 @@ export const NON = [
   'la prueba de manejo es el martes',
   'media y varianza de la binomial',
   'la media de una normal',
+  // il guardaroba: altri vestiti e altri «metti» non sono accessori
+  'quítate el abrigo',
+  'ponte las pilas con el temario',
 ];
 // gli esami spagnoli del libretto del banco, solo nel giro dello spagnolo (con «Inglés B2» nel libretto comune, «inglês» in
 // portoghese troverebbe l'esame spagnolo)

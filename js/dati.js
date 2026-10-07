@@ -5,6 +5,7 @@
 import { t, elenco, numero, lingua, tIn, elencoIn } from './lingua.js';
 import * as S from './sistemi.js';
 import { numeroInFondo } from './parole.js';
+import { valido as validoAccessorio, inForma as accessorioInForma } from './guardaroba.js';
 // i dati di esempio di tutte le lingue: esempio() prende quelli della lingua della barra, il benvenuto li riconosce tutti
 import esempioIt from './lingue/it/esempio.js';
 import esempioEn from './lingue/en/esempio.js';
@@ -26,7 +27,7 @@ export const VUOTO = () => ({
   // informatica (js/codice/): esercizi «Cosa stampa?» (SM-2 a parte), errori contati, eventi per il diario, opzioni dei progetti.
   // Una chiave a sé: pulisciEsempio() in benvenuto.js azzera D.memoria, non questa. I percorsi dei progetti qui non ci sono mai.
   codice: { memoria: {}, errori: {}, eventi: [], diari: {}, opzioni: {}, turni: [], spiegate: {} },
-  imp: { focus: 25, pausa: 5, voceAlta: false, chiave: '', aspetto: 'scuro', suoni: true, suggerimenti: true, ultimoSuggerimento: 0 },
+  imp: { focus: 25, pausa: 5, voceAlta: false, chiave: '', aspetto: 'scuro', suoni: true, suggerimenti: true, ultimoSuggerimento: 0, accessorio: null },   // accessorio: il guardaroba (js/guardaroba.js), null = nessuno
   benvenuto: false,
 });
 
@@ -58,8 +59,10 @@ export function profiloInForma(p) {
   if (x.sistema !== 'it' && !x.totaliScelti) { if (!(Number(x.cfuTotali) > 0) || +x.cfuTotali === 180) x.cfuTotali = S.sistema(x.sistema).totali; x.totaliScelti = true; }
   return x;
 }
+// le impostazioni con i campi che mancano; un accessorio sconosciuto (dati scritti a mano, una versione futura) vale nessuno
+const impInForma = i => { const x = { ...VUOTO().imp, ...i }; x.accessorio = accessorioInForma(x.accessorio); return x; };
 // i voti si controllano con il sistema del profilo già in forma
-function unisci(d) { if (!(d && d.v === 1)) return null; const profilo = profiloInForma(d.profilo); return { ...VUOTO(), ...d, esami: Array.isArray(d.esami) ? d.esami.filter(e => e && typeof e === 'object' && ID.test(e.id)).map(e => inForma(e, profilo.sistema)) : [], profilo, imp: { ...VUOTO().imp, ...d.imp }, codice: { ...VUOTO().codice, ...d.codice } }; }
+function unisci(d) { if (!(d && d.v === 1)) return null; const profilo = profiloInForma(d.profilo); return { ...VUOTO(), ...d, esami: Array.isArray(d.esami) ? d.esami.filter(e => e && typeof e === 'object' && ID.test(e.id)).map(e => inForma(e, profilo.sistema)) : [], profilo, imp: impInForma(d.imp), codice: { ...VUOTO().codice, ...d.codice } }; }
 // Un backup da importare (magari passato da un compagno) si controlla tutto e, se qualcosa non torna, si rifiuta: non si
 // «aggiusta», perché rigenerare gli id romperebbe i legami fra carte ed esami. Numeri come numeri (o cifre), id semplici,
 // date AAAA-MM-GG, giorni dell'orario 0-6. Poi passa da sostituisci(), che rimette in forma cfu e voti
@@ -76,7 +79,8 @@ export function backupValido(d) {
   const turnoOk = t => ogg(t) && giorni(t.giorni) && ora(t.inizio) && ora(t.fine);
   const eccezioneOk = x => ogg(x) && DATA.test(x.data) && (x.no === true || (ora(x.inizio) && ora(x.fine)));
   const lavoroOk = l => l == null || (ogg(l) && lista(l.turni, turnoOk) && lista(l.eccezioni, eccezioneOk) && numero(l.tetto));
-  const impOk = i => ogg(i) && lavoroOk(i.lavoro) && (i.studio == null || (ogg(i.studio) && ora(i.studio.da) && ora(i.studio.a))) && lista(i.oreScelte, x => typeof x === 'string');
+  // il guardaroba: un accessorio che Lode conosce, o nessuno (i backup di prima non ce l'hanno)
+  const impOk = i => ogg(i) && lavoroOk(i.lavoro) && validoAccessorio(i.accessorio) && (i.studio == null || (ogg(i.studio) && ora(i.studio.da) && ora(i.studio.a))) && lista(i.oreScelte, x => typeof x === 'string');
   return ogg(d) && d.v === 1 && Array.isArray(d.esami) && d.esami.every(esameOk) && lista(d.carte, cartaOk) && lista(d.orario, orarioOk) && lista(d.sessioni, sessioneOk)
     && (d.profilo == null || (ogg(d.profilo) && testo(d.profilo.nome) && testo(d.profilo.corso) && numero(d.profilo.cfuTotali) && numero(d.profilo.lode) && (d.profilo.sistema == null || CODICI.includes(d.profilo.sistema)))) && (d.imp == null || impOk(d.imp));
 }
@@ -148,7 +152,7 @@ export function inverti(p, q, cur) {
   }
 }
 
-export function sostituisci(nuovi) { const profilo = profiloInForma(nuovi.profilo); D = { ...VUOTO(), ...nuovi, esami: (nuovi.esami || []).map(e => inForma(e, profilo.sistema)), profilo, imp: { ...VUOTO().imp, ...nuovi.imp, chiave: D.imp.chiave }, codice: { ...VUOTO().codice, ...nuovi.codice } }; salva(); }
+export function sostituisci(nuovi) { const profilo = profiloInForma(nuovi.profilo); D = { ...VUOTO(), ...nuovi, esami: (nuovi.esami || []).map(e => inForma(e, profilo.sistema)), profilo, imp: { ...impInForma(nuovi.imp), chiave: D.imp.chiave }, codice: { ...VUOTO().codice, ...nuovi.codice } }; salva(); }
 // la chiave AI non esce mai in un'esportazione
 export function esporta() { const c = structuredClone(D); c.imp.chiave = ''; return c; }
 // in ascolto da altre schede dello stesso browser

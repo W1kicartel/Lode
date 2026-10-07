@@ -10,7 +10,7 @@
 // I numeri a parole («vinte e oito») diventano cifre solo qui dentro: numeri() non si esporta, perché le formule dettate
 // in portoghese restano come sono (docs/LINGUE.md, «La voce e le formule»).
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta, VOTO_CIFRE, VOTO_SOLO, numeroVoto, obiettivoDetto } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta, VOTO_CIFRE, VOTO_SOLO, numeroVoto, obiettivoDetto, accessorioDetto } from './comune.js';
 
 const DIAS = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
 const MESES = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -127,8 +127,22 @@ function interpretaProgetto(testo) {
   return null;
 }
 
+// o guarda-roupa (js/guardaroba.js): «coloca a coroa», «tira o chapéu», «guarda-roupa» (palavras sem acentos)
+const ART_G = '(?:(?:o|a|os|as|um|uma|seu|sua|teu|tua|meu|minha) )?';
+export const GUARDAROBA = {
+  nomi: { capelo: 'tocco', 'chapeu de formatura': 'tocco', 'chapeu de formando': 'tocco', 'coroa de louros': 'alloro', 'coroa de louro': 'alloro', louros: 'alloro',
+    coroa: 'corona', coroinha: 'corona', gorro: 'berretto', 'gorro de la': 'berretto', touca: 'berretto', 'touca de la': 'berretto', gorrinho: 'berretto',
+    'chapeu de mago': 'mago', 'chapeu de bruxo': 'mago', 'chapeu de feiticeiro': 'mago', fones: 'cuffie', 'fones de ouvido': 'cuffie', 'fone de ouvido': 'cuffie', fone: 'cuffie', headphone: 'cuffie', headphones: 'cuffie',
+    oculos: 'occhiali', 'oculos redondos': 'occhiali', laco: 'fiocco', lacinho: 'fiocco', 'chapeu de festa': 'festa', 'chapeuzinho de festa': 'festa', chapeuzinho: 'festa',
+    aureola: 'aureola', boina: 'basco', cartola: 'cilindro' },
+  metti: [`(?:coloca|coloque|colocar|bota|bote|botar|poe|ponha|por|usa|use|veste|vista|experimenta) ${ART_G}NOME`],
+  togli: [`(?:tira|tire|tirar|remove|remova|remover) ${ART_G}NOME`, 'sem (?:chapeu|acessorios?)'],
+  generico: 'chapeu|chapeus|acessorio|acessorios',
+  apri: '(?:(?:abre|abrir|abra|mostra|me mostra|ver) )?(?:o |meu )?(?:guarda roupa|armario|closet)|troca(?:r)? (?:de |o )?(?:chapeu|acessorio)|chapeus|acessorios',
+};
 export function interpreta(frase) {
   const grezzo0 = String(frase || '').normalize('NFC').trim(); if (!grezzo0) return null;
+  { const a = accessorioDetto(grezzo0, GUARDAROBA); if (a) return a; }
   // informatica: «explica o erro», anche con l'errore incollato dopo. Solo se dopo «erro» non c'è niente, ci sono i due punti
   // o un a capo, o c'è davvero un errore del compilatore: «o que significa erro padrão» resta all'AI
   let e0;

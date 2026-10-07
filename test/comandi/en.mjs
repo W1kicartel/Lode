@@ -250,6 +250,15 @@ export const CASI = [
   ['what GPA do I need for 3.5', { tipo: 'serve', base: 3.5 }],
   ['what do I need for summa cum laude', { tipo: 'serve', base: 3.9 }],
   ['what do I need for 110 cum laude', { tipo: 'serve', base: 110 }],
+  // il guardaroba (js/guardaroba.js): mettere, togliere, aprire la scelta
+  ['put on the crown', { tipo: 'accessorio', id: 'corona' }],
+  ['Wear the mortarboard.', { tipo: 'accessorio', id: 'tocco' }],
+  ["put on the wizard's hat", { tipo: 'accessorio', id: 'mago' }],
+  ['put the headphones on', { tipo: 'accessorio', id: 'cuffie' }],
+  ['take off the hat', { tipo: 'accessorio', id: null }],
+  ['remove the glasses', { tipo: 'accessorio', id: null }],
+  ['wardrobe', { tipo: 'accessorio', apri: true }],
+  ['open the wardrobe', { tipo: 'accessorio', apri: true }],
 ];
 
 // frasi che non sono comandi: restano all'AI
@@ -286,4 +295,7 @@ export const NON = [
   'thanks a lot',
   'what is a homomorphism',
   'summarise chapter three for me',
+  // il guardaroba: altri vestiti e altri «metti» non sono accessori
+  'take off your coat',
+  'put on some music while I study',
 ];

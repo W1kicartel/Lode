@@ -10,7 +10,7 @@
 // I numeri a parole («achtundzwanzig») diventano cifre solo dentro i comandi: non c'è un export «numeri», così le formule
 // dettate in tedesco restano come sono (docs/LINGUE.md, «La voce e le formule»).
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta, VOTO_CIFRE, VOTO_SOLO, numeroVoto, obiettivoDetto } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta, VOTO_CIFRE, VOTO_SOLO, numeroVoto, obiettivoDetto, accessorioDetto } from './comune.js';
 
 // le espressioni si scrivono con le dieresi; chi scrive di fretta le salta o le scioglie: «ü» vale anche «ue» e «u», «ß»
 // anche «ss». \b diventa un confine di parola che conosce le lettere tedesche (quello di JavaScript taglia «über» prima
@@ -151,8 +151,20 @@ const FRASE = R(String.raw`^(?:ich|man|wir|du|ihr|sie|es|mir|mich|dir|dich|uns)\
 // un comando dentro «zeig mir …», «öffne …»: «zeig mir meine Noten» è il libretto, non una pagina che si chiama «Noten»
 const DENTRO = new Set(['naviga', 'apriEsame']);
 
+// der Kleiderschrank (js/guardaroba.js): „setz die Krone auf“, „nimm den Hut ab“, „Kleiderschrank“ (Wörter ohne Umlaute: ü → u)
+const ART_G = '(?:(?:den|die|das|dem|der|einen|eine|ein|deinen|deine|dein|meinen|meine|mein) )?';
+export const GUARDAROBA = {
+  nomi: { doktorhut: 'tocco', absolventenhut: 'tocco', abschlusshut: 'tocco', lorbeerkranz: 'alloro', lorbeeren: 'alloro', lorbeer: 'alloro', krone: 'corona', kronchen: 'corona',
+    mutze: 'berretto', bommelmutze: 'berretto', wollmutze: 'berretto', pudelmutze: 'berretto', strickmutze: 'berretto', zauberhut: 'mago', zaubererhut: 'mago', kopfhorer: 'cuffie',
+    brille: 'occhiali', 'runde brille': 'occhiali', schleife: 'fiocco', partyhut: 'festa', partyhutchen: 'festa', partymutze: 'festa', heiligenschein: 'aureola', baskenmutze: 'basco', barett: 'basco', zylinder: 'cilindro' },
+  metti: [`(?:setz|setze|zieh|ziehe|trag|trage)(?: dir| mal| dir mal)? ${ART_G}NOME(?: auf| an)?`, `${ART_G}NOME (?:aufsetzen|anziehen|tragen)`],
+  togli: [`(?:nimm|setz|setze|zieh|ziehe)(?: dir| mal| dir mal)? ${ART_G}NOME (?:ab|aus)`, `${ART_G}NOME (?:ab|absetzen|ausziehen)`, 'ohne (?:hut|accessoire|zubehor)'],
+  generico: 'hut|hute|accessoire|accessoires|zubehor',
+  apri: '(?:(?:offne|zeig mir|zeig) )?(?:den |meinen )?(?:kleiderschrank|garderobe|schrank)(?: offnen| auf)?|(?:hut|accessoire) wechseln|hute|accessoires',
+};
 export function interpreta(frase) {
   const grezzo0 = String(frase || '').trim(); if (!grezzo0) return null;
+  { const a = accessorioDetto(grezzo0, GUARDAROBA); if (a) return a; }
   // informatica: «erklär den Fehler», anche con l'errore incollato dopo. Solo se dopo «Fehler» non c'è niente, ci sono i due
   // punti o un a capo, o c'è davvero un errore del compilatore: «was bedeutet Standardfehler» resta all'AI
   let e0;

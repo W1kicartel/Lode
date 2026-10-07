@@ -1,0 +1,21 @@
+// La garde-robe de Lode (français).
+export default {
+  'guardaroba.titolo': "Garde-robe",
+  'guardaroba.aiuto': "Un accessoire pour Lode, le losange en haut de la fenêtre. Aussi depuis la barre : « mets la couronne », « enlève le chapeau », « garde-robe ».",
+  'guardaroba.scheda-aiuto': "Touche un accessoire, Lode l’essaie tout de suite.",
+  'guardaroba.nessuno': "Aucun",
+  'guardaroba.messo': "Nouveau look : {nome}.",
+  'guardaroba.tolto': "Plus d’accessoires : Lode redevient lui-même.",
+  'guardaroba.tocco': "Toque",
+  'guardaroba.alloro': "Couronne de laurier",
+  'guardaroba.corona': "Petite couronne",
+  'guardaroba.berretto': "Bonnet à pompon",
+  'guardaroba.mago': "Chapeau de magicien",
+  'guardaroba.cuffie': "Casque audio",
+  'guardaroba.occhiali': "Lunettes rondes",
+  'guardaroba.fiocco': "Nœud",
+  'guardaroba.festa': "Chapeau de fête",
+  'guardaroba.aureola': "Auréole",
+  'guardaroba.basco': "Béret",
+  'guardaroba.cilindro': "Haut-de-forme",
+};

@@ -2,6 +2,11 @@
 // finestra. Sbatte le palpebre, guarda il cursore, ascolta (si gonfia con la voce), pensa, parla, sorride quando ha finito,
 // salta quando c'è da confermare. È un livello sopra l'interfaccia che segue il rombo della pillola o dell'intestazione
 // del pannello, e reagisce agli eventi 'lode' di lode.js.
+// Porta l'accessorio del guardaroba (js/guardaroba.js, D.imp.accessorio), nel disegno piccolo: segue il corpo (salti, gonfiore
+// della voce, inclinazione verso il cursore), gli occhiali seguono lo sguardo, nappa e pompon arrivano con un po' di ritardo
+// (una molla). Per un voto nuovo, qualche secondo con il cappellino da festa (il tocco per il 30 e lode).
+import { D } from './dati.js';
+import { disegno, inForma } from './guardaroba.js';
 const RIDOTTO = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const NS = 'http://www.w3.org/2000/svg';
 const el = (tag, attrs = {}, padre) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (padre) padre.append(e); return e; };
@@ -12,6 +17,7 @@ const raggi = Array.from({ length: 6 }, () => { const i = document.createElement
 
 // la gemma: rombo con angoli morbidi, due facce di bianco diverse (luce dall'alto a sinistra) e gli occhi
 const svg = el('svg', { viewBox: '-50 -50 100 100', width: 20, height: 20 }, corpo);
+const accDietro = el('g', { class: 'acc-dietro' }, svg);   // le parti dell'accessorio dietro la gemma
 el('path', { d: 'M0,-44 Q4,-44 7,-41 L41,-7 Q44,-4 44,0 Q44,4 41,7 L7,41 Q4,44 0,44 Q-4,44 -7,41 L-41,7 Q-44,4 -44,0 Q-44,-4 -41,-7 L-7,-41 Q-4,-44 0,-44 Z', fill: '#FFFFFF' }, svg);
 el('path', { d: 'M0,-44 L44,0 L0,44 Z', fill: '#E9E9E9' }, svg);
 el('path', { d: 'M-24,-20 L0,-44 L8,-36 L-16,-12 Z', fill: '#FFFFFF', opacity: .9 }, svg);
@@ -23,6 +29,22 @@ const lucD = el('circle', { cx: 14.5, cy: -5.5, r: 1.8, fill: '#fff' }, occhi);
 const felice = el('g', { opacity: 0 }, svg);
 el('path', { d: 'M-19,1 Q-13,-9 -7,1', stroke: '#0A0A0A', 'stroke-width': 4.2, fill: 'none', 'stroke-linecap': 'round' }, felice);
 el('path', { d: 'M7,1 Q13,-9 19,1', stroke: '#0A0A0A', 'stroke-width': 4.2, fill: 'none', 'stroke-linecap': 'round' }, felice);
+// l'accessorio sopra la faccia (e gli occhiali sopra gli occhi): il gruppo «pop» fa la molla quando cambia
+const accOcchi = el('g', { class: 'acc-sugli-occhi' }, svg);
+const accPop = el('g', { class: 'acc-pop' }, svg);
+const accDavanti = el('g', { class: 'acc-davanti' }, accPop);
+const ACC = { id: undefined, pop: -1e9, molle: [], fluttua: null, festaId: null, festaFino: 0, prima: null };
+function vesti(id, t) {
+  const d = disegno(id, 20);   // la mascotte è sempre piccola (20 px nella pillola, ~29 nel pannello): il disegno piccolo
+  accDietro.innerHTML = d.dietro; accDavanti.innerHTML = d.davanti; accOcchi.innerHTML = d.occhi;
+  ACC.molle = [...svg.querySelectorAll('.acc-molla')].map(g => ({ g, tipo: g.dataset.tipo, a: 0, v: 0 }));
+  ACC.fluttua = svg.querySelector('.acc-fluttua');
+  if (ACC.id !== undefined && id) ACC.pop = t;
+  ACC.id = id;
+}
+addEventListener('lode:guardaroba', e => {
+  if (e.detail?.festa) { ACC.festaId = e.detail.festa; ACC.festaFino = ora() + (e.detail.ms || 4500); }
+});
 
 const ora = () => performance.now();
 const S = { dove: 'pillola', salto: null, umore: 'quiete', finoA: 0, parlaFino: 0, festa: 0, mouse: [innerWidth / 2, innerHeight / 2], livello: 0, attivo: false };
@@ -73,6 +95,8 @@ function passo() {
     if (k >= 1) S.salto = null;
     else { const q = morb(k), d = S.salto.da; p = { x: d.x + (a.x - d.x) * q, y: d.y + (a.y - d.y) * q - Math.sin(Math.PI * Math.min(1, k)) * 46, s: d.s + (a.s - d.s) * molla(k) }; }
   }
+  const dt = ACC.prima ? Math.min(.05, Math.max(.001, (t - ACC.prima.t) / 1000)) : .016, velX = ACC.prima ? (p.x - ACC.prima.x) / dt : 0;
+  ACC.prima = { t, x: p.x };
   ultima = p;
   if (['ascolto', 'attenzione', 'felice'].includes(S.umore) && S.finoA && t > S.finoA) { S.umore = S.umore === 'ascolto' ? 'pensa' : 'quiete'; S.finoA = 0; }
   if (S.umore === 'parla' && t > S.parlaFino) S.umore = 'quiete';
@@ -86,10 +110,12 @@ function passo() {
     if (S.umore === 'focus') { dy = Math.sin(t / 1400) * .9; rot = 0; sc = 1 + Math.sin(t / 1400) * .025; }
     if (S.umore === 'felice') { const k = (t - S.festa) / 520; if (k < 1) { dy -= Math.sin(Math.PI * k) * 16; rot = 360 * morb(k); } sc = 1.06; }
   }
+  // gli occhi (e l'inclinazione): verso il cursore
+  const vx = S.mouse[0] - p.x, vy = S.mouse[1] - p.y, n = Math.hypot(vx, vy) || 1;
+  if (!RIDOTTO && S.umore !== 'focus' && S.umore !== 'felice') rot += vx / n * 3;
   corpo.style.transform = `translate(${(p.x - 10).toFixed(2)}px,${(p.y - 10 + dy).toFixed(2)}px) scale(${(p.s * sc).toFixed(3)}) rotate(${rot.toFixed(2)}deg)`;
 
   // occhi: guardano il cursore (in alto se pensa, in basso se aspetta la conferma), sbattono ogni ~3,2 s
-  const vx = S.mouse[0] - p.x, vy = S.mouse[1] - p.y, n = Math.hypot(vx, vy) || 1;
   let ox = vx / n * 3.2, oy = vy / n * 2.6;
   if (S.umore === 'pensa') { ox = 3.5; oy = -4; }
   if (S.umore === 'attenzione') { ox = 0; oy = 4; }
@@ -101,6 +127,23 @@ function passo() {
   lucS.setAttribute('cx', (-11.5 + ox).toFixed(2)); lucS.setAttribute('cy', (-5.5 + oy).toFixed(2)); lucS.setAttribute('opacity', chiudi > .5 ? 0 : 1);
   lucD.setAttribute('cx', (14.5 + ox).toFixed(2)); lucD.setAttribute('cy', (-5.5 + oy).toFixed(2)); lucD.setAttribute('opacity', chiudi > .5 ? 0 : 1);
 
+  // l'accessorio: quello scelto, o quello della festa per qualche secondo
+  const id = ACC.festaFino > t ? ACC.festaId : inForma(D.imp?.accessorio);
+  if (id !== ACC.id) vesti(id, t);
+  if (id) {
+    accOcchi.setAttribute('transform', `translate(${(ox * .55).toFixed(2)},${(oy * .55).toFixed(2)})`);
+    const kp = (t - ACC.pop) / 520;
+    accPop.setAttribute('transform', RIDOTTO || kp >= 1 ? '' : `translate(0,-30) scale(${(.55 + .45 * molla(kp)).toFixed(3)}) translate(0,30)`);
+    if (ACC.fluttua) ACC.fluttua.setAttribute('transform', RIDOTTO ? '' : `translate(0,${(Math.sin(t / 650) * 2.4).toFixed(2)})`);
+    // nappa e pompon: una molla verso dove li porterebbero il peso e il movimento (la nappa pende sempre in giù)
+    const giro = ((rot + 180) % 360 + 360) % 360 - 180;
+    for (const m of ACC.molle) {
+      if (RIDOTTO) { m.g.setAttribute('transform', ''); continue; }
+      const meta = Math.max(-45, Math.min(45, m.tipo === 'appesa' ? -giro + velX * .05 : -velX * .04 - giro * .25));
+      m.v += (90 * (meta - m.a) - 8 * m.v) * dt; m.a += m.v * dt;
+      m.g.setAttribute('transform', `rotate(${m.a.toFixed(2)})`);
+    }
+  }
   const kf = S.festa ? (t - S.festa) / 700 : 2;
   raggi.forEach((r, i) => {
     if (kf >= 1 || RIDOTTO) { r.style.opacity = 0; return; }

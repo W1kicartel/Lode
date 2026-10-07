@@ -287,6 +287,15 @@ export const CASI = [
   ['quanto preciso para 7', { tipo: 'serve', base: 7 }],
   ['que média preciso para 8,5', { tipo: 'serve', base: 8.5 }],
   ['quanto preciso para 14', { tipo: 'serve', base: 14 }],
+  // il guardaroba (js/guardaroba.js): mettere, togliere, aprire la scelta
+  ['coloca a coroa', { tipo: 'accessorio', id: 'corona' }],
+  ['Coloca o capelo.', { tipo: 'accessorio', id: 'tocco' }],
+  ['põe a cartola', { tipo: 'accessorio', id: 'cilindro' }],
+  ['usa os óculos redondos', { tipo: 'accessorio', id: 'occhiali' }],
+  ['tira o chapéu', { tipo: 'accessorio', id: null }],
+  ['tira os fones', { tipo: 'accessorio', id: null }],
+  ['guarda-roupa', { tipo: 'accessorio', apri: true }],
+  ['abre o guarda-roupa', { tipo: 'accessorio', apri: true }],
 ];
 
 // frasi che non sono comandi: restano all'AI
@@ -337,6 +346,9 @@ export const NON = [
   'play com os amigos',
   'cards para economia',
   'review de um texto meu',
+  // il guardaroba: altri vestiti e altri «metti» non sono accessori
+  'tira o casaco',
+  'coloca uma música enquanto eu estudo',
 ];
 
 // l'inglese di riserva con la barra in portoghese: le frasi inglesi restano comandi, anche con il nome portoghese di un esame
