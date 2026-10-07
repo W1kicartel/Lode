@@ -4,6 +4,7 @@
 // Senza AI capisce i comandi in italiano (comandi.js); con il cervello locale (gratis) o la tua AI preferita spiega, crea carte e interroga come all'orale.
 import { inverti, datiIllegibili, piuGiorni, norm, D, DESKTOP, lezioneOra, prossimaLezione, daGiocare, ricorda, aggiungiOrario, lezioni, RISPOSTE, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esc, fatti, media, minuti, num, oggi, ore, piano, prossimi, prossimoIntervallo, registraVoto, rispondi, salva, serie, serve, simula, sostituisci, traQuanto, trovaEsame, intervalloTesto, giorniTra, definizioni } from './dati.js';
 import { t, elenco, numero } from './lingua.js';
+import { t as tn } from './lingua.js';   // t() dove una variabile locale si chiama già t (arrivaTurno, schedaTurno, piedeSync, schedaNote)
 import { RIDOTTO, attendi, comprimi, conta, dopo, entra, h, lineare, morbido, ogni, premi, tween } from './motore.js';
 import { ESEMPI, interpreta } from './comandi.js';
 import * as F from './focus.js';
@@ -986,20 +987,20 @@ function opzioniPer(x) {
   return [];
 }
 function schedaFile(x, { corso: suggerito } = {}) {
-  if (x.tipo === 'altro') return rispostaFissa(`Questo non lo so usare: ${x.motivo}.`);
+  if (x.tipo === 'altro') return rispostaFissa(t('barra2.file-non-so-usare', { motivo: x.motivo }));
   const op = opzioniPer(x), tutti = corsiPossibili(), corsi = suggerito ? [suggerito, ...tutti.filter(c => norm(c) !== norm(suggerito))] : tutti, serveCorso = op.some(o => o.corso), serveData = op.some(o => o.data);
-  const s = scheda('ld-file-op', `<div class="capo">${ico(ICONA_FILE[x.tipo] || 'doc')}<span class="t"><b>${esc(x.nome)}</b><span>${NOME_TIPO[x.tipo]} · ${x.mb < 1 ? Math.max(1, Math.round(x.mb * 1024)) + ' KB' : x.mb.toFixed(1).replace('.', ',') + ' MB'}</span></span></div>
-    <span class="ld-lbl">Cosa ne faccio?</span>
+  const s = scheda('ld-file-op', `<div class="capo">${ico(ICONA_FILE[x.tipo] || 'doc')}<span class="t"><b>${esc(x.nome)}</b><span>${NOME_TIPO[x.tipo]} · ${x.mb < 1 ? t('barra2.peso-kb', { n: Math.max(1, Math.round(x.mb * 1024)) }) : t('barra2.peso-mb', { n: num(x.mb, 1) })}</span></span></div>
+    <span class="ld-lbl">${t('barra2.cosa-ne-faccio')}</span>
     <div class="ld-opzioni">${op.map(o => `<button type="button" class="ld-op${o.primo && !o.no ? ' primo' : ''}" data-op="${o.k}"${o.no ? ' disabled' : ''}><b>${esc(o.t)}</b><span>${esc(o.no ? o.d + ' · ' + o.no : o.d)}</span></button>`).join('')}</div>
-    ${serveCorso && corsi.length ? `<div class="ld-riga-form ld-per"><span class="ld-lbl">Per</span><select aria-label="Corso">${corsi.map(c => `<option>${esc(c)}</option>`).join('')}</select>${serveData ? `<input type="date" aria-label="Data della lezione" value="${isoDi(x.file.lastModified || Date.now())}">` : ''}</div>` : ''}`);
+    ${serveCorso && corsi.length ? `<div class="ld-riga-form ld-per"><span class="ld-lbl">${t('barra2.per')}</span><select aria-label="${t('barra2.corso')}">${corsi.map(c => `<option>${esc(c)}</option>`).join('')}</select>${serveData ? `<input type="date" aria-label="${t('barra2.data-lezione')}" value="${isoDi(x.file.lastModified || Date.now())}">` : ''}</div>` : ''}`);
   s.querySelectorAll('.ld-op').forEach((b, i) => entra(b, { ritardo: 80 + i * 55, dy: 6, blur: 5, ms: 420 }));
   s.querySelectorAll('[data-op]').forEach(b => b.addEventListener('click', async () => {
     s.querySelectorAll('[data-op]').forEach(y => { y.disabled = true; y.classList.toggle('scelta', y === b); });
     const corso = s.querySelector('.ld-per select')?.value || corsi[0] || null, data = s.querySelector('.ld-per input[type=date]')?.value;
     try { await usaFile(x, b.dataset.op, { corso, data }); }
-    catch (e) { modo('riposo'); rispostaFissa('Non è andata: ' + e.message, { errore: true }); s.querySelectorAll('[data-op]').forEach((y, i) => { y.disabled = !!op[i].no; y.classList.remove('scelta'); }); }
+    catch (e) { modo('riposo'); rispostaFissa(t('barra2.non-andata', { errore: e.message }), { errore: true }); s.querySelectorAll('[data-op]').forEach((y, i) => { y.disabled = !!op[i].no; y.classList.remove('scelta'); }); }
   }));
-  if (A.turno) A.turno.dataset.sintesi = `${x.nome}: cosa ne faccio?`;
+  if (A.turno) A.turno.dataset.sintesi = t('barra2.sintesi-cosa-ne-faccio', { nome: x.nome });
 }
 const lezionePer = (corso, data) => {
   const d = data || oggi();
@@ -1015,65 +1016,65 @@ async function allegaFile(x, corso) {
   return { l, nome };
 }
 async function usaFile(x, op, { corso, data }) {
-  if (op === 'allega') { const r = await allegaFile(x, corso); return mostraFatto({ testo: `Allegato alla lezione di ${r.l.corso}.`, azione: ['Apri', () => apriAppunti(r.l)] }); }
+  if (op === 'allega') { const r = await allegaFile(x, corso); return mostraFatto({ testo: t('barra2.allegato-lezione', { corso: r.l.corso }), azione: [t('barra2.apri'), () => apriAppunti(r.l)] }); }
   if (op === 'sbobina') {
     const sb = SB.leggi(x.testo), corsoN = trovaEsame(sb.corso)?.nome || sb.corso;
     const r = await V.salvaFile(`Lezioni/${pulito(corsoN)}/${sb.data} ${pulito(corsoN)} · sbobina${sb.da ? ' di ' + pulito(sb.da) : ''}.md`, { testo: sb.nota });
     aggiornaTutto(); segnala('fatto');
-    return mostraFatto({ testo: `Sbobina di ${corsoN} nel tuo vault.`, nota: `${dataBreve(sb.data)}${sb.da ? ' · da ' + sb.da : ''}`, azione: ['Apri', () => apriAppunti({ file: r.file, corso: corsoN })], sintesi: 'sbobina ricevuta' });
+    return mostraFatto({ testo: t('barra2.sbobina-nel-vault', { corso: corsoN }), nota: sb.da ? t('barra2.sbobina-nota-da', { data: dataBreve(sb.data), da: sb.da }) : dataBreve(sb.data), azione: [t('barra2.apri'), () => apriAppunti({ file: r.file, corso: corsoN })], sintesi: t('barra2.sbobina-ricevuta') });
   }
   if (op === 'importaCarte') {
     const carte = [];
     for (const riga of x.testo.split(/\r?\n/)) { if (!riga.trim() || riga.startsWith('#')) continue; const p = riga.split(/\t| = | → |;(?=[^;]*$)/); if (p.length >= 2 && p[0].trim() && p[1].trim()) carte.push({ fronte: p[0].trim().replace(/^"|"$/g, ''), retro: p.slice(1).join(' ').trim().replace(/^"|"$/g, '') }); }
-    if (!carte.length) return rispostaFissa('Non ho trovato righe «domanda, risposta» in questo file.');
+    if (!carte.length) return rispostaFissa(t('barra2.nessuna-riga-carte'));
     return eseguiStrumento('crea_carte', { carte: carte.slice(0, 30), esame: corso || prossimi()[0]?.nome });
   }
   if (op === 'audio') {
-    modo('pensa', 'Apro la registrazione…');
+    modo('pensa', t('barra2.apro-registrazione'));
     const audio = await FILE.audioDi(x.file); modo('riposo');
     const l = lezionePer(corso, data);
     return avviaTrascrizione({ audioProva: audio, lezione: l, daFile: x.nome });
   }
   if (op === 'lavagna') {
-    modo('pensa', 'Leggo la foto…'); segnala('pensa');
+    modo('pensa', t('barra2.leggo-foto')); segnala('pensa');
     const blocco = await AI.bloccoFile(x.file), md = await AI.trascriviFoto({ blocco, corso }); modo('riposo');
-    const card = schedaConferma({ titolo: `Mettere negli appunti di ${corso}?`, extra: `<div class="ld-anteprima">${mdHtml(md.slice(0, 1400))}</div>`, nota: 'Insieme alla foto, nella nota della lezione di oggi. Rileggila: l\'ha trascritta ' + AI.nomeMotore('testo') + '.' });
+    const card = schedaConferma({ titolo: t('barra2.lavagna-titolo', { corso }), extra: `<div class="ld-anteprima">${mdHtml(md.slice(0, 1400))}</div>`, nota: t('barra2.lavagna-nota', { motore: AI.nomeMotore('testo') }) });
     formuleIn(card.querySelector('.ld-anteprima'), md.slice(0, 1400));   // le formule disegnate, come in Obsidian
-    return attendiDecisione(card, async () => { const r = await allegaFile(x, corso); await V.annota('appunti', md, { lezione: r.l, grezza: true }); await mostraFatto({ testo: 'Lavagna negli appunti.', azione: ['Apri', () => apriAppunti(r.l)] }, card); return {}; });
+    return attendiDecisione(card, async () => { const r = await allegaFile(x, corso); await V.annota('appunti', md, { lezione: r.l, grezza: true }); await mostraFatto({ testo: t('barra2.lavagna-fatta'), azione: [t('barra2.apri'), () => apriAppunti(r.l)] }, card); return {}; });
   }
   // i temi d'esame leggono il testo da soli: un PDF scansionato non è un errore, si dice di incollare il testo (niente AI né OCR)
   if (op === 'temi') return temiDaFile(x, corso);
   // da qui serve il testo del file
-  modo('pensa', `Leggo ${x.nome}…`); segnala('pensa');
+  modo('pensa', t('barra2.leggo-file', { nome: x.nome })); segnala('pensa');
   let testo = null, blocchi;
   if (x.tipo === 'foto') blocchi = [await AI.bloccoFile(x.file)];
   else {
     try { testo = await FILE.testoDi(x); blocchi = [{ type: 'text', text: `[${x.nome}]\n${testo.slice(0, 120000)}` }]; }
     catch (e) { if (x.tipo === 'pdf' && AI.motore('testo') === 'claude') blocchi = [await AI.bloccoFile(x.file)]; else throw e; }
   }
-  if (op === 'crocette') { modo('riposo'); if (!testo) return rispostaFissa('Da questo file non riesco a leggere il testo.'); return schedaCrocette({ esame: trovaEsame(corso || ''), materiale: testo, nomeFile: x.nome }); }
+  if (op === 'crocette') { modo('riposo'); if (!testo) return rispostaFissa(t('barra2.file-senza-testo')); return schedaCrocette({ esame: trovaEsame(corso || ''), materiale: testo, nomeFile: x.nome }); }
   if (op === 'programma' || op === 'domande') {
     modo('riposo');
-    if (!testo) return rispostaFissa('Da questo file non riesco a leggere il testo: incollalo nel campo.');
+    if (!testo) return rispostaFissa(t('barra2.file-senza-testo-incolla'));
     const e = trovaEsame(corso || '') || (corso ? aggiungiEsame({ nome: corso }) : prossimi()[0]);
-    if (!e) return rispostaFissa('Aggiungi prima l\'esame, per esempio: «esame analisi 2 il 15 gennaio 9 cfu».');
+    if (!e) return rispostaFissa(t('barra2.prima-esame'));
     return op === 'programma' ? proponiProgramma(e, testo, { fonte: x.nome }) : aggiungiDomandeUscite(e, testo);
   }
   if (op === 'carte') {
-    modo('pensa', 'Scrivo le carte…');
+    modo('pensa', t('barra2.scrivo-carte'));
     const carte = await AI.carteDa(blocchi); modo('riposo');
-    if (!carte.length) return rispostaFissa('Da questo file non ho tirato fuori carte.');
+    if (!carte.length) return rispostaFissa(t('barra2.file-senza-carte'));
     return eseguiStrumento('crea_carte', { carte, esame: corso || prossimi()[0]?.nome });
   }
   if (op === 'definizioni') { modo('riposo'); return chiudiLezione(corso, { lezione: lezionePer(corso), testo: (testo || '').slice(0, 9000) }); }
   if (op === 'orale') { modo('riposo'); return avviaOrale(trovaEsame(corso || '') || { id: null, nome: corso || x.nome }, null, (testo || '').slice(0, 30000)); }
   if (op === 'riassunto') {
-    const md = await AI.riassumi({ corso, testo, nome: x.nome, avanza: p => modo('pensa', `Riassumo ${x.nome}… ${Math.round(p * 100)}%`) }); modo('riposo');
-    const card = schedaConferma({ titolo: `Salvare il riassunto in Obsidian?`, extra: `<div class="ld-anteprima">${mdHtml(md.slice(0, 1400))}${md.length > 1400 ? '<span class="ld-tenue"> …</span>' : ''}</div>`, nota: `Nota nuova in Materiali/${pulito(corso || 'Varie')}, con il file originale allegato.` });
+    const md = await AI.riassumi({ corso, testo, nome: x.nome, avanza: p => modo('pensa', t('barra2.riassumo', { nome: x.nome, p: Math.round(p * 100) })) }); modo('riposo');
+    const card = schedaConferma({ titolo: t('barra2.riassunto-titolo'), extra: `<div class="ld-anteprima">${mdHtml(md.slice(0, 1400))}${md.length > 1400 ? '<span class="ld-tenue"> …</span>' : ''}</div>`, nota: t('barra2.riassunto-nota', { cartella: `Materiali/${pulito(corso || 'Varie')}` }) });
     return attendiDecisione(card, async () => {
       const al = await V.salvaFile(`Allegati/${x.nome}`, { dati: new Uint8Array(await x.file.arrayBuffer()) });
       const n = await V.salvaFile(`Materiali/${pulito(corso || 'Varie')}/${x.nome.replace(/\.[^.]+$/, '')}.md`, { testo: `---\ntipo: materiale\ncorso: "[[${pulito(corso || '')}]]"\nfonte: "[[${al.file.split('/').pop()}]]"\ntags: [materiale]\n---\n# ${x.nome.replace(/\.[^.]+$/, '')}\n\n[[${pulito(corso || 'Home')}]] · file originale: ![[${al.file.split('/').pop()}]]\n\n${md}\n` });
-      await mostraFatto({ testo: 'Riassunto salvato.', azione: ['Apri', () => apriAppunti({ file: n.file, corso: x.nome })] }, card); return {};
+      await mostraFatto({ testo: t('barra2.riassunto-salvato'), azione: [t('barra2.apri'), () => apriAppunti({ file: n.file, corso: x.nome })] }, card); return {};
     });
   }
 }
@@ -1107,8 +1108,8 @@ async function accettaProposta() {
   if (p.tipo === 'programma') { const a = p.esame?.programma?.argomenti?.find(x => x.id === p.argomento); return a && AI.attiva() ? avviaOraleProgramma(p.esame, [a], { max: 2 }) : schedaProgramma({ esame: p.esame }); }
   if (p.tipo === 'focus') return avviaFocus({ esameId: p.esame?.id });
   if (p.tipo === 'stelle') {
-    const s = scheda('ld-elenco-stelle', `<span class="ld-lbl">★ Da esame · ${esc(p.esame?.nome || '')}</span>${p.stelle.map(x => `<div class="ld-stella">${mdHtml(x.replace(/^\d\d:\d\d\s*/, ''))}</div>`).join('')}<div class="az"><button type="button" class="btn primary" data-g>Ora un gioco</button></div>`);
-    s.querySelector('[data-g]').addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Gioca'); schedaGioco(p.esame?.nome); });
+    const s = scheda('ld-elenco-stelle', `<span class="ld-lbl">${t('barra2.stelle-titolo', { esame: esc(p.esame?.nome || '') })}</span>${p.stelle.map(x => `<div class="ld-stella">${mdHtml(x.replace(/^\d\d:\d\d\s*/, ''))}</div>`).join('')}<div class="az"><button type="button" class="btn primary" data-g>${t('barra2.ora-un-gioco')}</button></div>`);
+    s.querySelector('[data-g]').addEventListener('click', () => { nuovoTurno(); detto(A.turno, t('barra2.gioca')); schedaGioco(p.esame?.nome); });
     s.querySelectorAll('.ld-stella').forEach((x, i) => entra(x, { ritardo: 80 + i * 60, dy: 6, blur: 5, ms: 420 }));
   }
 }
@@ -1133,37 +1134,37 @@ function zonaOff() {
 /* ---------- la tua AI: la chiave del servizio che preferisci (facoltativa, a consumo) ---------- */
 function schedaAI(preferito) {
   const st = AI.statoAI(), F = AI.FORNITORI, loc = !!st.locale;
-  const s = scheda('ld-tuaai', `<span class="ld-lbl">La tua AI</span>
-    <p class="ld-nota" style="margin-top:6px">${loc ? 'Adesso Lode usa il <b>cervello locale</b>: gratis, offline, gli appunti restano qui.' : 'Il <b>cervello locale</b> gratis si installa da «Prepara Lode».'} Se vuoi un'AI più potente, collega la tua chiave: paghi direttamente il servizio, a consumo (di solito pochi centesimi a sessione). Lode non vede né incassa niente; la chiave resta su questo computer.</p>
-    <div class="ld-opzioni">${Object.entries(F).map(([k, f]) => `<button type="button" class="ld-op${st.fornitore === k ? ' primo' : ''}" data-f="${k}"><b>${esc(f.nome)}${st.fornitore === k ? ' · collegata' : ''}</b><span>${esc(f.ditta)} · ${esc(f.nota)}</span></button>`).join('')}</div>
-    <div class="ld-ai-chiave" hidden><span class="ld-lbl"></span><div class="ld-riga-form"><input type="password" autocomplete="off" spellcheck="false" aria-label="Chiave API"><button type="button" class="btn small primary" data-collega>Collega</button></div><small class="ld-tenue"></small></div>
-    <div class="ld-ai-modello" ${st.fornitore && st.fornitore !== 'anthropic' ? '' : 'hidden'}><span class="ld-lbl">Modello</span><div class="ld-riga-form"><select aria-label="Modello">${st.modello ? `<option>${esc(st.modello)}</option>` : ''}</select></div></div>
-    ${loc ? `<label class="ld-spunta-ai"><input type="checkbox" data-uso${st.uso === 'pesante' ? ' checked' : ''}> Appunti e lezioni restano sul computer: la tua AI solo per spiegazioni e orale</label>` : ''}
-    ${st.fornitore ? '<div class="az"><button type="button" class="btn small ld-piano" data-scollega>Usa solo il cervello locale</button></div>' : ''}`);
+  const s = scheda('ld-tuaai', `<span class="ld-lbl">${t('barra2.la-tua-ai')}</span>
+    <p class="ld-nota" style="margin-top:6px">${loc ? t('barra2.ai-locale-attivo') : t('barra2.ai-locale-da-installare')} ${t('barra2.ai-chiave-spiegazione')}</p>
+    <div class="ld-opzioni">${Object.entries(F).map(([k, f]) => `<button type="button" class="ld-op${st.fornitore === k ? ' primo' : ''}" data-f="${k}"><b>${st.fornitore === k ? t('barra2.ai-nome-collegata', { nome: esc(f.nome) }) : esc(f.nome)}</b><span>${esc(f.ditta)} · ${esc(f.nota)}</span></button>`).join('')}</div>
+    <div class="ld-ai-chiave" hidden><span class="ld-lbl"></span><div class="ld-riga-form"><input type="password" autocomplete="off" spellcheck="false" aria-label="${t('barra2.chiave-api')}"><button type="button" class="btn small primary" data-collega>${t('barra2.collega')}</button></div><small class="ld-tenue"></small></div>
+    <div class="ld-ai-modello" ${st.fornitore && st.fornitore !== 'anthropic' ? '' : 'hidden'}><span class="ld-lbl">${t('barra2.modello')}</span><div class="ld-riga-form"><select aria-label="${t('barra2.modello')}">${st.modello ? `<option>${esc(st.modello)}</option>` : ''}</select></div></div>
+    ${loc ? `<label class="ld-spunta-ai"><input type="checkbox" data-uso${st.uso === 'pesante' ? ' checked' : ''}> ${t('barra2.ai-solo-spiegazioni')}</label>` : ''}
+    ${st.fornitore ? `<div class="az"><button type="button" class="btn small ld-piano" data-scollega>${t('barra2.usa-solo-locale')}</button></div>` : ''}`);
   const box = s.querySelector('.ld-ai-chiave'), inp = box.querySelector('input'), nota = box.querySelector('small');
   let scelto = null;
   const scegli = k => {
     scelto = k; const f = F[k];
     s.querySelectorAll('[data-f]').forEach(b => b.classList.toggle('scelta', b.dataset.f === k));
-    box.hidden = false; box.querySelector('.ld-lbl').textContent = `Chiave di ${f.nome}`;
-    inp.placeholder = f.segnaposto || 'incolla la chiave'; inp.value = AI.chiaveSalvata(k) || '';
-    nota.innerHTML = `Si crea su <b>${esc(f.sito)}</b>.`;
+    box.hidden = false; box.querySelector('.ld-lbl').textContent = t('barra2.chiave-di', { nome: f.nome });
+    inp.placeholder = f.segnaposto || t('barra2.incolla-chiave'); inp.value = AI.chiaveSalvata(k) || '';
+    nota.innerHTML = t('barra2.si-crea-su', { sito: esc(f.sito) });
     entra(box, { dy: 6, blur: 5, ms: 360 }); requestAnimationFrame(() => inp.focus({ preventScroll: true }));
   };
   s.querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => scegli(b.dataset.f)));
   const collega = async () => {
     const chiave = inp.value.trim(); if (!scelto || !chiave) return;
-    const b = box.querySelector('[data-collega]'); b.disabled = true; nota.textContent = 'Provo la chiave…';
+    const b = box.querySelector('[data-collega]'); b.disabled = true; nota.textContent = t('barra2.provo-chiave');
     try {
       const r = await AI.provaFornitore(scelto, chiave);
       AI.collegaFornitore(scelto, chiave, r.modello); salva();
       const sel = s.querySelector('.ld-ai-modello select'), mod = s.querySelector('.ld-ai-modello');
       if (scelto !== 'anthropic' && r.modelli.length) { sel.innerHTML = r.modelli.map(m => `<option${m === r.modello ? ' selected' : ''}>${esc(m)}</option>`).join(''); mod.hidden = false; }
       else mod.hidden = true;
-      s.querySelectorAll('[data-f]').forEach(x => { x.classList.toggle('primo', x.dataset.f === scelto); x.querySelector('b').textContent = F[x.dataset.f].nome + (x.dataset.f === scelto ? ' · collegata' : ''); });
+      s.querySelectorAll('[data-f]').forEach(x => { x.classList.toggle('primo', x.dataset.f === scelto); x.querySelector('b').textContent = x.dataset.f === scelto ? t('barra2.ai-nome-collegata', { nome: F[x.dataset.f].nome }) : F[x.dataset.f].nome; });
       nota.textContent = ''; box.hidden = true; segnala('fatto'); aggiornaTutto();
-      await mostraFatto({ testo: `${F[scelto].nome} collegata.`, nota: `${r.modello ? 'Modello ' + r.modello + '. ' : ''}${AI.statoAI().uso === 'pesante' ? 'Gli appunti restano sul computer.' : 'Spiegazioni, orale, carte e riordino usano la tua AI.'}`, sintesi: 'AI collegata' }, s);
-    } catch (e) { nota.textContent = e.status === 401 || e.status === 403 ? 'La chiave non è valida.' : /fetch|network/i.test(e.message) ? 'Non riesco a raggiungere il servizio: c\'è la rete?' : 'Non è andata: ' + e.message; }
+      await mostraFatto({ testo: t('barra2.ai-collegata', { nome: F[scelto].nome }), nota: `${r.modello ? t('barra2.ai-modello', { modello: r.modello }) + ' ' : ''}${AI.statoAI().uso === 'pesante' ? t('barra2.ai-appunti-restano') : t('barra2.ai-usano-tua')}`, sintesi: t('barra2.sintesi-ai-collegata') }, s);
+    } catch (e) { nota.textContent = e.status === 401 || e.status === 403 ? t('barra2.chiave-non-valida') : /fetch|network/i.test(e.message) ? t('barra2.servizio-irraggiungibile') : t('barra2.non-andata', { errore: e.message }); }
     finally { b.disabled = false; }
   };
   box.querySelector('[data-collega]').addEventListener('click', collega);
@@ -1172,11 +1173,11 @@ function schedaAI(preferito) {
   s.querySelector('[data-uso]')?.addEventListener('change', e => { AI.impostaUso(e.target.checked ? 'pesante' : 'tutto'); salva(); });
   s.querySelector('[data-scollega]')?.addEventListener('click', async e => {
     const f = F[AI.scollegaFornitore()]; salva(); aggiornaTutto(); e.target.disabled = true;
-    await mostraFatto({ testo: 'Lode usa solo il cervello locale.', nota: `Ho cancellato la chiave da questo computer. Nel tuo account${f ? ' ' + f.nome : ''} vale ancora: se non ti serve più, revocala anche lì${f?.sito ? ' (' + f.sito + ')' : ''}.` }, s);
+    await mostraFatto({ testo: t('barra2.solo-locale-fatto'), nota: f ? (f.sito ? t('barra2.ai-scollegata-sito', { nome: f.nome, sito: f.sito }) : t('barra2.ai-scollegata-nome', { nome: f.nome })) : t('barra2.ai-scollegata') }, s);
   });
   if (preferito && F[preferito]) scegli(preferito);
   s.querySelectorAll('.ld-op').forEach((b, i) => entra(b, { ritardo: 60 + i * 40, dy: 6, blur: 5, ms: 400 }));
-  if (A.turno) A.turno.dataset.sintesi = 'la tua AI';
+  if (A.turno) A.turno.dataset.sintesi = t('barra2.sintesi-la-tua-ai');
 }
 
 /* ---------- preparare il computer: Obsidian e il cervello locale ---------- */
@@ -1188,17 +1189,17 @@ const azioneAgg = async canale => { const r = await BRIDGE.invoca(canale).catch(
 function rigaAggiornamento() {
   if (!AGG?.nuova || !AGG.attivi) return null;   // spenti: niente righe (la versione nuova è su GitHub)
   // errore con 'pronta': «Riavvia ora» non ha installato (aggiorna.mjs, nonEsce); resta pronta e si installa all'uscita
-  if (AGG.fase === 'pronta') return { cls: 'info', t: `Lode ${AGG.nuova.versione} è pronta`, d: AGG.errore || 'Si installa da sola quando chiudi Lode', n: '', b: 'Riavvia ora', f: () => azioneAgg('aggiorna:riavvia') };
-  if (AGG.fase === 'da_scaricare') return { cls: 'info', t: `È uscita Lode ${AGG.nuova.versione}`, d: MAC ? 'Scarica il .dmg e trascina Lode in Applicazioni' : 'Scarica la versione nuova da GitHub', n: '', b: 'Scarica', f: () => azioneAgg('aggiorna:scarica') };
+  if (AGG.fase === 'pronta') return { cls: 'info', t: t('barra2.agg-pronta', { versione: AGG.nuova.versione }), d: AGG.errore || t('barra2.agg-si-installa'), n: '', b: t('barra2.riavvia-ora'), f: () => azioneAgg('aggiorna:riavvia') };
+  if (AGG.fase === 'da_scaricare') return { cls: 'info', t: t('barra2.agg-uscita', { versione: AGG.nuova.versione }), d: MAC ? t('barra2.agg-scarica-dmg') : t('barra2.agg-scarica-github'), n: '', b: t('barra2.scarica'), f: () => azioneAgg('aggiorna:scarica') };
   return null;
 }
 function testoAggiornamenti() {
   const v = AGG.nuova?.versione;
-  if (!AGG.attivi) return `Lode ${AGG.versione} · spenti: le versioni nuove sono su GitHub, nella pagina Release`;
-  if (AGG.fase === 'scarico' && v) return `Scarico Lode ${v} · ${Math.round((AGG.p || 0) * 100)}%`;
-  if (AGG.fase === 'pronta' && v) return `Lode ${v} è pronta · si installa da sola quando chiudi Lode`;
-  if (AGG.fase === 'da_scaricare' && v) return `È uscita Lode ${v} · ${MAC ? 'scarica il .dmg e trascina Lode in Applicazioni' : 'scaricala da GitHub'}`;
-  return AGG.modo === 'manuale' ? `Lode ${AGG.versione} · ti avviso quando ne esce una nuova (da GitHub, ogni 6 ore)` : `Lode ${AGG.versione} · si aggiorna da sola da GitHub, controlla ogni 6 ore`;
+  if (!AGG.attivi) return t('barra2.agg-spenti', { versione: AGG.versione });
+  if (AGG.fase === 'scarico' && v) return t('barra2.agg-scarico', { versione: v, p: Math.round((AGG.p || 0) * 100) });
+  if (AGG.fase === 'pronta' && v) return t('barra2.agg-pronta-riga', { versione: v });
+  if (AGG.fase === 'da_scaricare' && v) return MAC ? t('barra2.agg-uscita-mac', { versione: v }) : t('barra2.agg-uscita-github', { versione: v });
+  return AGG.modo === 'manuale' ? t('barra2.agg-manuale', { versione: AGG.versione }) : t('barra2.agg-automatici', { versione: AGG.versione });
 }
 // la riga «Aggiornamenti» di «Prepara Lode», aggiornata sul posto: testo, avanzamento del download e bottoni
 function mostraAggiornamenti(s) {
@@ -1207,7 +1208,7 @@ function mostraAggiornamenti(s) {
   r.querySelector('.d').textContent = testoAggiornamenti();
   r.querySelector('.ld-prog i').style.transform = `scaleX(${(AGG.p || 0).toFixed(3)})`;
   const az = r.querySelector('.ld-agg-az'), ora = rigaAggiornamento();
-  az.innerHTML = `${ora ? `<button type="button" class="btn small primary" data-agg-ora>${ora.b}</button>` : ''}<button type="button" class="btn small" data-agg-interruttore>${AGG.attivi ? 'Spegni' : 'Accendi'}</button>`;
+  az.innerHTML = `${ora ? `<button type="button" class="btn small primary" data-agg-ora>${ora.b}</button>` : ''}<button type="button" class="btn small" data-agg-interruttore>${AGG.attivi ? t('barra2.spegni') : t('barra2.accendi')}</button>`;
   az.querySelector('[data-agg-ora]')?.addEventListener('click', () => ora.f());
   az.querySelector('[data-agg-interruttore]').addEventListener('click', async e => {
     e.currentTarget.disabled = true;
@@ -1219,42 +1220,42 @@ function mostraAggiornamenti(s) {
 async function aggiornaStato() { if (!V.attivo) return; try { STATO = await V.stato(); AI.impostaLocale(STATO.modello); } catch { } if (A?.aperto && A.home) disegnaHome(); }
 const avanzamenti = {};
 function schedaPrepara(cosa) {
-  if (!V.attivo) return rispostaFissa('Obsidian e il cervello locale si installano dall\'**app desktop** di Lode.');
+  if (!V.attivo) return rispostaFissa(t('barra2.prep-solo-app'));
   const st = STATO, m = st?.consigliato;
   const riga = (k, titolo, pronto, dett, b) => `<div class="ld-prep${pronto ? ' ok' : ''}" data-k="${k}"><i class="ld-seg"></i><div class="t"><b>${titolo}</b><span class="d">${dett}</span><i class="ld-prog"><i></i></i></div>${b}</div>`;
-  const s = scheda('ld-prepara', `<span class="ld-lbl">Prepara Lode</span>
-    ${riga('vault', 'Il tuo vault', true, esc(V.info?.percorso || 'Documenti/Lode') + ' · Home, corsi, lezioni, glossario', '<button type="button" class="btn small" data-apri>Apri</button>')}
-    ${riga('obsidian', 'Obsidian', st?.obsidian.installato, st?.obsidian.installato ? 'Installato e collegato al vault' : 'Gratis per uso personale · installer ufficiale da GitHub, circa 230 MB', st?.obsidian.installato ? '<button type="button" class="btn small" data-apri>Apri</button>' : '<button type="button" class="btn small primary" data-installa="obsidian">Installa</button>')}
-    ${riga('cervello', 'Cervello locale', !!st?.modello, st?.modello ? `${esc(st.modello)} · gira sul computer, senza internet` : `Ollama + ${esc(m?.etichetta || 'Qwen3.5')}, ${esc(m?.perche || '')} · circa ${m ? String(m.gb + 0.2).replace('.', ',') : '3,5'} GB`, st?.modello ? '<span class="ld-spunta">pronto</span>' : '<button type="button" class="btn small primary" data-installa="cervello">Installa</button>')}
-    ${riga('voce', 'Voce', Voce.pronta(), Voce.pronta() ? Voce.NOME_VOCE + ' in locale · tieni premuto ' + TASTI + ' e parla' : `${Voce.descrizioneVoce()}, in locale, in italiano · circa ${Voce.PESO_VOCE} MB, una volta sola`, Voce.pronta() ? '<span class="ld-spunta">pronta</span>' : '<button type="button" class="btn small primary" data-voce>Prepara</button>')}
-    ${riga('tuaai', 'La tua AI <small>facoltativa</small>', !!AI.fornitore(), AI.fornitore() ? `${esc(AI.FORNITORI[AI.fornitore()].nome)} collegata · paghi tu a consumo, direttamente al servizio` : 'Claude, ChatGPT, Gemini, Mistral…: più potente, a consumo con la tua chiave', `<button type="button" class="btn small" data-tuaai>${AI.fornitore() ? 'Cambia' : 'Collega'}</button>`)}
-    ${BRIDGE ? riga('sync', 'Sincronizza fra i tuoi computer <small>sperimentale</small>', !!SYNC?.acceso && !!SYNC.cloud && !syncBloccata(), esc(TS.rigaStato(SYNC)), `<button type="button" class="btn small" data-sync>${syncBloccata() ? 'Sblocca' : SYNC?.acceso && SYNC.cloud ? 'Gestisci' : 'Attiva'}</button>`) : ''}
-    ${BRIDGE && !(SYNC?.acceso && SYNC.cloud) ? riga('collega', 'Uso già Lode su un altro computer', false, 'Collega questo computer al vault che hai già nella cartella cloud', '<button type="button" class="btn small" data-collega>Collega</button>') : ''}
-    ${AGG?.possibile ? riga('aggiorna', 'Aggiornamenti', AGG.attivi, esc(testoAggiornamenti()), '<span class="ld-agg-az" style="display:flex;gap:6px"></span>') : ''}
-    <p class="ld-nota">Il cervello locale è gratis e lavora offline: estrae definizioni, crea carte, spiega e interroga. La tua AI è un potenziamento facoltativo: Lode non vede né incassa niente.</p>`);
-  s.querySelector('[data-tuaai]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'La mia AI'); schedaAI(); });
-  s.querySelector('[data-sync]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Sincronizza fra i computer'); schedaSincronizza(syncBloccata() ? 'sblocca' : null); });
-  s.querySelector('[data-collega]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Uso già Lode su un altro computer'); schedaSincronizza('collega'); });
+  const s = scheda('ld-prepara', `<span class="ld-lbl">${t('barra2.prepara-lode')}</span>
+    ${riga('vault', t('barra2.il-tuo-vault'), true, t('barra2.prep-vault-dett', { percorso: esc(V.info?.percorso || 'Documenti/Lode') }), `<button type="button" class="btn small" data-apri>${t('barra2.apri')}</button>`)}
+    ${riga('obsidian', 'Obsidian', st?.obsidian.installato, st?.obsidian.installato ? t('barra2.obs-installato') : t('barra2.obs-da-installare'), st?.obsidian.installato ? `<button type="button" class="btn small" data-apri>${t('barra2.apri')}</button>` : `<button type="button" class="btn small primary" data-installa="obsidian">${t('barra2.installa')}</button>`)}
+    ${riga('cervello', t('barra2.cervello-locale'), !!st?.modello, st?.modello ? t('barra2.cervello-pronto-dett', { modello: esc(st.modello) }) : t('barra2.cervello-da-installare', { etichetta: esc(m?.etichetta || 'Qwen3.5'), perche: esc(m?.perche || ''), gb: m ? String(m.gb + 0.2).replace('.', ',') : '3,5' }), st?.modello ? `<span class="ld-spunta">${t('barra2.pronto')}</span>` : `<button type="button" class="btn small primary" data-installa="cervello">${t('barra2.installa')}</button>`)}
+    ${riga('voce', t('barra2.voce'), Voce.pronta(), Voce.pronta() ? t('barra2.voce-pronta-dett', { voce: Voce.NOME_VOCE, tasti: TASTI }) : t('barra2.voce-da-preparare', { descrizione: Voce.descrizioneVoce(), peso: Voce.PESO_VOCE }), Voce.pronta() ? `<span class="ld-spunta">${t('barra2.pronta')}</span>` : `<button type="button" class="btn small primary" data-voce>${t('barra2.prepara')}</button>`)}
+    ${riga('tuaai', `${t('barra2.la-tua-ai')} <small>${t('barra2.facoltativa')}</small>`, !!AI.fornitore(), AI.fornitore() ? t('barra2.tua-ai-collegata-dett', { nome: esc(AI.FORNITORI[AI.fornitore()].nome) }) : t('barra2.tua-ai-da-collegare'), `<button type="button" class="btn small" data-tuaai>${AI.fornitore() ? t('barra2.cambia') : t('barra2.collega')}</button>`)}
+    ${BRIDGE ? riga('sync', `${t('barra2.sincronizza-computer')} <small>${t('barra2.sperimentale')}</small>`, !!SYNC?.acceso && !!SYNC.cloud && !syncBloccata(), esc(TS.rigaStato(SYNC)), `<button type="button" class="btn small" data-sync>${syncBloccata() ? t('barra2.sblocca') : SYNC?.acceso && SYNC.cloud ? t('barra2.gestisci') : t('barra2.attiva')}</button>`) : ''}
+    ${BRIDGE && !(SYNC?.acceso && SYNC.cloud) ? riga('collega', t('barra2.uso-gia-altrove'), false, t('barra2.collega-dett'), `<button type="button" class="btn small" data-collega>${t('barra2.collega')}</button>`) : ''}
+    ${AGG?.possibile ? riga('aggiorna', t('barra2.aggiornamenti'), AGG.attivi, esc(testoAggiornamenti()), '<span class="ld-agg-az" style="display:flex;gap:6px"></span>') : ''}
+    <p class="ld-nota">${t('barra2.prep-nota')}</p>`);
+  s.querySelector('[data-tuaai]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, t('barra2.detto-mia-ai')); schedaAI(); });
+  s.querySelector('[data-sync]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, t('barra2.detto-sincronizza')); schedaSincronizza(syncBloccata() ? 'sblocca' : null); });
+  s.querySelector('[data-collega]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, t('barra2.uso-gia-altrove')); schedaSincronizza('collega'); });
   mostraAggiornamenti(s);
   s.querySelectorAll('[data-apri]').forEach(b => b.addEventListener('click', () => apriAppunti({ file: 'Home.md', corso: 'Home' })));
   s.querySelectorAll('[data-installa]').forEach(b => b.addEventListener('click', () => chiediInstalla(b.dataset.installa, s)));
-  s.querySelector('[data-voce]')?.addEventListener('click', () => { mostraAvanzamento(s, 'voce', { testo: `Scarico ${Voce.NOME_VOCE}…`, p: 0 }); Voce.prepara().then(() => { try { localStorage.setItem('lode:voce', '1'); } catch { } }).catch(() => { }); });
+  s.querySelector('[data-voce]')?.addEventListener('click', () => { mostraAvanzamento(s, 'voce', { testo: t('barra2.scarico-voce', { voce: Voce.NOME_VOCE }), p: 0 }); Voce.prepara().then(() => { try { localStorage.setItem('lode:voce', '1'); } catch { } }).catch(() => { }); });
   if (cosa && !(cosa === 'obsidian' ? st?.obsidian.installato : st?.modello)) chiediInstalla(cosa, s);
   for (const [k, x] of Object.entries(avanzamenti)) mostraAvanzamento(s, k, x);
-  if (A.turno) A.turno.dataset.sintesi = 'prepara Lode';
+  if (A.turno) A.turno.dataset.sintesi = t('barra2.sintesi-prepara');
 }
 async function chiediInstalla(cosa, s) {
   const m = STATO?.consigliato;
   const card = schedaConferma(cosa === 'obsidian'
-    ? { titolo: 'Installare Obsidian?', righe: [['Da', 'github.com/obsidianmd (ufficiale)'], ['Peso', 'circa 230 MB'], ['Dove', STATO?.piattaforma === 'darwin' ? 'Applicazioni' : 'il tuo utente']], nota: 'Obsidian è gratis per uso personale. Si apre già sul tuo vault, sulla Home.', fuoco: false }
-    : { titolo: `Installare ${m?.etichetta || 'il cervello locale'}?`, righe: [['Cosa', `Ollama (motore) + ${m?.nome || 'qwen3.5'}`], ['Peso', `circa ${m ? String(m.gb + 0.2).replace('.', ',') : '3,5'} GB`], ['Perché', m?.perche || '']], nota: 'Si scarica una volta sola. Poi funziona senza internet e senza chiavi.', fuoco: false });
-  card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = 'Si conferma solo col clic.';
+    ? { titolo: t('barra2.installare-obsidian'), righe: [[t('barra2.da'), t('barra2.github-obsidian')], [t('barra2.peso'), t('barra2.circa-230-mb')], [t('barra2.dove'), STATO?.piattaforma === 'darwin' ? t('barra2.applicazioni') : t('barra2.il-tuo-utente')]], nota: t('barra2.obs-nota'), fuoco: false }
+    : { titolo: m?.etichetta ? t('barra2.installare-nome', { nome: m.etichetta }) : t('barra2.installare-cervello'), righe: [[t('barra2.cosa'), t('barra2.ollama-motore', { nome: m?.nome || 'qwen3.5' })], [t('barra2.peso'), t('barra2.circa-gb', { gb: m ? String(m.gb + 0.2).replace('.', ',') : '3,5' })], [t('barra2.perche'), m?.perche || '']], nota: t('barra2.cervello-nota'), fuoco: false });
+  card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = t('barra2.solo-clic');
   await attendiDecisione(card, async () => {
-    await mostraFatto({ testo: 'Avviato.', nota: 'Puoi chiudere il pannello: continuo da solo.' }, card);
+    await mostraFatto({ testo: t('barra2.avviato'), nota: t('barra2.continuo-da-solo') }, card);
     const r = await V.installa(cosa);
     await aggiornaStato();
-    if (r.esito === 'ok') { segnala('confermato'); mostraAvviso(cosa === 'obsidian' ? 'Obsidian è pronto' : 'Cervello locale pronto'); }
-    else if (r.esito === 'errore') rispostaFissa(`Non è andata: ${r.errore}`, { errore: true });
+    if (r.esito === 'ok') { segnala('confermato'); mostraAvviso(cosa === 'obsidian' ? t('barra2.obsidian-pronto') : t('barra2.cervello-pronto')); }
+    else if (r.esito === 'errore') rispostaFissa(t('barra2.non-andata', { errore: r.errore }), { errore: true });
     return r;
   });
 }
@@ -1262,7 +1263,7 @@ function mostraAvanzamento(s, cosa, x) {
   const r = s?.querySelector(`.ld-prep[data-k="${cosa}"]`); if (!r) return;
   r.classList.add('va'); r.querySelector('.d').textContent = x.testo || '';
   r.querySelector('.ld-prog i').style.transform = `scaleX(${(x.p ?? 0).toFixed(3)})`;
-  if (x.fase === 'fatto') { r.classList.remove('va'); r.classList.add('ok'); r.querySelector('.btn.primary')?.replaceWith(h('span', 'ld-spunta', 'pronto')); }
+  if (x.fase === 'fatto') { r.classList.remove('va'); r.classList.add('ok'); r.querySelector('.btn.primary')?.replaceWith(h('span', 'ld-spunta', t('barra2.pronto'))); }
   if (x.fase === 'errore') r.classList.remove('va');
 }
 
@@ -1275,72 +1276,72 @@ const syncBloccata = () => !!SYNC?.acceso && ['password', 'rigenerato'].includes
 // il piede della barra: con la sincronizzazione accesa i dati non restano solo su questo computer, e lo si dice
 function piedeSync() {
   const t = document.querySelector('.ld-piede-dati > span'); if (!t) return;
-  t.textContent = SYNC?.acceso && SYNC.cloud ? `${SYNC.cifrato ? 'Cifrati, sincronizzati' : 'Sincronizzati'} con ${SYNC.servizio || 'la tua cartella cloud'}` : 'I dati restano su questo computer';
+  t.textContent = SYNC?.acceso && SYNC.cloud ? (SYNC.cifrato ? tn('barra2.sync-piede-cifrati', { servizio: SYNC.servizio || tn('barra2.la-tua-cartella-cloud') }) : tn('barra2.sync-piede', { servizio: SYNC.servizio || tn('barra2.la-tua-cartella-cloud') })) : tn('barra2.dati-restano-qui');
 }
 const listaChiaro = () => `<ul class="ld-sync-lista">${TS.IN_CHIARO.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
-const testoPortachiavi = () => SYNC?.portachiavi ? `La password si ricorda su questo computer (${BRIDGE?.piattaforma === 'darwin' ? 'nel Portachiavi' : BRIDGE?.piattaforma === 'win32' ? 'protetta dal tuo account di Windows' : 'nel portachiavi del sistema'}).`
-  : 'Questo computer non ha un portachiavi sicuro: Lode ti chiederà la password a ogni avvio.';
+const testoPortachiavi = () => SYNC?.portachiavi ? (BRIDGE?.piattaforma === 'darwin' ? t('barra2.portachiavi-mac') : BRIDGE?.piattaforma === 'win32' ? t('barra2.portachiavi-windows') : t('barra2.portachiavi-sistema'))
+  : t('barra2.senza-portachiavi');
 async function schedaSincronizza(cosa) {
-  if (!BRIDGE) return rispostaFissa('La sincronizzazione fra i computer è nell\'**app desktop** di Lode.');
+  if (!BRIDGE) return rispostaFissa(t('barra2.sync-solo-app'));
   await aggiornaSync();
-  if (!SYNC) return rispostaFissa('Non riesco a leggere lo stato della sincronizzazione.', { errore: true });
-  if (SYNC.acceso && SYNC.cloud && cosa === 'altro') return rispostaFissa(`Sull'altro computer apri Lode e scegli «Uso già Lode su un altro computer», poi il vault «${SYNC.vault || 'Lode'}» in ${SYNC.servizio || 'la cartella cloud'}.`);
+  if (!SYNC) return rispostaFissa(t('barra2.sync-stato-illeggibile'), { errore: true });
+  if (SYNC.acceso && SYNC.cloud && cosa === 'altro') return rispostaFissa(t('barra2.sync-altro-computer', { vault: SYNC.vault || 'Lode', servizio: SYNC.servizio || t('barra2.la-cartella-cloud') }));
   if (SYNC.acceso && SYNC.cloud) return schedaSyncAccesa(cosa);
   if (cosa === 'altro') cosa = 'collega';
-  if (cosa === 'smetti' || cosa === 'sblocca' || cosa === 'password') return rispostaFissa('La sincronizzazione non è accesa: i dati di Lode restano su questo computer.');
+  if (cosa === 'smetti' || cosa === 'sblocca' || cosa === 'password') return rispostaFissa(t('barra2.sync-non-accesa'));
   const { cartelle = [], vault = [] } = await BRIDGE.invoca('sync:cartelle').catch(() => ({}));
   const altro = cosa === 'collega';
-  const s = scheda('ld-sync', `<span class="ld-lbl">${altro ? 'Uso già Lode su un altro computer' : 'Sincronizza fra i tuoi computer'} · sperimentale</span>
-    <p class="ld-nota"><b>Sperimentale.</b> ${esc(TS.SPERIMENTALE)}</p>
-    ${altro ? '' : `<p class="ld-nota">Uso la cartella cloud che hai già: niente account, niente server di Lode. Copio il vault lì e passo alla copia; la cartella di prima resta dov'è. ${esc(TS.PRIMA)}</p>
-    ${SYNC.spostamento ? `<p class="ld-nota"><b>Lo spostamento in ${esc(SYNC.spostamento.servizio || 'cartella cloud')} si è interrotto.</b> Il vault di prima è intatto: scegli di nuovo la cartella e riprendo da dove ero rimasto.${SYNC.spostamento.cifrata ? ' Era cominciato con la password: ti chiederò di scriverla di nuovo.' : ''}</p>` : ''}
-    <div class="ld-opzioni">${cartelle.map(c => `<button type="button" class="ld-op" data-cloud="${c.i}"><b>${esc(c.servizio)}</b><span>${c.qui ? 'il vault è già qui: niente da spostare' : esc(c.nome)}</span></button>`).join('')}
-      <button type="button" class="ld-op" data-cloud="altra"><b>Un'altra cartella…</b><span>Syncthing, una cartella di rete</span></button></div>
-    ${cartelle.length ? '' : '<p class="ld-nota">Non trovo iCloud Drive, OneDrive, Dropbox o Google Drive su questo computer: scegli tu la cartella che si sincronizza.</p>'}`}
-    <span class="ld-lbl" style="margin-top:14px;display:block">${altro ? 'Scegli il vault nella cartella cloud' : 'Uso già Lode su un altro computer'}</span>
-    <div class="ld-opzioni">${vault.map(v => `<button type="button" class="ld-op" data-vault="${v.i}"><b>${esc(v.nome)}</b><span>${esc(v.servizio)} · già sincronizzato</span></button>`).join('')}
-      <button type="button" class="ld-op" data-vault="altro"><b>Scegli il vault…</b><span>la cartella «Lode» nella tua cartella cloud</span></button></div>
-    <p class="ld-nota">Il vault che c'è adesso su questo computer resta dov'è, intatto.${altro ? ' Se Lode qui ha già esami, voti o carte, li porto nel gruppo come «Dati di un altro primo avvio»: li importi tu, niente sostituisce i dati degli altri computer.' : ''}</p>`);
+  const s = scheda('ld-sync', `<span class="ld-lbl">${altro ? t('barra2.sync-titolo-altro') : t('barra2.sync-titolo')}</span>
+    <p class="ld-nota">${t('barra2.sync-sperimentale', { testo: esc(TS.SPERIMENTALE) })}</p>
+    ${altro ? '' : `<p class="ld-nota">${t('barra2.sync-cartella-cloud', { prima: esc(TS.PRIMA) })}</p>
+    ${SYNC.spostamento ? `<p class="ld-nota">${t('barra2.sync-interrotto', { servizio: esc(SYNC.spostamento.servizio || t('barra2.cartella-cloud')) })}${SYNC.spostamento.cifrata ? ' ' + t('barra2.sync-interrotto-pw') : ''}</p>` : ''}
+    <div class="ld-opzioni">${cartelle.map(c => `<button type="button" class="ld-op" data-cloud="${c.i}"><b>${esc(c.servizio)}</b><span>${c.qui ? t('barra2.vault-gia-qui') : esc(c.nome)}</span></button>`).join('')}
+      <button type="button" class="ld-op" data-cloud="altra"><b>${t('barra2.altra-cartella')}</b><span>${t('barra2.altra-cartella-dett')}</span></button></div>
+    ${cartelle.length ? '' : `<p class="ld-nota">${t('barra2.nessuna-cartella-cloud')}</p>`}`}
+    <span class="ld-lbl" style="margin-top:14px;display:block">${altro ? t('barra2.scegli-vault-cloud') : t('barra2.uso-gia-altrove')}</span>
+    <div class="ld-opzioni">${vault.map(v => `<button type="button" class="ld-op" data-vault="${v.i}"><b>${esc(v.nome)}</b><span>${t('barra2.gia-sincronizzato', { servizio: esc(v.servizio) })}</span></button>`).join('')}
+      <button type="button" class="ld-op" data-vault="altro"><b>${t('barra2.scegli-vault')}</b><span>${t('barra2.scegli-vault-dett')}</span></button></div>
+    <p class="ld-nota">${t('barra2.vault-resta')}${altro ? ' ' + t('barra2.vault-resta-altro') : ''}</p>`);
   s.querySelectorAll('[data-cloud]').forEach(b => b.addEventListener('click', () => {
     const c = cartelle.find(x => String(x.i) === b.dataset.cloud);
-    chiediSincronizza(c ? { i: c.i } : { scegli: true }, c?.servizio || 'la cartella che scegli', c?.qui);
+    chiediSincronizza(c ? { i: c.i } : { scegli: true }, c?.servizio || t('barra2.la-cartella-che-scegli'), c?.qui);
   }));
   s.querySelectorAll('[data-vault]').forEach(b => b.addEventListener('click', () => collegaAltro(b.dataset.vault === 'altro' ? { scegli: true } : { i: +b.dataset.vault })));
   s.querySelectorAll('.ld-op').forEach((b, i) => entra(b, { ritardo: 60 + i * 40, dy: 6, blur: 5, ms: 400 }));
-  if (A.turno) A.turno.dataset.sintesi = altro ? 'uso già Lode altrove' : 'sincronizza';
+  if (A.turno) A.turno.dataset.sintesi = altro ? t('barra2.sintesi-uso-gia-altrove') : t('barra2.sintesi-sincronizza');
 }
 // la scelta della cifratura, una volta sola all'accensione (§10.1): il gruppo nasce cifrato o in chiaro e non cambia più modo
 async function chiediSincronizza(dove, servizio, giaDentro) {
-  const card = schedaConferma({ titolo: `Sincronizzare con ${servizio}?`, righe: [['Vault', giaDentro ? 'resta dov\'è: è già nella cartella cloud' : `una cartella «Lode» in ${servizio}`], ['Prima', giaDentro ? 'il dati.json di prima resta nella cronologia del servizio' : 'il vault di adesso resta dov\'è, intatto'], ['Dati di Lode', 'un diario per computer: niente conflitti, niente si perde']],
-    extra: `<div class="ld-sync-pw"><label class="ld-spunta-ai"><input type="checkbox" data-conpw> Proteggi i dati di Lode con una password</label>
-      <div class="ld-sync-pwbox" hidden><div class="ld-riga-form"><input type="password" autocomplete="new-password" placeholder="Password (almeno 8 caratteri)" aria-label="Password" data-pw><input type="password" autocomplete="new-password" placeholder="Ripetila" aria-label="Ripeti la password" data-pw2></div>
-      <p class="ld-nota"><b>Cifrati:</b> ${esc(TS.CIFRATI)}. <b>In chiaro nella cartella cloud</b>, anche con la password:</p>${listaChiaro()}
+  const card = schedaConferma({ titolo: t('barra2.sincronizzare-con', { servizio }), righe: [[t('barra2.vault'), giaDentro ? t('barra2.vault-resta-cloud') : t('barra2.cartella-lode-in', { servizio })], [t('barra2.prima'), giaDentro ? t('barra2.dati-json-cronologia') : t('barra2.vault-adesso-resta')], [t('barra2.dati-di-lode'), t('barra2.un-diario-per-computer')]],
+    extra: `<div class="ld-sync-pw"><label class="ld-spunta-ai"><input type="checkbox" data-conpw> ${t('barra2.proteggi-con-password')}</label>
+      <div class="ld-sync-pwbox" hidden><div class="ld-riga-form"><input type="password" autocomplete="new-password" placeholder="${t('barra2.password-almeno-8')}" aria-label="${t('barra2.password')}" data-pw><input type="password" autocomplete="new-password" placeholder="${t('barra2.ripetila')}" aria-label="${t('barra2.ripeti-password')}" data-pw2></div>
+      <p class="ld-nota">${t('barra2.cifrati-in-chiaro-anche', { cifrati: esc(TS.CIFRATI) })}</p>${listaChiaro()}
       <p class="ld-nota">${esc(TS.SUL_COMPUTER)} ${giaDentro ? esc(TS.CRONOLOGIA) + ' ' : ''}${esc(TS.DIMENTICATA)} ${esc(testoPortachiavi())}</p></div><small class="ld-tenue" data-msg></small></div>`,
-    nota: `La password si può aggiungere anche dopo («Proteggi con una password»), o cambiare («Cambia password»). Sugli altri computer: «Uso già Lode su un altro computer». ${TS.PRIMA}`, fuoco: false });
-  card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = 'Si conferma solo col clic.';
+    nota: t('barra2.sync-nota-password', { prima: TS.PRIMA }), fuoco: false });
+  card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = t('barra2.solo-clic');
   const box = card.querySelector('.ld-sync-pwbox'), msg = t => { card.querySelector('[data-msg]').textContent = t; };
   card.querySelector('[data-conpw]').addEventListener('change', e => { box.hidden = !e.target.checked; if (e.target.checked) card.querySelector('[data-pw]').focus(); });
   // uno spostamento interrotto che era cominciato con la password si riprende solo con la password (il main lo rifiuta senza)
-  if (SYNC?.spostamento?.cifrata && !giaDentro) { const c = card.querySelector('[data-conpw]'); c.checked = true; c.disabled = true; box.hidden = false; msg('Lo spostamento era cominciato con la password: scrivila di nuovo.'); }
+  if (SYNC?.spostamento?.cifrata && !giaDentro) { const c = card.querySelector('[data-conpw]'); c.checked = true; c.disabled = true; box.hidden = false; msg(t('barra2.spostamento-con-password')); }
   // una password che non va: si dice e la scheda aspetta di nuovo la conferma (attendiDecisione si riarma)
   const esegui = async () => {
     let password = null;
     if (card.querySelector('[data-conpw]').checked) {
       password = card.querySelector('[data-pw]').value;
-      if (password.length < 8) { msg('Almeno 8 caratteri.'); return attendiDecisione(card, esegui); }
-      if (password !== card.querySelector('[data-pw2]').value) { msg('Le due password non sono uguali.'); return attendiDecisione(card, esegui); }
+      if (password.length < 8) { msg(t('barra2.almeno-8')); return attendiDecisione(card, esegui); }
+      if (password !== card.querySelector('[data-pw2]').value) { msg(t('barra2.password-diverse')); return attendiDecisione(card, esegui); }
     }
     card.querySelectorAll('input[type=password]').forEach(i => { i.value = ''; });
-    const p = h('p', 'ld-nota ld-sync-avanza', 'Preparo…'); card.append(p);
+    const p = h('p', 'ld-nota ld-sync-avanza', t('barra2.preparo')); card.append(p);
     const r = await BRIDGE.invoca('sync:attiva', { ...dove, password }).catch(e => ({ esito: 'errore', errore: e.message }));
     await aggiornaSync();
-    if (r.esito === 'ok') await mostraFatto({ testo: `Sincronizzato con ${r.servizio}.`, nota: r.giaDentro ? 'Il vault era già nella cartella cloud: da adesso ogni computer scrive solo il suo diario.' : `La cartella di prima («${r.da}») resta dov'era: cancellala tu quando vuoi. Sugli altri computer: «Uso già Lode su un altro computer».` }, card);
-    else if (r.esito === 'esiste') await mostraFatto({ testo: `In ${r.servizio} c'è già un vault di Lode sincronizzato.`, nota: 'Usa «Uso già Lode su un altro computer» per collegarti a quello.', no: true }, card);
-    else if (r.esito === 'annullato') await mostraFatto({ testo: 'Annullato.', nota: 'Non ho cambiato niente.', no: true }, card);
+    if (r.esito === 'ok') await mostraFatto({ testo: t('barra2.sincronizzato-con', { servizio: r.servizio }), nota: r.giaDentro ? t('barra2.vault-era-gia-cloud') : t('barra2.cartella-prima-resta', { da: r.da }) }, card);
+    else if (r.esito === 'esiste') await mostraFatto({ testo: t('barra2.vault-gia-in-servizio', { servizio: r.servizio }), nota: t('barra2.usa-uso-gia'), no: true }, card);
+    else if (r.esito === 'annullato') await mostraFatto({ testo: t('barra2.annullato'), nota: t('barra2.niente-cambiato'), no: true }, card);
     // la password che serve (spostamento cominciato con la password, o un gruppo già cifrato nel vault): si chiede di nuovo qui
-    else if (r.esito === 'password' || r.esito === 'sbagliata') { const c = card.querySelector('[data-conpw]'); c.checked = true; box.hidden = false; p.remove(); msg(r.errore || 'Scrivi la password.'); return attendiDecisione(card, esegui); }
-    else if (r.esito === 'aspetta') await mostraFatto({ testo: 'Non ancora.', nota: r.errore, no: true }, card);
-    else rispostaFissa(`Non è andata: ${r.errore || r.esito}${/intatto/.test(r.errore || '') ? '' : '. Il vault di prima è intatto.'}`, { errore: true });
+    else if (r.esito === 'password' || r.esito === 'sbagliata') { const c = card.querySelector('[data-conpw]'); c.checked = true; box.hidden = false; p.remove(); msg(r.errore || t('barra2.scrivi-password')); return attendiDecisione(card, esegui); }
+    else if (r.esito === 'aspetta') await mostraFatto({ testo: t('barra2.non-ancora'), nota: r.errore, no: true }, card);
+    else rispostaFissa(/intatto/.test(r.errore || '') ? t('barra2.non-andata', { errore: r.errore || r.esito }) : t('barra2.non-andata-vault-intatto', { errore: r.errore || r.esito }), { errore: true });
     return r;
   };
   await attendiDecisione(card, esegui);
@@ -1348,75 +1349,75 @@ async function chiediSincronizza(dove, servizio, giaDentro) {
 async function collegaAltro(dove) {
   const r = await BRIDGE.invoca('sync:collega', dove).catch(e => ({ esito: 'errore', errore: e.message }));
   await aggiornaSync();
-  if (r.esito === 'ok') return mostraFatto({ testo: `Collegato al vault in ${r.servizio}.`, nota: [r.avviso, r.stato === 'password' ? 'I dati di Lode sono protetti da una password: scrivila per riceverli.' : 'Ricevo i dati dagli altri computer: arrivano da soli. Lode è già usabile.',
-    r.importati ? `I dati che avevi su questo computer (${r.importati} record) sono in «Dati di un altro primo avvio» nella scheda «Sincronizza»: importali da lì. Il file di prima resta nel vault «${r.vaultPrima}».` : ''].filter(Boolean).join(' ') });
-  if (r.esito !== 'annullato') rispostaFissa(r.errore || 'Non riesco a usare quella cartella.', { errore: true });
+  if (r.esito === 'ok') return mostraFatto({ testo: t('barra2.collegato-vault-in', { servizio: r.servizio }), nota: [r.avviso, r.stato === 'password' ? t('barra2.dati-protetti-password') : t('barra2.ricevo-dati'),
+    r.importati ? t('barra2.dati-importati-altrove', { n: r.importati, vault: r.vaultPrima }) : ''].filter(Boolean).join(' ') });
+  if (r.esito !== 'annullato') rispostaFissa(r.errore || t('barra2.cartella-inusabile'), { errore: true });
 }
 function schedaSyncAccesa(cosa) {
   // fermo (il diario non si legge): solo la frase e «Riprova». Prima i rami della password guardavano uno stato vuoto e dicevano
   // «Senza password…» con [Proteggi con una password] anche per un gruppo cifrato (giro 3)
   if (SYNC.fermo) {
-    const f = scheda('ld-sync', `<span class="ld-lbl">Sincronizza fra i tuoi computer</span><p class="ld-sync-stato"><b>Il diario di Lode su questo computer non si legge</b></p>
-      <p class="ld-nota">Niente è stato cancellato: la cartella dei dati di Lode non risponde (disco pieno o guasto?). Le modifiche di adesso vanno in un file a parte.</p><div class="ld-riga-form"><button type="button" class="btn small primary" data-riprova>Riprova</button></div>`);
+    const f = scheda('ld-sync', `<span class="ld-lbl">${t('barra2.sincronizza-computer')}</span><p class="ld-sync-stato"><b>${t('barra2.diario-illeggibile')}</b></p>
+      <p class="ld-nota">${t('barra2.diario-illeggibile-nota')}</p><div class="ld-riga-form"><button type="button" class="btn small primary" data-riprova>${t('barra2.riprova')}</button></div>`);
     f.querySelector('[data-riprova]')?.addEventListener('click', () => location.reload());
     return f;
   }
   const st = SYNC, bloccata = syncBloccata(), avvisi = (st.avvisi || []).filter(a => TS.AVVISI[a] && !(a === 'altra_password' && st.stato === 'rigenerato') && !(a === 'scrittura' && st.stato === 'scrittura'));
-  const s = scheda('ld-sync', `<span class="ld-lbl">Sincronizza fra i tuoi computer</span>
+  const s = scheda('ld-sync', `<span class="ld-lbl">${t('barra2.sincronizza-computer')}</span>
     <p class="ld-sync-stato"><b>${esc(TS.rigaStato(st))}</b></p>
     ${avvisi.map(a => `<p class="ld-nota">${esc(TS.AVVISI[a])}</p>`).join('')}
-    ${st.stato === 'sparito' ? '<p class="ld-nota">I dati di Lode di questo computer sono al sicuro nel suo diario. Se hai spostato il vault, scegli la cartella dove l\'hai messo.</p><div class="ld-riga-form"><button type="button" class="btn small primary" data-trova>Trova il vault</button></div>' : ''}
-    ${st.vecchiaDiversi ? `<p class="ld-nota"><b>Da una Lode vecchia:</b> ${st.vecchiaDiversi} ${st.vecchiaDiversi === 1 ? 'campo diverso' : 'campi diversi'} da quelli di adesso. Non cambiano niente da soli: la copia del file è nella cartella dei dati di Lode (sync/copie).</p>` : ''}
-    ${st.aggiunte ? `<p class="ld-nota"><b>Dati di un altro primo avvio o di una Lode vecchia:</b> ${st.aggiunte} ${st.aggiunte === 1 ? 'record' : 'record'} (esami, carte, sessioni…) che il diario non ha. Non entrano da soli.</p><div class="ld-riga-form"><button type="button" class="btn small" data-aggiunte>Importa le aggiunte</button></div>` : ''}
-    ${bloccata || cosa === 'sblocca' && st.cifrato ? `<div class="ld-sync-pw"><span class="ld-lbl">Password dei dati di Lode</span><div class="ld-riga-form"><input type="password" autocomplete="current-password" aria-label="Password" data-pw><button type="button" class="btn small primary" data-sblocca>Sblocca</button></div>
-      <p class="ld-nota">Intanto Lode funziona con i dati di questo computer: le modifiche aspettano nel diario. ${esc(testoPortachiavi())}</p><small class="ld-tenue" data-msg></small>
-      <p class="ld-nota">${esc(TS.DIMENTICATA)}</p><button type="button" class="btn small" data-dimenticata>Ho dimenticato la password</button>${st.ricordate ? ' <button type="button" class="btn small" data-dimentica>Dimentica la password qui</button>' : ''}</div>`
-    : st.cifrato ? `<p class="ld-nota"><b>Cifrati:</b> ${esc(TS.CIFRATI)}. <b>In chiaro nella cartella cloud:</b></p>${listaChiaro()}<p class="ld-nota">${esc(TS.SUL_COMPUTER)}</p>
-      <div class="ld-riga-form"><button type="button" class="btn small" data-cambia>Cambia password</button>${st.chiave || st.ricordate ? '<button type="button" class="btn small" data-dimentica>Dimentica la password qui</button>' : ''}</div>`
-    : `<p class="ld-nota">Senza password: chi può leggere la tua cartella cloud può leggere anche i dati di Lode, come già gli appunti.</p>
-      <div class="ld-riga-form"><button type="button" class="btn small" data-proteggi>Proteggi con una password</button></div>`}
-    ${st.recupero ? `<p class="ld-nota">Le modifiche che il diario non ha potuto prendere sono ${st.recuperi > 1 ? `in ${st.recuperi} file «recupero-…json» (l'ultimo: «${esc(st.recupero)}»)` : `nel file «${esc(st.recupero)}»`}, nella cartella dei dati di Lode: non le ho buttate.</p>` : ''}
-    <div class="ld-riga-form" style="margin-top:12px"><button type="button" class="btn small" data-smetti>Smetti su questo computer</button></div><small class="ld-tenue" data-msg2></small>`);
+    ${st.stato === 'sparito' ? `<p class="ld-nota">${t('barra2.vault-sparito')}</p><div class="ld-riga-form"><button type="button" class="btn small primary" data-trova>${t('barra2.trova-vault')}</button></div>` : ''}
+    ${st.vecchiaDiversi ? `<p class="ld-nota">${t('barra2.lode-vecchia-campi', { n: st.vecchiaDiversi })}</p>` : ''}
+    ${st.aggiunte ? `<p class="ld-nota">${t('barra2.aggiunte', { n: st.aggiunte })}</p><div class="ld-riga-form"><button type="button" class="btn small" data-aggiunte>${t('barra2.importa-aggiunte')}</button></div>` : ''}
+    ${bloccata || cosa === 'sblocca' && st.cifrato ? `<div class="ld-sync-pw"><span class="ld-lbl">${t('barra2.password-dati-lode')}</span><div class="ld-riga-form"><input type="password" autocomplete="current-password" aria-label="${t('barra2.password')}" data-pw><button type="button" class="btn small primary" data-sblocca>${t('barra2.sblocca')}</button></div>
+      <p class="ld-nota">${t('barra2.intanto-funziona', { portachiavi: esc(testoPortachiavi()) })}</p><small class="ld-tenue" data-msg></small>
+      <p class="ld-nota">${esc(TS.DIMENTICATA)}</p><button type="button" class="btn small" data-dimenticata>${t('barra2.ho-dimenticato-password')}</button>${st.ricordate ? ` <button type="button" class="btn small" data-dimentica>${t('barra2.dimentica-password-qui')}</button>` : ''}</div>`
+    : st.cifrato ? `<p class="ld-nota">${t('barra2.cifrati-in-chiaro', { cifrati: esc(TS.CIFRATI) })}</p>${listaChiaro()}<p class="ld-nota">${esc(TS.SUL_COMPUTER)}</p>
+      <div class="ld-riga-form"><button type="button" class="btn small" data-cambia>${t('barra2.cambia-password')}</button>${st.chiave || st.ricordate ? `<button type="button" class="btn small" data-dimentica>${t('barra2.dimentica-password-qui')}</button>` : ''}</div>`
+    : `<p class="ld-nota">${t('barra2.senza-password')}</p>
+      <div class="ld-riga-form"><button type="button" class="btn small" data-proteggi>${t('barra2.proteggi-password')}</button></div>`}
+    ${st.recupero ? `<p class="ld-nota">${st.recuperi > 1 ? t('barra2.recuperi', { n: st.recuperi, file: esc(st.recupero) }) : t('barra2.recupero', { file: esc(st.recupero) })}</p>` : ''}
+    <div class="ld-riga-form" style="margin-top:12px"><button type="button" class="btn small" data-smetti>${t('barra2.smetti-qui')}</button></div><small class="ld-tenue" data-msg2></small>`);
   const msg = t => { const m = s.querySelector('[data-msg]') || s.querySelector('[data-msg2]'); if (m) m.textContent = t; };
   s.querySelector('[data-trova]')?.addEventListener('click', () => collegaAltro({ scegli: true }));
   s.querySelector('[data-aggiunte]')?.addEventListener('click', async e => {
     e.currentTarget.disabled = true;
     const r = await BRIDGE.invoca('sync:importaAggiunte').catch(x => ({ esito: 'errore', errore: x.message }));
     await aggiornaSync(); aggiornaTutto();
-    if (r.esito === 'ok') mostraFatto({ testo: r.importati === 1 ? 'Importato 1 record.' : `Importati ${r.importati} record.`, nota: 'Ora sono su tutti i computer.' }, s);
-    else msg(r.errore || 'Non è andata.');
+    if (r.esito === 'ok') mostraFatto({ testo: t('barra2.importati-record', { n: r.importati }), nota: t('barra2.ora-su-tutti') }, s);
+    else msg(r.errore || t('barra2.non-andata-punto'));
   });
   s.querySelector('[data-sblocca]')?.addEventListener('click', async e => {
-    const b = e.currentTarget, pw = s.querySelector('[data-pw]').value; if (!pw) return msg('Scrivi la password.');
-    b.disabled = true; msg('Controllo…');
+    const b = e.currentTarget, pw = s.querySelector('[data-pw]').value; if (!pw) return msg(t('barra2.scrivi-password'));
+    b.disabled = true; msg(t('barra2.controllo'));
     const r = await BRIDGE.invoca('sync:sblocca', { password: pw }).catch(x => ({ esito: 'errore', errore: x.message }));
     s.querySelector('[data-pw]').value = ''; b.disabled = false;
-    if (r.esito !== 'ok') return msg(r.errore || 'Non è andata.');
+    if (r.esito !== 'ok') return msg(r.errore || t('barra2.non-andata-punto'));
     await aggiornaSync(); aggiornaTutto();
-    mostraFatto({ testo: 'Sbloccata.', nota: r.ricordata ? 'La password è ricordata su questo computer.' : 'Te la chiederò al prossimo avvio.' }, s);
+    mostraFatto({ testo: t('barra2.sbloccata'), nota: r.ricordata ? t('barra2.password-ricordata') : t('barra2.chiedero-prossimo-avvio') }, s);
   });
   s.querySelector('[data-pw]')?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); s.querySelector('[data-sblocca]')?.click(); } });
   const nuovaPassword = (titolo, nota) => {
-    const card = schedaConferma({ titolo, extra: `<div class="ld-riga-form"><input type="password" autocomplete="new-password" placeholder="Password nuova (almeno 8 caratteri)" aria-label="Password nuova" data-pw><input type="password" autocomplete="new-password" placeholder="Ripetila" aria-label="Ripeti la password" data-pw2></div><small class="ld-tenue" data-msg></small>`, nota, fuoco: false });
-    card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = 'Si conferma solo col clic.';
+    const card = schedaConferma({ titolo, extra: `<div class="ld-riga-form"><input type="password" autocomplete="new-password" placeholder="${t('barra2.password-nuova-almeno-8')}" aria-label="${t('barra2.password-nuova')}" data-pw><input type="password" autocomplete="new-password" placeholder="${t('barra2.ripetila')}" aria-label="${t('barra2.ripeti-password')}" data-pw2></div><small class="ld-tenue" data-msg></small>`, nota, fuoco: false });
+    card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = t('barra2.solo-clic');
     const esegui = async () => {
       const pw = card.querySelector('[data-pw]').value, m = t => { card.querySelector('[data-msg]').textContent = t; };
-      if (pw.length < 8) { m('Almeno 8 caratteri.'); return attendiDecisione(card, esegui); }
-      if (pw !== card.querySelector('[data-pw2]').value) { m('Le due password non sono uguali.'); return attendiDecisione(card, esegui); }
+      if (pw.length < 8) { m(t('barra2.almeno-8')); return attendiDecisione(card, esegui); }
+      if (pw !== card.querySelector('[data-pw2]').value) { m(t('barra2.password-diverse')); return attendiDecisione(card, esegui); }
       card.querySelectorAll('input[type=password]').forEach(i => { i.value = ''; });
       const r = await BRIDGE.invoca('sync:cifra', { password: pw }).catch(x => ({ esito: 'errore', errore: x.message }));
       await aggiornaSync(); aggiornaTutto();
-      if (r.esito === 'ok') await mostraFatto({ testo: 'Password nuova pronta.', nota: 'Gli altri computer te la chiederanno una volta.' }, card);
-      else rispostaFissa(r.errore || 'Non è andata.', { errore: true });
+      if (r.esito === 'ok') await mostraFatto({ testo: t('barra2.password-nuova-pronta'), nota: t('barra2.altri-chiederanno') }, card);
+      else rispostaFissa(r.errore || t('barra2.non-andata-punto'), { errore: true });
       return r;
     };
     return attendiDecisione(card, esegui);
   };
-  s.querySelector('[data-cambia]')?.addEventListener('click', () => nuovaPassword('Cambiare la password?', 'Lode rifà i dati di Lode nella cartella cloud con la password nuova. ' + TS.NUOVA_PASSWORD));
-  s.querySelector('[data-dimenticata]')?.addEventListener('click', () => nuovaPassword('Scegliere una password nuova?', TS.NUOVA_PASSWORD));
+  s.querySelector('[data-cambia]')?.addEventListener('click', () => nuovaPassword(t('barra2.cambiare-password'), t('barra2.rifa-password-nuova', { testo: TS.NUOVA_PASSWORD })));
+  s.querySelector('[data-dimenticata]')?.addEventListener('click', () => nuovaPassword(t('barra2.scegliere-password-nuova'), TS.NUOVA_PASSWORD));
   // §10.4 «proteggo dopo»: il main (sync:cifra) e il motore (cifra() da in_pari) lo sapevano già fare, mancava il bottone
-  s.querySelector('[data-proteggi]')?.addEventListener('click', () => nuovaPassword('Proteggere i dati di Lode con una password?', 'Lode rifà i dati di Lode nella cartella cloud, cifrati con la password. Gli altri computer te la chiederanno. ' + TS.CRONOLOGIA));
-  s.querySelector('[data-dimentica]')?.addEventListener('click', async e => { e.currentTarget.disabled = true; await BRIDGE.invoca('sync:dimentica'); await aggiornaSync(); mostraFatto({ testo: 'Password dimenticata su questo computer.', nota: 'Te la chiederò di nuovo.' }, s); });
+  s.querySelector('[data-proteggi]')?.addEventListener('click', () => nuovaPassword(t('barra2.proteggere-password'), t('barra2.rifa-cifrati', { testo: TS.CRONOLOGIA })));
+  s.querySelector('[data-dimentica]')?.addEventListener('click', async e => { e.currentTarget.disabled = true; await BRIDGE.invoca('sync:dimentica'); await aggiornaSync(); mostraFatto({ testo: t('barra2.password-dimenticata'), nota: t('barra2.chiedero-di-nuovo') }, s); });
   s.querySelector('[data-smetti]')?.addEventListener('click', () => chiediSmetti());
   if (cosa === 'smetti') chiediSmetti();
   if (bloccata || cosa === 'sblocca') requestAnimationFrame(() => s.querySelector('[data-pw]')?.focus({ preventScroll: true }));
@@ -1424,15 +1425,15 @@ function schedaSyncAccesa(cosa) {
 }
 // «Smetti su questo computer» (§11): non esiste un segnale che spegne tutto per tutti
 async function chiediSmetti() {
-  const card = schedaConferma({ titolo: 'Smettere su questo computer?', righe: [['Vault', 'copiato in una cartella fuori dalla cartella cloud, che scegli tu'], ['Dati di Lode', 'tutti, anche quelli degli altri computer fino a oggi'], ['Gli altri computer', 'continuano a sincronizzarsi tra loro']],
+  const card = schedaConferma({ titolo: t('barra2.smettere-qui'), righe: [[t('barra2.vault'), t('barra2.vault-copiato-fuori')], [t('barra2.dati-di-lode'), t('barra2.tutti-dati')], [t('barra2.gli-altri-computer'), t('barra2.continuano-sincronizzarsi')]],
     nota: TS.SMETTI(SYNC?.servizio), fuoco: false });
-  card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = 'Si conferma solo col clic.';
+  card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = t('barra2.solo-clic');
   await attendiDecisione(card, async () => {
     const r = await BRIDGE.invoca('sync:smetti').catch(e => ({ esito: 'errore', errore: e.message }));
     await aggiornaSync(); aggiornaTutto();
-    if (r.esito === 'ok') await mostraFatto({ testo: 'Smesso su questo computer.', nota: 'Il vault ora è fuori dalla cartella cloud. Per smettere ovunque, fallo su ogni computer.', sintesi: 'sincronizzazione smessa qui' }, card);
-    else if (r.esito === 'annullato') await mostraFatto({ testo: 'Annullato.', nota: 'Non ho cambiato niente.', no: true }, card);
-    else rispostaFissa(r.errore || 'Non è andata.', { errore: true });
+    if (r.esito === 'ok') await mostraFatto({ testo: t('barra2.smesso-qui'), nota: t('barra2.smesso-nota'), sintesi: t('barra2.sintesi-smessa') }, card);
+    else if (r.esito === 'annullato') await mostraFatto({ testo: t('barra2.annullato'), nota: t('barra2.niente-cambiato'), no: true }, card);
+    else rispostaFissa(r.errore || t('barra2.non-andata-punto'), { errore: true });
     return r;
   });
 }
@@ -1441,17 +1442,17 @@ async function chiediSmetti() {
 async function schedaNote(q = '') {
   if (!V.attivo) return apriAppunti();
   const tutte = await V.note(), lo = V.lezioneDaAnnotare(), ultima = lezioni().find(l => l.file);
-  const rapide = [['Home', 'Home.md'], [lo.corso === 'Appunti sparsi' ? (ultima ? 'Ultima lezione' : null) : `Lezione di ${lo.corso}`, lo.corso === 'Appunti sparsi' ? ultima?.file : null], ['Orario', 'Orario.md'], ['Esami', 'Esami.md'], ['Glossario', 'Glossario.md'], ['Cosa sa Lode di me', 'Lode/Memoria.md']].filter(x => x[0]);
-  const s = scheda('ld-note', `<span class="ld-lbl">Vai a… · ${esc(tutte.length)} note</span>
-    <div class="ld-rapide">${rapide.map(([t, f], i) => `<button type="button" class="ld-chip larga" data-r="${i}"><b>${esc(t)}</b><span>${esc(f ? f.replace(/\.md$/, '').split('/').slice(0, -1).join('/') || 'vault' : 'oggi')}</span></button>`).join('')}</div>
-    <input class="ld-cerca-note" placeholder="Cerca una nota: corso, lezione, data…" aria-label="Cerca una nota" value="${esc(q)}"><div class="ld-risultati"></div>`);
+  const rapide = [['Home', 'Home.md'], [lo.corso === 'Appunti sparsi' ? (ultima ? t('barra2.ultima-lezione') : null) : t('barra2.lezione-di', { corso: lo.corso }), lo.corso === 'Appunti sparsi' ? ultima?.file : null], ['Orario', 'Orario.md'], ['Esami', 'Esami.md'], ['Glossario', 'Glossario.md'], [t('barra2.cosa-sa-lode'), 'Lode/Memoria.md']].filter(x => x[0]);
+  const s = scheda('ld-note', `<span class="ld-lbl">${t('barra2.vai-a-note', { n: esc(tutte.length) })}</span>
+    <div class="ld-rapide">${rapide.map(([t, f], i) => `<button type="button" class="ld-chip larga" data-r="${i}"><b>${esc(t)}</b><span>${esc(f ? f.replace(/\.md$/, '').split('/').slice(0, -1).join('/') || tn('barra2.radice-vault') : tn('barra2.oggi'))}</span></button>`).join('')}</div>
+    <input class="ld-cerca-note" placeholder="${t('barra2.cerca-nota-segnaposto')}" aria-label="${t('barra2.cerca-nota')}" value="${esc(q)}"><div class="ld-risultati"></div>`);
   const apriR = i => { const [t, f] = rapide[i]; f ? apriAppunti({ file: f, corso: t }) : apriAppunti(lo); };
   s.querySelectorAll('[data-r]').forEach(b => b.addEventListener('click', () => apriR(+b.dataset.r)));
   const inp = s.querySelector('input'), box = s.querySelector('.ld-risultati');
   const filtra = () => {
     const w = norm(inp.value).split(' ').filter(Boolean);
     const ris = (w.length ? tutte.filter(n => w.every(x => norm(n.file).includes(x))) : tutte.filter(n => n.cartella === 'Lezioni').sort((a, b) => b.titolo.localeCompare(a.titolo))).slice(0, 7);
-    box.innerHTML = ris.map((n, i) => `<button type="button" class="ld-nota-r${i === 0 ? ' su' : ''}" data-f="${esc(n.file)}"><b>${esc(n.titolo)}</b><span>${esc(n.file.split('/').slice(0, -1).join(' / ') || 'vault')}</span></button>`).join('') || '<p class="ld-nota">Nessuna nota trovata.</p>';
+    box.innerHTML = ris.map((n, i) => `<button type="button" class="ld-nota-r${i === 0 ? ' su' : ''}" data-f="${esc(n.file)}"><b>${esc(n.titolo)}</b><span>${esc(n.file.split('/').slice(0, -1).join(' / ') || t('barra2.radice-vault'))}</span></button>`).join('') || `<p class="ld-nota">${t('barra2.nessuna-nota')}</p>`;
     box.querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => apriAppunti({ file: b.dataset.f, corso: b.querySelector('b').textContent })));
   };
   inp.addEventListener('input', filtra);
@@ -1459,7 +1460,7 @@ async function schedaNote(q = '') {
   filtra();
   if (q && box.querySelectorAll('[data-f]').length === 1) box.querySelector('[data-f]').click();
   requestAnimationFrame(() => inp.focus({ preventScroll: true }));
-  if (A.turno) A.turno.dataset.sintesi = q ? `cerco «${q}»` : 'note';
+  if (A.turno) A.turno.dataset.sintesi = q ? t('barra2.sintesi-cerco', { q }) : t('barra2.sintesi-note');
 }
 
 /* ---------- chiudere una lezione: dagli appunti alle definizioni (con l'AI, anche locale) ---------- */
@@ -1471,22 +1472,22 @@ function daChiudere() {
 async function chiudiLezione(corso, { lezione, testo } = {}) {
   const l0 = lezione || lezioni().find(x => (x.file || x.appunti) && (!corso || norm(x.corso) === norm(corso)) && ((x.parole || 0) >= 10 || (x.paroleTrascritte || 0) >= 60));
   const l = l0 && { ...l0, appunti: testo || (l0.parole >= 10 ? l0.appunti : (l0.trascrizione || '').slice(0, 9000)) };
-  if (!l) return rispostaFissa(corso ? `Non trovo appunti di **${corso}** negli ultimi giorni.` : 'Non trovo una lezione con abbastanza appunti: scrivili nella sezione «Appunti» della nota.');
-  if (!AI.attiva()) return rispostaFissa('Per leggere gli appunti serve l\'AI: installa il **cervello locale** (gratis, funziona offline) da «Prepara Lode», oppure collega la tua AI: scrivi «AI».');
-  modo('pensa', `Leggo gli appunti di ${l.corso}…`); segnala('pensa');
+  if (!l) return rispostaFissa(corso ? t('barra2.niente-appunti-di', { corso }) : t('barra2.niente-appunti', { sezione: 'Appunti' }));
+  if (!AI.attiva()) return rispostaFissa(t('barra2.appunti-serve-ai'));
+  modo('pensa', t('barra2.leggo-appunti-di', { corso: l.corso })); segnala('pensa');
   let r; try { r = await AI.estraiLezione({ corso: l.corso, appunti: l.appunti, gia: (l.definizioni || []).map(d => d.t) }); }
-  catch (e) { modo('riposo'); return rispostaFissa('Non sono riuscito a leggere gli appunti: ' + e.message, { errore: true }); }
+  catch (e) { modo('riposo'); return rispostaFissa(t('barra2.appunti-illeggibili', { errore: e.message }), { errore: true }); }
   modo('riposo');
-  if (!r.definizioni.length && !r.daEsame.length) return rispostaFissa('Negli appunti non ho trovato definizioni nuove. Prova a scriverle per esteso, anche brevi.');
-  const card = schedaConferma({ titolo: `Aggiungere a ${l.corso} · ${dataBreve(l.data)}?`,
+  if (!r.definizioni.length && !r.daEsame.length) return rispostaFissa(t('barra2.nessuna-definizione-nuova'));
+  const card = schedaConferma({ titolo: t('barra2.aggiungere-a', { corso: l.corso, data: dataBreve(l.data) }),
     extra: `<ol class="ld-proposte">${r.definizioni.map(d => `<li><b>${esc(d.termine)}</b><span>${esc(d.definizione)}</span></li>`).join('')}${r.daEsame.map(x => `<li><b>★ ${esc(x)}</b></li>`).join('')}</ol>`,
-    nota: `${r.definizioni.length} definizioni${r.daEsame.length ? ` e ${r.daEsame.length} ★` : ''} nella nota della lezione. Controlla che siano giuste: le ha scritte ${AI.nomeMotore('testo')}.` });
+    nota: r.daEsame.length ? t('barra2.chiudi-nota-stelle', { n: r.definizioni.length, stelle: r.daEsame.length, motore: AI.nomeMotore('testo') }) : t('barra2.chiudi-nota', { n: r.definizioni.length, motore: AI.nomeMotore('testo') }) });
   card.querySelectorAll('.ld-proposte li').forEach((li, i) => entra(li, { ritardo: 100 + Math.min(i, 12) * 55, dy: 6, blur: 5, ms: 420 }));
   await attendiDecisione(card, async () => {
     for (const d of r.definizioni) await V.annota('definizione', d.definizione, { termine: d.termine, lezione: l });
     for (const x of r.daEsame) await V.annota('stella', x, { lezione: l });
     D.imp.chiuse = [...(D.imp.chiuse || []), l.file].slice(-60); salva();
-    await mostraFatto({ testo: 'Lezione chiusa.', nota: `${r.definizioni.length} definizioni pronte per i giochi.`, azione: ['Gioca', () => { nuovoTurno(); schedaGioco(l.corso); }], sintesi: `${r.definizioni.length} definizioni` }, card);
+    await mostraFatto({ testo: t('barra2.lezione-chiusa'), nota: t('barra2.definizioni-pronte', { n: r.definizioni.length }), azione: [t('barra2.gioca'), () => { nuovoTurno(); schedaGioco(l.corso); }], sintesi: t('barra2.sintesi-definizioni', { n: r.definizioni.length }) }, card);
     aggiornaTutto(); return {};
   });
 }
@@ -1495,23 +1496,23 @@ async function chiudiLezione(corso, { lezione, testo } = {}) {
 async function apriAppunti(l) {
   if (V.attivo) {
     l ||= V.lezioneDaAnnotare(); if (!A.turno || A.home) nuovoTurno();
-    const r = await V.apri(l), nome = l.corso === 'Appunti sparsi' ? 'gli appunti sparsi di oggi' : 'la nota di ' + l.corso;
-    if (r.esito === 'ok') return mostraFatto({ testo: `Apro ${nome} in Obsidian.` });
-    if (r.esito === 'da_aprire') return rispostaFissa(`Apro ${nome}. Se Obsidian non trova il vault, la prima volta fai **Apri cartella come vault** e scegli la cartella «${r.percorso}»: poi resta collegato.`);
-    if (r.esito === 'manca') return rispostaFissa(`Ho aperto ${nome} con l'editor di sistema. Con **Obsidian** (gratis, obsidian.md) il vault «${r.percorso}» è già pronto: cartelle, modelli, orario e la tua memoria.`);
-    return rispostaFissa('Non riesco ad aprire la nota: ' + (r.errore || ''), { errore: true });
+    const r = await V.apri(l), nome = l.corso === 'Appunti sparsi' ? t('barra2.appunti-sparsi-oggi') : t('barra2.la-nota-di', { corso: l.corso });
+    if (r.esito === 'ok') return mostraFatto({ testo: t('barra2.apro-in-obsidian', { nome }) });
+    if (r.esito === 'da_aprire') return rispostaFissa(t('barra2.apro-se-non-trova', { nome, percorso: r.percorso }));
+    if (r.esito === 'manca') return rispostaFissa(t('barra2.aperto-editor', { nome, percorso: r.percorso }));
+    return rispostaFissa(t('barra2.nota-non-si-apre', { errore: r.errore || '' }), { errore: true });
   }
-  rispostaFissa('Gli appunti in Obsidian sono nell\'**app desktop** di Lode: lì ogni lezione diventa una nota del tuo vault, con le ★ e le definizioni che segni dalla barra.');
+  rispostaFissa(t('barra2.appunti-solo-app'));
 }
 function schedaGioco(corso) {
   const { scelte, tutte } = daGiocare(6, corso);
   if (scelte.length < 2) {
-    rispostaFissa(tutte.length ? `Le definizioni ${corso ? 'di ' + (tutte[0]?.corso || corso) + ' ' : ''}per oggi le sai già: tornano quando stanno per scappare.` : `Ancora nessuna definizione${corso ? ' di ' + corso : ''}. In aula premi **Definizione** (o scrivi «def: termine = definizione»), oppure scrivile in Obsidian nella sezione «Definizioni» della lezione.`);
+    rispostaFissa(tutte.length ? (corso ? t('barra2.gioco-sai-gia-di', { corso: tutte[0]?.corso || corso }) : t('barra2.gioco-sai-gia')) : corso ? t('barra2.gioco-nessuna-di', { corso, sezione: 'Definizioni' }) : t('barra2.gioco-nessuna', { sezione: 'Definizioni' }));
     return;
   }
   const manche = partita(scelte, tutte), corsi = [...new Set(scelte.map(d => d.corso))];
   let i = 0, punti = 0, tot = 0; const t0 = Date.now(), sbagliate = new Set();
-  const s = scheda('ld-gioco', `<div class="capo"><span class="ld-lbl">Gioco · ${esc(corsi.length === 1 ? corsi[0] : 'ultime lezioni')}</span><span class="conto"></span></div><i class="ld-prog"><i></i></i><div class="manche"></div>`);
+  const s = scheda('ld-gioco', `<div class="capo"><span class="ld-lbl">${t('barra2.gioco-di', { corso: esc(corsi.length === 1 ? corsi[0] : t('barra2.ultime-lezioni')) })}</span><span class="conto"></span></div><i class="ld-prog"><i></i></i><div class="manche"></div>`);
   const box = s.querySelector('.manche'), conto = s.querySelector('.conto'), pr = s.querySelector('.ld-prog i');
   const segna = (d, ok, q) => { tot++; if (ok) punti++; else sbagliate.add(d.t); ricorda(d.k, ok, q); };
   const avanti = () => { i++; tween(140, e => { box.style.opacity = (1 - e).toFixed(3); }).then(() => { box.style.opacity = ''; mostra(); }); };
@@ -1519,10 +1520,10 @@ function schedaGioco(corso) {
   const mostra = () => {
     pr.style.transform = `scaleX(${(i / manche.length).toFixed(4)})`;
     if (i >= manche.length) return fine();
-    const m = manche[i]; conto.textContent = `${i + 1} di ${manche.length}`;
+    const m = manche[i]; conto.textContent = t('barra2.manche-di', { i: i + 1, n: manche.length });
     if (m.tipo === 'abbina') {
       const destra = [...m.defs].sort(() => Math.random() - .5);
-      box.innerHTML = `<p class="dom">Abbina ogni termine alla sua definizione.</p><div class="ld-abbina"><div class="col">${m.defs.map((d, j) => `<button type="button" class="ld-tess" data-s="${j}">${esc(d.t)}</button>`).join('')}</div><div class="col">${destra.map(d => `<button type="button" class="ld-tess def" data-d="${m.defs.indexOf(d)}">${esc(d.d.length > 92 ? d.d.slice(0, 90) + '…' : d.d)}</button>`).join('')}</div></div>`;
+      box.innerHTML = `<p class="dom">${t('barra2.abbina')}</p><div class="ld-abbina"><div class="col">${m.defs.map((d, j) => `<button type="button" class="ld-tess" data-s="${j}">${esc(d.t)}</button>`).join('')}</div><div class="col">${destra.map(d => `<button type="button" class="ld-tess def" data-d="${m.defs.indexOf(d)}">${esc(d.d.length > 92 ? d.d.slice(0, 90) + '…' : d.d)}</button>`).join('')}</div></div>`;
       let sel = null, fatte = 0; const errori = new Set();
       box.querySelectorAll('[data-s]').forEach(b => b.addEventListener('click', () => { if (b.disabled) return; box.querySelectorAll('[data-s]').forEach(x => x.classList.toggle('sel', x === b)); sel = +b.dataset.s; }));
       box.querySelectorAll('[data-d]').forEach(b => b.addEventListener('click', () => {
@@ -1533,13 +1534,13 @@ function schedaGioco(corso) {
         } else { errori.add(sel); scuoti(b); scuoti(sx); }
       }));
     } else if (m.tipo === 'chi') {
-      box.innerHTML = `<p class="dom">Chi sono?</p><p class="def">${esc(m.def.d)}</p><div class="ld-scelte">${m.opzioni.map(o => `<button type="button" class="btn" data-o="${esc(o.k)}">${esc(o.t)}</button>`).join('')}</div>`;
+      box.innerHTML = `<p class="dom">${t('barra2.chi-sono')}</p><p class="def">${esc(m.def.d)}</p><div class="ld-scelte">${m.opzioni.map(o => `<button type="button" class="btn" data-o="${esc(o.k)}">${esc(o.t)}</button>`).join('')}</div>`;
       box.querySelectorAll('[data-o]').forEach(b => b.addEventListener('click', () => {
         const ok = b.dataset.o === m.def.k; box.querySelectorAll('[data-o]').forEach(x => { x.disabled = true; if (x.dataset.o === m.def.k) x.classList.add('giusta'); });
         if (!ok) { b.classList.add('errata'); scuoti(b); } segna(m.def, ok); segnala(ok ? 'fatto' : 'quiete'); dopo(ok ? 650 : 1500, avanti);
       }));
     } else if (m.tipo === 'completa') {
-      box.innerHTML = `<p class="dom">${esc(m.def.t)}: completa la definizione.</p><p class="def">${esc(m.buco.prima)}<input class="ld-buco" aria-label="Parola mancante" autocomplete="off" spellcheck="false" style="width:${Math.max(5, m.buco.parola.length) + 1}ch">${esc(m.buco.dopo)}</p><div class="az"><button type="button" class="btn primary">Controlla <kbd>Invio</kbd></button><button type="button" class="btn ld-piano" data-salta>Non la so</button></div>`;
+      box.innerHTML = `<p class="dom">${t('barra2.completa', { termine: esc(m.def.t) })}</p><p class="def">${esc(m.buco.prima)}<input class="ld-buco" aria-label="${t('barra2.parola-mancante')}" autocomplete="off" spellcheck="false" style="width:${Math.max(5, m.buco.parola.length) + 1}ch">${esc(m.buco.dopo)}</p><div class="az"><button type="button" class="btn primary">${t('barra2.controlla-invio')}</button><button type="button" class="btn ld-piano" data-salta>${t('barra2.non-la-so')}</button></div>`;
       const inp = box.querySelector('.ld-buco'), verifica = salta => {
         if (inp.disabled) return; const ok = !salta && giusta(inp.value, m.buco.parola); inp.disabled = true;
         inp.value = m.buco.parola; inp.classList.add(ok ? 'ok' : 'no'); if (!ok) scuoti(inp); segna(m.def, ok); segnala(ok ? 'fatto' : 'quiete'); dopo(ok ? 700 : 1600, avanti);
@@ -1548,9 +1549,9 @@ function schedaGioco(corso) {
       box.querySelector('.btn.primary').addEventListener('click', () => verifica(false)); box.querySelector('[data-salta]').addEventListener('click', () => verifica(true));
       requestAnimationFrame(() => inp.focus({ preventScroll: true }));
     } else {
-      box.innerHTML = `<p class="dom">Te la ricordi?</p><p class="termine">${esc(m.def.t)}</p><p class="def" hidden>${esc(m.def.d)}</p><div class="az"><button type="button" class="btn primary" data-gira>Mostra <kbd>Spazio</kbd></button></div>`;
+      box.innerHTML = `<p class="dom">${t('barra2.te-la-ricordi')}</p><p class="termine">${esc(m.def.t)}</p><p class="def" hidden>${esc(m.def.d)}</p><div class="az"><button type="button" class="btn primary" data-gira>${t('barra2.mostra-spazio')}</button></div>`;
       const gira = () => { const d = box.querySelector('.def'); if (!d.hidden) return; d.hidden = false; entra(d, { dy: 6, blur: 6, ms: 400 });
-        box.querySelector('.az').innerHTML = '<button type="button" class="btn" data-no>Non la sapevo <kbd>1</kbd></button><button type="button" class="btn primary" data-si>La sapevo <kbd>2</kbd></button>';
+        box.querySelector('.az').innerHTML = `<button type="button" class="btn" data-no>${t('barra2.non-la-sapevo')}</button><button type="button" class="btn primary" data-si>${t('barra2.la-sapevo')}</button>`;
         box.querySelector('[data-no]').addEventListener('click', () => { segna(m.def, false); avanti(); }); box.querySelector('[data-si]').addEventListener('click', () => { segna(m.def, true); avanti(); }); };
       box.querySelector('[data-gira]').addEventListener('click', gira);
       A.gioco = { gira, vota: k => box.querySelector(k === '1' ? '[data-no]' : '[data-si]')?.click() };
@@ -1562,51 +1563,51 @@ function schedaGioco(corso) {
   const fine = () => {
     A.gioco = null; salva(); V.scriviMemoria(); aggiornaTutto();
     const sec = Math.round((Date.now() - t0) / 1000);
-    box.innerHTML = `<div class="ld-esito"><b>${esc(punti)}<small>/${esc(tot)}</small></b><span>${punti === tot ? 'Tutte giuste. Queste restano.' : `Da rinforzare: ${[...sbagliate].slice(0, 3).map(esc).join(', ')}. Tornano domani.`}</span><small>${sec < 60 ? sec + ' secondi' : Math.round(sec / 60) + ' min'}</small></div>`;
+    box.innerHTML = `<div class="ld-esito"><b>${esc(punti)}<small>/${esc(tot)}</small></b><span>${punti === tot ? t('barra2.tutte-giuste') : t('barra2.da-rinforzare', { elenco: [...sbagliate].slice(0, 3).map(esc).join(', ') })}</span><small>${sec < 60 ? t('barra2.secondi', { n: sec }) : t('barra2.minuti', { n: Math.round(sec / 60) })}</small></div>`;
     entra(box, { dy: 8, blur: 6, ms: 480 }); segnala(punti >= tot - 1 ? 'confermato' : 'quiete');
-    if (A.turno) A.turno.dataset.sintesi = `${punti} su ${tot}`;
+    if (A.turno) A.turno.dataset.sintesi = t('barra2.sintesi-punti', { punti, tot });
     const ancora = daGiocare(6, corso).scelte.length;
-    if (ancora >= 2) { const b = h('button', 'btn small', 'Ancora una'); b.type = 'button'; b.addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Gioca ancora'); schedaGioco(corso); }); box.querySelector('.ld-esito').append(b); }
+    if (ancora >= 2) { const b = h('button', 'btn small', t('barra2.ancora-una')); b.type = 'button'; b.addEventListener('click', () => { nuovoTurno(); detto(A.turno, t('barra2.gioca-ancora')); schedaGioco(corso); }); box.querySelector('.ld-esito').append(b); }
   };
   mostra();
-  if (A.turno) A.turno.dataset.sintesi = 'gioco';
+  if (A.turno) A.turno.dataset.sintesi = t('barra2.sintesi-gioco');
 }
 
 /* ---------- eseguire un comando locale ---------- */
 async function esegui(c) {
   switch (c.tipo) {
     case 'aiuto': return schedaAiuto();
-    case 'ferma': { const r = F.ferma(); return r ? mostraFatto({ testo: r.era.fase === 'pausa' ? 'Pausa finita.' : `Fermato dopo ${ore(r.min)}.`, nota: r.era.fase === 'prova' && PV.inCorso() ? 'La prova resta aperta: scrivi «prova generale» per consegnarla.' : r.min >= 5 && r.era.fase !== 'pausa' ? 'Li conto nelle ore di studio.' : '', sintesi: 'timer fermato' }) : rispostaFissa('Non c\'è nessun timer acceso.'); }
-    case 'sospendi': F.sospendi(); return mostraFatto({ testo: 'Timer in pausa.', nota: 'Scrivi «riprendi» quando torni.' });
-    case 'riprendi': F.riprendi(); return mostraFatto({ testo: 'Si riparte.' });
+    case 'ferma': { const r = F.ferma(); return r ? mostraFatto({ testo: r.era.fase === 'pausa' ? t('barra2.pausa-finita') : t('barra2.fermato-dopo', { tempo: ore(r.min) }), nota: r.era.fase === 'prova' && PV.inCorso() ? t('barra2.prova-resta-aperta') : r.min >= 5 && r.era.fase !== 'pausa' ? t('barra2.li-conto') : '', sintesi: t('barra2.sintesi-timer-fermato') }) : rispostaFissa(t('barra2.nessun-timer')); }
+    case 'sospendi': F.sospendi(); return mostraFatto({ testo: t('barra2.timer-in-pausa'), nota: t('barra2.scrivi-riprendi') });
+    case 'riprendi': F.riprendi(); return mostraFatto({ testo: t('barra2.si-riparte') });
     case 'focus': {
-      if (c.nomeDetto && !c.esame) return rispostaFissa(`Non trovo **${c.nomeDetto}** tra i tuoi esami. Faccio partire lo studio libero? Scrivi «focus ${c.min || D.imp.focus}».`);
+      if (c.nomeDetto && !c.esame) return rispostaFissa(t('barra2.focus-esame-sconosciuto', { nome: c.nomeDetto, min: c.min || D.imp.focus }));
       if (!c.min && !c.esame) return schedaFocus();
       return avviaFocus({ min: c.min || D.imp.focus, esameId: c.esame?.id || null, dove: null });
     }
     case 'voto': case 'idoneita': {
       const ann = istantanea(); let e = c.esame, nuovo = false;
-      if (!e) { if (!c.nomeDetto) return rispostaFissa('Di quale esame?'); e = aggiungiEsame({ nome: c.nomeDetto, cfu: 6 }); nuovo = true; }
+      if (!e) { if (!c.nomeDetto) return rispostaFissa(t('barra2.di-quale-esame')); e = aggiungiEsame({ nome: c.nomeDetto, cfu: 6 }); nuovo = true; }
       const prima = media();
       registraVoto(e.id, c.tipo === 'idoneita' ? { idoneita: true } : { voto: c.voto, lode: c.lode });
       const dopo = media(), d = prima.ponderata != null && dopo.ponderata != null ? dopo.ponderata - prima.ponderata : null;
-      await mostraFatto({ testo: c.tipo === 'idoneita' ? `${e.nome}: idoneità registrata.` : `${c.voto}${c.lode ? ' e lode' : ''} in ${e.nome}.`, nota: nuovo ? 'Nuovo esame da 6 CFU: correggi i CFU nel libretto.' : (d != null ? `Media ${num(dopo.ponderata, 2)} (${d >= 0 ? '+' : '−'}${num(Math.abs(d), 2)})` : ''), annulla: ann, sintesi: `${e.nome}: ${c.tipo === 'idoneita' ? 'idoneità' : c.voto}` });
+      await mostraFatto({ testo: c.tipo === 'idoneita' ? t('barra2.idoneita-registrata', { nome: e.nome }) : c.lode ? t('barra2.voto-lode-in', { voto: c.voto, nome: e.nome }) : t('barra2.voto-in', { voto: c.voto, nome: e.nome }), nota: nuovo ? t('barra2.nuovo-esame-6-cfu') : (d != null ? t('barra2.media-diff', { media: num(dopo.ponderata, 2), segno: d >= 0 ? '+' : '−', diff: num(Math.abs(d), 2) }) : ''), annulla: ann, sintesi: t('barra2.sintesi-voto', { nome: e.nome, voto: c.tipo === 'idoneita' ? t('barra2.idoneita') : c.voto }) });
       segnala('fatto'); aggiornaTutto();
-      if (c.voto >= 28 || c.lode) rispostaFissa(c.lode ? 'Trenta e lode. Questa si festeggia.' : 'Bel colpo. Respira oggi, domani si riparte.');
+      if (c.voto >= 28 || c.lode) rispostaFissa(c.lode ? t('barra2.trenta-e-lode') : t('barra2.bel-colpo'));
       return schedaLibretto();
     }
     case 'esame': {
       const ann = istantanea(); let e = c.esistente && !c.esistente.fatto ? c.esistente : null;
       if (e) { if (c.data) e.data = c.data; if (c.cfu) e.cfu = c.cfu; salva(); }
       else e = aggiungiEsame({ nome: c.nome, cfu: c.cfu || 6, data: c.data });
-      await mostraFatto({ testo: `${e.nome}${c.esistente && !c.esistente.fatto ? ' aggiornato' : ' aggiunto'}.`, nota: `${e.data ? cap(dataLunga(e.data)) + ' · ' : 'senza data · '}${e.cfu} CFU${!c.cfu && !c.esistente ? ' (cambiali se sono di più)' : ''}`, annulla: ann, sintesi: `${e.nome} ${e.data ? traQuanto(e.data) : ''}` });
+      await mostraFatto({ testo: c.esistente && !c.esistente.fatto ? t('barra2.esame-aggiornato', { nome: e.nome }) : t('barra2.esame-aggiunto', { nome: e.nome }), nota: !c.cfu && !c.esistente ? t('barra2.esame-nota-cambiali', { quando: e.data ? cap(dataLunga(e.data)) : t('barra2.senza-data'), cfu: e.cfu }) : t('barra2.esame-nota', { quando: e.data ? cap(dataLunga(e.data)) : t('barra2.senza-data'), cfu: e.cfu }), annulla: ann, sintesi: `${e.nome} ${e.data ? traQuanto(e.data) : ''}` });
       aggiornaTutto();
-      if (e.data) { const p = piano(e), g = giorniTra(oggi(), e.data), liv = D.imp.allenatore || 'normale'; rispostaFissa(`Per arrivarci pronto: circa **${num(p.perGiorno)} h al giorno** (${p.tot} h in tutto). ${liv === 'mai' ? 'Le proposte sono spente: le riaccendi con «proposte normali».' : `Da adesso, quando sei al computer e libero, ti propongo giochi, ripassi e domande su ${e.nome}${g <= 14 ? ', sempre più spesso man mano che si avvicina' : ''}.`}`); }
+      if (e.data) { const p = piano(e), g = giorniTra(oggi(), e.data), liv = D.imp.allenatore || 'normale'; rispostaFissa(`${t('barra2.piano-ore', { h: num(p.perGiorno), tot: p.tot })} ${liv === 'mai' ? t('barra2.proposte-spente-riaccendi') : g <= 14 ? t('barra2.proposte-da-adesso-vicino', { nome: e.nome }) : t('barra2.proposte-da-adesso', { nome: e.nome })}`); }
       return;
     }
     case 'carta': {
       aggiungiCarta({ esameId: c.esame?.id || null, fronte: c.fronte, retro: c.retro }); salva(); aggiornaTutto();
-      return mostraFatto({ testo: 'Carta aggiunta.', nota: c.esame ? c.esame.nome : 'senza esame', annulla: (() => { const id = D.carte.at(-1).id; return () => { D.carte = D.carte.filter(x => x.id !== id); salva(); }; })() });
+      return mostraFatto({ testo: t('barra2.carta-aggiunta'), nota: c.esame ? c.esame.nome : t('barra2.senza-esame'), annulla: (() => { const id = D.carte.at(-1).id; return () => { D.carte = D.carte.filter(x => x.id !== id); salva(); }; })() });
     }
     case 'simula': return schedaSimula(c);
     case 'serve': return schedaLibretto({ base: c.base });
@@ -1616,7 +1617,7 @@ async function esegui(c) {
     case 'oggi': return ORE.calendario().attivo ? schedaOre() : schedaEsami();
     case 'apriEsame': return c.esame.fatto ? schedaLibretto() : schedaEsami();
     case 'ripasso': {
-      if (c.nomeDetto && !c.esame) return rispostaFissa(`Non trovo **${c.nomeDetto}** tra i tuoi esami.`);
+      if (c.nomeDetto && !c.esame) return rispostaFissa(t('barra2.esame-sconosciuto', { nome: c.nomeDetto }));
       return schedaRipasso(c.esame?.id);
     }
     case 'orale': {
@@ -1634,26 +1635,26 @@ async function esegui(c) {
     case 'spiego': {
       // l'argomento detto, cercato nei programmi degli esami da fare; senza argomento, il primo di oggi nel piano
       const conP = daFare().filter(e => PG.programmaDi(e));
-      if (!conP.length) return rispostaFissa('Prima incolla il programma di un esame («programma di analisi 2»): poi mi spieghi i suoi argomenti e ti dico cosa hai saltato.');
+      if (!conP.length) return rispostaFissa(t('barra2.spiego-senza-programma'));
       for (const e of conP) { const a = c.q ? PG.abbina(c.q, e.programma.argomenti) : null; if (a) return avviaSpiego(e, a); }
-      if (c.q) return rispostaFissa(`Non trovo **${c.q}** nei programmi dei tuoi esami.`);
+      if (c.q) return rispostaFissa(t('barra2.argomento-sconosciuto', { q: c.q }));
       const e = prossimi().find(x => PG.programmaDi(x)) || conP[0], o = PG.oggiDi(e), x = o && [...o.studia, ...o.ripassa][0];
       return avviaSpiego(e, x?.a || e.programma.argomenti[0]);
     }
     case 'domande': {
       const e = c.esame || (c.nomeDetto ? null : prossimi().find(x => PG.programmaDi(x)) || prossimi()[0]);
-      if (!e) return rispostaFissa(c.nomeDetto ? `Non trovo l'esame **${c.nomeDetto}**.` : 'Di quale esame? Per esempio: «domande uscite di analisi 2: …».');
+      if (!e) return rispostaFissa(c.nomeDetto ? t('barra2.esame-non-trovato', { nome: c.nomeDetto }) : t('barra2.domande-di-quale-esame'));
       if (!c.testo) return PG.programmaDi(e) ? disegnaProgramma(e, { domande: true }) : programmaVuoto(e);
       return aggiungiDomandeUscite(e, c.testo);
     }
     case 'stella': case 'domanda': case 'definizione': {
       const r = await salvaCattura(c.tipo, c.testo, { termine: c.termine }); if (!r) return;
-      return mostraFatto({ testo: r.testo, nota: V.attivo ? 'Nella nota della lezione.' : '', azione: V.attivo ? ['Apri', () => apriAppunti(r.l)] : null, sintesi: r.testo });
+      return mostraFatto({ testo: r.testo, nota: V.attivo ? t('barra2.nella-nota-lezione') : '', azione: V.attivo ? [t('barra2.apri'), () => apriAppunti(r.l)] : null, sintesi: r.testo });
     }
     case 'orario': {
       const o = aggiungiOrario(c); V.scriviOrario(); aggiornaTutto();
-      await mostraFatto({ testo: `${o.corso} in orario.`, nota: `${o.giorni.map(g => GIORNI_BREVI[g]).join(', ')} · ${o.inizio}–${o.fine}${o.aula ? ' · aula ' + o.aula : ''}`, sintesi: `${o.corso} in orario` });
-      return rispostaFissa('Quando sei a lezione la barra lo sa: si apre sulla cattura veloce (★ da esame, definizioni, domande) e a casa ti propone due minuti di gioco su quello che hai appena fatto.');
+      await mostraFatto({ testo: t('barra2.in-orario', { corso: o.corso }), nota: `${o.giorni.map(g => GIORNI_BREVI[g]).join(', ')} · ${o.inizio}–${o.fine}${o.aula ? ' · ' + t('barra2.aula', { aula: o.aula }) : ''}`, sintesi: t('barra2.sintesi-in-orario', { corso: o.corso }) });
+      return rispostaFissa(t('barra2.orario-spiegazione'));
     }
     case 'vediOrario': return schedaOrario();
     case 'lavoro': return comandoLavoro(c);
@@ -1665,8 +1666,8 @@ async function esegui(c) {
     case 'prepara': return schedaPrepara(c.cosa);
     case 'sincronizza': return schedaSincronizza(c.cosa);
     case 'ai': return schedaAI(c.fornitore);
-    case 'proposte': D.imp.allenatore = c.livello; salva(); return mostraFatto({ testo: c.livello === 'mai' ? 'Proposte spente.' : `Proposte ${({ poco: 'poche', normale: 'normali', spesso: 'frequenti' })[c.livello]}.`, nota: c.livello === 'mai' ? 'Le riaccendi quando vuoi.' : 'Mai a lezione, al lavoro, in focus o nelle ore di silenzio.' });
-    case 'proponi': { const r = await provaAllenatore(true); return r?.includes(':') ? null : rispostaFissa('Per ora non ho niente da proporti: aggiungi un esame con la data, o segna qualche definizione a lezione.'); }
+    case 'proposte': D.imp.allenatore = c.livello; salva(); return mostraFatto({ testo: c.livello === 'mai' ? t('barra2.proposte-spente') : ({ poco: t('barra2.proposte-poche'), normale: t('barra2.proposte-normali'), spesso: t('barra2.proposte-frequenti') })[c.livello], nota: c.livello === 'mai' ? t('barra2.riaccendi-quando-vuoi') : t('barra2.proposte-mai-quando') });
+    case 'proponi': { const r = await provaAllenatore(true); return r?.includes(':') ? null : rispostaFissa(t('barra2.niente-da-proporre')); }
     case 'trascrivi': return c.sorgente === 'computer' ? schedaComputer(c.corso) : avviaTrascrizione();
     case 'ripeti': return ripeti(c.sec || 60);
     case 'spegniRipeti': return spegniRipeti();
@@ -1674,8 +1675,8 @@ async function esegui(c) {
     case 'anki': return esportaAnki(c.corso);
     case 'tasca': return schedaTasca(c);
     case 'fineTrascrizione': return fermaTrascrizione();
-    case 'pausaTrascrizione': TR.pausa(); return mostraFatto({ testo: 'Trascrizione in pausa.', nota: 'Scrivi «riprendi trascrizione» quando ricomincia.' });
-    case 'riprendiTrascrizione': TR.riprendi(); return mostraFatto({ testo: 'Riprendo a trascrivere.' });
+    case 'pausaTrascrizione': TR.pausa(); return mostraFatto({ testo: t('barra2.trascrizione-in-pausa'), nota: t('barra2.scrivi-riprendi-trascrizione') });
+    case 'riprendiTrascrizione': TR.riprendi(); return mostraFatto({ testo: t('barra2.riprendo-trascrivere') });
     case 'riordina': return riordinaLezione(c.corso);
     case 'stampa': {   // scritto nel campo: il campo lascia il fuoco, così i tasti 1-4 rispondono subito
       const s = ST.schedaStampa({ corso: c.corso || corsoInf(), lingua: c.lingua });
@@ -1694,14 +1695,14 @@ const nomeFile = f => f ? String(f).split(/[\\/]/).pop() : null;
 const nomeSicuro = n => typeof n === 'string' && n && !['__proto__', 'constructor', 'prototype'].includes(n);
 // la scheda «Errore»: il primo errore, le righe vere con due prima e due dopo, i passi che si aprono uno alla volta.
 // conta: la prima volta che la scheda si apre per quell'errore (D.codice.errori e l'evento del diario)
-function schedaErrore(r, { progetto = null, corso = null, prova = null, valutato = false, sorgente = null, righeCambiate = null, cambiato = false, conta = true, notaValutato = 'Progetto valutato: la correzione non te la mostro.' } = {}) {
+function schedaErrore(r, { progetto = null, corso = null, prova = null, valutato = false, sorgente = null, righeCambiate = null, cambiato = false, conta = true, notaValutato = t('barra2.err-valutato') } = {}) {
   // con il file vero spiega() può correggere la voce (uno «scanf senza &» che è un printf): conta quella
   const d0 = r.primo, sp = ER.spiega(d0, { sorgente, righeCambiate, valutato, cambiato }), d = sp.chiave === d0.chiave ? d0 : { ...d0, chiave: sp.chiave };
   const chi = { ...(progetto ? { progetto } : {}), ...(corso ? { corso } : {}), voce: d.chiave || null, nome: ER.nomeErrore(d.chiave), titolo: ER.breve(d), file: nomeFile(d.file), riga: d.riga || null };
   // la correzione di questo errore l'hai già guardata? Allora resta scritto
   const vista = D.codice.eventi.some(x => x.tipo === 'correzione-vista' && x.voce === chi.voce && x.file === chi.file && x.riga === chi.riga && (prova == null || x.t >= prova));
   const s = scheda('ld-err', ER.schedaHtml(sp, { conto: r.conto, vista }));
-  s.setAttribute('role', 'group'); s.setAttribute('aria-label', 'Errore spiegato');
+  s.setAttribute('role', 'group'); s.setAttribute('aria-label', t('barra2.errore-spiegato'));
   if (vista) s.querySelector('[data-passo=correzione]')?.setAttribute('data-vista', '1');
   if (sp.correzioneNascosta) { const n = document.createElement('p'); n.className = 'ld-nota'; n.dataset.valutato = '1'; n.textContent = notaValutato; s.append(n); }
   if (A.turno) A.turno.dataset.sintesi = ER.perDiario(d);
@@ -1721,7 +1722,7 @@ function schedaErrore(r, { progetto = null, corso = null, prova = null, valutato
     }
     if (passo === 'correzione' && !det.dataset.vista) {   // resta scritto: la correzione l'hai vista
       det.dataset.vista = '1';
-      det.querySelector('summary').insertAdjacentHTML('beforeend', '<span class="ld-err-vista">correzione vista</span>');
+      det.querySelector('summary').insertAdjacentHTML('beforeend', `<span class="ld-err-vista">${t('barra2.correzione-vista')}</span>`);
       DI.registra(D.codice, { tipo: 'correzione-vista', ...chi }); salva();
     }
   }));
@@ -1762,10 +1763,10 @@ async function seguoValutato() {
 // «spiegami l'errore»: il testo scritto dopo, se no quello copiato negli appunti (letto dal main, solo se è un errore)
 async function spiegaIncollato(testo) {
   if (!testo && BRIDGE) testo = (await BRIDGE.invoca('appunti:errore').catch(() => null))?.testo || null;
-  if (!testo) return rispostaFissa(BRIDGE ? 'Copia l\'errore dal terminale (o dall\'IDE) e riscrivi «spiegami l\'errore».' : 'Incolla l\'errore dopo i due punti: «spiegami l\'errore: …».');
+  if (!testo) return rispostaFissa(BRIDGE ? t('barra2.copia-errore') : t('barra2.incolla-errore'));
   const r = ER.riassunto(ER.analizza(testo));
-  if (!r.primo) return rispostaFissa('In questo testo non trovo un errore del compilatore o del programma. Copia tutto, dalla riga con il nome del file, e riprova.');
-  return schedaErrore(r, { valutato: await seguoValutato(), notaValutato: 'Segui un progetto valutato: la correzione non te la mostro.' });
+  if (!r.primo) return rispostaFissa(t('barra2.nessun-errore-nel-testo'));
+  return schedaErrore(r, { valutato: await seguoValutato(), notaValutato: t('barra2.segui-valutato') });
 }
 // gli eventi di «Segui il progetto» nel registro (D.codice.eventi → diario del progetto). Mai il percorso: solo il nome
 function eventoProgetto(x) {
@@ -1778,50 +1779,50 @@ function eventoProgetto(x) {
 }
 // «diario del progetto»: la nota di oggi in Obsidian (Progetti/<nome>/<giorno>.md)
 async function apriDiario(progetto) {
-  if (!V.attivo) return rispostaFissa('Il diario sta nel vault: serve l\'**app desktop** di Lode.');
+  if (!V.attivo) return rispostaFissa(t('barra2.diario-solo-app'));
   await V.scriviDiario();
   const x = DI.diarioDaAprire(D.codice, { progetto });
-  if (!x) return rispostaFissa(progetto ? `Non trovo un progetto che si chiama «${progetto}».` : 'Non seguo ancora nessun progetto. Scrivi **segui progetto** e scegli la cartella del laboratorio.');
-  if (x.spento) return rispostaFissa(`Per **${x.progetto}** il diario è spento: nel vault non scrivo niente. Lo riaccendi con «accendi il diario di ${x.progetto}».`);
+  if (!x) return rispostaFissa(progetto ? t('barra2.progetto-sconosciuto', { nome: progetto }) : t('barra2.nessun-progetto-segui'));
+  if (x.spento) return rispostaFissa(t('barra2.diario-spento-per', { progetto: x.progetto }));
   const r = await V.apriDiario(x).catch(e => ({ esito: 'errore', errore: e.message }));
-  if (r?.esito === 'errore') return rispostaFissa('Non riesco ad aprire il diario: ' + r.errore, { errore: true });
-  return mostraFatto({ testo: `Diario di ${x.progetto}.`, nota: r?.esito === 'manca' ? 'Aperto con l\'editor di sistema: con Obsidian è più comodo.' : `${x.file} · aperto in Obsidian.`, sintesi: `diario di ${x.progetto}` });
+  if (r?.esito === 'errore') return rispostaFissa(t('barra2.diario-non-si-apre', { errore: r.errore }), { errore: true });
+  return mostraFatto({ testo: t('barra2.diario-di', { progetto: x.progetto }), nota: r?.esito === 'manca' ? t('barra2.aperto-editor-sistema') : t('barra2.aperto-in-obsidian', { file: x.file }), sintesi: t('barra2.sintesi-diario-di', { progetto: x.progetto }) });
 }
 // l'interruttore «non scrivere il diario di questo progetto» (e il contrario)
 function opzioneDiario(c) {
   const seguiti = [...PR.stato().values()].map(p => p.nome).filter(Boolean);
   const nome = DI.diarioDaAprire(D.codice, { progetto: c.progetto })?.progetto || seguiti.find(n => !c.progetto || norm(n).includes(norm(c.progetto)));
-  if (!nomeSicuro(nome)) return rispostaFissa(c.progetto ? `Non trovo un progetto che si chiama «${c.progetto}».` : 'Non seguo ancora nessun progetto.');
+  if (!nomeSicuro(nome)) return rispostaFissa(c.progetto ? t('barra2.progetto-sconosciuto', { nome: c.progetto }) : t('barra2.nessun-progetto'));
   D.codice.opzioni[nome] = { ...DI.opzioniProgetto(D.codice, nome), diario: c.diario }; salva(); aggiornaTutto();
-  return mostraFatto(c.diario ? { testo: `Diario di ${nome} acceso.`, nota: 'Scrivo nel vault quello che vedo: cosa cambia e le prove. Non so chi scrive le righe.' }
-    : { testo: `Diario di ${nome} spento.`, nota: 'Da adesso nel vault non scrivo niente di questo progetto. Le note già scritte restano: puoi toglierle da Obsidian.' });
+  return mostraFatto(c.diario ? { testo: t('barra2.diario-acceso', { nome }), nota: t('barra2.diario-acceso-nota') }
+    : { testo: t('barra2.diario-spento', { nome }), nota: t('barra2.diario-spento-nota') });
 }
 
 /* ---------- AI ---------- */
 async function eseguiStrumento(nome, x) {
   A.risposta?.fine(); A.risposta = null; modo('riposo');
-  if (nome === 'avvia_focus') { const e = x.esame ? trovaEsame(x.esame) : null; F.avvia({ min: x.minuti || D.imp.focus, esameId: e?.id || null }); await mostraFatto({ testo: `Focus di ${x.minuti || D.imp.focus} minuti${e ? ' su ' + e.nome : ''}.` }); aggiornaPillola(); return { esito: 'avviato' }; }
+  if (nome === 'avvia_focus') { const e = x.esame ? trovaEsame(x.esame) : null; F.avvia({ min: x.minuti || D.imp.focus, esameId: e?.id || null }); await mostraFatto({ testo: e ? t('barra2.focus-di-minuti-su', { min: x.minuti || D.imp.focus, nome: e.nome }) : t('barra2.focus-di-minuti', { min: x.minuti || D.imp.focus }) }); aggiornaPillola(); return { esito: 'avviato' }; }
   if (nome === 'mostra') { const e = x.esame ? trovaEsame(x.esame) : null; x.scheda === 'libretto' ? schedaLibretto() : x.scheda === 'esami' ? schedaEsami() : schedaRipasso(e?.id); return { esito: 'mostrata' }; }
   if (nome === 'crea_carte') {
     const e = x.esame ? trovaEsame(x.esame) : null, carte = x.carte.slice(0, 30);
-    const card = schedaConferma({ titolo: `Salvare ${carte.length} ${carte.length === 1 ? 'carta' : 'carte'}${e ? ' di ' + e.nome : ''}?`,
-      extra: `<ol class="ld-proposte">${carte.map(c => `<li><b>${esc(c.fronte)}</b><span>${esc(c.retro)}</span></li>`).join('')}</ol>`, nota: 'Entrano nel ripasso di oggi.' });
+    const card = schedaConferma({ titolo: e ? t('barra2.salvare-carte-di', { n: carte.length, nome: e.nome }) : t('barra2.salvare-carte', { n: carte.length }),
+      extra: `<ol class="ld-proposte">${carte.map(c => `<li><b>${esc(c.fronte)}</b><span>${esc(c.retro)}</span></li>`).join('')}</ol>`, nota: t('barra2.entrano-ripasso') });
     card.querySelectorAll('.ld-proposte li').forEach((li, i) => entra(li, { ritardo: 120 + Math.min(i, 12) * 60, dy: 6, blur: 5, ms: 420 }));
-    return attendiDecisione(card, async () => { carte.forEach(c => aggiungiCarta({ esameId: e?.id || null, fronte: c.fronte, retro: c.retro })); salva(); aggiornaTutto(); await mostraFatto({ testo: `${carte.length} carte salvate.`, azione: ['Ripassa ora', () => { nuovoTurno(); schedaRipasso(e?.id); }], sintesi: `${carte.length} carte` }, card); return { esito: 'salvate', n: carte.length }; });
+    return attendiDecisione(card, async () => { carte.forEach(c => aggiungiCarta({ esameId: e?.id || null, fronte: c.fronte, retro: c.retro })); salva(); aggiornaTutto(); await mostraFatto({ testo: t('barra2.carte-salvate', { n: carte.length }), azione: [t('barra2.ripassa-ora'), () => { nuovoTurno(); schedaRipasso(e?.id); }], sintesi: t('barra2.sintesi-carte', { n: carte.length }) }, card); return { esito: 'salvate', n: carte.length }; });
   }
   if (nome === 'aggiungi_esame') {
-    const card = schedaConferma({ titolo: `Aggiungere ${x.nome}?`, righe: [['Esame', x.nome], ['CFU', String(x.cfu || 6)], ['Appello', x.data ? dataLunga(x.data) : 'senza data']] });
-    return attendiDecisione(card, async () => { const e = aggiungiEsame({ nome: x.nome, cfu: x.cfu || 6, data: /^\d{4}-\d\d-\d\d$/.test(x.data || '') ? x.data : null }); aggiornaTutto(); await mostraFatto({ testo: `${e.nome} aggiunto.` }, card); return { esito: 'aggiunto' }; });
+    const card = schedaConferma({ titolo: t('barra2.aggiungere-esame', { nome: x.nome }), righe: [[t('barra2.esame'), x.nome], [t('barra2.cfu'), String(x.cfu || 6)], [t('barra2.appello'), x.data ? dataLunga(x.data) : t('barra2.senza-data')]] });
+    return attendiDecisione(card, async () => { const e = aggiungiEsame({ nome: x.nome, cfu: x.cfu || 6, data: /^\d{4}-\d\d-\d\d$/.test(x.data || '') ? x.data : null }); aggiornaTutto(); await mostraFatto({ testo: t('barra2.esame-aggiunto', { nome: e.nome }) }, card); return { esito: 'aggiunto' }; });
   }
   if (nome === 'registra_voto') {
     const e = trovaEsame(x.esame);
-    const card = schedaConferma({ titolo: `Registrare ${x.voto}${x.lode && x.voto === 30 ? ' e lode' : ''}?`, righe: [['Esame', e?.nome || x.esame + ' (nuovo, 6 CFU)'], ['Voto', `${x.voto}${x.lode && x.voto === 30 ? ' e lode' : ''}`]] });
-    return attendiDecisione(card, async () => { const ee = e || aggiungiEsame({ nome: x.esame, cfu: 6 }); registraVoto(ee.id, { voto: x.voto, lode: x.lode }); aggiornaTutto(); await mostraFatto({ testo: 'Voto registrato.', nota: `Media ${num(media().ponderata, 2)}` }, card); return { esito: 'registrato', media: media().ponderata }; });
+    const card = schedaConferma({ titolo: x.lode && x.voto === 30 ? t('barra2.registrare-voto-lode', { voto: x.voto }) : t('barra2.registrare-voto', { voto: x.voto }), righe: [[t('barra2.esame'), e?.nome || t('barra2.esame-nuovo-6-cfu', { nome: x.esame })], [t('barra2.voto'), x.lode && x.voto === 30 ? t('barra2.voto-e-lode', { voto: x.voto }) : `${x.voto}`]] });
+    return attendiDecisione(card, async () => { const ee = e || aggiungiEsame({ nome: x.esame, cfu: 6 }); registraVoto(ee.id, { voto: x.voto, lode: x.lode }); aggiornaTutto(); await mostraFatto({ testo: t('barra2.voto-registrato'), nota: t('barra2.media', { media: num(media().ponderata, 2) }) }, card); return { esito: 'registrato', media: media().ponderata }; });
   }
   return { errore: 'strumento sconosciuto' };
 }
 async function chiediAI(testo, { sistema } = {}) {
-  const g = GEN; modo('pensa', A.allegati.length ? 'Leggo il file…' : A.orale ? 'Il prof ci pensa…' : 'Un attimo…'); segnala('pensa');
+  const g = GEN; modo('pensa', A.allegati.length ? t('barra2.leggo-il-file') : A.orale ? t('barra2.prof-ci-pensa') : t('barra2.un-attimo')); segnala('pensa');
   const blocchi = [];
   for (const f of A.allegati) {
     try {
@@ -1834,8 +1835,8 @@ async function chiediAI(testo, { sistema } = {}) {
   if (A.allegati.length) { const t = A.turno; const box = h('div', 'ld-allegati'); A.allegati.forEach(f => box.append(chipFile(f.file, false))); t.append(box); A.allegati = []; allegatiBox.innerHTML = ''; }
   // col modello locale i file diventano carte con una risposta strutturata (niente strumenti)
   if (blocchi.length && AI.motore() !== 'claude' && !A.orale) {
-    try { const carte = await AI.carteDa([...blocchi, { type: 'text', text: testo }]); modo('riposo'); if (!carte.length) return rispostaFissa('Da questo file non ho tirato fuori carte: se è un PDF, il modello locale non lo legge. Prova con una foto delle pagine o col testo.'); return eseguiStrumento('crea_carte', { carte, esame: prossimi()[0]?.nome }); }
-    catch (e) { modo('riposo'); return rispostaFissa('Non sono riuscito a leggere il file: ' + e.message, { errore: true }); }
+    try { const carte = await AI.carteDa([...blocchi, { type: 'text', text: testo }]); modo('riposo'); if (!carte.length) return rispostaFissa(t('barra2.file-senza-carte-locale')); return eseguiStrumento('crea_carte', { carte, esame: prossimi()[0]?.nome }); }
+    catch (e) { modo('riposo'); return rispostaFissa(t('barra2.file-illeggibile', { errore: e.message }), { errore: true }); }
     finally { if (g === GEN) segnala('quiete'); }
   }
   A.storia.push({ role: 'user', content: [...blocchi, { type: 'text', text: testo }] });
@@ -1848,7 +1849,7 @@ async function chiediAI(testo, { sistema } = {}) {
   } catch (e) {
     if (g !== GEN || e.name === 'AbortError' || /abort/i.test(e.message)) return;
     console.error(e);
-    const msg = e.status === 401 ? 'La chiave non è valida: ricollegala scrivendo «AI».' : e.status === 429 ? 'Troppe richieste in poco tempo: riprova tra un minuto.' : e.status === 529 || e.status >= 500 ? `${AI.nomeMotore()} è sovraccarico in questo momento: riprova tra poco.` : /Failed to fetch|NetworkError/i.test(e.message) ? 'Sembra che manchi la rete.' : 'Qualcosa non è andato: ' + e.message;
+    const msg = e.status === 401 ? t('barra2.chiave-non-valida-ricollega') : e.status === 429 ? t('barra2.troppe-richieste') : e.status === 529 || e.status >= 500 ? t('barra2.sovraccarico', { motore: AI.nomeMotore() }) : /Failed to fetch|NetworkError/i.test(e.message) ? t('barra2.manca-rete') : t('barra2.qualcosa-non-andato', { errore: e.message });
     A.risposta?.fine(); rispostaFissa(msg, { errore: true });
     // la storia resta coerente: tolgo la domanda senza risposta
     while (A.storia.length && A.storia.at(-1).role === 'user') A.storia.pop();
@@ -1859,16 +1860,16 @@ async function chiediAI(testo, { sistema } = {}) {
 async function avviaOrale(e, nomeDetto, materialeFile) {
   if (!A.turno || A.home) nuovoTurno();
   if (!AI.attiva()) {
-    rispostaFissa(V.attivo ? 'Per l\'interrogazione serve l\'AI: installa il **cervello locale** da «Prepara Lode» (gratis, offline) o collega la tua AI (scrivi «AI»). Intanto puoi fare il **ripasso** delle carte.' : 'Per l\'interrogazione serve l\'AI: aggiungi la tua chiave Claude in **Impostazioni** (costa pochi centesimi a sessione). Intanto puoi fare il **ripasso** delle carte.');
+    rispostaFissa(V.attivo ? t('barra2.orale-serve-ai-app') : t('barra2.orale-serve-ai-web'));
     return;
   }
   if (!e) {
     const lista = prossimi().length ? prossimi() : daFare();
-    if (nomeDetto) { rispostaFissa(`Non trovo **${nomeDetto}**: ti interrogo comunque su quello.`); e = { id: null, nome: nomeDetto }; }
+    if (nomeDetto) { rispostaFissa(t('barra2.orale-esame-sconosciuto', { nome: nomeDetto })); e = { id: null, nome: nomeDetto }; }
     else if (lista.length === 1) e = lista[0];
     else {
-      const s = scheda('ld-scegli', `<span class="ld-lbl">Su quale esame?</span><div class="ld-preset">${lista.slice(0, 6).map(x => `<button type="button" class="ld-chip larga" data-e="${esc(x.id)}"><b>${esc(x.nome)}</b><span>${x.data ? traQuanto(x.data) : ''}</span></button>`).join('') || '<p class="ld-nota">Aggiungi prima un esame.</p>'}</div>`);
-      s.querySelectorAll('[data-e]').forEach(b => b.addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Interrogami su ' + esame(b.dataset.e).nome); avviaOrale(esame(b.dataset.e)); }));
+      const s = scheda('ld-scegli', `<span class="ld-lbl">${t('barra2.su-quale-esame')}</span><div class="ld-preset">${lista.slice(0, 6).map(x => `<button type="button" class="ld-chip larga" data-e="${esc(x.id)}"><b>${esc(x.nome)}</b><span>${x.data ? traQuanto(x.data) : ''}</span></button>`).join('') || `<p class="ld-nota">${t('barra2.aggiungi-prima-esame')}</p>`}</div>`);
+      s.querySelectorAll('[data-e]').forEach(b => b.addEventListener('click', () => { nuovoTurno(); detto(A.turno, t('barra2.interrogami-su', { nome: esame(b.dataset.e).nome })); avviaOrale(esame(b.dataset.e)); }));
       return;
     }
   }
@@ -1879,89 +1880,89 @@ async function avviaOrale(e, nomeDetto, materialeFile) {
     lez.length ? `Lezioni:\n${lez.map(l => [...(l.definizioni || []).map(d => `– ${d.t}: ${d.d}`), ...(l.stelle || []).map(x => `– ★ ${x}`)].join('\n')).join('\n')}` : '',
   ].filter(Boolean).join('\n\n');
   A.orale = { esameId: e.id, nome: e.nome, materiale, storico: [], corrente: null, max: 5 }; A.storia = [];
-  const c = contesto(`Orale · <b>${esc(e.nome)}</b>`); const via = h('button', 'ld-esci', 'Esci'); via.type = 'button'; via.addEventListener('click', esciOrale); c.append(via);
-  A.turno.dataset.sintesi = `orale di ${e.nome}`;
+  const c = contesto(t('barra2.orale-di-contesto', { nome: esc(e.nome) })); const via = h('button', 'ld-esci', t('barra2.esci')); via.type = 'button'; via.addEventListener('click', esciOrale); c.append(via);
+  A.turno.dataset.sintesi = t('barra2.sintesi-orale-di', { nome: e.nome });
   return domandaOrale();
 }
 // l'orale guidato dal codice: domanda → risposta dello studente → giudizio → domanda… (5) → voto calcolato da Lode
 async function domandaOrale() {
   const o = A.orale, g = GEN; if (!o) return;
-  modo('pensa', 'Il prof ci pensa…'); segnala('pensa');
+  modo('pensa', t('barra2.prof-ci-pensa')); segnala('pensa');
   try {
     const arg = o.argomenti ? o.argomenti[o.storico.length % o.argomenti.length] : null;
     const materiale = arg ? PG.materialeArgomento(esame(o.esameId), arg) : o.materiale;
     const d = await AI.domandaOrale({ nome: o.nome, materiale, fatte: o.storico.map(x => arg ? x.domanda : x.argomento), argomento: arg?.t });
     if (g !== GEN || A.orale !== o) return;
     o.corrente = arg ? { ...d, argomentoId: arg.id, argomento: arg.t, materiale } : d; modo('riposo');
-    const r = nuovaRisposta(); r.aggiungi(`**Domanda ${o.storico.length + 1} di ${o.max}.** ${d.domanda}`); await r.fine();
-  } catch (e) { if (g === GEN) { modo('riposo'); rispostaFissa('Il prof non risponde: ' + e.message, { errore: true }); } }
+    const r = nuovaRisposta(); r.aggiungi(t('barra2.domanda-n-di', { n: o.storico.length + 1, max: o.max, domanda: d.domanda })); await r.fine();
+  } catch (e) { if (g === GEN) { modo('riposo'); rispostaFissa(t('barra2.prof-non-risponde', { errore: e.message }), { errore: true }); } }
   finally { if (g === GEN) segnala('quiete'); }
 }
 async function rispostaOrale(testo) {
   const o = A.orale, g = GEN;
   if (/^(basta|voto|dammi il voto|ho finito)\b/i.test(testo) || !o.corrente) return chiudiOrale();
-  modo('pensa', 'Il prof ascolta…'); segnala('pensa');
+  modo('pensa', t('barra2.prof-ascolta')); segnala('pensa');
   try {
     const giu = await AI.giudicaRisposta({ nome: o.nome, domanda: o.corrente.domanda, argomento: o.corrente.argomento, risposta: testo, materiale: o.corrente.materiale || o.materiale });
     if (g !== GEN || A.orale !== o) return;
     o.storico.push({ ...o.corrente, risposta: testo, ...giu }); o.corrente = null; modo('riposo');
     esitoSulProgramma(o, o.storico.at(-1));
-    const r = nuovaRisposta(); r.aggiungi(`**${cap(giu.esito)}.** ${giu.giudizio}${giu.mancava ? `\n\nMancava: ${giu.mancava}` : ''}`); await r.fine();
+    const r = nuovaRisposta(); r.aggiungi(`**${cap(giu.esito)}.** ${giu.giudizio}${giu.mancava ? `\n\n${t('barra2.orale-mancava', { cosa: giu.mancava })}` : ''}`); await r.fine();
     segnala(giu.esito === 'giusta' ? 'fatto' : 'quiete');
     // il giudizio è il parere di un modello (piccolo, se locale): se era giusta lo studente lo dice, e il voto ne tiene conto
     if (giu.esito !== 'giusta') {
-      const x = o.storico.at(-1), b = h('button', 'btn small ld-piano ld-contesta', 'Era giusta'); b.type = 'button';
-      b.addEventListener('click', () => { x.esitoModello = x.esito; x.esito = 'giusta'; x.contestata = true; b.disabled = true; b.textContent = 'Segnata giusta'; const u = x.registrato?.esiti?.at(-1); if (u) { u.e = 'giusta'; salva(); } });
+      const x = o.storico.at(-1), b = h('button', 'btn small ld-piano ld-contesta', t('barra2.era-giusta')); b.type = 'button';
+      b.addEventListener('click', () => { x.esitoModello = x.esito; x.esito = 'giusta'; x.contestata = true; b.disabled = true; b.textContent = t('barra2.segnata-giusta'); const u = x.registrato?.esiti?.at(-1); if (u) { u.e = 'giusta'; salva(); } });
       (A.turno || filo).append(b);
     }
     return o.storico.length >= o.max ? chiudiOrale() : domandaOrale();
-  } catch (e) { if (g === GEN) { modo('riposo'); rispostaFissa('Il prof non risponde: ' + e.message, { errore: true }); } }
+  } catch (e) { if (g === GEN) { modo('riposo'); rispostaFissa(t('barra2.prof-non-risponde', { errore: e.message }), { errore: true }); } }
 }
 async function chiudiOrale() {
   const o = A.orale; if (!o) return;
   if (!o.storico.length) return esciOrale();
   A.orale = null; nuovoTurno();
   const v = AI.votoOrale(o.storico);
-  modo('pensa', 'Il prof scrive il voto…'); segnala('pensa');
+  modo('pensa', t('barra2.prof-scrive-voto')); segnala('pensa');
   let rip = []; try { rip = await AI.ripassoOrale({ nome: o.nome, storico: o.storico }); } catch { }
   modo('riposo'); segnala(v.voto >= 27 ? 'confermato' : 'quiete');
-  const s = scheda('ld-voto', `<span class="ld-lbl">Orale · ${esc(o.nome)} · ${esc(o.storico.length)} ${o.storico.length === 1 ? 'domanda' : 'domande'}</span>
+  const s = scheda('ld-voto', `<span class="ld-lbl">${t('barra2.orale-titolo', { nome: esc(o.nome), n: esc(o.storico.length) })}</span>
     <div class="ld-voto-n">${esc(v.testo)}</div>
     <div class="ld-esiti">${o.storico.map((x, i) => `<div class="ld-esito-r e-${x.esito.replace(' ', '-')}"><span class="n">${i + 1}</span><b>${esc(x.argomento || x.domanda)}</b><em>${esc(x.esito)}</em></div>`).join('')}</div>
-    ${rip.length ? `<span class="ld-lbl">Da ripassare</span><ul class="ld-ripassa">${rip.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
-    <p class="ld-nota">Il voto lo calcola Lode dalle tue risposte (giusta 3 punti, parziale 2)${o.storico.some(x => x.contestata) ? `, contando ${o.storico.filter(x => x.contestata).length === 1 ? 'la risposta che hai segnato giusta' : 'le risposte che hai segnato giuste'}` : ''}. I giudizi sono il parere ${AI.motore() === 'locale' ? 'del modello locale: può sbagliare' : 'dell\'AI'}. È un allenamento, non una previsione.</p>`);
+    ${rip.length ? `<span class="ld-lbl">${t('barra2.da-ripassare')}</span><ul class="ld-ripassa">${rip.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+    <p class="ld-nota">${o.storico.some(x => x.contestata) ? t('barra2.orale-calcolo-contestate', { n: o.storico.filter(x => x.contestata).length }) : t('barra2.orale-calcolo')} ${AI.motore() === 'locale' ? t('barra2.orale-giudizi-locale') : t('barra2.orale-giudizi-ai')}</p>`);
   s.querySelectorAll('.ld-esito-r').forEach((x, i) => entra(x, { ritardo: 120 + i * 70, dy: 6, blur: 5, ms: 420 }));
-  if (A.turno) A.turno.dataset.sintesi = `orale di ${o.nome}: ${v.testo}`;
+  if (A.turno) A.turno.dataset.sintesi = t('barra2.sintesi-orale-voto', { nome: o.nome, voto: v.testo });
 }
-function esciOrale() { if (!A.orale) return; A.orale = null; A.storia = []; mostraFatto({ testo: 'Orale chiuso.', nota: 'Ripassa le domande dove hai esitato.' }); }
+function esciOrale() { if (!A.orale) return; A.orale = null; A.storia = []; mostraFatto({ testo: t('barra2.orale-chiuso'), nota: t('barra2.ripassa-esitato') }); }
 
 /* ---------- il ponte con gli agenti di programmazione (desktop/agenti.mjs), in sola lettura ---------- */
 // l'agente manda i suoi eventi a Lode; Lode guarda i progetti seguiti e a fine turno dice cosa ha fatto davvero
 const NOMI_AGENTI = {};
 const turniAgenti = new Map();   // id progetto → ultimo turno arrivato
 async function schedaAgenti(c = {}) {
-  if (!BRIDGE) return rispostaFissa('Il ponte con gli agenti è nell\'**app desktop** di Lode.');
-  let st; try { st = await BRIDGE.invoca('agenti:stato'); } catch (e) { return rispostaFissa('Il ponte non risponde: ' + e.message, { errore: true }); }
+  if (!BRIDGE) return rispostaFissa(t('barra2.agenti-solo-app'));
+  let st; try { st = await BRIDGE.invoca('agenti:stato'); } catch (e) { return rispostaFissa(t('barra2.ponte-non-risponde', { errore: e.message }), { errore: true }); }
   st.agenti.forEach(a => { NOMI_AGENTI[a.id] = a.nome; });
   if (c.agente) {
     const a = st.agenti.find(x => x.id === c.agente || norm(x.nome).replace(/ /g, '').startsWith(c.agente));
-    if (!a) return rispostaFissa(`Non so ancora collegarmi a **${c.agente}**. Scrivi «agenti» per vedere quelli che conosco.`);
+    if (!a) return rispostaFissa(t('barra2.agente-sconosciuto', { agente: c.agente }));
     return collegaAgente(a, c.togli);
   }
   const ordinati = [...st.agenti].sort((a, b) => (b.collegato - a.collegato) || (b.installato - a.installato));
-  const s = scheda('ld-agenti', `<span class="ld-lbl">Agenti di programmazione</span>
-    <p>Collega l'agente che usi per i laboratori: a fine turno Lode ti dice cosa ha toccato davvero nei progetti che segui, se ha lanciato i test dopo l'ultima modifica e se ha cambiato i test mentre fallivano.</p>
-    <ul class="ld-agenti-l">${ordinati.map(a => `<li><span class="t"><b>${esc(a.nome)}</b><small>${a.collegato ? `collegato${a.eventi ? ` · ${a.eventi} eventi, l'ultimo alle ${esc(PR.ora(a.ultimo))}` : ' · ancora nessun evento'}` : a.installato ? 'trovato su questo computer' : 'non trovato'}${a.eventi?.length && Array.isArray(a.eventi) ? '' : ''}</small></span><button type="button" class="btn small${a.collegato ? ' ld-piano' : a.installato ? ' primary' : ''}" data-a="${esc(a.id)}">${a.collegato ? 'Scollega' : 'Collega'}</button></li>`).join('')}</ul>
-    <p class="ld-nota">Solo lettura: Lode non risponde agli agenti, non decide niente e non allarga i loro permessi. Prima di scrivere nella loro configurazione ti mostra le righe esatte. Gli eventi contano solo nei progetti che segui («segui progetto»), gli altri si buttano; il testo che scrivi all'agente non si salva.</p>`);
-  s.querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', async () => { const a = st.agenti.find(x => x.id === b.dataset.a); b.disabled = true; const r = await collegaAgente(a, a.collegato, { silenzioso: true }); b.disabled = false; if (r?.ok && !r.uguale) { b.textContent = a.collegato ? 'Collega' : 'Scollega'; a.collegato = !a.collegato; b.classList.toggle('ld-piano', a.collegato); b.classList.toggle('primary', !a.collegato); } }));
-  if (A.turno) A.turno.dataset.sintesi = 'agenti';
+  const s = scheda('ld-agenti', `<span class="ld-lbl">${t('barra2.agenti-titolo')}</span>
+    <p>${t('barra2.agenti-spiegazione')}</p>
+    <ul class="ld-agenti-l">${ordinati.map(a => `<li><span class="t"><b>${esc(a.nome)}</b><small>${a.collegato ? (a.eventi ? t('barra2.ag-collegato-eventi', { n: a.eventi, ora: esc(PR.ora(a.ultimo)) }) : t('barra2.ag-collegato-nessuno')) : a.installato ? t('barra2.ag-trovato') : t('barra2.ag-non-trovato')}${a.eventi?.length && Array.isArray(a.eventi) ? '' : ''}</small></span><button type="button" class="btn small${a.collegato ? ' ld-piano' : a.installato ? ' primary' : ''}" data-a="${esc(a.id)}">${a.collegato ? t('barra2.scollega') : t('barra2.collega')}</button></li>`).join('')}</ul>
+    <p class="ld-nota">${t('barra2.agenti-nota')}</p>`);
+  s.querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', async () => { const a = st.agenti.find(x => x.id === b.dataset.a); b.disabled = true; const r = await collegaAgente(a, a.collegato, { silenzioso: true }); b.disabled = false; if (r?.ok && !r.uguale) { b.textContent = a.collegato ? t('barra2.collega') : t('barra2.scollega'); a.collegato = !a.collegato; b.classList.toggle('ld-piano', a.collegato); b.classList.toggle('primary', !a.collegato); } }));
+  if (A.turno) A.turno.dataset.sintesi = t('barra2.sintesi-agenti');
 }
 async function collegaAgente(a, togli = false, { silenzioso = false } = {}) {
   const r = await BRIDGE.invoca(togli ? 'agenti:scollega' : 'agenti:collega', { id: a.id }).catch(e => ({ errore: e.message }));
-  if (r?.annullato) { if (!silenzioso) rispostaFissa('Va bene, non ho toccato niente.'); return r; }
+  if (r?.annullato) { if (!silenzioso) rispostaFissa(t('barra2.niente-toccato')); return r; }
   if (r?.errore) { rispostaFissa(r.errore, { errore: true }); return r; }
   segnala('fatto');
-  mostraFatto({ testo: togli ? `${a.nome} scollegato.` : r.uguale ? `${a.nome} era già collegato.` : `${a.nome} collegato.`, nota: togli ? 'Ho tolto solo le mie righe.' : `${a.nota || ''} Poi segui il progetto del laboratorio («segui progetto»).`.trim() });
+  mostraFatto({ testo: togli ? t('barra2.ag-scollegato', { nome: a.nome }) : r.uguale ? t('barra2.ag-gia-collegato', { nome: a.nome }) : t('barra2.ag-collegato', { nome: a.nome }), nota: togli ? t('barra2.ag-tolte-righe') : `${a.nota || ''} ${t('barra2.ag-poi-segui')}`.trim() });
   return r;
 }
 // a fine turno: se la barra è chiusa la pillola lo propone; se è aperta resta pronto per «cosa ha fatto l'agente»
@@ -1970,25 +1971,25 @@ function arrivaTurno(t) {
   DC.registraTurno(D.codice, t); salva();   // per «Pronto per la discussione»: solo id, nome, agente, orari e file relativi
   if (!t.file.length && !t.comandi && !t.avvisi.length) return;   // un turno di sole parole
   if (A?.aperto || A?.proposta) return;
-  const chi = NOMI_AGENTI[t.agente] || t.agente || 'L\'agente';
-  mostraProposta({ tipo: 'agente', titolo: `${chi} · ${t.nome}`, testo: t.avvisi.length ? t.avvisi[0].testo.replace(/`/g, '') : `ha finito: ${t.file.length} ${t.file.length === 1 ? 'file' : 'file'}${t.test ? t.dopoTest ? ', test lanciati dopo l\'ultima modifica' : ', test non rilanciati' : ', nessun test'}`, bottone: 'Guarda', turno: t });
+  const chi = NOMI_AGENTI[t.agente] || t.agente || tn('barra2.l-agente');
+  mostraProposta({ tipo: 'agente', titolo: `${chi} · ${t.nome}`, testo: t.avvisi.length ? t.avvisi[0].testo.replace(/`/g, '') : (t.test ? t.dopoTest ? tn('barra2.ag-finito-test-dopo', { n: t.file.length }) : tn('barra2.ag-finito-test-prima', { n: t.file.length }) : tn('barra2.ag-finito-senza-test', { n: t.file.length })), bottone: tn('barra2.guarda'), turno: t });
 }
 function schedaTurno(t) {
-  if (!t) return rispostaFissa('Ancora nessun turno di un agente nei progetti che segui. Scrivi «agenti» per collegarne uno.');
-  const chi = NOMI_AGENTI[t.agente] || t.agente || 'L\'agente';
-  const es = t.ultimoTest ? (t.ultimoTest.codice == null ? 'esito non noto' : t.ultimoTest.codice === 0 ? 'riuscito' : `fallito (codice ${t.ultimoTest.codice})`) : '';
-  const s = scheda('ld-turno-ag', `<span class="ld-lbl">${esc(chi)} · ${esc(t.nome)}${t.fine ? ' · alle ' + esc(PR.ora(t.fine)) : ''}</span>
+  if (!t) return rispostaFissa(tn('barra2.nessun-turno'));
+  const chi = NOMI_AGENTI[t.agente] || t.agente || tn('barra2.l-agente');
+  const es = t.ultimoTest ? (t.ultimoTest.codice == null ? tn('barra2.esito-non-noto') : t.ultimoTest.codice === 0 ? tn('barra2.riuscito') : tn('barra2.fallito-codice', { codice: t.ultimoTest.codice })) : '';
+  const s = scheda('ld-turno-ag', `<span class="ld-lbl">${esc(chi)} · ${esc(t.nome)}${t.fine ? ' · ' + tn('barra2.alle', { ora: esc(PR.ora(t.fine)) }) : ''}</span>
     ${t.avvisi.map(a => `<p class="avviso">${PR.md(a.testo)}</p>`).join('')}
-    <p><b>${t.file.length}</b> ${t.file.length === 1 ? 'file toccato' : 'file toccati'}${t.file.length ? ': ' + t.file.slice(0, 8).map(f => `<code>${esc(f)}</code>`).join(', ') + (t.file.length > 8 ? '…' : '') : ''}.</p>
-    <p>${t.comandi} ${t.comandi === 1 ? 'comando' : 'comandi'} · ${t.test ? `test lanciati ${t.test} ${t.test === 1 ? 'volta' : 'volte'}, l'ultima <code>${esc(t.ultimoTest.comando)}</code> ${esc(es)}${t.dopoTest ? ', dopo l\'ultima modifica' : ', <b>prima</b> dell\'ultima modifica'}` : 'nessun test lanciato'}.</p>
+    <p>${t.file.length ? tn('barra2.file-toccati', { n: t.file.length, elenco: t.file.slice(0, 8).map(f => `<code>${esc(f)}</code>`).join(', ') + (t.file.length > 8 ? '…' : '') }) : tn('barra2.nessun-file-toccato', { n: t.file.length })}</p>
+    <p>${tn('barra2.comandi', { n: t.comandi })} · ${t.test ? (t.dopoTest ? tn('barra2.test-lanciati-dopo', { n: t.test, comando: esc(t.ultimoTest.comando), esito: esc(es) }) : tn('barra2.test-lanciati-prima', { n: t.test, comando: esc(t.ultimoTest.comando), esito: esc(es) })) : tn('barra2.nessun-test-lanciato')}.</p>
     ${t.messaggio ? `<blockquote>${esc(t.messaggio.slice(0, 300))}${t.messaggio.length > 300 ? '…' : ''}</blockquote>` : ''}
-    <div class="az"><button type="button" class="btn primary" data-c>Cosa è cambiato</button><button type="button" class="btn" data-p>Prova tu</button>${DC.daSpiegare(t) ? '<button type="button" class="btn" data-d>Preparati alla discussione</button>' : ''}</div>
-    <p class="ld-nota">Quello che dice l'agente sono parole: le prove le ha lanciate davvero solo se le vedi qui. Le regole sono fisse: se non trovano niente, non è una garanzia.</p>`);
-  s.querySelector('[data-c]').addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Cosa è cambiato'); PR.schedaCambia(t.id); });
-  s.querySelector('[data-p]').addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Prova il progetto'); PR.prova(t.id); });
-  s.querySelector('[data-d]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Preparati alla discussione'); PR.discussione(t.id); });
+    <div class="az"><button type="button" class="btn primary" data-c>${tn('barra2.cosa-cambiato')}</button><button type="button" class="btn" data-p>${tn('barra2.prova-tu')}</button>${DC.daSpiegare(t) ? `<button type="button" class="btn" data-d>${tn('barra2.preparati-discussione')}</button>` : ''}</div>
+    <p class="ld-nota">${tn('barra2.parole-agente')}</p>`);
+  s.querySelector('[data-c]').addEventListener('click', () => { nuovoTurno(); detto(A.turno, tn('barra2.cosa-cambiato')); PR.schedaCambia(t.id); });
+  s.querySelector('[data-p]').addEventListener('click', () => { nuovoTurno(); detto(A.turno, tn('barra2.prova-il-progetto')); PR.prova(t.id); });
+  s.querySelector('[data-d]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, tn('barra2.preparati-discussione')); PR.discussione(t.id); });
   PR.coseNuoveDi(t.id).then(l => PR.mostraCoseNuove(s, l));   // le funzioni di libreria nuove nelle righe aggiunte (glossario.js)
-  if (A.turno) A.turno.dataset.sintesi = `${chi}: ${t.file.length} file`;
+  if (A.turno) A.turno.dataset.sintesi = tn('barra2.sintesi-turno', { chi, n: t.file.length });
 }
 if (BRIDGE) { BRIDGE.su('agente:turno', arrivaTurno); BRIDGE.invoca('agenti:stato').then(st => st?.agenti?.forEach(a => { NOMI_AGENTI[a.id] = a.nome; })).catch(() => { }); }
 
