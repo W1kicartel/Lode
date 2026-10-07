@@ -31,6 +31,7 @@ export function nomiDi(cod) {
     orario: { colonne: [...v('orario-colonne')], giorni: [...v('giorni-brevi')], spiega: v('orario-spiega') },
     commenti: { definizioni: v('commento-definizioni'), corso: v('commento-corso'), cosaHoCapito: v('commento-cosa-ho-capito') },
     segnalibri: { memoria: v('segnalibro-memoria') },
+    file: { sbobina: v('file-sbobina'), sbobinaDi: v('file-sbobina-di'), originale: v('materiale-originale') },
     // i testi delle note che nascono col vault (desktop/vault.mjs): non si rileggono, ma restano nella lingua del vault
     testi: { esameProgramma: v('esame-programma'), esameDomande: v('esame-domande'), esameDomandeCommento: v('esame-domande-commento'), esameEsercizi: v('esame-esercizi'), esameManca: v('esame-manca'),
       ripassoTreRighe: v('ripasso-tre-righe'), ripassoCommentoDefinizioni: v('ripasso-commento-definizioni'), ripassoCollegamenti: v('ripasso-collegamenti'), ripassoCommentoCollegamenti: v('ripasso-commento-collegamenti'),
@@ -50,7 +51,7 @@ export function completa(salvati) {
     for (const k of Object.keys(voci)) {
       const x = s[g][k];
       if (Array.isArray(voci[k])) { if (Array.isArray(x) && x.length === voci[k].length && x.every(y => typeof y === 'string' && y.trim())) voci[k] = [...x]; }
-      else if (['orario', 'commenti', 'testi', 'segnalibri', 'titoli', 'sezioni', 'parole'].includes(g) ? typeof x === 'string' && x.trim() && !x.includes('\0') : buono(x)) voci[k] = x;
+      else if (['orario', 'commenti', 'testi', 'segnalibri', 'titoli', 'sezioni', 'parole', 'file'].includes(g) ? typeof x === 'string' && x.trim() && !x.includes('\0') : buono(x)) voci[k] = x;
     }
   }
   base.cartelle.lode = 'Lode';   // la cartella di Lode ha il suo nome in tutte le lingue (la sincronizzazione ci scrive la sua nota)
@@ -68,6 +69,8 @@ export function impostaNomi(x) {
   return globalThis[K];
 }
 
+// un nome di file composto («{data} {corso} · sbobina di {da}»): i pezzi arrivano già puliti (markdown.js, pulito)
+export const nomeFile = (k, p) => String(nomi().file[k]).replace(/\{(\w+)\}/g, (x, c) => (c in p ? String(p[c]) : x));
 // comodità: il nome del file di una nota alla radice («Home.md») e i percorsi fissi
 export const md = nome => `${nome}.md`;
 export const fileNota = chiave => md(nomi().note[chiave]);

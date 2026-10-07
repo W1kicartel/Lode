@@ -100,6 +100,7 @@ VA.crea(EN, [{ corso: 'Calculus 2', giorni: [1, 3], inizio: '09:00', fine: '11:0
   prova('en: «Notes tidied up by Lode» conta come riordinata', M.leggiLezione('---\ndata: 2026-02-13\n---\n## Notes tidied up by Lode\nx\n', 'f.md').riordinata);
   // la sbobina condivisa prende le sezioni inglesi
   const sb = SB.crea(testo, { autore: 'Anna' });
+  prova('en: il file della sbobina ha il nome inglese', sb.nome === '2026-02-12 Calculus 2 · transcript' && NM.nomeFile('sbobinaDi', { data: '2026-02-12', corso: 'X', da: 'Anna' }) === '2026-02-12 X · transcript by Anna', sb.nome);
   prova('en: la sbobina porta ★ e trascrizione coi nomi del vault', /## ★ For the exam/.test(sb.md) && /## Transcript/.test(sb.md) && /## Definitions/.test(sb.md));
 
   // la memoria: si riscrive ma «Notes for Lode» dello studente resta
@@ -170,6 +171,7 @@ VA.crea(EN, [{ corso: 'Calculus 2', giorni: [1, 3], inizio: '09:00', fine: '11:0
   prova('vecchio: il benvenuto è quello di sempre', leggi(IT, 'Benvenuto.md').includes("Questo vault l'ha preparato **Lode**") && leggi(IT, 'Benvenuto.md').includes('`Lezioni/<corso>/`'));
   const file = M.fileLezione({ corso: 'Analisi 2', data: '2026-02-12' });
   VA.annota(IT, { file, chiave: 'stella', riga: '- 10:00 il teorema del limite' });
+  prova('vecchio: i nomi dei file composti di sempre', NM.nomeFile('sbobina', { data: '2026-02-12', corso: 'X' }) === '2026-02-12 X · sbobina' && NM.nomeFile('sbobinaDi', { data: '2026-02-12', corso: 'X', da: 'Anna' }) === '2026-02-12 X · sbobina di Anna' && NM.nomi().file.originale === 'file originale');
   prova('vecchio: la ★ va in «★ Da esame»', /## ★ Da esame\n- 10:00 il teorema del limite/.test(leggi(IT, file)));
   prova('vecchio: la lezione si rilegge', VA.lezioni(IT)[0]?.stelle.join() === '10:00 il teorema del limite');
   prova('vecchio: le note per Lode si leggono', VA.notePerLode(IT) === 'frasi brevi');

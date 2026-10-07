@@ -27,7 +27,7 @@ import * as PV from './prova.js';
 import * as CO from './computer.js';
 import { parlatoInFormule } from './formule.js';
 import { pulito } from './markdown.js';
-import { nomi as NV } from './nomi.js';   // i nomi del vault aperto (cartelle, note): quelli con cui il vault è nato
+import { nomi as NV, nomeFile as nomeFileVault } from './nomi.js';   // i nomi del vault aperto (cartelle, note): quelli con cui il vault è nato
 import { preparaAnki, testoAnki, nomeFileAnki, mazzo } from './anki.js';
 import * as TA from './tasca.js';
 // informatica (docs/PROGETTO-INFORMATICA.md): «Cosa stampa?», «Segui il progetto», gli errori spiegati, il registro nel vault
@@ -1021,7 +1021,7 @@ async function usaFile(x, op, { corso, data }) {
   if (op === 'allega') { const r = await allegaFile(x, corso); return mostraFatto({ testo: t('barra2.allegato-lezione', { corso: r.l.corso }), azione: [t('barra2.apri'), () => apriAppunti(r.l)] }); }
   if (op === 'sbobina') {
     const sb = SB.leggi(x.testo), corsoN = trovaEsame(sb.corso)?.nome || sb.corso;
-    const r = await V.salvaFile(`${NV().cartelle.lezioni}/${pulito(corsoN)}/${sb.data} ${pulito(corsoN)} · sbobina${sb.da ? ' di ' + pulito(sb.da) : ''}.md`, { testo: sb.nota });
+    const r = await V.salvaFile(`${NV().cartelle.lezioni}/${pulito(corsoN)}/${sb.da ? nomeFileVault('sbobinaDi', { data: sb.data, corso: pulito(corsoN), da: pulito(sb.da) }) : nomeFileVault('sbobina', { data: sb.data, corso: pulito(corsoN) })}.md`, { testo: sb.nota });
     aggiornaTutto(); segnala('fatto');
     return mostraFatto({ testo: t('barra2.sbobina-nel-vault', { corso: corsoN }), nota: sb.da ? t('barra2.sbobina-nota-da', { data: dataBreve(sb.data), da: sb.da }) : dataBreve(sb.data), azione: [t('barra2.apri'), () => apriAppunti({ file: r.file, corso: corsoN })], sintesi: t('barra2.sbobina-ricevuta') });
   }
@@ -1075,7 +1075,7 @@ async function usaFile(x, op, { corso, data }) {
     const card = schedaConferma({ titolo: t('barra2.riassunto-titolo'), extra: `<div class="ld-anteprima">${mdHtml(md.slice(0, 1400))}${md.length > 1400 ? '<span class="ld-tenue"> …</span>' : ''}</div>`, nota: t('barra2.riassunto-nota', { cartella: `${NV().cartelle.materiali}/${pulito(corso || NV().corsi.varie)}` }) });
     return attendiDecisione(card, async () => {
       const al = await V.salvaFile(`${NV().cartelle.allegati}/${x.nome}`, { dati: new Uint8Array(await x.file.arrayBuffer()) });
-      const n = await V.salvaFile(`${NV().cartelle.materiali}/${pulito(corso || NV().corsi.varie)}/${x.nome.replace(/\.[^.]+$/, '')}.md`, { testo: `---\ntipo: materiale\ncorso: "[[${pulito(corso || '')}]]"\nfonte: "[[${al.file.split('/').pop()}]]"\ntags: [materiale]\n---\n# ${x.nome.replace(/\.[^.]+$/, '')}\n\n[[${pulito(corso || NV().note.home)}]] · file originale: ![[${al.file.split('/').pop()}]]\n\n${md}\n` });
+      const n = await V.salvaFile(`${NV().cartelle.materiali}/${pulito(corso || NV().corsi.varie)}/${x.nome.replace(/\.[^.]+$/, '')}.md`, { testo: `---\ntipo: materiale\ncorso: "[[${pulito(corso || '')}]]"\nfonte: "[[${al.file.split('/').pop()}]]"\ntags: [materiale]\n---\n# ${x.nome.replace(/\.[^.]+$/, '')}\n\n[[${pulito(corso || NV().note.home)}]] · ${NV().file.originale}: ![[${al.file.split('/').pop()}]]\n\n${md}\n` });
       await mostraFatto({ testo: t('barra2.riassunto-salvato'), azione: [t('barra2.apri'), () => apriAppunti({ file: n.file, corso: x.nome })] }, card); return {};
     });
   }

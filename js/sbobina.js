@@ -5,7 +5,7 @@
 // Restano fuori gli appunti personali e le domande per il prof.
 import { frontmatter, sezioni, SEZIONI, pulito } from './markdown.js';
 import { libreria } from './librerie.js';
-import { nomiDi } from './nomi.js';
+import { nomiDi, nomeFile } from './nomi.js';
 import { t, data as dataLingua, lingua } from './lingua.js';
 
 // le sezioni che passano ai compagni, coi nomi del vault aperto (js/nomi.js); nella nota si trovano anche coi nomi italiani
@@ -28,7 +28,7 @@ ${fm.ora ? `ora: "${fm.ora}"\n` : ''}${autore ? `da: "${String(autore).replace(/
 
 ${parti.join('\n\n')}
 `;
-  return { md, nome: `${data} ${pulito(corso)} · sbobina`, corso, data };
+  return { md, nome: nomeFile('sbobina', { data, corso: pulito(corso) }), corso, data };
 }
 
 /* ---------- la pagina HTML: Markdown essenziale + formule in MathML ---------- */

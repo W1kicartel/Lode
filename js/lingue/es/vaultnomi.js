@@ -53,6 +53,10 @@ export default {
   'vaultnomi.commento-corso': 'Escribe arriba o abajo: el recuadro de Lode (clases, ★, examen) se actualiza solo y el resto no lo toca.',
   'vaultnomi.commento-cosa-ho-capito': 'Esta parte es tuya: Lode nunca la toca. Lo que has entendido hoy, lo que todavía no te cuadra.',
   'vaultnomi.segnalibro-memoria': 'Lo que Lode sabe de mí',
+  // i nomi dei file che Lode compone (sbobine, materiali)
+  'vaultnomi.file-sbobina': '{data} {corso} · transcripción',
+  'vaultnomi.file-sbobina-di': '{data} {corso} · transcripción de {da}',
+  'vaultnomi.materiale-originale': 'archivo original',
   // i modelli di Obsidian e le note che nascono col vault
   'vaultnomi.esame-programma': 'Temario',
   'vaultnomi.esame-domande': 'Preguntas que siempre caen',
