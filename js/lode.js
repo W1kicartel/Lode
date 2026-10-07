@@ -1276,7 +1276,7 @@ const syncBloccata = () => !!SYNC?.acceso && ['password', 'rigenerato'].includes
 // il piede della barra: con la sincronizzazione accesa i dati non restano solo su questo computer, e lo si dice
 function piedeSync() {
   const t = document.querySelector('.ld-piede-dati > span'); if (!t) return;
-  t.textContent = SYNC?.acceso && SYNC.cloud ? tn(SYNC.cifrato ? 'barra2.sync-piede-cifrati' : 'barra2.sync-piede', { servizio: SYNC.servizio || tn('barra2.la-tua-cartella-cloud') }) : tn('barra2.dati-restano-qui');
+  t.textContent = SYNC?.acceso && SYNC.cloud ? (SYNC.cifrato ? tn('barra2.sync-piede-cifrati', { servizio: SYNC.servizio || tn('barra2.la-tua-cartella-cloud') }) : tn('barra2.sync-piede', { servizio: SYNC.servizio || tn('barra2.la-tua-cartella-cloud') })) : tn('barra2.dati-restano-qui');
 }
 const listaChiaro = () => `<ul class="ld-sync-lista">${TS.IN_CHIARO.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
 const testoPortachiavi = () => SYNC?.portachiavi ? (BRIDGE?.piattaforma === 'darwin' ? t('barra2.portachiavi-mac') : BRIDGE?.piattaforma === 'win32' ? t('barra2.portachiavi-windows') : t('barra2.portachiavi-sistema'))
@@ -1972,7 +1972,7 @@ function arrivaTurno(t) {
   if (!t.file.length && !t.comandi && !t.avvisi.length) return;   // un turno di sole parole
   if (A?.aperto || A?.proposta) return;
   const chi = NOMI_AGENTI[t.agente] || t.agente || tn('barra2.l-agente');
-  mostraProposta({ tipo: 'agente', titolo: `${chi} · ${t.nome}`, testo: t.avvisi.length ? t.avvisi[0].testo.replace(/`/g, '') : tn(t.test ? t.dopoTest ? 'barra2.ag-finito-test-dopo' : 'barra2.ag-finito-test-prima' : 'barra2.ag-finito-senza-test', { n: t.file.length }), bottone: tn('barra2.guarda'), turno: t });
+  mostraProposta({ tipo: 'agente', titolo: `${chi} · ${t.nome}`, testo: t.avvisi.length ? t.avvisi[0].testo.replace(/`/g, '') : (t.test ? t.dopoTest ? tn('barra2.ag-finito-test-dopo', { n: t.file.length }) : tn('barra2.ag-finito-test-prima', { n: t.file.length }) : tn('barra2.ag-finito-senza-test', { n: t.file.length })), bottone: tn('barra2.guarda'), turno: t });
 }
 function schedaTurno(t) {
   if (!t) return rispostaFissa(tn('barra2.nessun-turno'));
@@ -1981,7 +1981,7 @@ function schedaTurno(t) {
   const s = scheda('ld-turno-ag', `<span class="ld-lbl">${esc(chi)} · ${esc(t.nome)}${t.fine ? ' · ' + tn('barra2.alle', { ora: esc(PR.ora(t.fine)) }) : ''}</span>
     ${t.avvisi.map(a => `<p class="avviso">${PR.md(a.testo)}</p>`).join('')}
     <p>${t.file.length ? tn('barra2.file-toccati', { n: t.file.length, elenco: t.file.slice(0, 8).map(f => `<code>${esc(f)}</code>`).join(', ') + (t.file.length > 8 ? '…' : '') }) : tn('barra2.nessun-file-toccato', { n: t.file.length })}</p>
-    <p>${tn('barra2.comandi', { n: t.comandi })} · ${t.test ? tn(t.dopoTest ? 'barra2.test-lanciati-dopo' : 'barra2.test-lanciati-prima', { n: t.test, comando: esc(t.ultimoTest.comando), esito: esc(es) }) : tn('barra2.nessun-test-lanciato')}.</p>
+    <p>${tn('barra2.comandi', { n: t.comandi })} · ${t.test ? (t.dopoTest ? tn('barra2.test-lanciati-dopo', { n: t.test, comando: esc(t.ultimoTest.comando), esito: esc(es) }) : tn('barra2.test-lanciati-prima', { n: t.test, comando: esc(t.ultimoTest.comando), esito: esc(es) })) : tn('barra2.nessun-test-lanciato')}.</p>
     ${t.messaggio ? `<blockquote>${esc(t.messaggio.slice(0, 300))}${t.messaggio.length > 300 ? '…' : ''}</blockquote>` : ''}
     <div class="az"><button type="button" class="btn primary" data-c>${tn('barra2.cosa-cambiato')}</button><button type="button" class="btn" data-p>${tn('barra2.prova-tu')}</button>${DC.daSpiegare(t) ? `<button type="button" class="btn" data-d>${tn('barra2.preparati-discussione')}</button>` : ''}</div>
     <p class="ld-nota">${tn('barra2.parole-agente')}</p>`);
