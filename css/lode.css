@@ -775,3 +775,22 @@ button.ld-ripeti-riga:hover{background:rgba(255,255,255,.06)}
 .ld-turno-ag code{font:500 12px var(--mono)}
 .ld-turno-ag blockquote{margin:6px 0 10px;padding:6px 0 6px 12px;border-left:2px solid var(--ld-riga);font-size:12.5px;color:var(--muted)}
 .ld-turno-ag .az{display:flex;gap:8px;margin-top:8px}
+
+/* Temi d'esame */
+.ld-temi p,.ld-tema p{margin:6px 0 8px;font-size:13.5px;line-height:1.5}
+.ld-temi>.az,.ld-tema .az{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.ld-temi-l{margin:8px 0;padding-left:0;list-style:none;max-height:380px;overflow:auto}
+.ld-temi-l li{display:flex;flex-direction:column;gap:6px;padding:9px 0;border-top:1px solid var(--ld-riga)}
+.ld-temi-l .t{font-size:13px;line-height:1.45;color:var(--muted)}
+.ld-temi-l .t b{margin-right:6px;font:600 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink)}
+.ld-temi-l .t small{display:block;margin-top:2px;font-size:11.5px;color:var(--ld-tenue)}
+.ld-temi-l .az{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ld-temi-l select{max-width:220px;height:30px;font-size:12.5px}
+.ld-temi-conta{list-style:none;margin:6px 0 10px;padding:0}
+.ld-temi-conta li{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--ld-riga);font-size:13px}
+.ld-temi-conta b{font:500 12px var(--mono);font-variant-numeric:tabular-nums}
+.ld-tema-meta{color:var(--ld-tenue);font-size:12px!important}
+.ld-tema-testo,.ld-tema-sol{margin:8px 0 10px;padding:11px 13px;border-radius:10px;font-size:14px;line-height:1.55;background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px var(--ld-filo);overflow-x:auto}
+.ld-tema-sol{background:transparent;box-shadow:inset 2px 0 0 var(--ink);border-radius:0}
+.ld-tema .btn.scelta{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.ld-tema-oggi .btn{margin-left:6px;vertical-align:baseline}

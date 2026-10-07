@@ -110,6 +110,15 @@ export function interpreta(frase) {
   if ((m = grezzo0.match(/^(?:(?:ecco|incolla|aggiungi) )?(?:le )?domande (?:uscite|d['’]esame|degli appelli|dell['’]esame|fatte all['’]esame|dei compagni)(?:\s+(?:di|del|della|dello|a|ad|in|per)\b|\s*d['’])?\s*([^:\n]*?)\s*(?:[:\n]([\s\S]*))?$/i))) {
     const nome = pulisci(numeri(m[1]).toLowerCase()); return { tipo: 'domande', esame: nome ? trovaEsame(nome) : null, nomeDetto: nome, testo: (m[2] || '').trim() };
   }
+  // i temi d'esame (js/temi.js): «temi d'esame di analisi 2: Esercizio 1 …» (il compito incollato, anche su più righe),
+  // «compiti vecchi di fisica»; «esercizio di analisi 2», «un esercizio», «fammi fare un esercizio» = l'esercizio di oggi.
+  // «esercizio di c», «esercizio di programmazione», «esercizi in python» restano a «Cosa stampa?» (più sotto)
+  if ((m = grezzo0.match(/^(?:(?:ecco|incolla|aggiungi|apri|mostrami) )?(?:i |gli |il |un )?(?:temi d['’]esame|temi dell['’]esame|compiti vecchi|vecchi compiti|compito vecchio|vecchio compito|esercizi d['’]esame|esercizi dei compiti(?: vecchi)?)(?:\s+(?:di|del|della|dello|dei|delle|per)\b|\s*d['’])?\s*([^:\n]*?)\s*(?:[:\n]([\s\S]*))?$/i))) {
+    const nome = pulisci(numeri(m[1]).toLowerCase()); return { tipo: 'temi', esame: nome ? trovaEsame(nome) : null, nomeDetto: nome, testo: (m[2] || '').trim() };
+  }
+  if ((m = t.match(/^(?:(?:fammi fare|fammi|dammi|proponimi|facciamo|faccio) )?(?:un |l'|il mio )?esercizio(?: d'esame| di oggi| del giorno)?(?:\s+(?:di|del|della|dello|per|su)\s+(?!(?:c|c\+\+|java|python|programmazione)$)(.+))?$/))) {
+    const nome = pulisci(m[1] || ''); return { tipo: 'temi', esame: nome ? trovaEsame(nome) : null, nomeDetto: nome, testo: '' };
+  }
 
   // in aula: ★ da esame, definizione, domanda per il prof
   if ((m = grezzo.match(/^(?:★|\*{1,2}|!|da esame\s*:?|importante\s*:|stella\s*:?|segna(?: che)?(?: è)? da esame\s*:?|questo è da esame\s*:?)\s*(.+)$/i))) return { tipo: 'stella', testo: m[1].trim() };
@@ -267,6 +276,7 @@ export const ESEMPI = [
   ['se prendo 30 in analisi 2', 'simula la media'],
   ['programma di analisi 2', 'incolla il programma: mappa degli argomenti e piano fino all\'appello'],
   ['domande uscite di analisi 2: …', 'quelle del gruppo del corso: salgono nel piano'],
+  ['temi d\'esame di analisi 2: …', 'gli esercizi di un compito vecchio: uno al giorno, sugli argomenti di oggi'],
   ['te lo spiego io: teorema di Green', 'spieghi un argomento, Lode ti dice cosa hai saltato'],
   ['quiz di analisi 2', 'domande a crocette: allenamento, o simulazione d\'esame a tempo'],
   ['trascrivi la videolezione di diritto privato', 'dall\'audio del computer: per chi studia da casa'],

@@ -1,0 +1,161 @@
+// «Temi d'esame»: gli esercizi dei compiti vecchi, uno al giorno, dentro il piano del programma (js/programma.js).
+// Lo studente incolla (o trascina) il testo di un compito vecchio: Lode lo divide in esercizi sui segni fissi («Esercizio 1»,
+// «Es. 2», «Problema 3»…), mette ognuno sotto il suo argomento del programma e ogni giorno ne propone uno degli argomenti
+// di oggi. Lo studente lo fa su carta, senza appunti, e dice lui com'è andata: Lode non corregge e non dà voti (sarebbe
+// un voto finto). La soluzione del prof, se c'è nel testo, si vede solo dopo l'esito. Gli esercizi tornano a intervalli
+// (2 giorni se non sapevi da dove partire, 3 se sbagliato, 7 e poi il doppio se giusto) e l'esito va sull'argomento,
+// così la mappa del programma si aggiorna. Tutto senza AI e senza OCR: un PDF scansionato si incolla a mano.
+// Dove sta: dentro l'esame (esami[i].temi), come il programma. piano() non si tocca: gli esercizi si agganciano ai suoi giorni.
+import { salva, id, oggi, piuGiorni, norm, MESI } from './dati.js';
+import { abbina, oggiDi, registraEsito } from './programma.js';
+
+/* ---------- dividere il compito in esercizi ---------- */
+// i segni a inizio riga: «Esercizio 1», «ES. 2», «Es 3», «Problema 4», «Quesito 5», «Domanda 6», anche «Esercizio 1 (6 punti)»
+const SEGNO = /^\s*(?:#+\s*)?(?:\*\*)?(?:esercizio|es\.?|problema|quesito|domanda)\s*n?[°º.]?\s*(\d{1,2})\b(?:\*\*)?\s*/i;
+// senza segni: righe numerate «1.» «2)» in ordine
+const NUMERO = /^\s*(\d{1,2})\s*[.)]\s+/;
+// la soluzione del prof dentro un esercizio, e la sezione «Soluzioni» in fondo al compito
+const SOL = /^\s*(?:\*\*)?(?:soluzione|svolgimento|risoluzione)\b[^:\n]{0,40}?(?:[:.]|\*\*|$)\s*/i;
+const SEZ_SOL = /^\s*(?:#+\s*)?(?:\*\*)?(?:soluzioni|svolgimenti|risoluzioni)(?: degli esercizi)?\s*:?(?:\*\*)?\s*$/i;
+// «(6 punti)», «- 8 pt», «:» dopo il numero: non fanno parte del testo
+const pulisciInizio = s => s.replace(/^\s*(?:\(\s*\d+(?:[.,]\d+)?\s*(?:punti|punto|pt|p)\.?\s*\)|[-–—]\s*\d+(?:[.,]\d+)?\s*(?:punti|pt)\.?)?\s*[.):\-–—]?\s*/i, '');
+const MESE = MESI.map(m => m.slice(0, 3)).join('|');
+// la data del compito nell'intestazione: 12/02/2024, 12.02.24, 12-2-2024, «12 febbraio 2024» → ISO
+export function dataDi(testo) {
+  const t = String(testo || ''); let m;
+  if ((m = t.match(/(?:^|[^\d])(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4}|\d{2})(?!\d)/))) {
+    const g = +m[1], me = +m[2]; let a = +m[3]; if (a < 100) a += 2000;
+    if (g >= 1 && g <= 31 && me >= 1 && me <= 12) return `${a}-${String(me).padStart(2, '0')}-${String(g).padStart(2, '0')}`;
+  }
+  if ((m = norm(t).match(new RegExp(`\\b(\\d{1,2}) (${MESE})[a-z]* (\\d{4})\\b`)))) {
+    const me = MESI.findIndex(x => x.startsWith(m[2])) + 1, g = +m[1];
+    if (g >= 1 && g <= 31) return `${m[3]}-${String(me).padStart(2, '0')}-${String(g).padStart(2, '0')}`;
+  }
+  return null;
+}
+export const dataScritta = iso => iso ? iso.split('-').reverse().join('/') : '';
+// un pezzo: il testo fino a «Soluzione», poi la soluzione (senza l'etichetta)
+function separa(righe) {
+  const k = righe.findIndex(r => SOL.test(r));
+  const t = (k < 0 ? righe : righe.slice(0, k)).join('\n').trim();
+  const sol = k < 0 ? '' : [righe[k].replace(SOL, ''), ...righe.slice(k + 1)].join('\n').trim();
+  return { t, sol: sol || null };
+}
+// il testo di un compito → { pezzi: [{ n, t, sol }], data }. L'intestazione (corso, data, istruzioni) si scarta, ma la
+// data si tiene. Al massimo 30 pezzi; quelli sotto 15 caratteri si uniscono al precedente. Nessun segno → un pezzo solo
+export function dividi(testo) {
+  const righe = String(testo || '').replace(/\r/g, '').replace(/^\[Pagina \d+\]$/gm, '').split('\n');
+  const segni = righe.filter(r => SEGNO.test(r)).length;
+  let aperture = [];   // [indice della riga, numero]
+  if (segni) righe.forEach((r, i) => { const m = r.match(SEGNO); if (m) aperture.push([i, +m[1]]); });
+  else {
+    let atteso = 1; const x = [];
+    righe.forEach((r, i) => { const m = r.match(NUMERO); if (m && +m[1] === atteso) { x.push([i, atteso]); atteso++; } });
+    if (x.length >= 2) aperture = x;
+  }
+  if (!aperture.length) { const p = separa(righe); return { pezzi: p.t || p.sol ? [{ n: 1, ...p }] : [], data: null }; }
+  const data = dataDi(righe.slice(0, aperture[0][0]).join('\n'));
+  let pezzi = [], inSoluzioni = false;
+  aperture.forEach(([i, n], k) => {
+    const fine = k + 1 < aperture.length ? aperture[k + 1][0] : righe.length;
+    let corpo = [(segni ? righe[i].replace(SEGNO, '') : righe[i].replace(NUMERO, '')), ...righe.slice(i + 1, fine)];
+    corpo[0] = pulisciInizio(corpo[0]);
+    // «Soluzioni» in fondo al compito: da lì gli stessi numeri sono le soluzioni degli esercizi di prima
+    const z = corpo.findIndex(r => SEZ_SOL.test(r));
+    const prima = z < 0 ? corpo : corpo.slice(0, z);
+    const gia = pezzi.find(p => p.n === n);
+    if (inSoluzioni && gia) gia.sol = [gia.sol, prima.join('\n').trim()].filter(Boolean).join('\n\n') || null;
+    else pezzi.push({ n, ...separa(prima) });
+    if (z >= 0) inSoluzioni = true;
+  });
+  // i pezzi troppo corti (un titolo, un numero rimasto solo) vanno col precedente (il primo col successivo)
+  const out = [];
+  for (const p of pezzi) {
+    if (p.t.length < 15 && out.length) { const q = out.at(-1); q.t = [q.t, p.t].filter(Boolean).join('\n'); q.sol = [q.sol, p.sol].filter(Boolean).join('\n\n') || null; }
+    else out.push(p);
+  }
+  if (out.length > 1 && out[0].t.length < 15) { const [a, b] = out; b.t = [a.t, b.t].filter(Boolean).join('\n'); b.n = a.n; out.shift(); }
+  return { pezzi: out.slice(0, 30), data };
+}
+// «Unisci al precedente» della scheda di controllo: il pezzo i va in coda al pezzo i-1 (testo e soluzione)
+export function unisci(pezzi, i) {
+  if (i <= 0 || i >= pezzi.length) return pezzi;
+  const x = pezzi.map(p => ({ ...p })), a = x[i - 1], b = x[i];
+  a.t = [a.t, b.t].filter(Boolean).join('\n'); a.sol = [a.sol, b.sol].filter(Boolean).join('\n\n') || null;
+  x.splice(i, 1); return x;
+}
+// un PDF scansionato: meno di 80 caratteri utili per pagina (i segni [Pagina N] e gli spazi non contano)
+export function scansione(testo, pagine = 1) {
+  const utili = String(testo || '').replace(/\[Pagina \d+\]/g, '').replace(/\s+/g, '').length;
+  return utili / Math.max(1, pagine || 1) < 80;
+}
+// quanto ci vuole su carta: una stima grezza dalla lunghezza del testo (si scrive sempre «circa»)
+export const minuti = t => { const n = String(t || '').length; return n < 300 ? 15 : n < 800 ? 25 : 40; };
+
+/* ---------- salvare ---------- */
+const MAX = 200;
+// i pezzi diventano temi dell'esame: ognuno sotto il suo argomento (abbina di programma.js, o quello scelto nella scheda:
+// p.a = id dell'argomento o null; se p.a manca, decide abbina). I doppioni (stesso testo) non si aggiungono
+export function metti(e, pezzi, { fonte = 'incollato', data = null } = {}) {
+  const lista = e.temi ||= [], argomenti = e.programma?.argomenti || [], visti = new Set(lista.map(x => norm(x.t))), T = oggi();
+  let messi = 0, senza = 0, doppi = 0;
+  for (const p of pezzi || []) {
+    const t = String(p.t || '').trim(), k = norm(t); if (!k) continue;
+    if (visti.has(k)) { doppi++; continue; }
+    visti.add(k);
+    const a = p.a !== undefined ? (argomenti.some(x => x.id === p.a) ? p.a : null) : abbina(t, argomenti)?.id || null;
+    lista.push({ id: id(), t, sol: p.sol || null, a, fonte: String(fonte || 'incollato').slice(0, 120), data: data || null, es: p.n || null, esiti: [], scad: T });
+    messi++; if (!a) senza++;
+  }
+  // al massimo 200 per esame: restano i più recenti
+  if (lista.length > MAX) e.temi = lista.slice(-MAX);
+  salva(); return { messi, senza, doppi };
+}
+// un programma nuovo (o incollato dopo i temi): i temi senza argomento, o con un argomento che non c'è più, si risistemano
+export function risistema(e) {
+  const argomenti = e.programma?.argomenti || []; let n = 0;
+  for (const x of e.temi || []) if (!x.a || !argomenti.some(a => a.id === x.a)) { const a = abbina(x.t, argomenti)?.id || null; if (a !== x.a) { x.a = a; if (a) n++; } }
+  if (n) salva(); return n;
+}
+
+/* ---------- l'esercizio di oggi ---------- */
+// l'ultimo tema fatto (per non dare due giorni di fila lo stesso argomento)
+const ultimoFatto = e => (e.temi || []).filter(x => x.fatto).sort((a, b) => b.fatto - a.fatto)[0] || null;
+// in ordine: prima un argomento diverso da quello dell'ultimo tema fatto, poi i mai fatti, poi i più vecchi (scadenza, data)
+function ordina(lista, ultimoA) {
+  return [...lista].sort((x, y) => ((x.a && x.a === ultimoA) - (y.a && y.a === ultimoA)) || (!!x.esiti.length - !!y.esiti.length)
+    || x.scad.localeCompare(y.scad) || (x.data || '9').localeCompare(y.data || '9'));
+}
+// gli esercizi di oggi: uno sugli argomenti del piano di oggi (studia + ripassa); il giorno del ripasso generale fino a 2,
+// fra tutti gli argomenti e possibilmente diversi. Se oggi non c'è niente di adatto, uno scaduto qualsiasi
+export function temiDiOggi(e, T = oggi()) {
+  const scaduti = (e?.temi || []).filter(x => x.scad <= T); if (!scaduti.length) return [];
+  const o = oggiDi(e), ultimoA = ultimoFatto(e)?.a || null;
+  if (o?.tipo === 'generale') {
+    const ord = ordina(scaduti, ultimoA), primo = ord[0], secondo = ord.find(x => x !== primo && (!x.a || x.a !== primo.a)) || ord[1];
+    return [primo, secondo].filter(Boolean);
+  }
+  const ids = new Set(o ? [...o.studia, ...o.ripassa].map(c => c.a.id) : []);
+  const adatti = scaduti.filter(x => x.a && ids.has(x.a));
+  return [ordina(adatti.length ? adatti : scaduti, ultimoA)[0]];
+}
+export const temaDiOggi = (e, T = oggi()) => temiDiOggi(e, T)[0] || null;
+// quanti temi per argomento (per la scheda quando oggi non c'è niente)
+export function conta(e) {
+  const per = new Map();
+  for (const x of e?.temi || []) { const t = e.programma?.argomenti?.find(a => a.id === x.a)?.t || 'senza argomento'; per.set(t, (per.get(t) || 0) + 1); }
+  return [...per].sort((a, b) => b[1] - a[1]);
+}
+
+/* ---------- com'è andata: lo dice lo studente ---------- */
+export const ESITI = { giusto: 'giusta', sbagliato: 'sbagliata', nonso: 'non so' };
+// nonso → tra 2 giorni, sbagliato → tra 3, giusto → tra 7 (la prima volta, o dopo uno sbagliato), poi il doppio (max 60)
+export function esito(e, temaId, come, T = oggi()) {
+  const x = (e?.temi || []).find(y => y.id === temaId); if (!x || !(come in ESITI)) return null;
+  const prima = x.esiti.at(-1)?.e;
+  const int = come === 'nonso' ? 2 : come === 'sbagliato' ? 3 : prima === 'giusto' ? Math.min(60, (x.int || 7) * 2) : 7;
+  x.esiti = [...x.esiti, { g: T, e: come }].slice(-6);
+  x.int = int; x.scad = piuGiorni(T, int); x.fatto = Date.now();
+  if (x.a) registraEsito(e, x.a, ESITI[come], 'tema');
+  salva(); return { tema: x, giorni: int };
+}
