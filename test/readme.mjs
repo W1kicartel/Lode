@@ -3,8 +3,9 @@
 // Controlla che stiano insieme: 1) in cima i link alle lingue; 2) ogni #ancora porta a un titolo vero, con le regole di
 // GitHub, anche verso l'altro file e da CONTRIBUTING.md; 3) ogni file citato con un link relativo esiste; 4) gli stessi
 // comandi di terminale (blocchi bash e powershell, comandi tra apici inversi), gli stessi link esterni, le stesse immagini,
-// le stesse sezioni; 5) la sezione delle lingue nomina tutte le lingue di js/lingua.js.
-import { readFileSync, existsSync } from 'node:fs';
+// le stesse sezioni; 5) la sezione delle lingue nomina tutte le lingue di js/lingua.js; 6) la stessa tabella dei file e le
+// stesse prove citate; 7) i link con ancora ai README da fuori (note dei rilasci, documenti, codice) portano a un titolo vero.
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { LINGUE } from '../js/lingua.js';
 
 let ok = 0, ko = 0;
@@ -82,6 +83,32 @@ for (const [cod, { nome }] of Object.entries(LINGUE)) {
 }
 prova('README.md: i sistemi dei voti di otto paesi', /Italy, Spain, France, Germany, Portugal, Brazil, the United Kingdom and the United States/.test(en) && ['Italy', 'Spain', 'France', 'Germany', 'Portugal', 'Brazil', 'United Kingdom', 'United States'].every(p => lingueEn.includes(`| ${p} |`)));
 prova('le due sezioni delle lingue portano a docs/LINGUE.md', lingueEn.includes('(docs/LINGUE.md)') && lingueIt.includes('(docs/LINGUE.md)'));
+
+/* ---------- 6) le stesse cose per chi sviluppa ---------- */
+// la tabella dei file (prima colonna) e le prove citate (`test/….mjs`) sono le stesse nei due README
+const fileTabella = s => [...s.matchAll(/^\| (`[^|]*`) \|/gm)].map(m => m[1]);
+prova('stessa tabella dei file, nello stesso ordine', fileTabella(en).join() === fileTabella(it).join() && fileTabella(en).length > 20, [...fileTabella(en).filter(x => !fileTabella(it).includes(x)), ...fileTabella(it).filter(x => !fileTabella(en).includes(x))].join(' | '));
+const prove = s => [...new Set([...s.matchAll(/`(test\/[\w/-]+\.mjs)`/g)].map(m => m[1]))].sort();
+prova('stesse prove citate', prove(en).join() === prove(it).join(), [...prove(en).filter(x => !prove(it).includes(x)), ...prove(it).filter(x => !prove(en).includes(x))].join(' | '));
+
+/* ---------- 7) i link ai README da fuori ---------- */
+// le note dei rilasci, i documenti e il codice portano al README con un'ancora: dopo il passaggio all'inglese
+// «github.com/W1kicartel/Lode#installa» non porta più da nessuna parte (la pagina del repository mostra README.md)
+const FUORI = ['.github/workflows/rilascio.yml', '.github/workflows/prove.yml', 'SECURITY.md', 'CONTRIBUTING.md', ...readdirSync(new URL('docs/', R)).filter(f => f.endsWith('.md')).map(f => 'docs/' + f), ...readdirSync(new URL('js/', R)).filter(f => f.endsWith('.js')).map(f => 'js/' + f)];
+let collegamentiFuori = 0;
+for (const f of FUORI.filter(f => existsSync(new URL(f, R)))) {
+  const s = leggi(f);
+  for (const m of s.matchAll(/github\.com\/W1kicartel\/Lode(?:\/blob\/main\/(README(?:\.it)?\.md))?#([\w-]+)/g)) {
+    collegamentiFuori++;
+    const dest = m[1] || 'README.md';
+    prova(`${f}: «${m[0]}» porta a un titolo di ${dest}`, ANCORE[dest].has(m[2]));
+  }
+  for (const m of s.matchAll(/\]\((?:\.\.\/)?(README(?:\.it)?\.md)#([^)\s]+)\)/g)) {
+    collegamentiFuori++;
+    prova(`${f}: «${m[0]}» porta a un titolo di ${m[1]}`, ANCORE[m[1]].has(m[2]));
+  }
+}
+prova('i link ai README da fuori sono stati trovati (rilascio.yml)', collegamentiFuori >= 2, collegamentiFuori);
 
 console.log(`${ok} prove passate, ${ko} fallite`);
 process.exit(ko ? 1 : 0);

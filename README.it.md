@@ -48,7 +48,7 @@ Trascina un file sulla pillola, anche chiusa: si allarga e ti chiede *cosa ne fa
 - **Le carte anche in Anki.** Scrivi «esporta per anki» (o «esporta le carte di analisi 2 per anki») e Lode prepara un file con le carte del ripasso e le definizioni delle lezioni, senza doppioni: un mazzo per corso (`Lode::Analisi 2`), con le formule, il codice e il grassetto. Nell'app il file va nella cartella `Anki` del vault, nel browser si scarica. In Anki: **File › Importa**, scegli il file e come tipo di nota **Basilare** (in inglese *Basic*), una volta sola per tutti i corsi. Se lo importi di nuovo, Anki aggiorna le carte che ha già invece di raddoppiarle.
 - **Il ripasso in tasca.** Scrivi «ripasso in tasca» e Lode mette le carte di domani (al massimo 20, prima quelle in ritardo) nella nota `In tasca.md` del vault. Sul telefono la apri in Obsidian: tocchi «Risposta» per vederla e spunti «sapevo» o «non sapevo». Quando la nota torna sul computer, Lode segna il ripasso e la riscrive con le carte nuove. Con «ripasso in tasca ogni sera» la riscrive da sola dopo le 19. Lode non usa la rete: la nota la porta il servizio che usi già (iCloud, Obsidian Sync, Syncthing). Se arriva una copia vecchia della nota, Lode non segna niente: mai due volte la stessa carta. Solo nell'app.
 - **Interrogazione:** un prof d'orale che fa una domanda alla volta, ti corregge e alla fine ti dà un voto onesto.
-- **Libretto e conti:** media ponderata, base di laurea, «quanto mi serve per 110», «se prendo 30 in analisi», ore da fare oggi per arrivare all'appello.
+- **Libretto e conti:** media ponderata, base di laurea, «quanto mi serve per 110», «se prendo 30 in analisi», ore da fare oggi per arrivare all'appello. Lode conosce anche i sistemi dei voti di Spagna, Francia, Germania, Portogallo, Brasile, Regno Unito e Stati Uniti: vedi [Lingue](#lingue).
 - **Sbobine da passare ai compagni:** un `.md` per Obsidian e una pagina `.html` che si apre su qualsiasi telefono, con le formule disegnate.
 
 ![La proposta a sorpresa nella pillola](docs/immagini/proposta.jpg)
@@ -370,7 +370,7 @@ Lode non ha un server e non addestra modelli: **la sua memoria è il tuo vault**
 
 ## Per chi sviluppa
 
-**Niente build:** HTML, CSS e moduli ES che il browser legge così come sono. L'app desktop è Electron.
+**Niente build:** HTML, CSS e moduli ES che il browser legge così come sono. L'app desktop è Electron. Codice, commenti e documenti per chi sviluppa (`docs/`) sono in italiano; i testi che vede lo studente stanno in un catalogo per lingua (`js/lingue/`, vedi [docs/LINGUE.md](docs/LINGUE.md)).
 
 **Prove:**
 ```bash
@@ -397,6 +397,7 @@ node test/sync-sim/fuzz.mjs --motore test/sync-sim/motore-v2.mjs --giri 1000 --s
 - `test/voce-onnx.mjs` prova la voce Parakeet ONNX con il modello vero, senza Electron e senza microfono: trascrive le frasi di `test/audio`, misura un minuto di audio e un Ripeti di 90 secondi (su Mac e Linux anche la memoria del processo, che non deve salire), controlla le impronte, la fila, il riposo, la chiusura durante l'avvio e i ripieghi (crash, addon che manca, modello rovinato). Il modello lo cerca in `LODE_MODELLO_ONNX`; con `--scarica` lo scarica lì (circa 640 MB). Senza modello salta. Su GitHub gira su Windows e Linux solo a richiesta («Run workflow» o `[voce]` nel messaggio del commit), con il modello nella cache.
 - `test/controlla-privacy.mjs` guarda i file che finirebbero su GitHub (quelli in git e i nuovi non ignorati) e si ferma se trova chiavi, percorsi con un nome vero (`/Users/<nome>/`, `C:\Users\<nome>\`, `/home/<nome>/`, anche il tuo nome utente), file privati (`.env`, certificati, un vault di prova, foto e risultati delle prove), codice da un CDN o `npx --yes` senza versione esatta, pacchetti di `desktop/package-lock.json` fuori dal registro npm. Lancialo prima di ogni commit: su GitHub gira con le prove unitarie.
 - `test/prova-app.mjs` fa il giro completo dell'app su un vault temporaneo, senza toccare i tuoi dati: 81 prove (80 senza compilatore C). Con `LODE_SOLO='informatica|stampa|progetto|errore|diario|davvero'` fa solo i passi di informatica (2-3 minuti). Con `LODE_SOLO='anki'` solo «Esporta per Anki» (meno di un minuto). Per ora gira solo su macOS (su Windows e Linux manca la voce di sistema per generare l'audio delle prove; contributi benvenuti): le frasi «parlate» le genera la voce di sistema e l'audio va direttamente al motore, senza altoparlanti né microfono.
+- `test/lingue.mjs` controlla i cataloghi delle lingue (in ogni lingua le stesse chiavi, gli stessi parametri e gli stessi tag dell'italiano); `test/readme.mjs` controlla questo README e quello inglese (i link fra i due, le `#ancore`, i file, gli stessi comandi di terminale).
 
 **Provare le modifiche senza rischi** (le tue, e soprattutto quelle degli altri: una pull request, un ramo scaricato):
 - **Mai sul vault vero né con le chiavi vere.** In sviluppo `npm start` usa la stessa configurazione dell'app installata: il vault in `Documenti/Lode`, le chiavi della tua AI, le cartelle che segui. `LODE_DATI` e `LODE_VAULT` spostano tutto in cartelle temporanee, `LODE_OBSIDIAN_DIR` tiene il vault di prova fuori dall'elenco di Obsidian. Dalla cartella `desktop`, su Mac e Linux:
@@ -419,7 +420,8 @@ node test/sync-sim/fuzz.mjs --motore test/sync-sim/motore-v2.mjs --giri 1000 --s
 | File | Cosa fa |
 |---|---|
 | `js/lode.js` | La barra: pillola, pannello a molla, conversazione, schede, conferme, voce, file trascinati, «La tua AI» |
-| `js/comandi.js` | Capisce l'italiano senza AI: date, voti, minuti, nomi d'esame approssimati |
+| `js/comandi.js` | Capisce le frasi senza AI: date, voti, minuti, nomi d'esame approssimati |
+| `js/lingua.js`, `js/lingue/` | Le lingue: quale è scelta, `t()` e i cataloghi dei testi, una cartella per lingua ([docs/LINGUE.md](docs/LINGUE.md)) |
 | `js/dati.js` | Dati e conti: media, base di laurea, voto che serve, piano, SM-2 |
 | `js/ore.js` | Il piano per chi lavora: ore libere vere (lezioni, turni, silenzio), tutti gli esami a minuti, cosa non ci sta e le opzioni |
 | `js/ai.js` | L'AI: locale (Ollama), Claude con gli strumenti (API chiamata con `fetch`, senza SDK), oppure un servizio in formato OpenAI; il prof dell'orale |
