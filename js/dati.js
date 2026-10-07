@@ -2,9 +2,16 @@
 // Niente account, niente server. La chiave AI non va mai nel vault (i vault si sincronizzano): resta in questo computer.
 // Esami e voti, sessioni di studio, carte del ripasso, impostazioni. Più i conti che servono a uno studente:
 // media ponderata, base di laurea, voto che serve, ore da fare oggi, ripasso a intervalli (SM-2).
-import { t, elenco, numero } from './lingua.js';
+import { t, elenco, numero, lingua } from './lingua.js';
 import * as S from './sistemi.js';
 import { numeroInFondo } from './parole.js';
+// i dati di esempio di tutte le lingue: esempio() prende quelli della lingua della barra, il benvenuto li riconosce tutti
+import esempioIt from './lingue/it/esempio.js';
+import esempioEn from './lingue/en/esempio.js';
+import esempioEs from './lingue/es/esempio.js';
+import esempioFr from './lingue/fr/esempio.js';
+import esempioDe from './lingue/de/esempio.js';
+import esempioPt from './lingue/pt/esempio.js';
 const { CODICI } = S;
 const CHIAVE = 'lode:v1';
 export const VUOTO = () => ({
@@ -343,61 +350,78 @@ export function ricorda(k, ok, q = ok ? 4 : 0, mappa = D.memoria) {
 }
 
 /* ---------- dati di esempio: per provare Lode in dieci secondi ---------- */
-export function esempio() {
-  const T = oggi(), d = VUOTO();
-  d.profilo = { nome: 'Giulia', corso: 'Ingegneria informatica', cfuTotali: 180, lode: 30 };
+// I testi stanno nel catalogo «esempio» di ogni lingua (js/lingue/<codice>/esempio.js); i numeri qui, nella scala del
+// sistema dei voti del paese della lingua (js/sistemi.js): il portoghese è quello del Brasile. Crediti dei 9 esami (6 fatti,
+// 3 da fare) e voti dei 6 fatti (null = idoneità). L'italiano è esattamente quello di sempre.
+const ESEMPI = { it: esempioIt, en: esempioEn, es: esempioEs, fr: esempioFr, de: esempioDe, pt: esempioPt };
+export const PAESI_ESEMPIO = {
+  it: { sistema: 'it', cfuTotali: 180, cfu: [9, 9, 6, 9, 3, 6, 9, 9, 6], voti: [27, 30, 24, 26, null, 29], lode: 1 },
+  en: { sistema: 'uk', cfuTotali: 360, cfu: [20, 20, 15, 15, 10, 20, 20, 15, 15], voti: [64, 78, 58, 66, null, 72] },
+  es: { sistema: 'es', cfuTotali: 240, cfu: [6, 6, 6, 6, 3, 6, 6, 6, 6], voti: [6.8, 9.2, 5.5, 7.1, null, 8.4] },
+  fr: { sistema: 'fr', cfuTotali: 180, cfu: [6, 6, 6, 6, 3, 6, 6, 6, 6], voti: [12.5, 16, 10.5, 13, null, 14.5] },
+  de: { sistema: 'de', cfuTotali: 180, cfu: [10, 8, 6, 8, 3, 8, 10, 6, 6], voti: [2.3, 1.3, 2.7, 2, null, 1.7] },
+  pt: { sistema: 'br', cfuTotali: 240, cfu: [6, 4, 4, 4, 2, 4, 6, 4, 4], voti: [7.5, 9.5, 6.5, 8, null, 8.8] },
+};
+// i nomi di esempio di tutte le lingue: il benvenuto toglie i dati di esempio anche se intanto lo studente ha cambiato lingua
+export const NOMI_ESEMPIO = [...new Set(Object.values(ESEMPI).flatMap(c => c['esempio.esami']))];
+export const STUDENTI_ESEMPIO = [...new Set(Object.values(ESEMPI).map(c => c['esempio.nome']))];
+// i dati sono di esempio? Dal segno che mette esempio(); senza il segno (dati caricati da una Lode di prima, che aveva solo
+// l'italiano) da «Giulia» insieme a un esame di esempio italiano. Un nome di esempio di un'altra lingua (Emily, Lena…) senza
+// il segno può essere quello di uno studente vero, coi suoi esami («Databases», «Physik 1»…): non basta
+const PRIMA = esempioIt['esempio.nome'], ESAMI_PRIMA = esempioIt['esempio.esami'];
+export const eEsempio = (d = D) => d.esempio === true || (d.profilo?.nome === PRIMA && (d.esami || []).some(e => ESAMI_PRIMA.includes(e.nome) && e.id));
+// il nome da proporre nel benvenuto: non quello dello studente di esempio (Emily, Lena… solo se i dati hanno il segno)
+export const nomeVero = (d = D) => { const n = d.profilo?.nome; return n && n !== PRIMA && !(d.esempio === true && STUDENTI_ESEMPIO.includes(n)) ? n : ''; };
+export function esempio(cod = lingua) {
+  const T = oggi(), d = VUOTO(), X = ESEMPI[cod] || ESEMPI.it, N = PAESI_ESEMPIO[ESEMPI[cod] ? cod : 'it'];
+  const nomi = X['esempio.esami'], aule = X['esempio.aule'];
+  d.profilo = { nome: X['esempio.nome'], corso: X['esempio.corso'], cfuTotali: N.cfuTotali, lode: 30 };
+  if (N.sistema !== 'it') d.profilo.sistema = N.sistema;   // in italiano il profilo resta quello di sempre
   d.benvenuto = true; d.imp = { ...D.imp };
   d.esempio = true;   // il segno dei dati di esempio: il benvenuto li riconosce da qui, non dai nomi degli esami (comunissimi anche veri)
-  const E = (nome, cfu, voto, lode, giorniFa) => ({ id: id(), nome, cfu, voto, lode, idoneita: voto == null, fatto: true, data: piuGiorni(T, -giorniFa), oreObiettivo: null });
+  const E = (k, giorniFa) => ({ id: id(), nome: nomi[k], cfu: N.cfu[k], voto: N.voti[k], lode: k === N.lode, idoneita: N.voti[k] == null, fatto: true, data: piuGiorni(T, -giorniFa), oreObiettivo: null });
   d.esami = [
-    E('Analisi 1', 9, 27, false, 300), E('Fondamenti di informatica', 9, 30, true, 290), E('Geometria e algebra lineare', 6, 24, false, 250),
-    E('Fisica 1', 9, 26, false, 160), E('Lingua inglese B2', 3, null, false, 150), E('Programmazione a oggetti', 6, 29, false, 140),
-    { id: id(), nome: 'Analisi 2', cfu: 9, data: piuGiorni(T, 12), voto: null, lode: false, idoneita: false, fatto: false, oreObiettivo: 90 },
-    { id: id(), nome: 'Basi di dati', cfu: 9, data: piuGiorni(T, 26), voto: null, lode: false, idoneita: false, fatto: false, oreObiettivo: null },
-    { id: id(), nome: 'Fisica 2', cfu: 6, data: piuGiorni(T, 41), voto: null, lode: false, idoneita: false, fatto: false, oreObiettivo: null },
+    E(0, 300), E(1, 290), E(2, 250),
+    E(3, 160), E(4, 150), E(5, 140),
+    { id: id(), nome: nomi[6], cfu: N.cfu[6], data: piuGiorni(T, 12), voto: null, lode: false, idoneita: false, fatto: false, oreObiettivo: 90 },
+    { id: id(), nome: nomi[7], cfu: N.cfu[7], data: piuGiorni(T, 26), voto: null, lode: false, idoneita: false, fatto: false, oreObiettivo: null },
+    { id: id(), nome: nomi[8], cfu: N.cfu[8], data: piuGiorni(T, 41), voto: null, lode: false, idoneita: false, fatto: false, oreObiettivo: null },
   ];
   const an2 = d.esami[6].id, bd = d.esami[7].id;
   const ora = new Date(); ora.setHours(10, 0, 0, 0);
   [[an2, [50, 75, 0, 100, 50, 125, 25]], [bd, [25, 0, 50, 0, 25, 0, 0]]].forEach(([e, mins]) => mins.forEach((m, i) => { if (m) d.sessioni.push({ id: id(), esameId: e, inizio: ora.getTime() - (6 - i) * 864e5 + (e === bd ? 6 * 36e5 : 0), min: m }); }));
   for (let i = 0; i < 18; i++) d.sessioni.push({ id: id(), esameId: an2, inizio: ora.getTime() - (8 + i) * 864e5, min: 100 });
-  const C = (fronte, retro, scadFra, esameId = an2) => ({ id: id(), esameId, fronte, retro, ease: 2.5, int: Math.max(0, scadFra), rip: scadFra > 0 ? 2 : 0, scad: piuGiorni(T, scadFra), creata: Date.now() });
-  d.carte = [
-    C('Che cos\'è il gradiente di f(x, y)?', 'Il vettore delle derivate parziali (∂f/∂x, ∂f/∂y): punta nella direzione di massima crescita.', 0),
-    C('Enuncia il teorema di Schwarz', 'Se le derivate seconde miste sono continue in un intorno, allora f_xy = f_yx.', 0),
-    C('Condizione per un punto stazionario', 'Il gradiente si annulla: ∇f(x₀) = 0.', 0),
-    C('Come si classifica un punto stazionario?', 'Con la matrice hessiana: definita positiva → minimo, definita negativa → massimo, indefinita → sella.', 0),
-    C('Che cos\'è un integrale doppio su un dominio normale?', 'Un integrale iterato: prima sulla variabile «interna» con estremi funzione dell\'altra, poi sull\'altra.', 0),
-    C('Teorema di Green: enunciato', 'L\'integrale di linea su ∂D di P dx + Q dy è uguale all\'integrale doppio su D di (∂Q/∂x − ∂P/∂y).', 0),
-    C('Forma differenziale esatta: definizione', 'ω è esatta se esiste una funzione U (potenziale) con dU = ω.', 1),
-    C('Serie geometrica: quando converge?', 'Per |q| < 1, con somma 1/(1 − q).', 3),
-    C('Che cos\'è una chiave primaria?', 'Un insieme minimo di attributi che identifica in modo univoco ogni tupla di una relazione.', 0, bd),
-    C('Differenza tra LEFT JOIN e INNER JOIN', 'La LEFT JOIN tiene tutte le righe della tabella di sinistra, anche senza corrispondenze (con NULL); la INNER solo le coppie che combaciano.', 0, bd),
-    C('Che cosa garantisce la 3ª forma normale?', 'Che ogni attributo non chiave dipenda dalla chiave, da tutta la chiave e da nient\'altro che la chiave (niente dipendenze transitive).', 2, bd),
-  ];
+  const C = ([fronte, retro], scadFra, esameId = an2) => ({ id: id(), esameId, fronte, retro, ease: 2.5, int: Math.max(0, scadFra), rip: scadFra > 0 ? 2 : 0, scad: piuGiorni(T, scadFra), creata: Date.now() });
+  const carte = X['esempio.carte'];
+  d.carte = [0, 0, 0, 0, 0, 0, 1, 3].map((scad, k) => C(carte[k], scad)).concat([0, 0, 2].map((scad, k) => C(carte[8 + k], scad, bd)));
   const dow = new Date(T + 'T12:00').getDay(), ieri = piuGiorni(T, -1);
   d.orario = [
-    { id: id(), corso: 'Analisi 2', giorni: [...new Set([1, 3, dow])].sort(), inizio: '09:00', fine: '11:00', aula: '7' },
-    { id: id(), corso: 'Basi di dati', giorni: [...new Set([2, (dow + 6) % 7])].sort(), inizio: '14:00', fine: '16:00', aula: 'B2' },
-    { id: id(), corso: 'Fisica 2', giorni: [5], inizio: '11:00', fine: '13:00', aula: 'Magna' },
+    { id: id(), corso: nomi[6], giorni: [...new Set([1, 3, dow])].sort(), inizio: '09:00', fine: '11:00', aula: aule[0] },
+    { id: id(), corso: nomi[7], giorni: [...new Set([2, (dow + 6) % 7])].sort(), inizio: '14:00', fine: '16:00', aula: aule[1] },
+    { id: id(), corso: nomi[8], giorni: [5], inizio: '11:00', fine: '13:00', aula: aule[2] },
   ];
+  const def = l => l.map(([t, d]) => ({ t, d }));
   d.lezioni = [
-    { id: id(), corso: 'Analisi 2', data: T, inizio: '09:00', fine: '11:00', aula: '7', domande: ['Perché nel teorema di Schwarz serve la continuità delle derivate miste?'],
-      stelle: ['Il teorema di Green all\'esame lo chiede sempre, con la dimostrazione', 'Classificare i punti stazionari con l\'hessiana: esercizio sicuro'],
-      definizioni: [
-        { t: 'Gradiente', d: 'Il vettore delle derivate parziali di f: punta nella direzione di massima crescita.' },
-        { t: 'Punto stazionario', d: 'Un punto in cui il gradiente della funzione si annulla.' },
-        { t: 'Matrice hessiana', d: 'La matrice quadrata delle derivate seconde parziali di una funzione.' },
-        { t: 'Punto di sella', d: 'Un punto stazionario che non è né di massimo né di minimo locale: l\'hessiana è indefinita.' },
-        { t: 'Teorema di Green', d: 'Lega l\'integrale di linea lungo il bordo di un dominio all\'integrale doppio sul dominio.' },
-        { t: 'Forma differenziale esatta', d: 'Una forma che ammette un potenziale, cioè è il differenziale di una funzione.' },
-      ] },
-    { id: id(), corso: 'Basi di dati', data: ieri, inizio: '14:00', fine: '16:00', aula: 'B2', domande: [], stelle: ['Normalizzazione fino alla BCNF: c\'è sempre nello scritto'],
-      definizioni: [
-        { t: 'Chiave primaria', d: 'Un insieme minimo di attributi che identifica in modo univoco ogni tupla.' },
-        { t: 'Chiave esterna', d: 'Un attributo che fa riferimento alla chiave primaria di un\'altra relazione.' },
-        { t: 'Dipendenza funzionale', d: 'Un vincolo per cui il valore di un insieme di attributi determina quello di un altro.' },
-        { t: 'Forma normale di Boyce-Codd', d: 'Ogni dipendenza funzionale non banale ha a sinistra una superchiave.' },
-      ] },
+    { id: id(), corso: nomi[6], data: T, inizio: '09:00', fine: '11:00', aula: aule[0], domande: [...X['esempio.domande']],
+      stelle: [...X['esempio.stelle']],
+      definizioni: def(X['esempio.definizioni']) },
+    { id: id(), corso: nomi[7], data: ieri, inizio: '14:00', fine: '16:00', aula: aule[1], domande: [], stelle: [...X['esempio.stelle-basi']],
+      definizioni: def(X['esempio.definizioni-basi']) },
   ];
+  return d;
+}
+// i dati di esempio se ne vanno (il benvenuto, «togli i dati di esempio»), quello che ha aggiunto lo studente resta. Gli esami e
+// i corsi dell'orario si riconoscono dai nomi di esempio di tutte le lingue
+export function togliEsempio(d = D) {
+  const finti = new Set(d.esami.filter(e => NOMI_ESEMPIO.includes(e.nome)).map(e => e.id));
+  const vuoto = VUOTO();
+  d.esami = d.esami.filter(e => !finti.has(e.id));
+  d.sessioni = d.sessioni.filter(s => !s.esameId || (!finti.has(s.esameId) && d.esami.some(e => e.id === s.esameId)));
+  d.carte = d.carte.filter(c => c.esameId && !finti.has(c.esameId));
+  d.lezioni = []; d.memoria = {};
+  d.orario = d.orario.filter(o => !NOMI_ESEMPIO.includes(o.corso));
+  // restano i crediti totali e il sistema dei voti (quelli di esempio sono quelli del paese della lingua)
+  d.profilo = { ...vuoto.profilo, cfuTotali: d.profilo.cfuTotali, ...(d.profilo.sistema ? { sistema: d.profilo.sistema } : {}) };
+  delete d.esempio;
   return d;
 }

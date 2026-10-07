@@ -120,6 +120,14 @@ Come funziona:
 - Le frasi della barra che citano un nome del vault lo ricevono come parametro (`vaultnomi.frase-orario-nel-vault` con `{nota}`, `vaultnomi.frase-nella-cartella` con `{cartella}`, `vaultnomi.frase-riordinati-nota` con `{sezione}`).
 - Prove: `node --experimental-vm-modules test/vault-nomi.mjs`.
 
+## I dati di esempio
+
+«Prova con i dati di esempio» carica uno studente finto nella lingua della barra: `esempio()` in `js/dati.js` prende i testi dal catalogo `esempio` (`js/lingue/<codice>/esempio.js`: studente, corso, esami, aule, carte, definizioni, stelle) e i numeri da `PAESI_ESEMPIO` (crediti e voti nel sistema del paese: `it` Giulia, `en` → `uk` Emily, `es` Lucía, `fr` Camille, `de` Lena, `pt` → `br` Júlia). In italiano i dati sono quelli di sempre.
+- Gli elenchi del catalogo hanno la stessa forma in tutte le lingue (9 esami: 6 fatti, il quinto è un'idoneità, poi 3 da fare; 11 carte; 6 + 4 definizioni). Nella prima stella c'è il nome della quinta definizione, che diventa «da esame».
+- `NOMI_ESEMPIO` e `STUDENTI_ESEMPIO` (in `dati.js`) raccolgono gli esami e gli studenti di **tutte** le lingue: `togliEsempio()`, chiamata dal benvenuto, toglie i dati di esempio anche se lo studente ha cambiato lingua dopo averli caricati. Il benvenuto li riconosce con `eEsempio()`: dal segno `esempio: true`; senza il segno (una Lode di prima, solo italiana) solo da «Giulia» con un esame di esempio italiano, perché Emily con «Databases» o Lena con «Physik 1» possono essere studenti veri. `nomeVero()` non propone il nome dello studente di esempio.
+- Nello stesso catalogo ci sono le parole che stampano i programmi di «Cosa stampa?» (switch, if) e «Hai scritto…»: `istanza()` in `js/codice/modelli.js` fa la frase scelta e quella scritta dallo stesso mutante, e la risposta giusta la calcola sempre il codice dal programma.
+- Prove: `node test/esempio-lingue.mjs`.
+
 ## L'AI
 
 Ogni richiesta all'AI (`js/ai.js`) dice in che lingua rispondere, quella della barra. In italiano i prompt restano quelli di sempre, carattere per carattere. Nelle altre lingue si aggiunge in fondo una riga in inglese, che i modelli (anche quelli piccoli) seguono meglio:

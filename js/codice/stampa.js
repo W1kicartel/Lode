@@ -72,7 +72,7 @@ export function valuta(ist, risposta = {}) {
   const sc = compatta(risposta.testo);
   if (sc === compatta(ist.giusta)) return { ok: true, mutante: null, frase: '', giusta, scelta: sc };
   const d = ist.distrattori.find(x => compatta(x.uscita) === sc);
-  if (d) return { ok: false, mutante: d.mutante, frase: d.frase.replace(/^Hai scelto/, 'Hai scritto'), giusta, scelta: sc };
+  if (d) return { ok: false, mutante: d.mutante, frase: d.scritta ?? d.frase, giusta, scelta: sc };   // «Hai scritto…» (istanza() in modelli.js)
   return { ok: false, mutante: null, frase: sc ? t('stampa.hai-scritto-altro', { uscita: sc }) : t('stampa.nessuna-risposta'), giusta, scelta: sc };
 }
 

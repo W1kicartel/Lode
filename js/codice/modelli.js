@@ -6,7 +6,7 @@
 // Lingue: ogni modello dice in quali si scrive (lingue: C, Java, Python; albero.js controlla che la stampa sia fedele) e, se
 // serve, le frasi e il concetto che cambiano con la lingua (python: { concetto, frasi, mutanti }, java: { … }).
 // test/stampa-vero.mjs li prova contro python3 e javac/java veri.
-import { t } from '../lingua.js';
+import { t, elenco } from '../lingua.js';
 import { num, car, reale, v, indice, valore, indirizzo, bin, cast, ternario, assegna, incr, chiama, printf, dich, array, espr, blocco, se, mentre, fai, per, scegli, caso, interrompi, continua, ritorna, param, funzione, main, programma, clona, visita, esegui, stampaC, stampaIn, normalizza, ErroreC, NOMI_LINGUE } from './albero.js';
 
 /* ---------- il seme ---------- */
@@ -60,7 +60,11 @@ function cambia(p, segno, f) {
 const cambiaTutti = (p, ...passi) => passi.reduce((q, [segno, f]) => cambia(q, segno, f), p);
 // un programma che stampa solo questo testo: per gli errori che non sono una modifica del codice
 const soloUscita = s => programma(main(espr(printf(s.replace(/%/g, '%%')))));
-const hai = s => t('modelli.hai-scelto', { s });
+// «Hai scelto `…`» (risposta scelta fra le opzioni) o «Hai scritto `…`» (risposta scritta): istanza() fa le due frasi di ogni
+// distrattore con lo stesso mutante, così valuta() in stampa.js non deve riscrivere la frase (in un'altra lingua non saprebbe come)
+let HAI = 'modelli.hai-scelto';
+const hai = s => t(HAI, { s });
+const scritta = f => { const prima = HAI; HAI = 'esempio.hai-scritto'; try { return f(); } finally { HAI = prima; } };
 const NOME = l => NOMI_LINGUE[l] || 'C';
 const pr = l => l === 'python' ? 'print' : 'printf';
 // il range che stampaPython scrive per un for del C
@@ -331,7 +335,8 @@ export const MODELLI = [
     id: 'switch', cosa: t('modelli.switch.cosa'), concetti: ['c:switch'],
     concetto: t('modelli.switch.concetto'),
     genera(r) {
-      const parole = ['uno', 'due', 'tre', 'quattro'];
+      // le parole stampate seguono la lingua della barra (catalogo «esempio»); la risposta giusta la calcola esegui() da qui
+      const parole = elenco('esempio.switch-parole');
       let rompe; do rompe = parole.map(() => r() < .4); while (rompe.every(Boolean) || !rompe.some(Boolean));
       // di solito x cade in un case senza break, e più sotto un break lo ferma
       const buoni = fila(1, 4).filter(k => !rompe[k - 1] && rompe.slice(k).some(Boolean));
@@ -339,7 +344,7 @@ export const MODELLI = [
       const casi = parole.map((w, k) => caso(k + 1, espr(printf(w + ' ')), ...(rompe[k] ? [interrompi()] : [])));
       return P({ x, rompe }, main(
         dich('int', ['x', num(x)]),
-        S(scegli(v('x'), ...casi, caso(null, espr(printf('altro ')))), 'sw'),
+        S(scegli(v('x'), ...casi, caso(null, espr(printf(t('esempio.switch-altro') + ' ')))), 'sw'),
         espr(printf('\n'))));
     },
     mutanti: [
@@ -357,7 +362,7 @@ export const MODELLI = [
         : bin('&&', bin('>', v('a'), num(0)), bin('>', incr(v('n'), '++', true), num(0)));
       return P({ a, op: o ? '||' : '&&' }, main(
         dich('int', ['a', num(a)], ['n', num(0)]),
-        se(S(cond, 'cond'), espr(printf('si ')), espr(printf('no '))),
+        se(S(cond, 'cond'), espr(printf(t('esempio.si') + ' ')), espr(printf(t('esempio.no') + ' '))),
         espr(printf('%d\n', v('n')))));
     },
     mutanti: [
@@ -759,7 +764,7 @@ export function istanza(m, seme = 1, { maxPassi = 10000, lingua = 'c' } = {}) {
       const k = normalizza(u);
       if (viste.has(k) || righe(u) > 10) continue;
       viste.add(k);
-      distrattori.push({ uscita: u, mutante: mu.id, indiceMutante, frase: mu.frase(inLinea(u), p.dati || {}, lingua) });
+      distrattori.push({ uscita: u, mutante: mu.id, indiceMutante, frase: mu.frase(inLinea(u), p.dati || {}, lingua), scritta: scritta(() => mu.frase(inLinea(u), p.dati || {}, lingua)) });
     }
     if (!distrattori.length) continue;     // nessun errore cambia l'uscita: con questi numeri non serve, si rigenera
     const scelti = distrattori.length > 3 ? mescola(r, distrattori).slice(0, 3) : distrattori;

@@ -97,6 +97,10 @@ jobs:
       # le piccole parole dentro le schede (sì/no, basta, voto, esci) in ogni lingua, identiche a prima in italiano
       - name: Lingua e sistema dei voti (scelta)
         run: node test/scelta.mjs
+      # i dati di esempio in ogni lingua (catalogo «esempio»): l'italiano identico a prima, voti nel sistema del paese,
+      # «togli i dati di esempio» per tutte le lingue, e le parole stampate da «Cosa stampa?» nella lingua della barra
+      - name: Dati di esempio nelle sei lingue
+        run: node test/esempio-lingue.mjs
       # README.md (inglese) e README.it.md: lingue in cima, ancore (anche da rilascio.yml e dai documenti), file, stessi comandi e stessi link
       - name: I README (inglese e italiano)
         run: node test/readme.mjs
