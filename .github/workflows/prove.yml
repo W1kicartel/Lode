@@ -39,6 +39,9 @@ jobs:
         with:
           node-version: 22
       - run: node --experimental-vm-modules test/unita.mjs
+      # il piano per chi lavora (js/ore.js): ore libere, turni, più esami a minuti, quello che non ci sta e le opzioni
+      - name: Il piano per chi lavora
+        run: node --experimental-vm-modules test/ore.mjs
       # informatica (docs/PROGETTO-INFORMATICA.md): «Cosa stampa?», «Segui il progetto», errori spiegati, registro nel vault
       - name: Cosa stampa? (albero del C, modelli, mutanti)
         run: node test/codice.mjs

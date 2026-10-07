@@ -20,6 +20,7 @@ import * as AL from './allenatore.js';
 import * as PG from './programma.js';
 import * as QC from './crocette.js';
 import * as TE from './temi.js';
+import * as ORE from './ore.js';
 import * as CO from './computer.js';
 import { parlatoInFormule } from './formule.js';
 import { pulito } from './markdown.js';
@@ -673,6 +674,63 @@ function schedaOrario() {
     nuovoTurno(); schedaOrario();
   });
   if (A.turno) A.turno.dataset.sintesi = `${D.orario.length} lezioni a settimana`;
+}
+
+/* ---------- il piano per chi lavora: le ore vere, più esami in un calendario solo (js/ore.js) ---------- */
+// «2 ore», «1 ora», «circa 1 h 30»: il tetto è una regola scelta dallo studente, non una stima
+const oreRegola = m => m % 60 ? ORE.circa(m) : `${m / 60} ${m === 60 ? 'ora' : 'ore'}`;
+async function comandoLavoro(c) {
+  if (c.azione === 'vedi') return schedaOre();
+  const vai = ['La tua settimana', () => { nuovoTurno(); detto(A.turno, 'Piano della settimana'); schedaOre(); }];
+  if (c.azione === 'aggiungi' || c.azione === 'sostituisci') {
+    const tetto = D.imp.lavoro?.tetto ?? 120, turni = c.azione === 'sostituisci' ? [c] : [...(D.imp.lavoro?.turni || []), c];
+    const card = schedaConferma({ titolo: `Lavori ${ORE.turniTesto(turni)}.`,
+      nota: `Lo tolgo dalle ore di studio, con mezz'ora per il viaggio. Nei giorni di lavoro studi al massimo ${oreRegola(tetto)}: lo cambi con «nei giorni di lavoro studio al massimo ${tetto >= 180 ? 2 : 3} ore».` });
+    return attendiDecisione(card, async () => {
+      const ann = istantanea(); ORE.applica(c); segnala('fatto');
+      await mostraFatto({ testo: c.azione === 'sostituisci' ? 'Turni cambiati.' : 'Turni salvati.', nota: `Lavori ${ORE.turniTesto()}.`, annulla: ann, azione: vai, sintesi: `lavoro ${ORE.turniTesto()}` }, card);
+      aggiornaTutto(); return {};
+    });
+  }
+  const ann = istantanea(); ORE.applica(c);
+  const giorno = d => cap(dataLunga(d));
+  const fatto = c.azione === 'togli' ? { testo: 'Turni tolti.', nota: 'Il piano torna a contare tutta la tua giornata di studio.' }
+    : c.azione === 'eccezione' ? (c.no ? { testo: `${giorno(c.data)} non lavori.`, nota: 'Quelle ore tornano libere per studiare.' } : { testo: `${giorno(c.data)} lavori anche ${ORE.ora(c.inizio)}–${ORE.ora(c.fine)}.`, nota: 'Solo quel giorno: lo tolgo dalle ore di studio.' })
+    : c.azione === 'tetto' ? { testo: `Nei giorni di lavoro studi al massimo ${oreRegola(D.imp.lavoro.tetto)}.`, nota: 'Il piano si rifà con questo tetto.' }
+    : { testo: `Studi dalle ${ORE.ora(c.da)} alle ${ORE.ora(c.a)}.`, nota: 'Il piano usa solo queste ore, meno lezioni e lavoro.' };
+  aggiornaTutto();
+  return mostraFatto({ ...fatto, annulla: ann, azione: vai, sintesi: fatto.testo });
+}
+// quello che non ci sta: le frasi, sempre con le opzioni (ognuna col suo risparmio) o con la frase di ripiego; le scelte
+// accese come chip con ✕. Solo dei turni di quell'esame se solo è un id. msg: la frase dopo un clic
+function riquadroOre(cal, solo = null, msg = '') {
+  const r = ORE.riquadro(cal, esame, solo), scelte = D.imp.oreScelte || [];
+  const chip = scelte.length ? `<div class="ld-ore-scelte">${scelte.map(k => `<button type="button" class="ld-ore-chip" data-via="${esc(k)}" aria-label="Togli: ${esc(ORE.testoScelta(k))}">${esc(ORE.testoScelta(k))} <span aria-hidden="true">✕</span></button>`).join('')}</div>` : '';
+  const dopo = msg ? `<p class="ld-ore-msg">${esc(msg)}</p>` : '';
+  if (!r) return dopo || chip ? `<div class="ld-ore-manca">${dopo}${chip}</div>` : '';
+  return `<div class="ld-ore-manca">${r.righe.map(t => `<p>${esc(t)}</p>`).join('')}
+    ${r.opzioni.length ? `<div class="az">${r.opzioni.map(o => `<button type="button" class="btn small" data-scelta="${esc(o.k)}">${esc(o.testo)}</button>`).join('')}</div>` : `<p class="ld-nota">${esc(r.ripiego)}</p>`}${dopo}${chip}</div>`;
+}
+// i bottoni del riquadro: una scelta si accende solo col clic, poi si rifà il conto e si dice quanto manca ancora
+function legaOre(s, ridisegna) {
+  s.querySelectorAll('[data-scelta]').forEach(b => b.addEventListener('click', () => { ORE.scegli(b.dataset.scelta); segnala('fatto'); ridisegna(ORE.dopoScelta(ORE.calendario())); aggiornaTutto(); }));
+  s.querySelectorAll('.ld-ore-chip').forEach(b => b.addEventListener('click', () => { ORE.scegli(b.dataset.via, false); ridisegna(''); aggiornaTutto(); }));
+}
+// «La tua settimana»: oggi in cima, poi 7 giorni con le ore libere, il turno e le voci di tutti gli esami
+function schedaOre() {
+  const s = scheda('ld-ore', '');
+  const disegna = (msg = '') => {
+    const cal = ORE.calendario(), turni = D.imp.lavoro?.turni || [];
+    s.innerHTML = `<span class="ld-lbl">La tua settimana</span>
+      <div class="ld-ore-oggi"><span class="ld-lbl">Oggi</span><p>${esc(ORE.testoOggi(cal, esame))}</p></div>
+      ${riquadroOre(cal, null, msg)}
+      <ul class="ld-ore-giorni">${cal.giorni.slice(0, 7).map((g, k) => `<li${k ? '' : ' class="oggi"'}><b>${esc(ORE.rigaGiorno(g))}</b>${ORE.vociGiorno(g, esame).map(t => `<span>${esc(t)}</span>`).join('') || '<span class="vuoto">niente nel piano</span>'}</li>`).join('')}</ul>
+      <p class="ld-nota">${turni.length ? `Lavori ${esc(ORE.turniTesto())}: lo tolgo dalle ore di studio, con mezz'ora per il viaggio. Nei giorni di lavoro studi al massimo ${esc(oreRegola(D.imp.lavoro.tetto ?? 120))}.` : 'Se lavori, scrivimelo: «lavoro lunedì mercoledì venerdì 14-19».'} ${cal.attivo ? '' : 'Con un esame solo e senza lavoro, il piano è quello del programma.'} Le ore sono stime: un argomento nuovo circa 1 h, un ripasso circa 30 min.</p>`;
+    legaOre(s, disegna);
+  };
+  disegna();
+  if (A.turno) A.turno.dataset.sintesi = 'la tua settimana';
+  return s;
 }
 
 /* ---------- cattura veloce in aula ---------- */
@@ -1550,7 +1608,9 @@ async function esegui(c) {
     case 'simula': return schedaSimula(c);
     case 'serve': return schedaLibretto({ base: c.base });
     case 'libretto': return schedaLibretto();
-    case 'esami': case 'oggi': return schedaEsami();
+    case 'esami': return schedaEsami();
+    // «piano»: con il lavoro, una finestra di studio o due esami vicini, la settimana a ore (js/ore.js); se no gli appelli
+    case 'oggi': return ORE.calendario().attivo ? schedaOre() : schedaEsami();
     case 'apriEsame': return c.esame.fatto ? schedaLibretto() : schedaEsami();
     case 'ripasso': {
       if (c.nomeDetto && !c.esame) return rispostaFissa(`Non trovo **${c.nomeDetto}** tra i tuoi esami.`);
@@ -1592,6 +1652,8 @@ async function esegui(c) {
       return rispostaFissa('Quando sei a lezione la barra lo sa: si apre sulla cattura veloce (★ da esame, definizioni, domande) e a casa ti propone due minuti di gioco su quello che hai appena fatto.');
     }
     case 'vediOrario': return schedaOrario();
+    case 'lavoro': return comandoLavoro(c);
+    case 'ore': return schedaOre();
     case 'gioco': return schedaGioco(c.corso);
     case 'appunti': return apriAppunti();
     case 'naviga': return schedaNote(c.q);
@@ -1599,7 +1661,7 @@ async function esegui(c) {
     case 'prepara': return schedaPrepara(c.cosa);
     case 'sincronizza': return schedaSincronizza(c.cosa);
     case 'ai': return schedaAI(c.fornitore);
-    case 'proposte': D.imp.allenatore = c.livello; salva(); return mostraFatto({ testo: c.livello === 'mai' ? 'Proposte spente.' : `Proposte ${({ poco: 'poche', normale: 'normali', spesso: 'frequenti' })[c.livello]}.`, nota: c.livello === 'mai' ? 'Le riaccendi quando vuoi.' : 'Mai a lezione, in focus o nelle ore di silenzio.' });
+    case 'proposte': D.imp.allenatore = c.livello; salva(); return mostraFatto({ testo: c.livello === 'mai' ? 'Proposte spente.' : `Proposte ${({ poco: 'poche', normale: 'normali', spesso: 'frequenti' })[c.livello]}.`, nota: c.livello === 'mai' ? 'Le riaccendi quando vuoi.' : 'Mai a lezione, al lavoro, in focus o nelle ore di silenzio.' });
     case 'proponi': { const r = await provaAllenatore(true); return r?.includes(':') ? null : rispostaFissa('Per ora non ho niente da proporti: aggiungi un esame con la data, o segna qualche definizione a lezione.'); }
     case 'trascrivi': return c.sorgente === 'computer' ? schedaComputer(c.corso) : avviaTrascrizione();
     case 'ripeti': return ripeti(c.sec || 60);
@@ -2336,8 +2398,15 @@ async function proponiProgramma(e, testo, { fonte = '' } = {}) {
     card.replaceWith(h('div')); disegnaProgramma(e); aggiornaTutto(); return {};
   });
 }
-function disegnaProgramma(e, { domande = false } = {}) {
-  const cop = PG.copertura(e), p = PG.piano(e, cop), per = new Map(cop.map(c => [c.a.id, c])), g = p.oggi, pr = PG.pronto(cop);
+function disegnaProgramma(e, { domande = false, msg = '' } = {}) {
+  const cop = PG.copertura(e), per = new Map(cop.map(c => [c.a.id, c])), pr = PG.pronto(cop);
+  // con il calendario delle ore acceso (lavoro, finestra di studio, più esami: js/ore.js) «Oggi» e «I prossimi giorni» vengono
+  // da lì, solo le voci di questo esame; se no il piano di sempre, identico
+  let p = PG.piano(e, cop);
+  const cal = ORE.esamiDelPiano().some(x => x.id === e.id) && ORE.calendario();
+  if (cal?.attivo) p = { ...p, giorni: p.giorni.map((x, k) => { const v = (cal.giorni[k]?.voci || []).filter(w => w.esameId === e.id);
+    return { ...x, studia: v.filter(w => w.tipo === 'studia').map(w => w.id), ripassa: v.filter(w => w.tipo === 'ripassa' || w.tipo === 'generale').map(w => w.id) }; }) };
+  const g = p.giorni[0] || null, oreH = cal?.attivo ? `<p class="ld-ore-testa">${esc(ORE.testoOggi(cal, esame))}</p>${riquadroOre(cal, e.id, msg)}` : '';
   const giorniA = e.data ? giorniTra(oggi(), e.data) : null, senza = e.programma.senza || [], tema = TE.temaDiOggi(e);
   const cosa = x => x.map(i => per.get(i)).filter(Boolean);
   const oggiH = !g ? '' : g.tipo === 'cuscinetto' ? '<p class="ld-nota">Oggi è il giorno cuscinetto: recupera quello che è rimasto indietro, oppure riposati.</p>'
@@ -2346,7 +2415,7 @@ function disegnaProgramma(e, { domande = false } = {}) {
   const prossimi7 = p.giorni.slice(1, 8).map(x => `<li><span>${esc(dataBreve(x.data))}</span>${x.tipo === 'cuscinetto' ? '<i>cuscinetto</i>' : x.tipo === 'generale' ? '<i>ripasso generale</i>' : esc([...cosa(x.studia).map(c => corto(c.a.t)), ...cosa(x.ripassa).map(c => '↻ ' + corto(c.a.t))].join(' · ') || '—')}</li>`).join('');
   const s = scheda('ld-programma', `<div class="capo"><span class="ld-lbl">Programma · ${esc(e.nome)}</span><span>${giorniA != null && giorniA >= 0 ? `${giorniA === 0 ? 'oggi' : giorniA === 1 ? 'domani' : `tra ${giorniA} giorni`} · ` : ''}${Math.round(pr * 100)}% pronto</span></div>
     <i class="ld-cop">${cop.map(c => `<i class="s${c.stato}${c.debole ? ' debole' : ''}" title="${esc(c.a.t)}: ${esc(PG.STATI[c.stato])}"></i>`).join('')}</i>
-    ${g ? `<div class="ld-prog-oggi"><span class="ld-lbl">Oggi</span>${oggiH}${tema ? `<p class="ld-tema-oggi"><em>Esercizio di oggi</em> ${esc(rigaTema(e, tema))} <button type="button" class="btn small" data-tema>Fallo adesso</button></p>` : ''}<div class="az">${AI.attiva() && (g.studia.length || g.ripassa.length) ? '<button type="button" class="btn primary" data-o>Interrogami su questi</button>' : ''}<button type="button" class="btn" data-f>Focus</button></div></div>` : ''}
+    ${g ? `<div class="ld-prog-oggi"><span class="ld-lbl">Oggi</span>${oreH}${oggiH}${tema ? `<p class="ld-tema-oggi"><em>Esercizio di oggi</em> ${esc(rigaTema(e, tema))} <button type="button" class="btn small" data-tema>Fallo adesso</button></p>` : ''}<div class="az">${AI.attiva() && (g.studia.length || g.ripassa.length) ? '<button type="button" class="btn primary" data-o>Interrogami su questi</button>' : ''}<button type="button" class="btn" data-f>Focus</button></div></div>` : ''}
     <ul class="ld-argomenti">${cop.map(c => `<li data-a="${esc(c.a.id)}"><i class="s${c.stato}${c.debole ? ' debole' : ''}"></i><span class="t"><b>${esc(c.a.t)}</b><small>${esc(c.debole ? 'da rivedere' : PG.STATI[c.stato])}${c.domande ? ` · uscita ${c.domande} ${c.domande === 1 ? 'volta' : 'volte'}` : ''}${c.stelle ? ' · ★' : ''}${c.oggi ? ' · fatto oggi' : ''}</small></span><span class="az"><button type="button" class="btn small ld-piano" data-spiego>Lo spiego io</button>${AI.attiva() ? '<button type="button" class="btn small" data-uno>Interrogami</button>' : ''}</span></li>`).join('')}</ul>
     ${prossimi7 ? `<details class="ld-prossimi"><summary>I prossimi giorni${p.conData ? '' : ' (senza data dell\'appello: piano su due settimane)'}</summary><ul>${prossimi7}</ul></details>` : ''}
     <details class="ld-domande-uscite"${domande ? ' open' : ''}><summary>Domande uscite agli appelli${senza.length ? ` · ${senza.length} senza argomento` : ''}</summary>
@@ -2354,6 +2423,8 @@ function disegnaProgramma(e, { domande = false } = {}) {
       ${senza.length ? `<p class="ld-nota">Non so di che argomento sono: ${senza.slice(0, 5).map(d => `«${esc(corto(d.t))}»`).join(', ')}${senza.length > 5 ? '…' : ''}</p>` : ''}</details>
     <p class="ld-nota">Il piano si rifà ogni giorno da quello che sai: appunti, carte, ripasso e interrogazioni. Prima gli argomenti deboli e quelli che escono di più; ogni argomento nuovo torna dopo qualche giorno.</p>`);
   s.querySelectorAll('.ld-argomenti li').forEach((x, i) => entra(x, { ritardo: 60 + Math.min(i, 12) * 35, dy: 4, blur: 4, ms: 380 }));
+  // una scelta delle ore cambia il piano: la scheda si rifà (in fondo al turno) con la frase di quanto manca
+  if (cal?.attivo) legaOre(s, m => { disegnaProgramma(e, { msg: m }); s.remove(); });
   s.querySelector('[data-o]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Interrogami sugli argomenti di oggi'); avviaOraleProgramma(e, [...cosa(g.studia), ...cosa(g.ripassa)].map(c => c.a)); });
   s.querySelector('[data-f]')?.addEventListener('click', () => avviaFocus({ esameId: e.id }));
   s.querySelector('[data-tema]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, `Esercizio di ${e.nome}`); schedaTema(e, tema); });

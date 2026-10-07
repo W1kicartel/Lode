@@ -1,13 +1,14 @@
 // L'allenatore: in momenti a caso della giornata, quando sei al computer e libero, la pillola ti propone una cosa
 // piccola e utile per il prossimo esame: due minuti di gioco sulle definizioni, le carte di oggi, le ★ da esame,
 // tre domande lampo come all'orale, un focus quando sei indietro col piano.
-// Più l'esame è vicino, più spesso. Mai a lezione, durante un focus o una trascrizione, né nelle ore di silenzio.
+// Più l'esame è vicino, più spesso. Mai a lezione, al lavoro, durante un focus o una trascrizione, né nelle ore di silenzio.
 // Impara: le proposte che accetti tornano più spesso, quelle che rimandi o ignori meno.
 import { D, salva, prossimi, daGiocare, daRipassare, lezioneOra, prossimaLezione, lezioni, piano, giorniTra, oggi, norm, num } from './dati.js';
 import * as F from './focus.js';
 import * as TR from './trascrizione.js';
 import * as AI from './ai.js';
 import * as PG from './programma.js';
+import * as ORE from './ore.js';
 import { anteprima, scaduti, corsoProgrammazione, linguaDi, RE_PROGRAMMAZIONE } from './codice/stampa.js';
 
 const L = typeof window !== 'undefined' ? window.lodeDesktop : null;
@@ -72,6 +73,7 @@ export async function momento({ forza = false } = {}) {
     if (adesso < (m.rimandaFino || 0)) return { no: 'rimandata' };   // «Dopo» vale prima di tutto
     if (inSilenzio()) return { no: 'ore di silenzio' };
     if (lezioneOra() || (prossimaLezione()?.tra ?? 99) < 15) return { no: 'lezione' };
+    if (ORE.alLavoro()) return { no: 'lavoro' };   // al turno (con mezz'ora per il viaggio): js/ore.js
     if (F.stato() || TR.attiva()) return { no: 'occupato' };
     const oggiN = m.storia.filter(x => x.giorno === oggi()).length;
     if (oggiN >= MASSIMO[liv]) return { no: 'basta per oggi' };

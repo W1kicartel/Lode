@@ -168,7 +168,7 @@ export const pronto = cop => cop.length ? cop.reduce((s, c) => s + [0, .25, .5, 
 
 /* ---------- il piano fino all'appello ---------- */
 // priorità: quanto sei indietro, quante volte è uscito, se il prof l'ha detto «da esame», se l'ultima volta è andata male
-const priorita = c => (3 - c.stato) * 2 + Math.min(c.domande, 5) * 1.2 + (c.stelle ? 1 : 0) + (c.debole ? 2 : 0);
+export const priorita = c => (3 - c.stato) * 2 + Math.min(c.domande, 5) * 1.2 + (c.stelle ? 1 : 0) + (c.debole ? 2 : 0);
 export function piano(e, cop = copertura(e), T = oggi()) {
   const conData = !!(e.data && e.data > T), giorni = conData ? giorniTra(T, e.data) : 14;
   const lista = [];
@@ -205,14 +205,15 @@ export function piano(e, cop = copertura(e), T = oggi()) {
       lavoro[k].ripassa.push(c.a.id); prima = k;
     }
   }
-  // i giorni rimasti vuoti: un ripasso degli argomenti meno sicuri, a rotazione (mai due giorni di fila lo stesso)
+  // i giorni rimasti vuoti: un ripasso degli argomenti meno sicuri, a rotazione (mai due giorni di fila lo stesso).
+  // g.giro dice quali sono: il piano per chi lavora (ore.js) li toglie per primi quando il tempo non basta
   const giro = ordinati.filter(c => c.stato < 3 || c.domande);
   let r = 0;
   lavoro.forEach((g, i) => {
     if (carico(g) || !giro.length) return;
     for (let t = 0; t < giro.length; t++) {
       const c = giro[(r + t) % giro.length];
-      if (!lavoro[i - 1]?.ripassa.includes(c.a.id) && !lavoro[i - 1]?.studia.includes(c.a.id)) { g.ripassa.push(c.a.id); r = (r + t + 1) % giro.length; break; }
+      if (!lavoro[i - 1]?.ripassa.includes(c.a.id) && !lavoro[i - 1]?.studia.includes(c.a.id)) { g.ripassa.push(c.a.id); g.giro = [c.a.id]; r = (r + t + 1) % giro.length; break; }
     }
   });
   const gen = lista.find(g => g.tipo === 'generale');

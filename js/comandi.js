@@ -136,6 +136,10 @@ export function interpreta(frase) {
     const o = leggiOrario(m[1]); if (o) return { tipo: 'orario', ...o };
   }
   if (/^(?:orario|il mio orario|le mie lezioni|lezioni|quando ho lezione|che lezione ho)$/.test(t)) return { tipo: 'vediOrario' };
+  // il lavoro e il piano per chi lavora (js/ore.js): turni, eccezioni, tetto, finestra di studio; «piano della settimana».
+  // «piano» da solo resta il piano di oggi
+  { const l = leggiLavoro(t); if (l) return l; }
+  if (/^(?:il )?piano (?:della|di questa|per la) settimana$|^(?:il mio piano|la mia settimana|le mie ore(?: libere)?|ore libere|quanto tempo ho(?: per studiare)?)$/.test(t)) return { tipo: 'ore' };
   // «Cosa stampa?»: esercizi di C con la risposta calcolata da Lode (prima del gioco: «allenami» da solo resta il gioco).
   // Anche in Java e in Python: «cosa stampa python», «cosa stampa in java», «esercizi di python», «allenami su java»
   if (/^(?:cosa stampa(?: questo (?:codice|programma))?|esercizio? (?:di )?(?:c|programmazione)|allenami (?:su|in) c)$/.test(t)) return { tipo: 'stampa' };
@@ -257,21 +261,71 @@ export function interpreta(frase) {
   return null;
 }
 
-// giorni, ore e aula di una lezione; quello che resta è il nome del corso
-export function leggiOrario(testo) {
+// giorni e ore di una frase («lunedì e mercoledì dalle 9 alle 11 aula 7»): resto è quello che avanza, già normalizzato.
+// Serve alle lezioni (leggiOrario) e ai turni di lavoro (leggiLavoro). Senza un orario: null
+export function giorniEOre(testo) {
   const basso = String(testo).toLowerCase();
   const o = basso.match(/(?:dalle\s+)?(\d{1,2})(?:[:.](\d{2}))?\s*(?:-|–|alle|a)\s*(\d{1,2})(?:[:.](\d{2}))?/);
   if (!o) return null;
   let r = ' ' + norm(basso.replace(o[0], ' ')) + ' ';
   const giorni = [], G = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
   r = r.replace(/ (?:il |la |ogni )?(lun|mar|mer|gio|ven|sab|dom)[a-z]*\b/g, (_, g) => { giorni.push(G.indexOf(g)); return ' '; });
-  if (!giorni.length) return null;
   const hh = (h, mm) => `${String(+h).padStart(2, '0')}:${mm || '00'}`;
-  let aula = ''; r = r.replace(/ (?:in )?aula (\w+)/, (_, a) => { aula = a.length <= 3 ? a.toUpperCase() : a.charAt(0).toUpperCase() + a.slice(1); return ' '; });
+  return { giorni, inizio: hh(o[1], o[2]), fine: hh(o[3], o[4]), resto: r };
+}
+// giorni, ore e aula di una lezione; quello che resta è il nome del corso
+export function leggiOrario(testo) {
+  const x = giorniEOre(testo);
+  if (!x || !x.giorni.length) return null;
+  let r = x.resto, aula = ''; r = r.replace(/ (?:in )?aula (\w+)/, (_, a) => { aula = a.length <= 3 ? a.toUpperCase() : a.charAt(0).toUpperCase() + a.slice(1); return ' '; });
   const corso = r.replace(/\b(e|il|la|di|dalle|alle|ore|in|ogni|a)\b/g, ' ').replace(/\s+/g, ' ').trim();
   if (!corso) return null;
   const e = trovaEsame(corso);
-  return { corso: e?.nome || corso.replace(/^./, c => c.toUpperCase()), giorni, inizio: hh(o[1], o[2]), fine: hh(o[3], o[4]), aula };
+  return { corso: e?.nome || corso.replace(/^./, c => c.toUpperCase()), giorni: x.giorni, inizio: x.inizio, fine: x.fine, aula };
+}
+
+// il lavoro (js/ore.js): «lavoro lunedì mercoledì venerdì 14-19», «i miei turni sono …», «giovedì non lavoro», «sabato lavoro
+// anche 18-23», «nei giorni di lavoro studio al massimo 2 ore», «studio dalle 10 alle 22», «non lavoro più», «quando lavoro».
+// Il giorno detto da solo è il prossimo con quel nome, oggi compreso. «ho lavorato…» e il focus («studio 50») non c'entrano
+const GIORNO = `(oggi|domani|dopodomani|${GIORNI.map(g => g.replace(/ì$/, '[iì]')).join('|')})`;
+function dataDetta(s) {
+  const T = oggi(), k = ['oggi', 'domani', 'dopodomani'].indexOf(s); if (k >= 0) return piuGiorni(T, k);
+  const dow = GIORNI.map(norm).indexOf(norm(s)); if (dow < 0) return null;
+  return piuGiorni(T, (dow - new Date(T + 'T12:00').getDay() + 7) % 7);
+}
+// un orario vero: «14:00»-«19:00»; un turno che passa la mezzanotte (22-2) finisce a mezzanotte
+const orarioOk = (inizio, fine) => {
+  const m = x => { const [h, mm] = x.split(':').map(Number); return h <= 24 && mm < 60 ? h * 60 + mm : NaN; };
+  if (Number.isNaN(m(inizio)) || Number.isNaN(m(fine)) || m(inizio) >= 1440) return null;
+  return m(fine) > m(inizio) ? { inizio, fine } : { inizio, fine: '24:00' };
+};
+export function leggiLavoro(testo) {
+  const t = String(testo || '').toLowerCase().replace(/[’`]/g, "'").replace(/\s+/g, ' ').replace(/[?!.]+$/, '').trim();
+  let m;
+  if (/^(?:non lavoro pi[uù]|niente (?:pi[uù] )?lavoro|niente turni|ho smesso di lavorare|(?:togli|cancella)(?: il)?(?: mio)? lavoro|(?:togli|cancella) (?:i )?(?:miei )?turni)$/.test(t)) return { tipo: 'lavoro', azione: 'togli' };
+  if (/^(?:quando lavoro|(?:i )?(?:miei )?turni(?: di lavoro)?|il mio lavoro|(?:i miei )?orari di lavoro)$/.test(t)) return { tipo: 'lavoro', azione: 'vedi' };
+  if ((m = t.match(new RegExp(`^(?:(?:questo|questa|il|la) )?${GIORNO} non lavoro$`))) || (m = t.match(new RegExp(`^non lavoro (?:(?:questo|questa|il|la) )?${GIORNO}$`)))) return { tipo: 'lavoro', azione: 'eccezione', data: dataDetta(m[1]), no: true };
+  if ((m = t.match(/^(?:nei giorni (?:di|in cui|che) lavoro|quando lavoro|i giorni (?:di|che) lavoro|nei giorni lavorativi),? studio (?:al massimo |massimo |solo |non pi[uù] di |al pi[uù] )?(.+)$/))) {
+    const mi = leggiMinuti(m[1]); if (mi && /or|h|min/.test(mi.pezzo) && mi.min >= 15 && mi.min <= 600) return { tipo: 'lavoro', azione: 'tetto', min: mi.min };
+  }
+  if ((m = t.match(/^(?:di solito |io )?studio (?:dalle |tra le |fra le )?(\d{1,2})(?:[:.](\d{2}))?\s*(?:-|–|alle|a|e le)\s*(\d{1,2})(?:[:.](\d{2}))?$/))) {
+    const hh = (h, mm) => `${String(+h).padStart(2, '0')}:${mm || '00'}`, o = orarioOk(hh(m[1], m[2]), hh(m[3], m[4]));
+    if (o && o.fine !== '24:00') return { tipo: 'lavoro', azione: 'finestra', da: o.inizio, a: o.fine };
+  }
+  // un turno in più solo quel giorno: «sabato lavoro anche 18-23», «questa settimana lavoro anche sabato 18-23»
+  if ((m = t.match(/^(?:questa settimana )?(?:(.+?) )?lavoro anche (.+)$/))) {
+    const g = `${m[1] || ''} ${m[2]}`.match(new RegExp(`(?:^| )${GIORNO}(?= |$)`)), x = g && giorniEOre(m[2].replace(g[1], ' '));
+    const o = x && orarioOk(x.inizio, x.fine);
+    if (o) return { tipo: 'lavoro', azione: 'eccezione', data: dataDetta(g[1]), ...o };
+  }
+  // i turni di ogni settimana: «lavoro …» li aggiunge, «i miei turni sono …» li sostituisce. Quello che avanza (al bar, in
+  // pizzeria) va bene se è poco: «lavoro di gruppo lunedì 14-16 per il progetto» non è un turno
+  if ((m = t.match(/^(?:(i miei turni sono|i turni sono|ora lavoro|adesso lavoro|da ora lavoro|lavoro solo)|lavoro|faccio i turni|ho (?:il )?turno|turno|turni)\s+(.+)$/))) {
+    const x = giorniEOre(m[2]), o = x && x.giorni.length && orarioOk(x.inizio, x.fine);
+    const resto = x ? x.resto.replace(/\b(e|il|la|lo|di|dalle|alle|ore|ogni|a|al|in|da)\b/g, ' ').trim().split(/\s+/).filter(Boolean) : [];
+    if (o && resto.length <= 2 && !/gruppo|squadra|progetto/.test(x.resto)) return { tipo: 'lavoro', azione: m[1] ? 'sostituisci' : 'aggiungi', giorni: [...new Set(x.giorni)].sort(), ...o };
+  }
+  return null;
 }
 
 export const ESEMPI = [
@@ -293,6 +347,8 @@ export const ESEMPI = [
   ['esporta per anki', 'carte e definizioni in un file per Anki, un mazzo per corso'],
   ['ripasso in tasca', 'le carte di domani in una nota, da fare sul telefono con Obsidian'],
   ['lezione analisi 2 lunedì e mercoledì 9-11 aula 7', 'l\'orario: Lode sa quando sei in aula'],
+  ['lavoro lunedì mercoledì venerdì 14-19', 'i turni: il piano usa solo le ore libere vere, con mezz\'ora per il viaggio'],
+  ['piano della settimana', 'tutti gli esami in un calendario solo, a minuti: cosa ci sta e cosa no'],
   ['★ il teorema di Green lo chiede sempre', 'in aula: segna cosa è da esame'],
   ['def: gradiente = vettore delle derivate parziali', 'in aula: una definizione nella nota'],
   ['gioca', 'due minuti sulle definizioni dell\'ultima lezione'],

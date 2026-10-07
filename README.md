@@ -35,6 +35,7 @@ Trascina un file sulla pillola, anche chiusa: si allarga e ti chiede *cosa ne fa
 
 ### A casa
 - **Il programma d'esame, argomento per argomento.** Incolla il programma del corso (o trascina il PDF) e Lode lo divide in argomenti. Per ognuno guarda cosa hai davvero: appunti, ★ del prof, carte, ripasso, interrogazioni. Ne esce una mappa, da «mai toccato» a «sicuro», e un piano giorno per giorno fino all'appello. Si comincia dagli argomenti deboli e da quelli che escono di più, e ogni argomento nuovo torna dopo qualche giorno. Il giorno prima dell'esame è per il ripasso generale e, se c'è tempo, c'è un giorno cuscinetto per gli imprevisti. Il piano si rifà ogni giorno da quello che sai. Senza AI funziona; con l'AI legge meglio i programmi disordinati e ti interroga argomento per argomento.
+- **Il piano per chi lavora.** Scrivi i turni una volta («lavoro lunedì mercoledì venerdì 14-19») e Lode li toglie dalle ore di studio, con mezz'ora per il viaggio, insieme alle lezioni. Nei giorni di lavoro il piano si ferma a 2 ore (lo cambi tu). «piano della settimana» mette tutti gli esami in un calendario solo, a minuti e non a numero di argomenti: «Lun 13 · circa 1 h 45 libere · lavoro 14–19». Quando non ci sta tutto, Lode lo dice con le opzioni accanto e quanto fa risparmiare ognuna; decidi tu, con un clic. Al lavoro la pillola non ti propone niente. Senza lavoro e con un esame solo, il piano resta quello del programma.
 - **Le domande uscite agli appelli.** Quelle che girano nel gruppo del corso: incollale («domande uscite di analisi 2: …», una per riga). Lode le mette sotto il loro argomento, le conta e fa salire nel piano gli argomenti che escono di più. Nell'interrogazione, il prof ne fa di simili.
 - **I temi d'esame, uno al giorno.** I compiti vecchi che girano nel gruppo del corso: trascina il PDF (scegli «Temi d'esame») o incollali («temi d'esame di analisi 2: …»). Lode li divide in esercizi sui segni che trova («Esercizio 1», «Es. 2», «Problema 3»), ti fa controllare la divisione e mette ogni esercizio sotto il suo argomento del programma. Ogni giorno, nel piano, c'è un esercizio sugli argomenti di oggi: lo fai su carta, senza appunti, e poi dici tu com'è andata. Lode non corregge e non dà voti finti: se è giusto torna tra una settimana, se è sbagliato tra 3 giorni, se non sapevi da dove partire tra 2. La soluzione del prof, se c'è nel testo, la vedi solo dopo. L'esito aggiorna la mappa. Senza AI: un PDF scansionato non lo legge, il testo lo incolli tu.
 - **«Te lo spiego io».** Spieghi un argomento con parole tue, scritte o a voce, come all'orale. Senza AI Lode controlla i punti che trova nel programma e nei tuoi appunti e ti dice quali hai saltato; con l'AI ti dà un giudizio come all'interrogazione. Spiegare con parole proprie è uno dei modi di studiare che funzionano di più, e l'esito aggiorna la mappa.
@@ -70,6 +71,8 @@ interrogami su analisi 2
 spiegami il teorema di Green
 esporta per anki
 ripasso in tasca
+lavoro lunedì mercoledì venerdì 14-19
+piano della settimana
 ```
 
 ### Per chi studia informatica
@@ -402,6 +405,7 @@ node test/sync-sim/fuzz.mjs --motore test/sync-sim/motore-v2.mjs --giri 1000 --s
 | `js/lode.js` | La barra: pillola, pannello a molla, conversazione, schede, conferme, voce, file trascinati, «La tua AI» |
 | `js/comandi.js` | Capisce l'italiano senza AI: date, voti, minuti, nomi d'esame approssimati |
 | `js/dati.js` | Dati e conti: media, base di laurea, voto che serve, piano, SM-2 |
+| `js/ore.js` | Il piano per chi lavora: ore libere vere (lezioni, turni, silenzio), tutti gli esami a minuti, cosa non ci sta e le opzioni |
 | `js/ai.js` | L'AI: locale (Ollama), Claude con gli strumenti (API chiamata con `fetch`, senza SDK), oppure un servizio in formato OpenAI; il prof dell'orale |
 | `js/fornitori.js` | I servizi della «tua AI», un elenco solo per la barra e per il main (che accetta dalla barra solo l'id del servizio) |
 | `js/librerie.js`, `desktop/vendor.mjs` | Le librerie di altri (pdf.js, Temml, transformers.js) con la versione esatta: nell'app file locali in `vendor/`, copiati da `desktop/node_modules`; nel browser da jsDelivr con l'impronta nell'import map |
