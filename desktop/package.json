@@ -70,6 +70,7 @@
       "sincronizza.mjs",
       "sync/**",
       "collegamento.mjs",
+      "lingua.mjs",
       "web/**",
       "package.json",
       "build/tray*.png",
