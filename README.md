@@ -41,6 +41,7 @@ Trascina un file sulla pillola, anche chiusa: si allarga e ti chiede *cosa ne fa
 - **Giochi di memoria** sulle definizioni delle tue lezioni: abbina, chi sono?, completa, flash.
 - **Ripasso a intervalli** (SM-2): le carte difficili tornano domani, le facili tra settimane.
 - **Le carte anche in Anki.** Scrivi «esporta per anki» (o «esporta le carte di analisi 2 per anki») e Lode prepara un file con le carte del ripasso e le definizioni delle lezioni, senza doppioni: un mazzo per corso (`Lode::Analisi 2`), con le formule, il codice e il grassetto. Nell'app il file va nella cartella `Anki` del vault, nel browser si scarica. In Anki: **File › Importa**, scegli il file e come tipo di nota **Basilare** (in inglese *Basic*), una volta sola per tutti i corsi. Se lo importi di nuovo, Anki aggiorna le carte che ha già invece di raddoppiarle.
+- **Il ripasso in tasca.** Scrivi «ripasso in tasca» e Lode mette le carte di domani (al massimo 20, prima quelle in ritardo) nella nota `In tasca.md` del vault. Sul telefono la apri in Obsidian: tocchi «Risposta» per vederla e spunti «sapevo» o «non sapevo». Quando la nota torna sul computer, Lode segna il ripasso e la riscrive con le carte nuove. Con «ripasso in tasca ogni sera» la riscrive da sola dopo le 19. Lode non usa la rete: la nota la porta il servizio che usi già (iCloud, Obsidian Sync, Syncthing). Se arriva una copia vecchia della nota, Lode non segna niente: mai due volte la stessa carta. Solo nell'app.
 - **Interrogazione:** un prof d'orale che fa una domanda alla volta, ti corregge e alla fine ti dà un voto onesto.
 - **Libretto e conti:** media ponderata, base di laurea, «quanto mi serve per 110», «se prendo 30 in analisi», ore da fare oggi per arrivare all'appello.
 - **Sbobine da passare ai compagni:** un `.md` per Obsidian e una pagina `.html` che si apre su qualsiasi telefono, con le formule disegnate.
@@ -67,6 +68,7 @@ trascrivi la lezione
 interrogami su analisi 2
 spiegami il teorema di Green
 esporta per anki
+ripasso in tasca
 ```
 
 ### Per chi studia informatica
@@ -409,6 +411,7 @@ node test/sync-sim/fuzz.mjs --motore test/sync-sim/motore-v2.mjs --giri 1000 --s
 | `js/file.js` | I file trascinati: tipo, testo di PDF (pdf.js), Word e PowerPoint, audio a 16 kHz |
 | `js/sbobina.js` | Sbobine da condividere (.md + .html con formule) e sbobine ricevute |
 | `js/anki.js` | «Esporta per Anki»: carte e definizioni nel testo d'importazione di Anki, un mazzo per corso, senza doppioni |
+| `js/tasca.js` | «Ripasso in tasca»: le carte di domani in `In tasca.md` da fare sul telefono, le spunte che tornano diventano ripasso (giro contro le copie vecchie) |
 | `js/allenatore.js` | Le proposte a sorpresa: quando, cosa, e cosa impara |
 | `js/benvenuto.js` | La configurazione guidata |
 | `js/codice/albero.js`, `js/codice/modelli.js`, `js/codice/stampa.js` | «Cosa stampa?»: un piccolo C che Lode sa eseguire e scrivere anche in Java e in Python, i modelli di domanda con i loro errori tipici, la scheda |

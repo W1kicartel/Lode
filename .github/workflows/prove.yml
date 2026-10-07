@@ -60,6 +60,8 @@ jobs:
         run: node test/errori.mjs
       - name: Registro nel vault
         run: node --experimental-vm-modules test/diario.mjs
+      - name: Ripasso in tasca
+        run: node --experimental-vm-modules test/tasca.mjs
       # aggiornamenti (desktop/aggiorna.mjs): versioni, installer giusto, latest*.yml, Mac senza firma, finto electron-updater
       - name: Aggiornamenti
         run: node test/aggiorna.mjs

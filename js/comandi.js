@@ -98,6 +98,12 @@ export function interpreta(frase) {
     const programma = /^scarica\b/.test(t) && /^anki$/.test(m[1].trim());
     if (!domanda && !programma) return { tipo: 'anki', corso: r && !/^(?:tutt[eio]|tutti i corsi|ogni corso)$/.test(r) ? r : null };
   }
+  // «Ripasso in tasca» (js/tasca.js): le carte di domani in una nota del vault, da fare sul telefono con Obsidian. «… ogni sera»
+  // la riscrive da sola dopo le 19; «non mettere» o «spegni il ripasso in tasca» (o «… solo quando lo chiedo») smette.
+  // Serve «in tasca» o «sul telefono»: «ripasso» da solo e «ripasso di analisi 2» restano il ripasso di sempre
+  const TASCA = '(?:il |le |i |la )?(?:mio |mie )?(?:ripasso|carte|ripassi) (?:in tasca|sul (?:telefono|cellulare))';
+  if ((m = t.match(new RegExp(`^(?:non (?:mettere|mettermi|fare|farmi)|spegni|togli|basta(?: con)?) ${TASCA}(?: ogni sera| tutte le sere)?$`)))) return { tipo: 'tasca', sera: false };
+  if ((m = t.match(new RegExp(`^(?:(?:metti(?:mi)?|fammi|fai|prepara(?:mi)?|manda(?:mi)?|porta(?:mi)?|scrivi(?:mi)?|aggiorna) )?${TASCA}( ogni sera| tutte le sere| solo quando (?:lo )?chiedo)?$`)))) return m[1] ? { tipo: 'tasca', sera: !/quando/.test(m[1]) } : { tipo: 'tasca' };
 
   // il programma d'esame: «programma di analisi 2», «programma», «programma analisi 2: 1. limiti …» (incollato, anche su
   // più righe: si legge dalla frase com'era, con gli a capo). «programma di oggi» resta il piano di oggi
@@ -275,6 +281,7 @@ export const ESEMPI = [
   ['ripassa analisi 2', 'le carte di oggi'],
   ['carta: teorema di Green = …', 'una carta al volo'],
   ['esporta per anki', 'carte e definizioni in un file per Anki, un mazzo per corso'],
+  ['ripasso in tasca', 'le carte di domani in una nota, da fare sul telefono con Obsidian'],
   ['lezione analisi 2 lunedì e mercoledì 9-11 aula 7', 'l\'orario: Lode sa quando sei in aula'],
   ['★ il teorema di Green lo chiede sempre', 'in aula: segna cosa è da esame'],
   ['def: gradiente = vettore delle derivate parziali', 'in aula: una definizione nella nota'],
