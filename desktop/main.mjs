@@ -19,7 +19,7 @@ import * as PROGETTO from './progetto.mjs';
 import * as AGGIORNA from './aggiorna.mjs';
 import { creaSincronizzazione } from './sincronizza.mjs';
 import * as ICONA from './collegamento.mjs';
-import { t, usa, dalSistema, LINGUE } from './lingua.mjs';
+import { t, usa, LINGUE, linguaDiPartenza, daFissare } from './lingua.mjs';
 
 const QUI = dirname(fileURLToPath(import.meta.url));
 const WEB = existsSync(join(QUI, 'web', 'index.html')) ? join(QUI, 'web') : join(QUI, '..');
@@ -273,13 +273,17 @@ ipcMain.on('dati:salva', (e, d, x) => {
 // la lingua: quella scelta dallo studente (conf.lingua), se no quella del sistema se Lode la conosce, se no l'inglese.
 // La barra la legge in modo sincrono all'avvio (preload: window.lodeDesktop.lingua, prima di js/lingua.js); cambiarla
 // la salva qui, la usa per i testi del main (menu dell'icona, finestre di sistema) e ricarica le finestre
-const linguaScelta = () => typeof conf.lingua === 'string' && Object.hasOwn(LINGUE, conf.lingua) ? conf.lingua : dalSistema(app.getLocale());
+// (chi aveva già fatto il benvenuto prima delle lingue resta in italiano: desktop/lingua.mjs, linguaDiPartenza e daFissare)
+const linguaScelta = () => linguaDiPartenza(conf, app.getLocale());
 ipcMain.on('lingua:leggi', e => { e.returnValue = linguaScelta(); });
 ipcMain.handle('lingua:imposta', async (_, cod) => {
   if (typeof cod !== 'string' || !Object.hasOwn(LINGUE, cod)) return false;
+  const cambia = cod !== linguaScelta();   // la lingua che le finestre mostrano adesso (lingua:leggi)
   conf.lingua = cod; salvaConf();
+  if (!cambia) return true;   // la stessa lingua (l'«Avanti» del benvenuto la conferma): si salva e basta, niente ricarica
   await usa(cod);
-  tutte().forEach(w => w.webContents.reload());
+  if (benvenuto && !benvenuto.isDestroyed()) benvenuto.setTitle(t('desktop.benvenuto-in-lode'));
+  tutte().forEach(w => w.webContents.reload());   // barra, quadro e benvenuto: i moduli rileggono i testi
   return true;
 });
 ipcMain.on('mouse', (e, ignora) => BrowserWindow.fromWebContents(e.sender)?.setIgnoreMouseEvents(ignora, { forward: true }));
@@ -613,6 +617,7 @@ app.whenReady().then(async () => {
   else Menu.setApplicationMenu(null);   // Windows e Linux: niente menu inglese nelle finestre, né Ctrl+R, Ctrl+W, Ctrl+Shift+I
   leggiConf();
   if (process.env.LODE_VAULT) conf.vault = process.env.LODE_VAULT;
+  if (daFissare(conf)) { conf.lingua = 'it'; salvaConf(); }   // chi usa già Lode resta in italiano (docs/LINGUE.md)
   try { await usa(linguaScelta()); } catch (x) { console.error('Lode: lingua non caricata, resta l\'italiano', x); }
   if (!conf.vault) {
     let documenti; try { documenti = app.getPath('documents'); } catch { documenti = app.getPath('home'); }   // Documenti su OneDrive o in rete non raggiungibile

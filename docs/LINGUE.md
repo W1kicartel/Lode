@@ -44,15 +44,20 @@ h('div', 'riga', `<b>${esc(e.nome)}</b> ${t('barra.traGiorni', { n })}`);   // e
 
 `js/lingua.js` legge la scelta prima di tutto il resto (`await` in cima al modulo), così le costanti in cima ai moduli trovano già il catalogo pronto. L'ordine è questo:
 1. la lingua salvata: `window.lodeDesktop.lingua` nell'app, `localStorage['lode:lingua']` nel browser;
-2. la lingua del sistema, se Lode la conosce;
-3. altrimenti l'inglese.
+2. **chi usa già Lode resta in italiano**: se il benvenuto è già fatto (nell'app `conf.benvenuto`; nel browser `imp.benvenuto` o degli esami nei dati) e non c'è una lingua salvata, si salva `it` una volta sola, prima che la barra si disegni. Così uno studente italiano con il computer in inglese non si ritrova la barra in inglese;
+3. la lingua del sistema, se Lode la conosce;
+4. altrimenti l'inglese.
 
-Nelle prove in node la lingua è l'italiano, salvo `LODE_LINGUA=<codice>`. Per cambiare lingua si chiama `imposta(cod)`, che salva la scelta (e nell'app la passa al processo principale con `lingua:imposta`), e poi si ricarica la finestra.
+Nel browser lo fa `iniziale()` di `js/lingua.js`. Nell'app lo fa il processo principale (`desktop/lingua.mjs`: `linguaDiPartenza`, `daFissare`), che la dà alla barra con `lingua:leggi` (sincrono, nel preload) e la usa anche per i suoi testi: menu dell'icona, finestre di sistema.
+
+Nelle prove in node la lingua è l'italiano, salvo `LODE_LINGUA=<codice>`. Per cambiare lingua si chiama `imposta(cod)`, che salva la scelta. Nell'app la passa al processo principale con `lingua:imposta`, che ricarica tutte le finestre (barra, quadro, benvenuto), ma solo se la lingua cambia davvero. Nel browser la pagina si ricarica da sola (`location.reload()`).
 
 La lingua si sceglie:
-- nel benvenuto, come prima domanda;
-- con il comando «lingua inglese» / «language italian» / «idioma español»…;
-- dalla pagina, in Impostazioni.
+- nel benvenuto, come primo passo: le sei lingue, ognuna scritta nella sua lingua, con quella di adesso già scelta. Un clic cambia subito la lingua del benvenuto;
+- con il comando «lingua inglese» / «language italian» / «idioma español»… (`{ tipo: 'lingua', codice }`, `cambiaLingua` in `js/lode.js`): prima la conferma nella lingua nuova («Lode ora parla English.»), poi si salva e si ricarica;
+- dalla pagina, in Impostazioni, insieme al sistema dei voti.
+
+`index.html` prende `lang`, titolo e descrizione dalla lingua scelta (`js/app.js`, catalogo `impostazioni`).
 
 ## I comandi senza AI
 
@@ -65,12 +70,13 @@ La lingua si sceglie:
 - Ogni lingua ha le sue parole: giorni, mesi, «domani», numeri scritti, verbi dei comandi.
 - **Il comando della lingua** c'è in tutte: «lingua inglese», «language italian», «idioma español»… → `{ tipo: 'lingua', codice }`.
 - **I voti** restano quelli detti (28, 30 e lode): come leggerli lo decide il sistema dei voti, non il riconoscitore.
+- **Le piccole parole dentro le schede** (il sì e il no di una conferma, «basta»/«voto» che chiudono l'orale, l'uscita da «spiegamelo» e dall'orale): ogni riconoscitore esporta `PAROLE = { si, siCoda, no, voto, basta, esci }`, frasi intere in minuscolo. `comandi.js` dà `dice(testo, 'si')` nella lingua scelta; le regole sono in `detto()` di `js/comandi/comune.js`, e in italiano danno esattamente le risposte delle regex di prima (`test/scelta.mjs`).
 - **Prove:** `node test/comandi-lingue.mjs`. Ogni lingua ha i suoi casi in `test/comandi/<codice>.mjs` (`CASI = [[frase, risultato atteso], …]`, `NON = [frasi che non sono comandi]`). La tabella di riferimento è `test/comandi/it.mjs`: per ogni lingua almeno 3 frasi per ogni `tipo` che l'italiano riconosce, con gli stessi campi, e almeno 15 frasi che **non** devono diventare comandi. Il banco lancia ogni lingua con `LODE_LINGUA=<codice>`.
 - Un riconoscitore nuovo va anche in `sw.js` (`FILE`, e il numero di `CACHE` sale).
 
 ## Sistemi dei voti
 
-`js/sistemi.js` descrive ogni sistema. Lo studente lo sceglie nel benvenuto e lo salva in `profilo.sistema`. Il predefinito viene dalla lingua: `it` → `it`, `es` → `es`, `fr` → `fr`, `de` → `de`, `pt` → `br` (la lingua è il portoghese del Brasile; chi studia in Portogallo sceglie `pt`), `en` → `uk`.
+`js/sistemi.js` descrive ogni sistema. Lo studente lo sceglie nel benvenuto (accanto a università e corso) o in Impostazioni, e lo salva in `profilo.sistema`. I dati e i backup di prima non ce l'hanno: valgono come `it`, e un codice sconosciuto pure. Il predefinito viene dalla lingua: `it` → `it`, `es` → `es`, `fr` → `fr`, `de` → `de`, `pt` → `br` (la lingua è il portoghese del Brasile; chi studia in Portogallo sceglie `pt`), `en` → `uk`.
 
 | Codice | Paese | Voti | Sufficienza | Migliore | Crediti | Voto finale |
 |---|---|---|---|---|---|---|

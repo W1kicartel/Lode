@@ -3,7 +3,7 @@
 // «Chiedi o scrivi un comando…». Si parla tenendo premuto ⌥ Spazio. I file trascinati diventano carte del ripasso.
 // Senza AI capisce i comandi in italiano (comandi.js); con il cervello locale (gratis) o la tua AI preferita spiega, crea carte e interroga come all'orale.
 import { inverti, datiIllegibili, piuGiorni, norm, D, DESKTOP, lezioneOra, prossimaLezione, daGiocare, ricorda, aggiungiOrario, lezioni, RISPOSTE, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esc, fatti, media, minuti, num, oggi, ore, piano, prossimi, prossimoIntervallo, registraVoto, rispondi, salva, serie, serve, simula, sostituisci, traQuanto, trovaEsame, intervalloTesto, giorniTra, definizioni } from './dati.js';
-import { t, elenco, numero } from './lingua.js';
+import { t, elenco, numero, LINGUE, lingua as linguaOra, usa, imposta } from './lingua.js';
 import { t as tn } from './lingua.js';   // t() dove una variabile locale si chiama già t (arrivaTurno, schedaTurno, piedeSync, schedaNote)
 import { RIDOTTO, attendi, comprimi, conta, dopo, entra, h, lineare, morbido, ogni, premi, tween } from './motore.js';
 import { ESEMPI, interpreta, dice } from './comandi.js';
@@ -1686,7 +1686,21 @@ async function esegui(c) {
     case 'errore': return spiegaIncollato(c.testo);
     case 'diario': return apriDiario(c.progetto);
     case 'diarioOpz': return opzioneDiario(c);
+    case 'lingua': return cambiaLingua(c.codice);
   }
+}
+
+// «lingua inglese», «language italian»…: prima la conferma nella lingua NUOVA, poi si salva e si ricarica (nell'app ricarica
+// tutte le finestre il processo principale, con lingua:imposta; nel browser questa pagina). La stessa lingua: si salva e basta
+async function cambiaLingua(cod) {
+  if (!Object.hasOwn(LINGUE, cod || '')) return rispostaFissa(t('impostazioni.lingua-sconosciuta', { lingue: Object.values(LINGUE).map(l => l.nome).join(', ') }));
+  if (cod === linguaOra) { imposta(cod); return mostraFatto({ testo: t('impostazioni.lingua-gia', { nome: LINGUE[cod].nome }) }); }
+  try { await usa(cod); } catch (e) { console.warn(e); }
+  const testo = t('impostazioni.lingua-ora', { nome: LINGUE[cod].nome });
+  await mostraFatto({ testo, nota: t('impostazioni.lingua-ricarico'), sintesi: testo });
+  await attendi(1400);
+  imposta(cod);
+  if (!DESKTOP) location.reload();
 }
 
 /* ---------- informatica: gli errori spiegati (F3) e il registro onesto (F4) ---------- */

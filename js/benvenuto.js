@@ -1,4 +1,6 @@
 // La prima volta: «Ciao, sono Lode». Una finestra a passi, bianca e nera come la barra.
+// PRIMA DI TUTTO la lingua: le sei, ognuna scritta nella sua lingua, con quella del sistema già scelta (js/lingua.js). Un clic
+// la cambia subito: si salva e la finestra si ricarica nella lingua nuova, di nuovo su questo passo.
 // OBBLIGATORIO: come ti chiami, Obsidian, il cervello locale (AI) e la voce. Senza queste Lode non è Lode.
 // FACOLTATIVO, il «setup veloce»: ateneo e corso, libretto (incollato da Esse3), esami da dare, orario delle lezioni
 // (scritto, incollato o da un file .ics del calendario dell'ateneo), come studi e quanto spesso Lode può proporti cose.
@@ -10,7 +12,8 @@ import * as AI from './ai.js';
 import * as Voce from './voce.js';
 import { leggiOrario as orarioDaFrase, leggiData } from './comandi.js';
 import { GIORNI_BREVI } from './markdown.js';
-import { t, elenco, numero } from './lingua.js';
+import { t, elenco, numero, LINGUE, lingua as linguaOra, imposta } from './lingua.js';
+import { CODICI, nomeSistema, predefinito } from './sistemi.js';
 
 const L = DESKTOP ? window.lodeDesktop : null;
 // la scorciatoia per parlare, come nella barra (su Windows ⌥ Spazio è il menu della finestra)
@@ -20,10 +23,12 @@ const ATENEI = ['Politecnico di Milano', 'Politecnico di Torino', 'Politecnico d
 const NOMI_ESEMPIO = ['Analisi 1', 'Fondamenti di informatica', 'Geometria e algebra lineare', 'Fisica 1', 'Lingua inglese B2', 'Programmazione a oggetti', 'Analisi 2', 'Basi di dati', 'Fisica 2'];
 
 const S = { passo: 0, installa: {}, esami: [], fatti: [], orario: [] };
-const PASSI = [
-  { k: 'ciao', obbl: true }, { k: 'nome', obbl: true }, { k: 'installa', obbl: true }, { k: 'veloce' },
+export const PASSI = [
+  { k: 'lingua', obbl: true }, { k: 'ciao', obbl: true }, { k: 'nome', obbl: true }, { k: 'installa', obbl: true }, { k: 'veloce' },
   { k: 'corso' }, { k: 'libretto' }, { k: 'esami' }, { k: 'orario' }, { k: 'abitudini' }, { k: 'fine' },
 ];
+// il primo passo facoltativo (il «setup veloce»): prima ci sono quelli obbligatori
+const VELOCE = PASSI.findIndex(p => p.k === 'veloce');
 let main;
 
 export function avvia() {
@@ -44,9 +49,9 @@ export function avvia() {
 
 function guscio(contenuto, { avanti = t('benvenuto.avanti'), salta = false, indietro = true, avantiNo = false } = {}) {
   const i = S.passo, p = PASSI[i];
-  const facoltativo = i >= 3 && i < PASSI.length - 1;
+  const facoltativo = i >= VELOCE && i < PASSI.length - 1;
   main.innerHTML = `<div class="bv">
-    <header class="bv-testa"><span class="bv-gemma">${GEMMA}</span><div class="bv-punti">${PASSI.map((_, k) => `<i class="${k < i ? 'fatto' : k === i ? 'ora' : ''}${k === 3 ? ' sep' : ''}"></i>`).join('')}</div><span class="bv-tipo">${i < 3 ? t('benvenuto.obbligatorio') : facoltativo ? t('benvenuto.facoltativo') : ''}</span></header>
+    <header class="bv-testa"><span class="bv-gemma">${GEMMA}</span><div class="bv-punti">${PASSI.map((_, k) => `<i class="${k < i ? 'fatto' : k === i ? 'ora' : ''}${k === VELOCE ? ' sep' : ''}"></i>`).join('')}</div><span class="bv-tipo">${i < VELOCE ? t('benvenuto.obbligatorio') : facoltativo ? t('benvenuto.facoltativo') : ''}</span></header>
     <section class="bv-corpo">${contenuto}</section>
     <footer class="bv-piede">${indietro && i > 0 ? `<button class="btn piano" data-bv="indietro">${t('benvenuto.indietro')}</button>` : '<span></span>'}<div>${salta ? `<button class="btn piano" data-bv="salta">${t('benvenuto.salta')}</button>` : ''}<button class="btn primary" data-bv="avanti"${avantiNo ? ' disabled' : ''}>${avanti}</button></div></footer>
   </div>`;
@@ -56,15 +61,32 @@ function guscio(contenuto, { avanti = t('benvenuto.avanti'), salta = false, indi
   main.querySelector('[data-bv=avanti]').addEventListener('click', () => { if ((PASSI[S.passo].salva?.() ?? true) !== false) vai(1); });
 }
 function vai(d) { S.passo = Math.max(0, Math.min(PASSI.length - 1, S.passo + d)); disegna(); }
-function disegna() { ({ ciao, nome, installa, veloce, corso, libretto, esami, orario, abitudini, fine })[PASSI[S.passo].k](); }
+function disegna() { ({ lingua, ciao, nome, installa, veloce, corso, libretto, esami, orario, abitudini, fine })[PASSI[S.passo].k](); }
 const P = k => PASSI.find(p => p.k === k);
 
 /* ---------- obbligatorio ---------- */
+// la lingua: i nomi sono scritti ognuno nella sua lingua (lang sul bottone, per chi legge lo schermo). «Avanti» la salva
+// (nell'app il main vede che è la stessa e non ricarica niente) e, la prima volta, dà il sistema dei voti della lingua
+// (il portoghese va al Brasile, l'inglese al Regno Unito: js/sistemi.js, predefinito), che si cambia poi in «corso»
+function lingua() {
+  guscio(`<h1>${t('impostazioni.benvenuto-lingua-titolo')}</h1>
+    <p class="bv-sub">${t('impostazioni.benvenuto-lingua-sotto', { comando: esc(t('impostazioni.comando-esempio')) })}</p>
+    <div class="bv-scelte" data-k="lingua">${Object.entries(LINGUE).map(([c, l]) => `<button type="button" class="ld-chip${c === linguaOra ? ' on' : ''}" data-v="${c}" lang="${c}" aria-pressed="${c === linguaOra}"><b>${esc(l.nome)}</b></button>`).join('')}</div>`, { indietro: false });
+  main.querySelectorAll('[data-k=lingua] .ld-chip').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.v === linguaOra) return;
+    main.querySelectorAll('[data-k=lingua] .ld-chip').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); });
+    if (imposta(b.dataset.v) && !L) location.reload();   // nell'app ricarica il main (lingua:imposta), tutte le finestre
+  }));
+  P('lingua').salva = () => {
+    imposta(linguaOra);
+    if (!D.imp.benvenuto && !S.sistemaScelto) { D.profilo.sistema = predefinito(linguaOra); salva(); }
+  };
+}
 function ciao() {
   guscio(`<h1>${t('benvenuto.ciao-titolo')}</h1>
     <p class="bv-sub">${t('benvenuto.ciao-sotto')}</p>
     <p class="bv-nota">${t('benvenuto.ciao-nota')}</p>
-    ${L ? `<p class="bv-nota"><button type="button" class="btn ld-piano" id="bv-altro">${t('benvenuto.altro-computer')} <small>${t('benvenuto.sperimentale')}</small></button></p><div id="bv-collega" hidden></div>` : ''}`, { avanti: t('benvenuto.iniziamo'), indietro: false });
+    ${L ? `<p class="bv-nota"><button type="button" class="btn ld-piano" id="bv-altro">${t('benvenuto.altro-computer')} <small>${t('benvenuto.sperimentale')}</small></button></p><div id="bv-collega" hidden></div>` : ''}`, { avanti: t('benvenuto.iniziamo') });
   main.querySelector('#bv-altro')?.addEventListener('click', collega);
 }
 // «Uso già Lode su un altro computer» (docs/SINCRONIZZAZIONE.md §12): si sceglie il vault nella cartella cloud, si scrive la
@@ -186,10 +208,11 @@ function corso() {
       <label class="bv-campo"><span>${t('benvenuto.tipo')}</span><select id="bv-cfu">${[[180, t('benvenuto.tipo-180')], [120, t('benvenuto.tipo-120')], [300, t('benvenuto.tipo-300')], [360, t('benvenuto.tipo-360')]].map(([v, x]) => `<option value="${v}"${p.cfuTotali === v ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
       <label class="bv-campo"><span>${t('benvenuto.anno')}</span><select id="bv-anno">${elenco('benvenuto.anni').map((a, i) => `<option value="${i + 1}"${p.anno === i + 1 ? ' selected' : ''}>${a}</option>`).join('')}</select></label>
       <label class="bv-campo"><span>${t('benvenuto.lode-vale')}</span><select id="bv-lode">${[30, 31, 32, 33].map(v => `<option${p.lode === v ? ' selected' : ''}>${v}</option>`).join('')}</select><small>${t('benvenuto.lode-nota')}</small></label>
+      <label class="bv-campo"><span>${t('sistemi.scelta')}</span><select id="bv-sistema">${CODICI.map(c => `<option value="${c}"${(p.sistema || predefinito(linguaOra)) === c ? ' selected' : ''}>${esc(nomeSistema(c))}</option>`).join('')}</select><small>${t('impostazioni.sistema-nota')}</small></label>
     </div>`, { salta: true });
   P('corso').salva = () => {
     const v = id => main.querySelector('#' + id).value;
-    Object.assign(D.profilo, { ateneo: v('bv-ateneo').trim(), corso: v('bv-corso').trim(), cfuTotali: +v('bv-cfu'), anno: +v('bv-anno'), lode: +v('bv-lode') }); salva();
+    Object.assign(D.profilo, { ateneo: v('bv-ateneo').trim(), corso: v('bv-corso').trim(), cfuTotali: +v('bv-cfu'), anno: +v('bv-anno'), lode: +v('bv-lode'), sistema: CODICI.includes(v('bv-sistema')) ? v('bv-sistema') : 'it' }); S.sistemaScelto = true; salva();
   };
 }
 // il libretto: incollato dalla pagina «Libretto» di Esse3 (o simili) oppure riga per riga

@@ -13,3 +13,9 @@ export const { t, elenco, usa, LINGUE } = L;
 export const lingua = () => L.lingua;
 // la lingua del sistema (app.getLocale(), «it-IT», «pt-BR»…) se Lode la conosce, altrimenti l'inglese (docs/LINGUE.md)
 export function dalSistema(locale) { const c = String(locale || '').slice(0, 2).toLowerCase(); return Object.hasOwn(LINGUE, c) ? c : 'en'; }
+// la lingua all'avvio: quella scelta (conf.lingua); se no, chi usa già Lode (conf.benvenuto: il benvenuto è fatto) resta in
+// italiano, come prima delle lingue, anche con il sistema in un'altra lingua; se no quella del sistema (js/lingua.js, iniziale)
+const salvata = conf => typeof conf?.lingua === 'string' && Object.hasOwn(LINGUE, conf.lingua);
+export const linguaDiPartenza = (conf, locale) => salvata(conf) ? conf.lingua : conf?.benvenuto ? 'it' : dalSistema(locale);
+// va salvato l'italiano? Una volta sola, all'avvio e prima delle finestre (main.mjs): poi conf.lingua c'è
+export const daFissare = conf => !!conf?.benvenuto && !salvata(conf);
