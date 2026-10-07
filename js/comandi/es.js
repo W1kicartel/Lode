@@ -126,12 +126,13 @@ function interpretaProgetto(testo) {
 }
 
 // un voto detto: 28, 30, 8,5 (anche «8.5»), con la lode: «con matrícula (de honor)», «cum laude», «MH». Vale la scala
-// italiana (18-30) o quella spagnola (0-10, un decimale): il sistema dei voti decide come leggerlo
+// italiana (18-30) o quella spagnola (5-10, un decimale): il sistema dei voti decide come leggerlo. Come in italiano (sotto
+// il 18 niente), un suspenso (0-4,9) non va nel libretto: «me saqué un 3 en física» resta all'AI
 const VOTO = '(\\d{1,2}(?:[.,]\\d{1,2})?)';
 const LODE = '( con matricula(?: de honor)?| matricula(?: de honor)?| mh| con honores| cum laude| con lode| y lode| e lode| lode)?';
 const votoDetto = (x, lode) => {
   const v = Number(x.replace(',', '.'));
-  if (!((Number.isInteger(v) && v >= 18 && v <= 30) || (v >= 0 && v <= 10))) return null;
+  if (!((Number.isInteger(v) && v >= 18 && v <= 30) || (v >= 5 && v <= 10))) return null;
   return { voto: v, lode: !!lode && (v === 30 || v === 10) };
 };
 
@@ -158,7 +159,7 @@ export function interpreta(frase) {
   let m;
 
   // la lingua della barra: «idioma inglés», «cambia el idioma a italiano», «pásate al alemán», «ponlo en francés»
-  if ((m = s.match(/^(?:(?:cambia|cambiar|pon|poner|configura)(?: el)? (?:idioma|lengua)(?: (?:a|al|en))?|(?:idioma|lengua):?(?: (?:a|al|en))?|(?:hablame|habla|respondeme|responde|contestame|escribeme) en|(?:pasa|pasate|pasalo|pasala|cambia|cambialo|ponlo|ponla|ponme|pon la app|pon lode) (?:a|al|en)|(?:la )?app en|en) (\S+)$/)) && linguaDetta(m[1], LINGUE_ES)) return { tipo: 'lingua', codice: linguaDetta(m[1], LINGUE_ES) };
+  if ((m = s.match(/^(?:(?:cambia|cambiar|pon|poner|configura)(?: el)? (?:idioma|lengua)(?: (?:a|al|en))?|(?:idioma|lengua):?(?: (?:a|al|en))?|(?:hablame|habla|respondeme|responde|contestame|escribeme) en|(?:pasa|pasate|pasalo|pasala|cambia|cambiar|cambialo|ponlo|ponla|ponme|pon la app|pon lode) (?:a|al|en)|(?:la )?app en|en) (\S+)$/)) && linguaDetta(m[1], LINGUE_ES)) return { tipo: 'lingua', codice: linguaDetta(m[1], LINGUE_ES) };
   if (/^(?:ayuda|ayudame|\?|que (?:puedes|sabes) hacer|que (?:puedo|se puede) (?:decir|escribir|pedir|hacer)|comandos|lista de comandos)$/.test(s)) return { tipo: 'aiuto' };
   if (/^(?:stop|para|parar|detente|basta|termina|terminar|fin|acaba|corta|cancela)(?: (?:el |la |mi )?(?:focus|timer|temporizador|cronometro|pomodoro|sesion|descanso|pausa))?$/.test(s)) return { tipo: 'ferma' };
   if (/^(?:pausa|pausar|pon(?:lo)? en pausa|pausa (?:el )?(?:timer|temporizador|cronometro)|espera|espera un momento)$/.test(s)) return { tipo: 'sospendi' };
@@ -219,7 +220,8 @@ export function interpreta(frase) {
   if (/^(?:que imprime(?: (?:esto|este codigo|este programa))?|que sale por pantalla|ejercicios? (?:de |en )?(?:c|programacion)|entrename en c)$/.test(s)) return { tipo: 'stampa' };
   if ((m = s.match(/^(?:que imprime(?: (?:esto|este codigo|este programa))?(?: en)?|ejercicios? (?:de|en)|entrename (?:en|con)) (c|java|python)$/))) return { tipo: 'stampa', lingua: m[1] };
   if ((m = T(/^(?:juega|juguemos|jugar|vamos a jugar|juego|minijuego|memory|entrename|entrenamiento|repasame las definiciones|fijame las definiciones|definiciones)\b\s*(.*)$/))) {
-    const r = pulisci(m[1] || ''); return { tipo: 'gioco', corso: r || null };
+    // «juego de definiciones de cálculo 2»: il corso è «cálculo 2»
+    const r = pulisci((m[1] || '').replace(/^(?:con |de )?(?:las |mis )?definiciones\b\s*/i, '')); return { tipo: 'gioco', corso: r || null };
   }
   if (/^(?:abre )?(?:mis |los )?(?:apuntes|obsidian|vault|la nota de hoy|nota de hoy)(?: de hoy| de la clase)?$/.test(s)) return { tipo: 'appunti' };
   // «clase desde el ordenador»: la videoclase (Teams, Zoom, el campus virtual) transcrita desde el audio del ordenador
@@ -272,13 +274,16 @@ export function interpreta(frase) {
   if ((m = T(/^(?:ya )?(?:he aprobado|aprobe|pase|he pasado|supere|he superado|saque (?:el )?apto en|tengo (?:el )?apto en|apto en|me dieron (?:el )?apto en) (?:el examen de |la prueba de |el )?(.+?)(?: \(?apto\)?)?$/)) && !/\d/.test(m[1]) && trovaEsame(pulisci(m[1])))
     return { tipo: 'idoneita', esame: trovaEsame(pulisci(m[1])), nomeDetto: pulisci(m[1]) };
 
-  // focus: «focus 50 en cálculo», «estudia bases de datos una hora», «un pomodoro de 25 minutos». «estudio derecho en
-  // Madrid» (la carrera) resta all'AI: «estudio» da solo non fa partire il timer
-  if ((m = T(/^(?:(?:empieza|empezar|inicia|iniciar|arranca|pon|ponme|haz|hagamos|vamos con|activa|comienza|empecemos) )?(?:un |una |el |la )?(?:(\d{1,3}) ?(?:minutos?|mins?|m) (?:de )?)?(?:focus|pomodoro|temporizador|timer|sesion de estudio|sesion|estudia|estudiar|estudiemos|a estudiar|vamos a estudiar|concentracion|concentrarme)\b\s*(.*)$/))) {
+  // focus: «focus 50 en cálculo», «estudia bases de datos una hora», «un pomodoro de 25 minutos», «voy a estudiar cálculo 2».
+  // «estudio derecho en Madrid» (la carrera) resta all'AI: «estudio» da solo non fa partire il timer. Con il verbo
+  // («estudiar», «estudia») e qualcosa dopo serve un esame del libretto o i minuti: «estudiar medicina en Madrid»,
+  // «estudiar en el extranjero», «estudia conmigo» restano all'AI
+  if ((m = T(/^(?:(?:empieza|empezar|inicia|iniciar|arranca|pon|ponme|haz|hagamos|vamos con|activa|comienza|empecemos|voy a|me pongo a|me voy a poner a) )?(?:un |una |el |la )?(?:(\d{1,3}) ?(?:minutos?|mins?|m) (?:de )?)?(focus|pomodoro|temporizador|timer|sesion de estudio|sesion|estudia|estudiar|estudiemos|a estudiar|vamos a estudiar|concentracion|concentrarme)\b\s*(.*)$/))) {
+    const verbo = /^(?:estudi|a estudiar|vamos a estudiar)/.test(senza(m[2])); m = [m[0], m[1], m[3]];
     let resto = m[2].replace(/^de (?=\d)/i, ''); const mi = m[1] ? { min: +m[1] } : leggiMinuti(resto);
     if (mi?.pezzo) { const i = senza(resto).indexOf(mi.pezzo); if (i >= 0) resto = resto.slice(0, i) + ' ' + resto.slice(i + mi.pezzo.length); }
     resto = pulisci(resto.replace(/\s+/g, ' ').replace(/^de /, '').trim()); const e = resto ? trovaEsame(resto, { anche: 'daFare' }) || trovaEsame(resto) : null;
-    return { tipo: 'focus', min: mi ? Math.min(240, Math.max(1, mi.min)) : null, esame: e, nomeDetto: resto };
+    if (!(verbo && resto && !mi && !e)) return { tipo: 'focus', min: mi ? Math.min(240, Math.max(1, mi.min)) : null, esame: e, nomeDetto: resto };
   }
 
   // «el examen de cálculo es el 15 de enero», «tengo cálculo 2 el 13 de octubre», «cálculo 2 se ha movido al 20 de enero»
@@ -286,10 +291,15 @@ export function interpreta(frase) {
   const QUANDO = '(el .+|en \\d.+|dentro de .+|manana|pasado manana|(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo).*|(?:este|esta|el proximo|la proxima) .+)';
   if ((m = T(new RegExp(`^(?:el |la )?${EX} (?:de |del )?(.+?) (?:es|sera|cae|lo tengo|va a ser) (?:el |la |en |a |para el )?(.+)$`))) || (m = T(new RegExp(`^(?:tengo|me toca|rindo|voy a rendir|hago) (?:(?:el|la|un|una|mi) ${EX} (?:de |del )?)?(.+?) (?:${EX} )?${QUANDO}$`))) || (m = T(new RegExp(`^(?:(?:el|la) ${EX} (?:de |del )|${EX} de )?(.+?) (?:se )?(?:ha )?(?:movido|cambiado|pasado|aplazado|adelantado|retrasado|postergado|movieron|cambiaron|paso|cambio|movio|aplazaron|adelantaron|postergaron) (?:al|a|para el|para|el) (.+)$`)))) {
     const d = leggiData(m[2]), e = trovaEsame(pulisci(m[1]));
-    if (d && (e || (new RegExp(`\\b${EX}\\b`).test(s) && pulisci(m[1]).length >= 3))) return { tipo: 'esame', nome: e?.nome || pulisci(m[1]), cfu: null, data: d.data, esistente: e && !e.fatto ? e : null };
+    // un esame nuovo, fuori dal libretto, solo con «examen», «parcial», «recuperatorio» o «final de …» senza articolo:
+    // «el final de la serie es el lunes», «la prueba de manejo es el martes» restano all'AI
+    const nuovo = /\b(?:examen|parcial|recuperatorio|recuperacion)\b/.test(s) || (/\bfinal\b/.test(s) && !/^(?:la|el|los|las|un|una|mi|tu|su|esta|este) /.test(senza(m[1])));
+    if (d && (e || (nuovo && pulisci(m[1]).length >= 3))) return { tipo: 'esame', nome: e?.nome || pulisci(m[1]), cfu: null, data: d.data, esistente: e && !e.fatto ? e : null };
   }
   // examen nuevo: «examen bases de datos el 15 de enero 9 créditos», «añade el examen de física 2 de 6 ECTS»
-  if ((m = T(/^(?:anade |agrega |nuevo |apunta |apuntame |pon |tengo |hay )?(?:un |el )?(?:examen|parcial|final)(?: final| parcial)?\s*:?\s+(?:de |del )?(.+)$/)) && !/^(?:que|cuales|cuando|proxim|fechas?|calendario|completo|entero|anteriores|viejos|pasados|resueltos|de otros|oral|escrito|tipo test|de la clase)\b/.test(senza(m[1]))) {
+  if ((m = T(/^(?:anade |agrega |nuevo |apunta |apuntame |pon |tengo |hay )?(?:un |el )?(?:examen|parcial|final)(?: final| parcial)?\s*:?\s+(?:de |del )?(.+)$/)) && !/^(?:que|cuales|cuando|proxim|fechas?|calendario|completo|entero|anteriores|viejos|pasados|resueltos|de otros|oral|escrito|tipo test|de la clase)\b/.test(senza(m[1]))
+    // «el final de la serie es el lunes»: «final» senza «examen» vale solo con un nome senza articolo («final de análisis»)
+    && !(!/\b(?:examen|parcial)\b/.test(s) && /^(?:la|el|los|las|un|una|mi|tu|su|esta|este) /.test(senza(m[1])))) {
     let resto = ' ' + m[1].replace(/[,;]/g, ' ') + ' ';
     const c = senza(resto).match(/(?:de |con |vale |por )?(\d{1,2})\s*(?:cfu|creditos?|ects|cr)\b/); let cfu = null; if (c) { cfu = +c[1]; const i = senza(resto).indexOf(c[0]); resto = resto.slice(0, i) + ' ' + resto.slice(i + c[0].length); }
     const d = leggiData(resto); if (d) { const i = senza(resto).indexOf(d.pezzo); resto = i >= 0 ? resto.slice(0, i) + ' ' + resto.slice(i + d.pezzo.length) : norm(resto).replace(d.pezzo, ' '); }
@@ -304,7 +314,7 @@ export function interpreta(frase) {
     if (b >= 66 && b <= 110) return { tipo: 'serve', base: Math.min(110, Math.round(b)) };
     if (b >= 5 && b <= 10) return { tipo: 'serve', base: b };
   }
-  if (/\b(media|promedio|nota media|expediente|mis notas|notas|calificaciones|creditos|ects|como voy|kardex)\b/.test(s) && !/\bmedia hora\b|\bhora y media\b|\bmedia (?:aritmetica|geometrica|ponderada de|movil)\b/.test(s) && !/\b(explica|explicame|significa|calcula|calcular|formula|toma|tomar)\b/.test(s) && (!/\b(que es|que son|cual es|como se)\b/.test(s) || /\bmis?\b/.test(s)) && s.split(' ').length <= 6) return { tipo: 'libretto' };
+  if (/\b(media|promedio|nota media|expediente|mis notas|notas|calificaciones|creditos|ects|como voy|kardex)\b/.test(s) && !/\bmedia hora\b|\bhora y media\b|\bmedia (?:aritmetica|geometrica|ponderada de|movil)\b|\b(?:varianza|desviacion|mediana|moda|distribucion|binomial|normal|poisson|muestra|muestral|poblacion|estadistica|esperanza)\b/.test(s) && !/\b(explica|explicame|significa|calcula|calcular|formula|toma|tomar)\b/.test(s) && (!/\b(que es|que son|cual es|como se)\b/.test(s) || /\bmis?\b/.test(s)) && s.split(' ').length <= 6) return { tipo: 'libretto' };
 
   // repaso
   if ((m = T(/^(?:vamos a |quiero |empieza a |hagamos |hazme |toca )?(?:repas\w*|tarjetas|las tarjetas|mis tarjetas|flashcards|fichas)\s*(.*)$/))) {

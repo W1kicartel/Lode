@@ -254,6 +254,17 @@ export const CASI = [
   ['cálculo 2', { tipo: 'apriEsame', esame: E('Cálculo 2') }],
   ['bases de datos', { tipo: 'apriEsame', esame: E('Bases de datos') }],
   ['calculo', { tipo: 'apriEsame', esame: E('Cálculo 2') }],
+  // dalla verifica: «voy a estudiar …», i suspensos fuori, «final de …» senza articolo, il corso del juego, «cambiar a …»
+  ['voy a estudiar 30 min de calculo 2', { tipo: 'focus', min: 30, esame: E('Cálculo 2'), nomeDetto: 'calculo 2' }],
+  ['me pongo a estudiar fisica 2', { tipo: 'focus', min: null, esame: E('Fisica 2'), nomeDetto: 'fisica 2' }],
+  ['estudiar 2 horas de algo nuevo', { tipo: 'focus', min: 120, esame: null, nomeDetto: 'algo nuevo' }],
+  ['saque un 5 en calculo 2', { tipo: 'voto', voto: 5, lode: false, esame: E('Cálculo 2'), nomeDetto: 'calculo 2' }],
+  ['saqué un ocho en física dos', { tipo: 'voto', voto: 8, lode: false, esame: E('Fisica 2'), nomeDetto: 'física 2' }],
+  ['final de analisis el 3 de marzo', { tipo: 'esame', nome: 'analisis', cfu: null, data: prossimo(3, 2), esistente: null }],
+  ['la prueba de calculo 2 es el 3 de marzo', { tipo: 'esame', nome: 'Cálculo 2', cfu: null, data: prossimo(3, 2), esistente: E('Cálculo 2') }],
+  ['juego de definiciones de calculo 2', { tipo: 'gioco', corso: 'calculo 2' }],
+  ['cambiar a ingles', { tipo: 'lingua', codice: 'en' }],
+  ['cual es mi media', { tipo: 'libretto' }],
 ];
 
 // frasi che non sono comandi: restano all'AI (in spagnolo e anche per l'inglese di riserva)
@@ -285,4 +296,17 @@ export const NON = [
   '¿qué es la media ponderada?',
   'test de Turing',
   'mañana no tengo clase',
+  // dalla verifica: «estudiar» con la carrera o un posto, i suspensos, «final»/«prueba» di tutti i giorni, la media in statistica
+  'estudiar medicina en madrid',
+  'estudiar en el extranjero',
+  'estudia conmigo',
+  'estudiar o trabajar',
+  'voy a estudiar medicina',
+  'me saque un 3 en derecho privado',
+  'y si saco un 4,5 en calculo 2',
+  'el final de la serie es el lunes',
+  'final de la temporada el 3 de marzo',
+  'la prueba de manejo es el martes',
+  'media y varianza de la binomial',
+  'la media de una normal',
 ];
