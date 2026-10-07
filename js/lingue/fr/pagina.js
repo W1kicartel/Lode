@@ -12,7 +12,7 @@ export default {
   'pagina.sotto-carte': { one: '{n} carte à réviser', other: '{n} cartes à réviser' },
   'pagina.sotto-serie': { one: "{n} jour d'affilée", other: "{n} jours d'affilée" },
   'pagina.sotto-niente': "Rien en attente aujourd'hui.",
-  'pagina.sotto-vuoto': 'Tes notes, ton plan de révision et tes cartes. Tout ici, tout à toi.',
+  'pagina.sotto-vuoto': 'Ton relevé de notes, ton plan de révision et tes cartes. Tout ici, tout à toi.',
   // en-tête
   'pagina.sottotitolo': "assistant d'étude",
   'pagina.esporta': 'Exporter',

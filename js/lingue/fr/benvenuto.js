@@ -62,7 +62,7 @@ export default {
   // config rapide
   'benvenuto.veloce-titolo': '{nome}, tu veux la config rapide ?',
   'benvenuto.veloce-sotto': "Parle-moi de ta fac, de tes examens et de tes horaires : dès demain, Lode sait quand tu es en cours, combien il te manque pour le diplôme et quoi réviser avant chaque examen.",
-  'benvenuto.veloce-lista': ['Université et formation', 'Tes notes, collées depuis le site de ta fac ou écrites à la main', 'Les examens à passer, avec les dates', "L'emploi du temps, même depuis le calendrier de la fac (.ics)", 'Comment et quand tu révises'],
+  'benvenuto.veloce-lista': ['Université et formation', 'Ton relevé de notes, collé depuis le site de ta fac ou écrit à la main', 'Les examens à passer, avec les dates', "L'emploi du temps, même depuis le calendrier de la fac (.ics)", 'Comment et quand tu révises'],
   'benvenuto.veloce-nota': "Tout est facultatif, tout se modifie après. Rien ne part sur internet.",
   'benvenuto.facciamolo': "C'est parti",
   // formation
