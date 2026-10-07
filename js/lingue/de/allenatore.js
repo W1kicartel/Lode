@@ -1,0 +1,20 @@
+// Texte des Coachs (Deutsch): die Vorschläge, die die Pille zu zufälligen Zeiten am Tag macht.
+export default {
+  'allenatore.titolo': '{esame} · {quando}',
+  'allenatore.ultima-lezione': '{corso} · letzte Vorlesung',
+  'allenatore.gioco': '2 Minuten mit {n} Definitionen?',
+  'allenatore.gioca': 'Spielen',
+  'allenatore.ripasso': '{n} Karten zu wiederholen, etwa {min} Minuten',
+  'allenatore.ripassa': 'Wiederholen',
+  'allenatore.stelle': 'Lies nochmal die {n} Dinge, die laut Prof „prüfungsrelevant“ sind',
+  'allenatore.rileggi': 'Nochmal lesen',
+  'allenatore.orale': 'Drei schnelle Fragen, wie in der Mündlichen?',
+  'allenatore.interrogami': 'Frag mich ab',
+  'allenatore.programma-ai': 'Heute ist „{argomento}“ dran: zwei Fragen?',
+  'allenatore.programma': 'Heute im Plan: „{argomento}“',
+  'allenatore.apri-piano': 'Plan öffnen',
+  'allenatore.focus-testo': 'Dir fehlen heute {h} Std., um im Plan zu bleiben: ein Fokus von {min}?',
+  'allenatore.focus': 'Fokus',
+  'allenatore.stampa': '{domanda} 1 Minute',
+  'allenatore.prova': 'Los',
+};
