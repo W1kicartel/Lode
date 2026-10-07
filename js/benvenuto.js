@@ -79,7 +79,9 @@ function lingua() {
   }));
   P('lingua').salva = () => {
     imposta(linguaOra);
-    if (!D.imp.benvenuto && !S.sistemaScelto) { D.profilo.sistema = predefinito(linguaOra); salva(); }
+    // solo in memoria: lo scrive il passo «nome» (qui il vault non è ancora scelto, e «Uso già Lode su un altro computer»
+    // nel passo dopo porta i dati suoi)
+    if (!D.imp.benvenuto && !S.sistemaScelto) D.profilo.sistema = predefinito(linguaOra);
   };
 }
 function ciao() {

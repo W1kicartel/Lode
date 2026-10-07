@@ -1694,9 +1694,10 @@ async function esegui(c) {
 // tutte le finestre il processo principale, con lingua:imposta; nel browser questa pagina). La stessa lingua: si salva e basta
 async function cambiaLingua(cod) {
   if (!Object.hasOwn(LINGUE, cod || '')) return rispostaFissa(t('impostazioni.lingua-sconosciuta', { lingue: Object.values(LINGUE).map(l => l.nome).join(', ') }));
-  if (cod === linguaOra) { imposta(cod); return mostraFatto({ testo: t('impostazioni.lingua-gia', { nome: LINGUE[cod].nome }) }); }
+  // il nome dentro la frase viene dal catalogo della lingua stessa («italiano», «español», «Deutsch»: le maiuscole giuste)
+  if (cod === linguaOra) { imposta(cod); return mostraFatto({ testo: t('impostazioni.lingua-gia', { nome: t('impostazioni.lingua-nome') }) }); }
   try { await usa(cod); } catch (e) { console.warn(e); }
-  const testo = t('impostazioni.lingua-ora', { nome: LINGUE[cod].nome });
+  const testo = t('impostazioni.lingua-ora', { nome: linguaOra === cod ? t('impostazioni.lingua-nome') : LINGUE[cod].nome });
   await mostraFatto({ testo, nota: t('impostazioni.lingua-ricarico'), sintesi: testo });
   await attendi(1400);
   imposta(cod);

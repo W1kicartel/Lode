@@ -3,6 +3,7 @@ export default {
   'impostazioni.titolo': 'Lode',
   'impostazioni.descrizione': 'Lode é o assistente de estudo de código aberto para universitários: média, plano para as provas, timer de foco, revisão espaçada e simulado de prova oral com IA. Seus dados ficam no seu computador.',
   'impostazioni.lingua': 'Idioma',
+  'impostazioni.lingua-nome': 'português',
   'impostazioni.lingua-ora': 'Lode agora fala {nome}.',
   'impostazioni.lingua-ricarico': 'Só um instante: estou recarregando a barra.',
   'impostazioni.lingua-gia': 'Lode já fala {nome}.',

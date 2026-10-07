@@ -617,6 +617,8 @@ app.whenReady().then(async () => {
   else Menu.setApplicationMenu(null);   // Windows e Linux: niente menu inglese nelle finestre, né Ctrl+R, Ctrl+W, Ctrl+Shift+I
   leggiConf();
   if (process.env.LODE_VAULT) conf.vault = process.env.LODE_VAULT;
+  // le prove dell'app (test/prova-app.mjs) girano in italiano anche sulle macchine in inglese, come quelle in node
+  if (Object.hasOwn(LINGUE, process.env.LODE_LINGUA || '')) conf.lingua = process.env.LODE_LINGUA;
   if (daFissare(conf)) { conf.lingua = 'it'; salvaConf(); }   // chi usa già Lode resta in italiano (docs/LINGUE.md)
   try { await usa(linguaScelta()); } catch (x) { console.error('Lode: lingua non caricata, resta l\'italiano', x); }
   if (!conf.vault) {

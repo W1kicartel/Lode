@@ -50,7 +50,7 @@ h('div', 'riga', `<b>${esc(e.nome)}</b> ${t('barra.traGiorni', { n })}`);   // e
 
 Nel browser lo fa `iniziale()` di `js/lingua.js`. Nell'app lo fa il processo principale (`desktop/lingua.mjs`: `linguaDiPartenza`, `daFissare`), che la dà alla barra con `lingua:leggi` (sincrono, nel preload) e la usa anche per i suoi testi: menu dell'icona, finestre di sistema.
 
-Nelle prove in node la lingua è l'italiano, salvo `LODE_LINGUA=<codice>`. Per cambiare lingua si chiama `imposta(cod)`, che salva la scelta. Nell'app la passa al processo principale con `lingua:imposta`, che ricarica tutte le finestre (barra, quadro, benvenuto), ma solo se la lingua cambia davvero. Nel browser la pagina si ricarica da sola (`location.reload()`).
+Nelle prove in node la lingua è l'italiano, salvo `LODE_LINGUA=<codice>`; nell'app `LODE_LINGUA` vale come `conf.lingua` (test/prova-app.mjs la mette a `it`, così gira in italiano anche sulle macchine in inglese). Per cambiare lingua si chiama `imposta(cod)`, che salva la scelta. Nell'app la passa al processo principale con `lingua:imposta`, che ricarica tutte le finestre (barra, quadro, benvenuto), ma solo se la lingua cambia davvero. Nel browser la pagina si ricarica da sola (`location.reload()`).
 
 La lingua si sceglie:
 - nel benvenuto, come primo passo: le sei lingue, ognuna scritta nella sua lingua, con quella di adesso già scelta. Un clic cambia subito la lingua del benvenuto;

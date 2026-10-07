@@ -118,7 +118,10 @@ for (const c of Object.keys(L.LINGUE)) {
   await L.usa(c);
   const es = L.t('impostazioni.comando-esempio'), r = R[c].interpreta(es);
   prova(`${c}: «${es}» cambia lingua`, r?.tipo === 'lingua' && r.codice !== c && Object.hasOwn(L.LINGUE, r.codice), JSON.stringify(r));
-  prova(`${c}: la conferma è nella lingua nuova e ha il nome`, L.t('impostazioni.lingua-ora', { nome: L.LINGUE[c].nome }).includes(L.LINGUE[c].nome));
+  // il nome dentro la frase: «Lode ora parla italiano.», «Lode ahora habla español.», «Lode spricht jetzt Deutsch.»
+  const nome = L.t('impostazioni.lingua-nome');
+  prova(`${c}: la conferma è nella lingua nuova e ha il nome`, nome.toLowerCase() === L.LINGUE[c].nome.toLowerCase() && L.t('impostazioni.lingua-ora', { nome }).includes(nome) && L.t('impostazioni.lingua-gia', { nome }).includes(nome));
+  prova(`${c}: il nome della lingua con le maiuscole giuste dentro la frase`, nome === (['en', 'de'].includes(c) ? L.LINGUE[c].nome : L.LINGUE[c].nome.toLowerCase()), nome);
   prova(`${c}: titolo e descrizione per index.html`, L.t('impostazioni.titolo') === 'Lode' && L.t('impostazioni.descrizione').length > 60 && !L.t('impostazioni.descrizione').includes('"'));
 }
 await L.usa('it');
@@ -133,6 +136,8 @@ prova('cambiaLingua: lingua sconosciuta → le sei lingue', /if \(!Object\.hasOw
 const iUsa2 = es.indexOf('await usa(cod)'), iConf = es.indexOf("t('impostazioni.lingua-ora'"), iImp = es.lastIndexOf('imposta(cod);'), iRic = es.indexOf('if (!DESKTOP) location.reload();');
 prova('cambiaLingua: prima la conferma nella lingua nuova, poi si salva e si ricarica (nel browser; nell\'app il main)', iUsa2 > 0 && iUsa2 < iConf && iConf < iImp && iImp < iRic, es);
 const bv = leggi('js/benvenuto.js');
+prova('cambiaLingua: il nome della lingua dal suo catalogo', es.includes("t('impostazioni.lingua-nome')") && !es.includes("{ nome: LINGUE[cod].nome }) })"));
+prova('benvenuto: il passo della lingua non scrive i dati (vault non ancora scelto)', /P\('lingua'\)\.salva = \(\) => \{[^}]*predefinito\(linguaOra\);\s*\};/.test(bv) && !/P\('lingua'\)\.salva = \(\) => \{[^}]*salva\(\)/.test(bv));
 prova('benvenuto: la lingua è il primo passo, obbligatorio', /export const PASSI = \[\s*\{ k: 'lingua', obbl: true \}, \{ k: 'ciao', obbl: true \}/.test(bv));
 prova('benvenuto: le sei lingue, ognuna nella sua lingua, quella di adesso già scelta', bv.includes('Object.entries(LINGUE).map(([c, l]) =>') && bv.includes('lang="${c}"') && bv.includes("${c === linguaOra ? ' on' : ''}"));
 prova('benvenuto: un clic cambia subito la lingua (salva e ricarica)', bv.includes("if (imposta(b.dataset.v) && !L) location.reload();"));
@@ -142,6 +147,9 @@ const pg = leggi('js/pagina.js');
 prova('Impostazioni: la lingua e il sistema dei voti', pg.includes('<select name="lingua">') && pg.includes('<select name="sistema">') && pg.includes("sistema: CODICI.includes(f.get('sistema'))") && pg.includes('imposta(nuova); if (!DESKTOP) location.reload();'));
 const sw = leggi('sw.js'), ind = leggi('js/lingue/indice.js');
 prova('sw.js e indice.js: l\'area impostazioni e tutti i riconoscitori', ind.includes("'impostazioni'") && Object.keys(L.LINGUE).every(c => sw.includes(`'js/lingue/${c}/impostazioni.js'`) && sw.includes(`'js/comandi/${c}.js'`)));
+
+const mainSrc = leggi('desktop/main.mjs');
+prova('app: LODE_LINGUA vale come conf.lingua (prova-app in italiano anche su Windows in inglese)', mainSrc.includes("if (Object.hasOwn(LINGUE, process.env.LODE_LINGUA || '')) conf.lingua = process.env.LODE_LINGUA;") && mainSrc.indexOf('process.env.LODE_LINGUA') < mainSrc.indexOf('await usa(linguaScelta())') && leggi('test/prova-app.mjs').includes("LODE_LINGUA: 'it'"));
 
 /* ---------- 4. il sistema dei voti nei dati ---------- */
 prova('VUOTO: profilo.sistema è l\'Italia', Dati.VUOTO().profilo.sistema === 'it');

@@ -257,7 +257,7 @@ console.log('Vault di prova:', VAULT);
 const LIMITE = +process.env.LODE_LIMITE_MIN || 100;
 
 const out = await new Promise(ok => {
-  const p = spawn(ELECTRON, ['.'], { cwd: DESKTOP, env: { ...process.env, LODE_DATI: join(DIR, 'dati'), LODE_VAULT: VAULT, LODE_OBSIDIAN_DIR: join(DIR, 'obsidian'), LODE_NON_APRIRE: '1', LODE_PROVA: join(DIR, 'passi.json'), LODE_ESCI: '1', ...(FOTO ? { LODE_FOTO: FOTO } : {}),
+  const p = spawn(ELECTRON, ['.'], { cwd: DESKTOP, env: { ...process.env, LODE_DATI: join(DIR, 'dati'), LODE_VAULT: VAULT, LODE_LINGUA: 'it', LODE_OBSIDIAN_DIR: join(DIR, 'obsidian'), LODE_NON_APRIRE: '1', LODE_PROVA: join(DIR, 'passi.json'), LODE_ESCI: '1', ...(FOTO ? { LODE_FOTO: FOTO } : {}),
     LODE_PROGETTO: LAB, LODE_CONFERMA_AUTO: '1', LODE_QUIETE_MS: '1500', LODE_FATTO_MS: '2000',
     // «la tua AI» in formato OpenAI: la base la sceglie il main (js/fornitori.js); nelle prove è il server di Ollama
     LODE_AI_BASE: 'http://127.0.0.1:11434/v1' } });
