@@ -5,7 +5,7 @@
 // Non scrive mai da sola: ogni modifica ai dati arriva come proposta con «Conferma / Annulla».
 import { D, cfuFatti, dataLunga, fatti, media, num, oggi, prossimi, daRipassare, lezioni, lezioneOra, sistemaVoti, votoFinale } from './dati.js';
 import * as S from './sistemi.js';
-import { ESEMPI } from './comandi.js';
+import { ESEMPI, PAROLE } from './comandi.js';
 import { ESEMPI as ESEMPI_IT } from './comandi/it.js';
 import { FORNITORI } from './fornitori.js';
 import { t, lingua } from './lingua.js';
@@ -240,7 +240,7 @@ export const SISTEMA_ORALE = nome => `Sei un docente universitario${italiano() ?
 Regole: una domanda alla volta, come all'orale vero, partendo da una domanda di apertura ampia («mi parli di…») e poi approfondendo su ciò che lo studente dice.
 Dopo ogni risposta: una riga di valutazione franca (cosa era giusto, cosa mancava o era impreciso, in una frase), poi la domanda successiva.
 Breve: massimo 70 parole per turno. Solo **grassetto** come formattazione, niente LaTeX.
-Se ti dà materiale (carte o appunti), basa le domande su quello. Dopo 5 domande, o se lo studente dice «basta» o «voto», chiudi con: **Voto: NN/30** e due righe su cosa ripassare prima dell'appello. Sii realistico, non generoso.`;
+Se ti dà materiale (carte o appunti), basa le domande su quello. Dopo 5 domande, o se lo studente dice ${lingua === 'it' ? '«basta» o «voto»' : `«${PAROLE.voto[0]}» o «${PAROLE.voto[1]}»`}, chiudi con: **Voto: NN/30** e due righe su cosa ripassare prima dell'appello. Sii realistico, non generoso.`;
 
 // i file trascinati diventano blocchi per Claude: PDF e immagini così come sono, il testo come testo
 export async function bloccoFile(file) {
