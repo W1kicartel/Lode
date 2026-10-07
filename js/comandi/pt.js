@@ -175,7 +175,7 @@ export function interpreta(frase) {
   // «deixa-me explicar: green», «eu explico as séries de potências»: lo studente spiega, Lode controlla cosa ha detto
   if ((m = casa(/^(?:deixa-me explicar|deixa eu explicar|deixe-me explicar|me deixa explicar|deixa que eu explico|eu explico|explico eu|eu te explico|vou-te explicar|vou te explicar|eu vou explicar|vou explicar)\b(?: isso| isto)?\s*:?\s*(.*)$/, t))) return { tipo: 'spiego', q: pulisci(m[1] || '') };
   // le domande uscite agli esami: «perguntas de exame de cálculo 2: …» (una per riga)
-  if ((m = casa(/^(?:(?:aqui estao|aqui vao|cola|colar|adiciona|adicionar) )?(?:as )?(?:perguntas|questoes) (?:de exame|dos exames(?: anteriores| passados)?|do exame|que sairam(?: no exame)?|que cairam(?: na prova| no exame)?|das provas anteriores|de provas anteriores)(?:\s+(?:de|da|do|das|dos|em|para|pra)\b)?\s*([^:\n]*?)\s*(?:[:\n]([\s\S]*))?$/i, grezzo0))) {
+  if ((m = casa(/^(?:(?:aqui estao|aqui vao|cola|colar|adiciona|adicionar) )?(?:as )?(?:perguntas|questoes) (?:de exame|de prova|dos exames(?: anteriores| passados)?|do exame|da prova|que sairam(?: no exame)?|que cairam(?: na prova| no exame)?|das provas anteriores|de provas anteriores)(?:\s+(?:de|da|do|das|dos|em|para|pra)\b)?\s*([^:\n]*?)\s*(?:[:\n]([\s\S]*))?$/i, grezzo0))) {
     const nome = pulisci(numeri(m[1]).toLowerCase()); return { tipo: 'domande', esame: nome ? trovaEsame(nome) : null, nomeDetto: nome, testo: (m[2] || '').trim() };
   }
   // i temi d'esame (js/temi.js): «exames antigos de cálculo 2: Exercício 1 …», «provas antigas de mecânica»; «exercício de
@@ -211,13 +211,13 @@ export function interpreta(frase) {
   }
   if (/^(?:abre |abrir )?(?:os |as )?(?:meus |minhas )?(?:apontamentos|anotacoes|notas da aula|obsidian|vault|cofre|a nota|nota)(?: de hoje| da aula| do dia)?$/.test(u)) return { tipo: 'appunti' };
   // «aula do computador»: la videoaula (Teams, Zoom, la plataforma online) trascritta dall'audio del computer
-  if ((m = casa(/^(?:(?:transcreve|transcrever|transcreva|grava|gravar|ouve|ouvir|escuta|escutar)(?: (?:a|esta|essa|uma|o))? ?(?:videoaula|video-aula|video aula|video|audio do (?:computador|pc|portatil|mac)|aula (?:do|no|pelo) (?:computador|pc|portatil|mac|browser|navegador)|aula online|aula gravada|aula remota)|(?:aula|videoaula) do (?:computador|pc|portatil|mac)|(?:ouve|escuta) o (?:computador|pc|portatil|mac))\b\s*(?:de |da |do |para )?(.*)$/, t))) return { tipo: 'trascrivi', sorgente: 'computer', corso: pulisci(m[1] || '') || null };
+  if ((m = casa(/^(?:(?:transcreve|transcrever|transcreva|grava|gravar|ouve|ouvir|escuta|escutar)(?: (?:a|esta|essa|uma|o))? ?(?:videoaula|video-aula|video aula|video|audio do (?:computador|pc|portatil|notebook|laptop|mac)|aula (?:do|no|pelo) (?:computador|pc|portatil|notebook|laptop|mac|browser|navegador)|aula online|aula gravada|aula remota)|(?:aula|videoaula) do (?:computador|pc|portatil|notebook|laptop|mac)|(?:ouve|escuta) o (?:computador|pc|portatil|notebook|laptop|mac))\b\s*(?:de |da |do |para )?(.*)$/, t))) return { tipo: 'trascrivi', sorgente: 'computer', corso: pulisci(m[1] || '') || null };
   if (/^(?:transcreve|transcrever|transcreva|grava|gravar|grave)$|^(?:transcreve|transcrever|transcreva|grava|gravar|grave|ouve|escuta)(?: (?:a|toda a|esta|essa))? aula\b|^(?:comeca|comecar|inicia|iniciar|liga|ativa) (?:a )?(?:transcricao|gravacao)/.test(u)) return { tipo: 'trascrivi' };
   if (/^(?:repete|repetir|repita|repete isso|repete (?:a ultima frase|os ultimos \d+ segundos)|o que (?:e que )?(?:ele|ela|o prof|o professor|a professora|o stor|a stora|o docente) (?:acabou de dizer|disse)|que disse (?:ele|ela|o prof|o professor)|nao percebi|nao entendi|perdi (?:alguma coisa|uma frase|isso))$/.test(u)) { const sec = +(u.match(/(\d+) segundos/)?.[1] || 60); return { tipo: 'ripeti', sec: Math.min(90, sec) }; }
   if (/^(?:desliga|desligar|desativa|desativar|para|chega de)(?: o)? (?:repete|repetir)$/.test(u)) return { tipo: 'spegniRipeti' };
   if ((m = u.match(/^(?:sugestoes|propostas|dicas)\s+(nunca|desligadas|poucas|normais|frequentes|muitas)$|^(poucas|normais|frequentes|muitas) (?:sugestoes|propostas|dicas)$|^(?:desliga|desativa|chega de|sem mais|para com)(?: as)? (?:sugestoes|propostas|dicas)$/))) { const l = m[1] || m[2]; return { tipo: 'proposte', livello: !l || /nunca|deslig/.test(l) ? 'mai' : /poucas/.test(l) ? 'poco' : /frequentes|muitas/.test(l) ? 'spesso' : 'normale' }; }
   if (/^(?:sugere(?:-me)?|sugira|me sugere|propoe(?:-me)?|me propoe|da-me|me da) (?:algo|alguma coisa|uma revisao|um jogo)$|^o que (?:e que )?(?:posso|devo) fazer (?:agora|a seguir)$|^o que (?:e que )?(?:devo |posso )?rever$|^o que (?:eu )?reviso$/.test(u)) return { tipo: 'proponi' };
-  if ((m = casa(/^(?:partilha|partilhar|compartilha|compartilhar|manda|mandar|envia|enviar|passa)(?: a| as| os)? (?:transcricao|aula|apontamentos|anotacoes|sebenta)\b\s*(.*)$/, t))) { const r = pulisci(m[1].replace(/^(?:com|aos|para os|pros|pra|para|a|com os) (?:os )?(?:meus )?(?:colegas(?: de turma)?|amigos)\s*/i, '')); return { tipo: 'condividi', corso: r || null }; }
+  if ((m = casa(/^(?:partilha|partilhar|compartilha|compartilhar|manda|mandar|envia|enviar|passa)(?: a| as| os)? (?:transcricao|aula|apontamentos|anotacoes|sebenta|apostila)\b\s*(.*)$/, t))) { const r = pulisci(m[1].replace(/^(?:com|aos|para os|pros|pra|para|a|com os) (?:os )?(?:meus )?(?:colegas(?: de turma)?|amigos)\s*/i, '')); return { tipo: 'condividi', corso: r || null }; }
   if (/^(?:para|parar|termina|terminar|acaba|acabar|fecha|fechar|chega de)(?: a)? (?:transcricao|gravacao)|^(?:para|parar|pare) de (?:gravar|transcrever)$|^(?:a )?aula (?:acabou|terminou|chegou ao fim)$|^fim da aula$/.test(u)) return { tipo: 'fineTrascrizione' };
   if (/^(?:pausa|pausar|poe em pausa|suspende|suspender)(?: a)? (?:transcricao|gravacao)/.test(u)) return { tipo: 'pausaTrascrizione' };
   if (/^(?:retoma|retomar|continua|continuar|recomeca)(?: a)? (?:transcricao|gravacao)/.test(u)) return { tipo: 'riprendiTrascrizione' };
@@ -228,11 +228,11 @@ export function interpreta(frase) {
     const m = u.match(/^(?:(?:a )?minha (?:ia|ai)|ia|ai|inteligencia artificial|(?:a )?(?:minha )?chave(?: (?:da )?api)?|api ?key|(?:conecta|conectar|liga|ligar|usa|usar|define|definir|adiciona|adicionar|poe|coloca)(?: a chave(?: d[oae])?| a minha| o| a)? (claude|anthropic|chatgpt|openai|gpt|gemini|google|mistral|groq|openrouter|deepseek|ia|a minha ia|minha ia|uma chave|chave))$/);
     if (m) return { tipo: 'ai', fornitore: FORN[m[1]] || null }; }
   // a sincronização entre computadores
-  if (/^(?:para|parar|deixa|deixar|desliga|desativa|chega)(?: de)?(?: a)? (?:sincronizar|sincronizacao|sync)\b|^para (?:neste|nesse) (?:computador|pc|portatil|mac)\b/.test(u)) return { tipo: 'sincronizza', cosa: 'smetti' };
+  if (/^(?:para|parar|deixa|deixar|desliga|desativa|chega)(?: de)?(?: a)? (?:sincronizar|sincronizacao|sync)\b|^para (?:neste|nesse) (?:computador|pc|portatil|notebook|laptop|mac)\b/.test(u)) return { tipo: 'sincronizza', cosa: 'smetti' };
   if (/^(?:muda|mudar|altera|alterar|troca|trocar|nova)(?: a)? (?:palavra-passe|password|senha)\b|^(?:esqueci|esqueci-me)(?: da| a)? (?:palavra-passe|password|senha)\b/.test(u)) return { tipo: 'sincronizza', cosa: 'password' };
   if (/^desbloqueia(?:r)?(?: (?:a )?sincronizacao| os (?:meus )?dados| o lode)?$|^desbloquear$/.test(u)) return { tipo: 'sincronizza', cosa: 'sblocca' };
-  if (/^(?:liga|ligar|conecta|conectar|adiciona|adicionar) (?:outro|mais um) (?:computador|pc|portatil|mac)\b/.test(u)) return { tipo: 'sincronizza', cosa: 'altro' };
-  if (/^(?:ja uso|ja tenho|uso|liga-me a|conecta-me a)(?: o)?(?: lode)? (?:noutro|num outro|em outro|no outro|de outro|outro) (?:computador|pc|portatil|mac)\b/.test(u)) return { tipo: 'sincronizza', cosa: 'collega' };
+  if (/^(?:liga|ligar|conecta|conectar|adiciona|adicionar) (?:outro|mais um) (?:computador|pc|portatil|notebook|laptop|mac)\b/.test(u)) return { tipo: 'sincronizza', cosa: 'altro' };
+  if (/^(?:ja uso|ja tenho|uso|liga-me a|conecta-me a)(?: o)?(?: lode)? (?:noutro|num outro|em outro|no outro|de outro|outro) (?:computador|pc|portatil|notebook|laptop|mac)\b/.test(u)) return { tipo: 'sincronizza', cosa: 'collega' };
   if (/^(?:sincroniza|sincronizar|sincronizacao|sync)\b|^(?:liga|ativa|ativar|gere|gerir|abre)(?: a)? sincronizacao\b/.test(u)) return { tipo: 'sincronizza', cosa: null };
   // preparar o computador: só o verbo e o que se prepara («instala o modelo», «configura o obsidian»), não «prepara-me um resumo»
   if ((m = u.match(/^(?:prepara|preparar|configura|configurar|instala|instalar)(?: (?:o|a|os|tudo|o lode|tudo para))?(?: (obsidian|modelo|cerebro|ollama|gemma|qwen|ia)(?: local)?)?$/))) return { tipo: 'prepara', cosa: m[1] === 'obsidian' ? 'obsidian' : m[1] ? 'cervello' : null };
@@ -402,48 +402,49 @@ export function leggiLavoro(testo) {
   return null;
 }
 
-// gli stessi esempi dell'italiano, nello stesso ordine (spiegazioni in portoghese europeo, come il catalogo pt)
+// gli stessi esempi dell'italiano, nello stesso ordine (spiegazioni in portoghese del Brasile, come il catalogo pt: «você»,
+// celular, anotações, prova; il riconoscitore capisce anche le forme del Portogallo)
 export const ESEMPI = [
-  ['foco 50 em cálculo 2', 'arranca o temporizador e conta as horas'],
-  ['tive 28 a física', 'regista a nota e atualiza a média'],
-  ['exame de bases de dados a 15 de janeiro 9 ects', 'acrescenta a data do exame'],
-  ['quanto preciso para 110', 'a média de que precisas daqui até ao fim'],
+  ['foco 50 em cálculo 2', 'inicia o cronômetro e conta as horas'],
+  ['tirei 28 em física', 'registra a nota e atualiza a média'],
+  ['prova de banco de dados dia 15 de janeiro 9 créditos', 'adiciona a data da prova'],
+  ['quanto preciso para 110', 'a média que você precisa daqui até o fim'],
   ['e se eu tirar 30 em cálculo 2', 'simula a média'],
-  ['programa de cálculo 2', 'cola o programa: mapa dos temas e plano até ao exame'],
-  ['perguntas de exame de cálculo 2: …', 'as do grupo da cadeira: sobem no plano'],
-  ['exames antigos de cálculo 2: …', 'os exercícios de um exame antigo: um por dia, sobre os temas de hoje'],
-  ['exame completo de cálculo 2', 'um exame antigo inteiro, com o tempo real: como correu dizes tu'],
-  ['deixa-me explicar: teorema de Green', 'explicas um tema, o Lode diz-te o que deixaste de fora'],
-  ['quiz de cálculo 2', 'perguntas de escolha múltipla: treino, ou simulação de exame cronometrada'],
+  ['programa de cálculo 2', 'cole a ementa: mapa dos temas e plano até a prova'],
+  ['perguntas de prova de cálculo 2: …', 'as do grupo da disciplina: sobem no plano'],
+  ['provas antigas de cálculo 2: …', 'os exercícios de uma prova antiga: um por dia, sobre os temas de hoje'],
+  ['prova completa de cálculo 2', 'uma prova antiga inteira, com o tempo real: como foi, quem diz é você'],
+  ['deixa eu explicar: teorema de Green', 'você explica um tema, o Lode diz o que ficou de fora'],
+  ['quiz de cálculo 2', 'perguntas de múltipla escolha: treino, ou simulado cronometrado'],
   ['transcreve a videoaula de direito civil', 'do áudio do computador: para quem estuda em casa'],
-  ['conecta o moodle', 'ficheiros novos e prazos da plataforma da tua universidade'],
-  ['agentes', 'liga o Claude Code, o Codex, o Cursor…: o Lode diz-te o que fizeram mesmo nos teus projetos'],
-  ['rever cálculo 2', 'os cartões de hoje'],
+  ['conecta o moodle', 'arquivos novos e prazos da plataforma da sua universidade'],
+  ['agentes', 'conecta o Claude Code, o Codex, o Cursor…: o Lode diz o que eles fizeram de verdade nos seus projetos'],
+  ['revisar cálculo 2', 'os cartões de hoje'],
   ['cartão: teorema de Green = …', 'um cartão rápido'],
-  ['exporta para o anki', 'cartões e definições num ficheiro para o Anki, um baralho por cadeira'],
-  ['revisão de bolso', 'os cartões de amanhã numa nota, para fazer no telemóvel com o Obsidian'],
-  ['aula cálculo 2 segunda e quarta 9-11 sala 7', 'o horário: o Lode sabe quando estás em aula'],
-  ['trabalho segunda quarta sexta 14-19', 'os turnos: o plano só usa as horas livres reais, com meia hora para a viagem'],
-  ['plano da semana', 'todos os exames num só calendário, ao minuto: o que cabe e o que não cabe'],
-  ['★ o teorema de Green sai sempre', 'em aula: marca o que sai no exame'],
+  ['exporta para o anki', 'cartões e definições num arquivo para o Anki, um baralho por disciplina'],
+  ['revisão de bolso', 'os cartões de amanhã numa nota, para fazer no celular com o Obsidian'],
+  ['aula cálculo 2 segunda e quarta 9-11 sala 7', 'o horário: o Lode sabe quando você está em aula'],
+  ['trabalho segunda quarta sexta 14-19', 'os turnos: o plano só usa as horas livres de verdade, com meia hora para o trajeto'],
+  ['plano da semana', 'todas as provas num só calendário, minuto a minuto: o que cabe e o que não cabe'],
+  ['★ o teorema de Green sempre cai', 'em aula: marca o que cai na prova'],
   ['def: gradiente = vetor das derivadas parciais', 'em aula: uma definição na nota'],
   ['jogar', 'dois minutos sobre as definições da última aula'],
-  ['transcreve a aula', 'em aula: a aula inteira em apontamentos, fórmulas incluídas, guardada no Obsidian'],
-  ['arruma a aula', 'da transcrição a apontamentos limpos (IA)'],
+  ['transcreve a aula', 'em aula: a aula inteira em anotações, fórmulas incluídas, salva no Obsidian'],
+  ['organiza a aula', 'da transcrição a anotações limpas (IA)'],
   ['repete', 'em aula: o que o professor disse nos últimos 60 segundos'],
-  ['IA', 'liga a tua IA preferida (Claude, ChatGPT, Gemini, Mistral…), pagas o que usas'],
-  ['partilha a transcrição', 'a aula para os colegas: AirDrop, WhatsApp, email'],
-  ['fecha a aula', 'definições e ★ tiradas dos apontamentos (IA)'],
-  ['abre o glossário', 'salta para uma página do vault'],
-  ['faz-me perguntas sobre bases de dados', 'simula a oral (com IA)'],
+  ['IA', 'conecta a sua IA preferida (Claude, ChatGPT, Gemini, Mistral…): você paga o que usar'],
+  ['compartilha a transcrição', 'a aula para os colegas: AirDrop, WhatsApp, e-mail'],
+  ['fecha a aula', 'definições e ★ tiradas das anotações (IA)'],
+  ['abre o glossário', 'vai para uma página do vault'],
+  ['me faz perguntas sobre banco de dados', 'simula a prova oral (com IA)'],
   ['o que imprime', 'exercícios de C: a resposta é calculada pelo Lode, não por uma IA'],
   ['o que imprime em python', 'os mesmos exercícios em Python (ou em Java: «o que imprime em java»)'],
-  ['segue o projeto', 'vigia a pasta do laboratório: o que muda e se o testaste'],
-  ['testa o projeto', 'compila e corre os testes .in/.out, depois de confirmares'],
-  ['explica o erro', 'copia o erro do terminal: explico-to em português, um passo de cada vez'],
+  ['segue o projeto', 'acompanha a pasta do laboratório: o que muda e se você testou'],
+  ['testa o projeto', 'compila e roda os testes .in/.out, depois que você confirmar'],
+  ['explica o erro', 'copie o erro do terminal: eu explico em português, um passo de cada vez'],
   ['diário do projeto', 'abre no Obsidian o diário de hoje'],
-  ['para de seguir', 'o Lode deixa de vigiar a pasta e apaga as suas cópias'],
-  ['sincroniza entre computadores', 'o mesmo Lode em dois ou três computadores, com a pasta na nuvem que já tens'],
+  ['para de seguir', 'o Lode para de acompanhar a pasta e apaga as cópias dele'],
+  ['sincroniza entre computadores', 'o mesmo Lode em dois ou três computadores, com a pasta na nuvem que você já tem'],
 ];
 
 // as palavrinhas dentro dos cartões (js/comandi/comune.js, detto()): confirmar, cancelar, terminar a prova oral

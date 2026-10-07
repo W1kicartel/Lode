@@ -71,6 +71,7 @@ export const CASI = [
   ['perguntas de exame de cálculo 2: Teorema de Green?', { tipo: 'domande', esame: E('Cálculo 2'), nomeDetto: 'cálculo 2', testo: 'Teorema de Green?' }],
   ['perguntas que saíram em mecânica\nGreen?', { tipo: 'domande', esame: E('Mecânica'), nomeDetto: 'mecânica', testo: 'Green?' }],
   ['perguntas dos exames anteriores', { tipo: 'domande', esame: null, nomeDetto: '', testo: '' }],
+  ['perguntas de prova de cálculo 2: Teorema de Green?', { tipo: 'domande', esame: E('Cálculo 2'), nomeDetto: 'cálculo 2', testo: 'Teorema de Green?' }],
   ['exames antigos de cálculo 2: Exercício 1. Calcula o limite', { tipo: 'temi', esame: E('Cálculo 2'), nomeDetto: 'cálculo 2', testo: 'Exercício 1. Calcula o limite' }],
   ['provas antigas de mecânica', { tipo: 'temi', esame: E('Mecânica'), nomeDetto: 'mecânica', testo: '' }],
   ['dá-me um exercício', { tipo: 'temi', esame: null, nomeDetto: '', testo: '' }],
