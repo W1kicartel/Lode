@@ -72,6 +72,21 @@ Español neutro (España y América Latina), «tú». Frasi corte, dirette, amic
 | studio libero | estudio libre | — |
 | benvenuto | bienvenida | — |
 | impostazioni | ajustes | «Configuración» in Windows; «ajustes» è corto e neutro. Per i menu di sistema si citano i loro nomi spagnoli. |
+| ciclo / giro (del ciclo) | bucle / vuelta | «Bucle» in Spagna e America Latina; «vuelta» per ogni iterazione, più naturale di «iteración» per chi comincia. |
+| riga (di codice) | línea | «Línea 5»; «fila» solo per le righe di stelle in «¿Qué imprime?». |
+| file | archivo | «Fichero» è solo spagnolo di Spagna; «archivo» si capisce ovunque. |
+| prova (.in/.out) / provato | prueba / probado | «Pruebas .in/.out»; «¿Probado?». I «test» degli agenti restano «tests». |
+| puntatore / indirizzo | puntero / dirección | Termini dei corsi di C. |
+| stringa | cadena | «Cadena» nei corsi; il tipo `String` resta com'è. |
+| array | array | Si dice così nei corsi; «arreglo» solo in parte dell'America Latina. |
+| graffa / quadre / tonde | llave / corchetes / paréntesis | — |
+| rientro (Python) | sangría | Termine standard. |
+| linker | enlazador (linker) | La prima volta in una frase con «(linker)», perché il messaggio originale è in inglese. |
+| avviso (del compilatore) | aviso | «Warning» resta nel messaggio originale. |
+| valori a caso | valor basura | Espressione dei corsi di C. |
+| Guarda… (dove guardare) | Mira… | Imperativo con «tú», come nel resto della barra. |
+| Pronto per la discussione | Listo para la defensa | Comando del riconoscitore: «listo para la defensa». |
+| ricorsione | recursividad (concetto) / recursión sin fin | «Recursividad» come nome dell'argomento. |
 
 ## Nomi del vault
 
