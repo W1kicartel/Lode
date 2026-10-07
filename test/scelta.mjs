@@ -6,6 +6,7 @@
 // 3) il comando della lingua (esegui in js/lode.js), il benvenuto (primo passo), le Impostazioni, index.html;
 // 4) profilo.sistema nei dati e nei backup, il predefinito della lingua (il portoghese va al Brasile).
 import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 globalThis.localStorage = { getItem: () => null, setItem() { }, removeItem() { } };
 globalThis.addEventListener = () => { }; globalThis.dispatchEvent = () => { }; globalThis.CustomEvent = class { constructor(t, o) { this.detail = o?.detail; } };
 const L = await import('../js/lingua.js');
@@ -35,6 +36,23 @@ uguale('browser: dati illeggibili come se mancassero', L.iniziale({ dati: 'boh',
 prova('imposta rifiuta una lingua strana', L.imposta('__proto__') === false && L.imposta('xx') === false);
 const src = leggi('js/lingua.js');
 prova('browser: scelta() passa da iniziale() e salva l\'italiano una volta sola', /const r = iniziale\(\{ salvata, dati, sistema: sis \}\);\s*if \(r\.salva\) try \{ localStorage\.setItem\(CHIAVE, r\.lingua\)/.test(src) && src.includes("localStorage.getItem('lode:v1')"));
+
+// e dal vero: js/lingua.js caricato come in un browser (senza process, con navigator e localStorage), in un processo a parte
+function nelBrowser({ dati = null, salvata = null, sistema }) {
+  const codice = `const deposito = new Map(${JSON.stringify([...(dati ? [['lode:v1', JSON.stringify(dati)]] : []), ...(salvata ? [['lode:lingua', salvata]] : [])])});
+    globalThis.localStorage = { getItem: k => deposito.get(k) ?? null, setItem: (k, v) => deposito.set(k, String(v)), removeItem: k => deposito.delete(k) };
+    globalThis.window = globalThis;
+    Object.defineProperty(globalThis, 'navigator', { value: { language: ${JSON.stringify(sistema)}, languages: [${JSON.stringify(sistema)}] }, configurable: true });
+    const p = globalThis.process; Object.defineProperty(globalThis, 'process', { value: undefined, configurable: true, writable: true });
+    const L = await import(${JSON.stringify(new URL('../js/lingua.js', import.meta.url).href)});
+    Object.defineProperty(globalThis, 'process', { value: p, configurable: true, writable: true });
+    console.log(JSON.stringify({ lingua: L.lingua, salvata: deposito.get('lode:lingua') ?? null }));`;
+  try { return JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', codice], { encoding: 'utf8', timeout: 30000 }).trim().split('\n').pop()); } catch (e) { return { errore: e.message }; }
+}
+uguale('browser vero: utente vecchio con il sistema in inglese → italiano, salvato', nelBrowser({ dati: vecchio, sistema: 'en-US' }), { lingua: 'it', salvata: 'it' });
+uguale('browser vero: utente nuovo con il sistema in inglese → inglese, niente salvato', nelBrowser({ sistema: 'en-US' }), { lingua: 'en', salvata: null });
+uguale('browser vero: utente nuovo con il sistema in spagnolo → spagnolo', nelBrowser({ dati: { v: 1, esami: [], imp: {} }, sistema: 'es-ES' }), { lingua: 'es', salvata: null });
+uguale('browser vero: la lingua salvata resta', nelBrowser({ dati: vecchio, salvata: 'de', sistema: 'en-US' }), { lingua: 'de', salvata: 'de' });
 
 prova('app: utente vecchio (conf.benvenuto) con il Mac in inglese resta in italiano', LD.linguaDiPartenza({ vault: '/x', benvenuto: '2026-01-01T10:00:00Z' }, 'en-US') === 'it' && LD.daFissare({ benvenuto: '2026-01-01T10:00:00Z' }));
 prova('app: utente nuovo prende la lingua del sistema', LD.linguaDiPartenza({}, 'fr-FR') === 'fr' && LD.linguaDiPartenza({ vault: '/x' }, 'pt-BR') === 'pt' && !LD.daFissare({}) && LD.linguaDiPartenza({}, 'zh-CN') === 'en');
