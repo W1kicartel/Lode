@@ -2158,9 +2158,11 @@ async function temiDaFile(x, corso) {
   modo('pensa', `Leggo ${x.nome}…`); segnala('pensa');
   let testo = ''; try { testo = await FILE.testoDi(x); } catch { }   // un PDF senza testo: niente errore, lo diciamo sotto
   modo('riposo');
-  const nome = minuscola(corso || prossimi()[0]?.nome || 'analisi 2'), pagine = Math.max(1, ...[...testo.matchAll(/\[Pagina (\d+)\]/g)].map(m => +m[1]));
-  if (x.tipo === 'pdf' && TE.scansione(testo, pagine)) return rispostaFissa(`Questo PDF sembra una scansione: senza AI non leggo le immagini. Incolla il testo degli esercizi con «temi d'esame di ${nome}:» e il testo sotto.`);
-  if (!testo.trim()) return rispostaFissa(`Da questo file non riesco a leggere il testo. Incollalo con «temi d'esame di ${nome}:» e il testo sotto.`);
+  // il comando da suggerire col corso giusto; senza corso e senza esami, la forma generica (mai un corso inventato)
+  const nome = corso || prossimi()[0]?.nome, cmd = nome ? `«temi d'esame di ${minuscola(nome)}:»` : '«temi d\'esame:»';
+  const pagine = Math.max(1, ...[...testo.matchAll(/\[Pagina (\d+)\]/g)].map(m => +m[1]));
+  if (x.tipo === 'pdf' && TE.scansione(testo, pagine)) return rispostaFissa(`Questo PDF sembra una scansione: senza AI non leggo le immagini. Incolla il testo degli esercizi con ${cmd} e il testo sotto.`);
+  if (!testo.trim()) return rispostaFissa(`Da questo file non riesco a leggere il testo. Incollalo con ${cmd} e il testo sotto.`);
   const e = trovaEsame(corso || '') || (corso ? aggiungiEsame({ nome: corso }) : prossimi()[0]);
   if (!e) return rispostaFissa('Aggiungi prima l\'esame, per esempio: «esame analisi 2 il 15 gennaio 9 cfu».');
   return controllaTemi(e, testo, { fonte: x.nome });

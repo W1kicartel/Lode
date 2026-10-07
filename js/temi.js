@@ -14,8 +14,10 @@ import { abbina, oggiDi, registraEsito } from './programma.js';
 const SEGNO = /^\s*(?:#+\s*)?(?:\*\*)?(?:esercizio|es\.?|problema|quesito|domanda)\s*n?[°º.]?\s*(\d{1,2})\b(?:\*\*)?\s*/i;
 // senza segni: righe numerate «1.» «2)» in ordine
 const NUMERO = /^\s*(\d{1,2})\s*[.)]\s+/;
-// la soluzione del prof dentro un esercizio, e la sezione «Soluzioni» in fondo al compito
-const SOL = /^\s*(?:\*\*)?(?:soluzione|svolgimento|risoluzione)\b[^:\n]{0,40}?(?:[:.]|\*\*|$)\s*/i;
+// la soluzione del prof dentro un esercizio: solo l'etichetta («Soluzione», «Soluzione:», «Soluzione.», «**Soluzione**»,
+// «Soluzione dell'esercizio 3:», «Svolgimento:»). Non «Soluzione di NaCl 0,9%: …» né «Soluzione generale dell'equazione…»,
+// che sono testo dell'esercizio: se finissero in sol, lo studente le vedrebbe solo dopo l'esito (o perderebbe l'esercizio)
+const SOL = /^\s*(?:\*\*)?(?:soluzione|svolgimento|risoluzione)(?:\s+(?:dell['’]\s*|del\s+)?(?:esercizio|es\.?|problema|quesito|domanda)\s*n?[°º.]?\s*\d{0,2})?\s*(?:\*\*)?\s*(?::(?:\*\*)?\s*|\.(?:\*\*)?(?:\s+|$)|$)/i;
 const SEZ_SOL = /^\s*(?:#+\s*)?(?:\*\*)?(?:soluzioni|svolgimenti|risoluzioni)(?: degli esercizi)?\s*:?(?:\*\*)?\s*$/i;
 // «(6 punti)», «- 8 pt», «:» dopo il numero: non fanno parte del testo
 const pulisciInizio = s => s.replace(/^\s*(?:\(\s*\d+(?:[.,]\d+)?\s*(?:punti|punto|pt|p)\.?\s*\)|[-–—]\s*\d+(?:[.,]\d+)?\s*(?:punti|pt)\.?)?\s*[.):\-–—]?\s*/i, '');
@@ -34,9 +36,10 @@ export function dataDi(testo) {
   return null;
 }
 export const dataScritta = iso => iso ? iso.split('-').reverse().join('/') : '';
-// un pezzo: il testo fino a «Soluzione», poi la soluzione (senza l'etichetta)
+// un pezzo: il testo fino a «Soluzione», poi la soluzione (senza l'etichetta). L'etichetta conta solo se prima c'è del
+// testo: un esercizio non resta mai con t vuoto e tutto nascosto in sol
 function separa(righe) {
-  const k = righe.findIndex(r => SOL.test(r));
+  const k = righe.findIndex((r, i) => SOL.test(r) && righe.slice(0, i).some(x => x.trim()));
   const t = (k < 0 ? righe : righe.slice(0, k)).join('\n').trim();
   const sol = k < 0 ? '' : [righe[k].replace(SOL, ''), ...righe.slice(k + 1)].join('\n').trim();
   return { t, sol: sol || null };
@@ -74,7 +77,7 @@ export function dividi(testo) {
     if (p.t.length < 15 && out.length) { const q = out.at(-1); q.t = [q.t, p.t].filter(Boolean).join('\n'); q.sol = [q.sol, p.sol].filter(Boolean).join('\n\n') || null; }
     else out.push(p);
   }
-  if (out.length > 1 && out[0].t.length < 15) { const [a, b] = out; b.t = [a.t, b.t].filter(Boolean).join('\n'); b.n = a.n; out.shift(); }
+  if (out.length > 1 && out[0].t.length < 15) { const [a, b] = out; b.t = [a.t, b.t].filter(Boolean).join('\n'); b.sol = [a.sol, b.sol].filter(Boolean).join('\n\n') || null; b.n = a.n; out.shift(); }
   return { pezzi: out.slice(0, 30), data };
 }
 // «Unisci al precedente» della scheda di controllo: il pezzo i va in coda al pezzo i-1 (testo e soluzione)

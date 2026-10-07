@@ -10,6 +10,13 @@ const prova = (nome, cond, dett = '') => { if (cond) ok++; else { ko++; console.
 const J = x => JSON.stringify(x);
 const T = D.oggi();
 
+{
+  // il PDF scansionato o illeggibile: il comando suggerito usa il corso vero, mai «analisi 2» scritto fisso
+  const src = (await import('node:fs')).readFileSync(new URL('../js/lode.js', import.meta.url), 'utf8');
+  const f = src.slice(src.indexOf('async function temiDaFile'), src.indexOf('async function schedaTemi'));
+  prova('temiDaFile: senza corso la forma generica, niente «analisi 2» fisso', f.length > 100 && !/analisi 2'/.test(f) && f.includes("«temi d\\'esame:»"), f.slice(0, 300));
+}
+
 /* ---------- dividere ---------- */
 const COMPITO = `Università degli Studi · Analisi Matematica 2
 Prova scritta del 12/02/2024
@@ -64,6 +71,27 @@ prova('dividi: data «12 febbraio 2024»', TE.dataDi('Appello del 12 febbraio 20
 {
   const { pezzi } = TE.dividi('Esercizio 1 Calcolare il gradiente di f(x,y) = x²y.\nEsercizio 2 Calcolare la divergenza del campo F = (x, y).\nSoluzioni\nEsercizio 1 ∇f = (2xy, x²).\nEsercizio 2 div F = 2.');
   prova('dividi: la sezione «Soluzioni» in fondo va agli esercizi giusti', pezzi.length === 2 && pezzi[0].sol === '∇f = (2xy, x²).' && pezzi[1].sol === 'div F = 2.', J(pezzi));
+}
+// «Soluzione» conta solo come etichetta: «Soluzione di NaCl…» e «Soluzione generale…» sono testo dell'esercizio
+{
+  const { pezzi } = TE.dividi('Esercizio 1\nSoluzione di NaCl 0,9%: calcolare la molarità della soluzione fisiologica.\nEsercizio 2\nCalcolare il pH di una soluzione di HCl 0,1 M.');
+  prova('dividi: «Soluzione di NaCl…» non è la soluzione del prof', pezzi.length === 2 && pezzi[0].t.startsWith('Soluzione di NaCl 0,9%: calcolare') && pezzi[1].t.startsWith('Calcolare il pH') && pezzi.every(p => p.sol === null), J(pezzi));
+}
+{
+  const { pezzi } = TE.dividi('Esercizio 1 Data l\'equazione y\'\' - y = x.\nSoluzione generale dell\'equazione omogenea: trovarla e poi trovare una soluzione particolare.\nEsercizio 2 Calcolare il limite di sin x / x per x → 0.');
+  prova('dividi: «Soluzione generale…» resta nel testo', pezzi.length === 2 && pezzi[0].t.includes('Soluzione generale dell\'equazione omogenea: trovarla') && pezzi[0].sol === null, J(pezzi));
+}
+{
+  const s = t => TE.dividi(`Esercizio 1 Risolvere y'' + y = 0 con y(0) = 1.\n${t}\nEsercizio 2 Calcolare il limite di sin x / x per x → 0.`).pezzi[0].sol;
+  prova('dividi: «Soluzione: y = cos x» tiene la soluzione', s('Soluzione: y = cos x') === 'y = cos x', s('Soluzione: y = cos x'));
+  prova('dividi: le etichette «**Soluzione**», «Soluzione.», «Soluzione dell\'esercizio 1:», «Svolgimento:», «Risoluzione:»',
+    ['**Soluzione**\ny = cos x', 'Soluzione.\ny = cos x', 'Soluzione dell\'esercizio 1:\ny = cos x', 'Svolgimento: y = cos x', 'Risoluzione:\ny = cos x', '**Soluzione:** y = cos x'].every(t => s(t) === 'y = cos x'));
+  const { pezzi } = TE.dividi('Esercizio 1\nSoluzione: calcolare la concentrazione molare di 5 g di NaCl in 1 L.\nEsercizio 2 Calcolare il pH di HCl 0,1 M.');
+  prova('dividi: un esercizio non resta mai col testo vuoto e tutto in sol', pezzi.length === 2 && pezzi[0].t.includes('calcolare la concentrazione') && pezzi[0].sol === null, J(pezzi));
+}
+{
+  const { pezzi } = TE.dividi('Esercizio 1 Calcola x.\nSoluzione: x = 2\nEsercizio 2 Calcolare il limite di sin x / x per x → 0.');
+  prova('dividi: il primo pezzo corto unito al secondo non perde la sua soluzione', pezzi.length === 1 && pezzi[0].t.startsWith('Calcola x.') && pezzi[0].sol === 'x = 2', J(pezzi));
 }
 {
   const p = TE.unisci([{ n: 1, t: 'a', sol: null }, { n: 2, t: 'b', sol: 'x' }, { n: 3, t: 'c', sol: null }], 1);
