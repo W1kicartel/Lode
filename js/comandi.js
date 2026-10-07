@@ -319,11 +319,18 @@ export function leggiLavoro(testo) {
     if (o) return { tipo: 'lavoro', azione: 'eccezione', data: dataDetta(g[1]), ...o };
   }
   // i turni di ogni settimana: «lavoro …» li aggiunge, «i miei turni sono …» li sostituisce. Quello che avanza (al bar, in
-  // pizzeria) va bene se è poco: «lavoro di gruppo lunedì 14-16 per il progetto» non è un turno
+  // pizzeria) va bene se è poco: «lavoro di gruppo lunedì 14-16 per il progetto» o «lavoro alla tesi lunedì 9-13» non
+  // sono turni. Più orari («lunedì 9-13 e mercoledì 15-19»): un turno per orario, ognuno con i giorni detti prima del suo
   if ((m = t.match(/^(?:(i miei turni sono|i turni sono|ora lavoro|adesso lavoro|da ora lavoro|lavoro solo)|lavoro|faccio i turni|ho (?:il )?turno|turno|turni)\s+(.+)$/))) {
-    const x = giorniEOre(m[2]), o = x && x.giorni.length && orarioOk(x.inizio, x.fine);
-    const resto = x ? x.resto.replace(/\b(e|il|la|lo|di|dalle|alle|ore|ogni|a|al|in|da)\b/g, ' ').trim().split(/\s+/).filter(Boolean) : [];
-    if (o && resto.length <= 2 && !/gruppo|squadra|progetto/.test(x.resto)) return { tipo: 'lavoro', azione: m[1] ? 'sostituisci' : 'aggiungi', giorni: [...new Set(x.giorni)].sort(), ...o };
+    const ORA = /(?:dalle\s+)?\d{1,2}(?:[:.]\d{2})?\s*(?:-|–|alle|a)\s*\d{1,2}(?:[:.]\d{2})?/g, pezzi = [];
+    let da = 0; for (const o of m[2].matchAll(ORA)) { pezzi.push(m[2].slice(da, o.index + o[0].length)); da = o.index + o[0].length; }
+    if (pezzi.length) pezzi[pezzi.length - 1] += m[2].slice(da);
+    const xs = pezzi.map(giorniEOre), turni = xs.map(x => x && x.giorni.length && orarioOk(x.inizio, x.fine));
+    const resto = xs.flatMap(x => x ? x.resto.replace(/\b(e|il|la|lo|di|dalle|alle|ore|ogni|a|al|in|da)\b/g, ' ').trim().split(/\s+/).filter(Boolean) : []);
+    if (turni.length && turni.every(Boolean) && resto.length <= 2 && !xs.some(x => /gruppo|squadra|progetto|tesi|eserciz|compit|laborator|relazion/.test(x.resto))) {
+      const tt = turni.map((o, i) => ({ giorni: [...new Set(xs[i].giorni)].sort(), ...o }));
+      return { tipo: 'lavoro', azione: m[1] ? 'sostituisci' : 'aggiungi', ...tt[0], ...(tt.length > 1 ? { turni: tt } : {}) };
+    }
   }
   return null;
 }

@@ -81,7 +81,7 @@ function conto({ T, adesso, scelte }) {
   const base = lavoro()?.tetto ?? TETTO_LAVORO, tetto = base + (scelte.includes('tetto') ? 60 : 0);
   const piani = esami.map(e => { const cop = PG.copertura(e); return { e, p: PG.piano(e, cop, T), pri: new Map(cop.map(c => [c.a.id, PG.priorita(c)])) }; });
   const n = Math.max(7, ...piani.map(x => x.p.giorni.length));
-  const giorni = Array.from({ length: n }, (_, k) => { const data = piuGiorni(T, k), L = liberi(data, { adesso, tetto }); return { data, liberi: L.min, lavoro: L.lavoro, voci: [], tipo: {}, cusc: false, gen: new Set() }; });
+  const giorni = Array.from({ length: n }, (_, k) => { const data = piuGiorni(T, k), L = liberi(data, { adesso, tetto }); return { data, liberi: L.min, lavoro: L.lavoro, voci: [], tipo: {}, cusc: new Set(), gen: new Set() }; });
   piani.forEach(({ e, p, pri }, ei) => {
     const voce = (tipo, id, k, extra = {}) => giorni[k].voci.push({ esameId: e.id, tipo, id, min: tipo === 'tema' ? extra.min : STIMA[tipo], ei, data: e.data, pri: pri.get(id) ?? 0, giro: false, ...extra });
     // «un ripasso solo»: il secondo ripasso di un argomento nuovo (il terzo passaggio di piano()) non si mette
@@ -89,7 +89,7 @@ function conto({ T, adesso, scelte }) {
     p.giorni.forEach((g, k) => {
       giorni[k].tipo[e.id] = g.tipo;
       if (g.tipo === 'generale') { giorni[k].gen.add(ei); g.ripassa.forEach(id => voce('generale', id, k)); return; }
-      if (g.tipo === 'cuscinetto') { giorni[k].cusc = true; return; }
+      if (g.tipo === 'cuscinetto') { giorni[k].cusc.add(ei); return; }
       g.studia.forEach(id => voce('studia', id, k));
       g.ripassa.forEach(id => {
         const giro = !!g.giro?.includes(id);
@@ -109,9 +109,11 @@ function conto({ T, adesso, scelte }) {
     // nuovi; poi l'esame dopo. Il ripasso generale per ultimo. A parità di data, prima le voci con meno priorità
     const banda = v => v.giro ? 0 : v.tipo === 'generale' ? 2 : 1, cat = v => v.tipo === 'studia' ? 1 : 0;
     const prima = (x, y) => banda(x) - banda(y) || y.data.localeCompare(x.data) || cat(x) - cat(y) || x.pri - y.pri;
-    // una voce tolta va al primo giorno dopo con posto, prima del ripasso generale del suo esame (mai nei cuscinetti,
-    // salvo la scelta); i riempitivi del giorno d'arrivo non contano, se serve si tolgono quando ci si arriva
-    const posto = (v, da) => { for (let j = da; j < genDi(v.ei); j++) { const g = giorni[j]; if ((!g.cusc || scelte.includes('cuscinetto')) && pieno(g) + v.min <= g.liberi) return j; } return -1; };
+    // una voce tolta va al primo giorno dopo con posto, prima del ripasso generale del suo esame (mai nel cuscinetto del
+    // suo esame, salvo la scelta: il cuscinetto di Analisi per Fisica è un giorno di studio come gli altri); i riempitivi
+    // del giorno d'arrivo non contano, se serve si tolgono quando ci si arriva
+    const vietato = (g, v) => g.cusc.has(v.ei) && !scelte.includes('cuscinetto');
+    const posto = (v, da) => { for (let j = da; j < genDi(v.ei); j++) { const g = giorni[j]; if (!vietato(g, v) && pieno(g) + v.min <= g.liberi) return j; } return -1; };
     for (let i = 0; i < n; i++) {
       const g = giorni[i];
       while (somma(g) > g.liberi && g.voci.length) {
@@ -124,7 +126,13 @@ function conto({ T, adesso, scelte }) {
         for (const [w, k] of dopo) giorni[k].voci.splice(giorni[k].voci.indexOf(w), 1);
         if (j < 0) { manca(v); dopo.forEach(([w]) => manca(w)); continue; }
         giorni[j].voci.push(v);
-        for (const [w, k] of dopo) { const nk = Math.max(k + j - i, j + 1); if (nk < genDi(w.ei)) giorni[nk].voci.push(w); else manca(w); }
+        // il ripasso slitta di quanto lo studio; se così cade nel cuscinetto o dopo il ripasso generale, va al primo giorno
+        // con posto (da lì, o se no dal giorno dopo lo studio). Solo se non c'è posto da nessuna parte manca
+        for (const [w, k] of dopo) {
+          let nk = Math.max(k + j - i, j + 1);
+          if (nk >= genDi(w.ei) || vietato(giorni[nk], w)) { nk = posto(w, nk); if (nk < 0) nk = posto(w, j + 1); }
+          if (nk < 0) manca(w); else giorni[nk].voci.push(w);
+        }
       }
     }
   }
@@ -195,9 +203,10 @@ export function applica(c, T = oggi()) {
   else if (c.azione !== 'vedi') {
     const L = D.imp.lavoro ||= { turni: [], eccezioni: [], tetto: TETTO_LAVORO };
     L.turni ||= []; L.eccezioni ||= [];
-    const turno = { giorni: [...new Set(c.giorni || [])].sort(), inizio: c.inizio, fine: c.fine };
-    if (c.azione === 'sostituisci') L.turni = [turno];
-    else if (c.azione === 'aggiungi') { if (!L.turni.some(t => JSON.stringify(t) === JSON.stringify(turno))) L.turni.push(turno); }
+    // uno o più turni («lunedì 9-13 e mercoledì 15-19» → c.turni)
+    const nuovi = (c.turni || [c]).map(x => ({ giorni: [...new Set(x.giorni || [])].sort(), inizio: x.inizio, fine: x.fine }));
+    if (c.azione === 'sostituisci') L.turni = nuovi;
+    else if (c.azione === 'aggiungi') { for (const turno of nuovi) if (!L.turni.some(t => JSON.stringify(t) === JSON.stringify(turno))) L.turni.push(turno); }
     else if (c.azione === 'eccezione') {
       if (c.no) L.eccezioni = [...L.eccezioni.filter(x => x.data !== c.data || !x.no), { data: c.data, no: true }];
       else L.eccezioni.push({ data: c.data, inizio: c.inizio, fine: c.fine });

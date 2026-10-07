@@ -683,7 +683,7 @@ async function comandoLavoro(c) {
   if (c.azione === 'vedi') return schedaOre();
   const vai = ['La tua settimana', () => { nuovoTurno(); detto(A.turno, 'Piano della settimana'); schedaOre(); }];
   if (c.azione === 'aggiungi' || c.azione === 'sostituisci') {
-    const tetto = D.imp.lavoro?.tetto ?? 120, turni = c.azione === 'sostituisci' ? [c] : [...(D.imp.lavoro?.turni || []), c];
+    const tetto = D.imp.lavoro?.tetto ?? 120, nuovi = c.turni || [c], turni = c.azione === 'sostituisci' ? nuovi : [...(D.imp.lavoro?.turni || []), ...nuovi];
     const card = schedaConferma({ titolo: `Lavori ${ORE.turniTesto(turni)}.`,
       nota: `Lo tolgo dalle ore di studio, con mezz'ora per il viaggio. Nei giorni di lavoro studi al massimo ${oreRegola(tetto)}: lo cambi con «nei giorni di lavoro studio al massimo ${tetto >= 180 ? 2 : 3} ore».` });
     return attendiDecisione(card, async () => {

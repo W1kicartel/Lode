@@ -150,6 +150,25 @@ prova('testi: ripiego senza opzioni', /decidi tu/.test(O.riquadro({ mancano: { x
 prova('testi: oggi', /^Oggi hai circa .* libere/.test(O.testoOggi({ giorni: [{ data: T, liberi: 120, lavoro: [{ inizio: '14:00', fine: '19:00' }], voci: [{ esameId: P1.id, tipo: 'studia', id: 'x', min: 60 }, { esameId: P2.id, tipo: 'ripassa', id: 'y', min: 25 }] }] }, nomi))
   && O.testoOggi({ giorni: [{ data: T, liberi: 120, lavoro: [{ inizio: '14:00', fine: '19:00' }], voci: [{ esameId: P1.id, tipo: 'studia', id: 'x', min: 60 }, { esameId: P2.id, tipo: 'ripassa', id: 'y', min: 25 }] }] }, nomi) === 'Oggi hai circa 2 h libere (lavoro 14–19): circa 1 h per Chimica generale, circa 30 min per Diritto privato.');
 
+/* ---------- (5b) slittamenti: i ripassi trovano posto, i cuscinetti sono di un esame solo ---------- */
+// niente lavoro ma due esami: il calendario è attivo e non deve dire «non ci sta» con giorni vuoti nel piano
+pulito();
+const An = esameCon('Analisi due', 10, Array(14).fill(0)), Fi = esameCon('Fisica uno', 16, Array(12).fill(0));
+cal = O.calendario({ T, adesso: ADESSO, scelte: [] });
+prova('slittamenti: senza lavoro e con posto, niente mancano', cal.attivo && !Object.keys(cal.mancano).length && !O.riquadro(cal, nomi0 => Dm.esame(nomi0)), JSON.stringify(cal.mancano));
+prova('slittamenti: nessun giorno oltre i suoi minuti', cal.giorni.every(g => g.min <= g.liberi));
+const nelCusc = c => c.giorni.flatMap((g, k) => g.voci.filter(v => g.tipo[v.esameId] === 'cuscinetto').map(v => `${g.data} ${v.tipo} ${v.esameId}`));
+prova('cuscinetto: con le scelte vuote nessuna voce sta nel cuscinetto del suo esame', !nelCusc(cal).length, nelCusc(cal).join(', '));
+D().imp.lavoro = { turni: [{ giorni: [1, 3, 5], inizio: '14:00', fine: '19:00' }], eccezioni: [], tetto: 120 };
+cal = O.calendario({ T, adesso: ADESSO, scelte: [] });
+prova('cuscinetto: con il lavoro, ancora nessuna voce nel cuscinetto del suo esame', !nelCusc(cal).length && cal.giorni.every(g => g.min <= g.liberi), nelCusc(cal).join(', '));
+// il cuscinetto di Analisi è un giorno di studio per Fisica: ci si può spostare una voce di Fisica (che piano() non ci metteva)
+const kc = cal.giorni.findIndex(g => g.tipo[An.id] === 'cuscinetto'), pFi = PG.piano(Fi);
+const diFi = cal.giorni[kc]?.voci.filter(v => v.esameId === Fi.id).map(v => v.tipo + v.id) || [], primaFi = [...(pFi.giorni[kc]?.studia || []).map(id => 'studia' + id), ...(pFi.giorni[kc]?.ripassa || []).map(id => 'ripassa' + id)];
+prova('cuscinetto: una voce di Fisica si sposta nel cuscinetto di Analisi', kc >= 0 && diFi.some(x => !primaFi.includes(x)), `${kc} ${diFi} | ${primaFi}`);
+const cc = O.calendario({ T, adesso: ADESSO, scelte: ['cuscinetto'] });
+prova('cuscinetto: con la scelta accesa il cuscinetto si può usare', nelCusc(cc).length > 0 || !Object.keys(cal.mancano).length, nelCusc(cc).join(', '));
+
 /* ---------- applica: turni, eccezioni passate, tetto, finestra ---------- */
 pulito();
 O.applica({ azione: 'aggiungi', giorni: [5, 1, 3], inizio: '14:00', fine: '19:00' });
@@ -163,6 +182,9 @@ O.applica({ azione: 'tetto', min: 90 }); O.applica({ azione: 'finestra', da: '10
 prova('applica: tetto e finestra', D().imp.lavoro.tetto === 90 && D().imp.studio.da === '10:00' && D().imp.studio.a === '22:00');
 O.applica({ azione: 'sostituisci', giorni: [6], inizio: '18:00', fine: '23:00' });
 prova('applica: sostituisci', D().imp.lavoro.turni.length === 1 && D().imp.lavoro.turni[0].giorni[0] === 6);
+O.applica(C.leggiLavoro('lavoro lunedì 9-13 e mercoledì 15-19'));
+prova('applica: più turni in una frase, ognuno col suo orario', JSON.stringify(D().imp.lavoro.turni) === JSON.stringify([{ giorni: [6], inizio: '18:00', fine: '23:00' }, { giorni: [1], inizio: '09:00', fine: '13:00' }, { giorni: [3], inizio: '15:00', fine: '19:00' }]), JSON.stringify(D().imp.lavoro.turni));
+O.applica({ azione: 'sostituisci', giorni: [6], inizio: '18:00', fine: '23:00' });
 O.applica({ azione: 'togli' });
 prova('applica: togli', !D().imp.lavoro);
 O.scegli('cuscinetto'); O.scegli('tetto'); O.scegli('cuscinetto', false);
@@ -197,6 +219,14 @@ const casi = [
   ['studio 50 analisi 2', x => x?.tipo === 'focus'],
   ['studio', x => x?.tipo === 'focus'],
   ['lavoro di squadra', x => x?.tipo !== 'lavoro'],
+  // più orari: un turno ciascuno, mai un orario inventato per un giorno
+  ['lavoro lunedì 9-13 e mercoledì 15-19', x => x?.azione === 'aggiungi' && JSON.stringify(x.turni) === JSON.stringify([{ giorni: [1], inizio: '09:00', fine: '13:00' }, { giorni: [3], inizio: '15:00', fine: '19:00' }])],
+  ['i miei turni sono lunedì dalle 9 alle 13 e sabato dalle 18 alle 23', x => x?.azione === 'sostituisci' && x.turni?.length === 2 && x.turni[1].giorni[0] === 6 && x.turni[1].inizio === '18:00'],
+  ['lavoro alla tesi lunedì 9-13', x => x?.tipo !== 'lavoro'],
+  ['lavoro agli esercizi martedì 15-17', x => x?.tipo !== 'lavoro'],
+  ['lavoro ai compiti giovedì 9-11', x => x?.tipo !== 'lavoro'],
+  ['lavoro in laboratorio lunedì 9-13', x => x?.tipo !== 'lavoro'],
+  ['lavoro alla relazione venerdì 10-12', x => x?.tipo !== 'lavoro'],
 ];
 for (const [f, ok1] of casi) prova(`comando: «${f}»`, ok1(c(f)), JSON.stringify(c(f)));
 prova('comandi: leggiLavoro da solo', C.leggiLavoro('lavoro lunedì 14-19')?.azione === 'aggiungi' && C.leggiLavoro('ciao') === null);
