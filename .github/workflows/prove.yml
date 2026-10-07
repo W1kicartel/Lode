@@ -76,6 +76,10 @@ jobs:
       # i comandi senza AI in ogni lingua (js/comandi/<codice>.js): stessi oggetti dell'italiano, e le frasi che non sono comandi
       - name: Lingue (comandi senza AI)
         run: node test/comandi-lingue.mjs
+      # i sistemi dei voti (js/sistemi.js): gli stessi numeri di oggi in Italia, poi Spagna, Francia, Germania, Portogallo,
+      # Brasile, Regno Unito e Stati Uniti (voti, media, voto finale, «quanto mi serve», libretto incollato)
+      - name: Sistemi dei voti
+        run: node test/sistemi.mjs
       # aggiornamenti (desktop/aggiorna.mjs): versioni, installer giusto, latest*.yml, Mac senza firma, finto electron-updater
       - name: Aggiornamenti
         run: node test/aggiorna.mjs
