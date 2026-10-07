@@ -43,7 +43,7 @@ How Lode's words are said in English. Register: plain international English for 
 | riordina la lezione | tidy up the lecture | Recognizer: "tidy up the lecture". |
 | chiudi la lezione | wrap up the lecture | Recognizer: "wrap up the lecture". |
 | Ripeti | Repeat | Recognizer: "repeat", "say that again". |
-| «★ Da esame» | ★ exam material | Neutral form; the exact vault section name stays «★ Da esame» for now. |
+| «★ Da esame» | ★ For the exam | Button and neutral form; the exact vault section name stays «★ Da esame» for now. |
 | definizione | definition | Recognizer: "definition: term = …". |
 | domanda per il prof | question for the lecturer | Recognizer: "question:", "ask the lecturer". |
 | spiego io | let me explain | Feynman-style check; recognizer: "let me explain". |
