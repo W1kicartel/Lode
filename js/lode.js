@@ -2,6 +2,7 @@
 // o il timer che scorre. Passandoci sopra si apre a molla in un pannello: «Oggi», sei strumenti e il campo
 // «Chiedi o scrivi un comando…». Si parla tenendo premuto ⌥ Spazio. I file trascinati diventano carte del ripasso.
 // Senza AI capisce i comandi in italiano (comandi.js); con il cervello locale (gratis) o la tua AI preferita spiega, crea carte e interroga come all'orale.
+import { t } from './lingua.js';
 import { inverti, datiIllegibili, piuGiorni, norm, D, DESKTOP, lezioneOra, prossimaLezione, daGiocare, ricorda, aggiungiOrario, lezioni, RISPOSTE, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esc, fatti, media, minuti, num, oggi, ore, piano, prossimi, prossimoIntervallo, registraVoto, rispondi, salva, serie, serve, simula, sostituisci, traQuanto, trovaEsame, intervalloTesto, giorniTra, definizioni } from './dati.js';
 import { RIDOTTO, attendi, comprimi, conta, dopo, entra, h, lineare, morbido, ogni, premi, tween } from './motore.js';
 import { ESEMPI, interpreta } from './comandi.js';
@@ -1995,36 +1996,35 @@ if (BRIDGE) { BRIDGE.su('agente:turno', arrivaTurno); BRIDGE.invoca('agenti:stat
 // le carte di domani in In tasca.md, da fare sul telefono con Obsidian: quando la nota torna, le spunte diventano ripasso.
 // Il comando fa sempre un giro (segna le spunte e riscrive); «… ogni sera» lo fa da solo dopo le 19. Una copia vecchia della
 // nota (sync in ritardo) non segna niente: si riscrive solo se lo studente lo chiede, e le spunte di quella copia si perdono
-const N_CARTE = n => `${n} ${n === 1 ? 'carta' : 'carte'}`;
 async function schedaTasca(c = {}, { riscrivi = false } = {}) {
-  if (!V.attivo) return rispostaFissa('Il ripasso in tasca va nell\'app: serve il vault di Obsidian.');
-  if (c.sera === false) { TA.sera(false); return mostraFatto({ testo: 'Ripasso in tasca solo quando lo chiedi.', nota: 'La nota In tasca.md resta nel vault: scrivi «ripasso in tasca» per aggiornarla.', sintesi: 'ripasso in tasca spento' }); }
+  if (!V.attivo) return rispostaFissa(t('barra3.tasca-solo-app'));
+  if (c.sera === false) { TA.sera(false); return mostraFatto({ testo: t('barra3.tasca-spenta'), nota: t('barra3.tasca-spenta-nota', { nota: TA.FILE }), sintesi: t('barra3.tasca-spenta-sintesi') }); }
   if (c.sera === true) TA.sera(true);
-  modo('pensa', 'Preparo la nota…');
+  modo('pensa', t('barra3.tasca-preparo'));
   let r; try { r = await TA.aggiorna({ forza: true, riscrivi }); } catch (e) { r = { saltata: 'errore', errore: e.message }; }
   modo('riposo');
   if (r.segnate) aggiornaTutto();
-  if (r.saltata === 'errore') return rispostaFissa('Non riesco a leggere o scrivere la nota In tasca.md: ' + r.errore, { errore: true });
-  if (r.saltata === 'estranea') return rispostaFissa('Nel vault c\'è già una nota **In tasca.md** che non ha scritto Lode: non la tocco. Rinominala e riprova.');
-  const segnate = !r.segnate ? '' : r.segnate === 1 ? `Ho segnato la carta che hai fatto sul telefono: ${r.sapevo ? 'la sapevi' : 'non la sapevi'}.` : `Ho segnato ${r.segnate} carte che hai fatto sul telefono: ${r.sapevo} sapevi, ${r.segnate - r.sapevo} no.`;
-  const gia = !r.gia ? '' : r.gia === 1 ? 'Una carta l\'avevi già ripassata sul computer: non la segno due volte.' : `${r.gia} carte le avevi già ripassate sul computer: non le segno due volte.`;
+  if (r.saltata === 'errore') return rispostaFissa(t('barra3.tasca-errore', { nota: TA.FILE, errore: r.errore }), { errore: true });
+  if (r.saltata === 'estranea') return rispostaFissa(t('barra3.tasca-estranea', { nota: TA.FILE }));
+  const segnate = !r.segnate ? '' : r.segnate === 1 ? t(r.sapevo ? 'barra3.tasca-segnata-sapevi' : 'barra3.tasca-segnata-non-sapevi') : t('barra3.tasca-segnate', { n: r.segnate, sapevo: r.sapevo, no: r.segnate - r.sapevo });
+  const gia = !r.gia ? '' : t('barra3.tasca-gia', { n: r.gia });
   const vecchia = r.saltata === 'vecchia', cambia = r.saltata === 'cambiata';
-  const dentro = vecchia ? 'La nota sul telefono è di un giro vecchio: non segno niente.' : cambia ? 'La nota sta ancora cambiando: Obsidian la sta sincronizzando. Non la riscrivo adesso, riprova tra un minuto.'
-    : r.scritte ? `Nella nota In tasca.md ${r.scritte === 1 ? 'c\'è' : 'ci sono'} ${N_CARTE(r.scritte)} per domani.` : 'Domani non hai carte da ripassare: la nota In tasca.md lo dice.';
+  const dentro = vecchia ? t('barra3.tasca-vecchia') : cambia ? t('barra3.tasca-cambiata')
+    : r.scritte ? t('barra3.tasca-domani', { nota: TA.FILE, n: r.scritte }) : t('barra3.tasca-domani-niente', { nota: TA.FILE });
   const sera = () => TA.stato().sera;
-  const s = scheda('ld-tasca', `<span class="ld-lbl">Ripasso in tasca</span>
+  const s = scheda('ld-tasca', `<span class="ld-lbl">${t('barra3.tasca-titolo')}</span>
     ${segnate ? `<p>${esc(segnate)}</p>` : ''}${gia ? `<p>${esc(gia)}</p>` : ''}<p>${esc(dentro)}</p>
-    ${vecchia ? '<p class="ld-nota">Aspetta che il telefono finisca di sincronizzare e riprova. Se la nota giusta non arriva, riscrivila: le spunte di quella copia non le segno.</p>' : ''}
-    <div class="az"><button type="button" class="btn primary" data-t="apri">Apri la nota</button>${vecchia ? '<button type="button" class="btn" data-t="riscrivi">Riscrivi la nota</button>' : ''}<button type="button" class="btn" data-t="sera">${sera() ? 'Solo quando lo chiedo' : 'Ogni sera'}</button></div>
-    <p class="ld-nota" data-sera>${sera() ? 'Ogni sera dopo le 19 la riscrivo da sola, se Lode è aperto.' : ''}</p>
-    <p class="ld-nota">Funziona se il vault arriva sul telefono (iCloud, Obsidian Sync, Syncthing). Lode non usa la rete: la nota la porta il servizio che usi già.</p>`);
-  s.querySelector('[data-t=apri]').addEventListener('click', () => TA.apri()?.catch(e => rispostaFissa('Non riesco ad aprire la nota: ' + e.message, { errore: true })));
-  s.querySelector('[data-t=riscrivi]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Riscrivi la nota In tasca.md'); schedaTasca({}, { riscrivi: true }); });
+    ${vecchia ? `<p class="ld-nota">${t('barra3.tasca-aspetta')}</p>` : ''}
+    <div class="az"><button type="button" class="btn primary" data-t="apri">${t('barra3.apri-nota')}</button>${vecchia ? `<button type="button" class="btn" data-t="riscrivi">${t('barra3.riscrivi-nota')}</button>` : ''}<button type="button" class="btn" data-t="sera">${sera() ? t('barra3.tasca-solo-quando') : t('barra3.tasca-ogni-sera')}</button></div>
+    <p class="ld-nota" data-sera>${sera() ? t('barra3.tasca-sera-accesa') : ''}</p>
+    <p class="ld-nota">${t('barra3.tasca-come-arriva')}</p>`);
+  s.querySelector('[data-t=apri]').addEventListener('click', () => TA.apri()?.catch(e => rispostaFissa(t('barra3.non-apro-nota', { errore: e.message }), { errore: true })));
+  s.querySelector('[data-t=riscrivi]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, t('barra3.tasca-riscrivi-detto', { nota: TA.FILE })); schedaTasca({}, { riscrivi: true }); });
   s.querySelector('[data-t=sera]').addEventListener('click', e => {
-    TA.sera(!sera()); e.target.textContent = sera() ? 'Solo quando lo chiedo' : 'Ogni sera';
-    s.querySelector('[data-sera]').textContent = sera() ? 'Ogni sera dopo le 19 la riscrivo da sola, se Lode è aperto.' : 'La riscrivo solo quando me lo chiedi.';
+    TA.sera(!sera()); e.target.textContent = sera() ? t('barra3.tasca-solo-quando') : t('barra3.tasca-ogni-sera');
+    s.querySelector('[data-sera]').textContent = sera() ? t('barra3.tasca-sera-accesa') : t('barra3.tasca-sera-spenta');
   });
-  if (A.turno) A.turno.dataset.sintesi = 'ripasso in tasca';
+  if (A.turno) A.turno.dataset.sintesi = t('barra3.tasca-sintesi');
 }
 // all'avvio, col vault pronto: il giro solo se la nota c'è o la sera è accesa; poi il timer della sera (js/tasca.js)
 if (V.attivo) TA.avvia(r => { if (r?.segnate) aggiornaTutto(); });
@@ -2032,41 +2032,41 @@ if (V.attivo) TA.avvia(r => { if (r?.segnate) aggiornaTutto(); });
 /* ---------- Moodle in sola lettura (desktop/moodle.mjs): corsi, file nuovi, scadenze ---------- */
 const nomeMoodle = st => st?.nome || st?.sito || 'Moodle';
 async function schedaMoodle(cosa = null) {
-  if (!BRIDGE) return rispostaFissa('Il collegamento a Moodle è nell\'**app desktop** di Lode.');
-  let st; try { st = await BRIDGE.invoca('moodle:stato'); } catch (e) { return rispostaFissa('Moodle non risponde: ' + e.message, { errore: true }); }
-  if (cosa === 'scollega') { if (!st.collegato) return rispostaFissa('Moodle non è collegato.'); await BRIDGE.invoca('moodle:scollega'); return mostraFatto({ testo: 'Moodle scollegato.', nota: 'Il token è cancellato da questo computer. I file già presi restano nel tuo vault.' }); }
+  if (!BRIDGE) return rispostaFissa(t('barra3.moodle-solo-app'));
+  let st; try { st = await BRIDGE.invoca('moodle:stato'); } catch (e) { return rispostaFissa(t('barra3.moodle-non-risponde', { errore: e.message }), { errore: true }); }
+  if (cosa === 'scollega') { if (!st.collegato) return rispostaFissa(t('barra3.moodle-non-collegato')); await BRIDGE.invoca('moodle:scollega'); return mostraFatto({ testo: t('barra3.moodle-scollegato'), nota: t('barra3.moodle-scollegato-nota') }); }
   if (!st.collegato) return collegaMoodle(st);
   if (cosa === 'corsi' || !Object.keys(st.corsi || {}).length) return corsiMoodle(st);
   if (cosa === 'novita') return novitaMoodle(st);
   if (cosa === 'scadenze') return scadenzeMoodle(st);
   const s = scheda('ld-moodle', `<span class="ld-lbl">Moodle · ${esc(nomeMoodle(st))}</span>
-    <p>${esc(st.utente || '')}${st.utente ? ' · ' : ''}${Object.keys(st.corsi).length} ${Object.keys(st.corsi).length === 1 ? 'corso seguito' : 'corsi seguiti'}: ${esc(Object.values(st.corsi).join(', '))}</p>
-    <div class="az"><button type="button" class="btn primary" data-m="novita">File nuovi</button><button type="button" class="btn" data-m="scadenze">Scadenze</button><button type="button" class="btn" data-m="corsi">Corsi</button><button type="button" class="btn ld-piano" data-m="scollega">Scollega</button></div>
-    ${st.memoria ? '<p class="ld-nota">Questo computer non ha un portachiavi: il collegamento vale fino a quando chiudi Lode.</p>' : ''}`);
-  s.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => { nuovoTurno(); detto(A.turno, { novita: 'Novità da Moodle', scadenze: 'Scadenze', corsi: 'Corsi di Moodle', scollega: 'Scollega Moodle' }[b.dataset.m]); schedaMoodle(b.dataset.m); }));
+    <p>${esc(st.utente || '')}${st.utente ? ' · ' : ''}${t('barra3.moodle-corsi-seguiti', { n: Object.keys(st.corsi).length, corsi: esc(Object.values(st.corsi).join(', ')) })}</p>
+    <div class="az"><button type="button" class="btn primary" data-m="novita">${t('barra3.file-nuovi')}</button><button type="button" class="btn" data-m="scadenze">${t('barra3.scadenze')}</button><button type="button" class="btn" data-m="corsi">${t('barra3.corsi')}</button><button type="button" class="btn ld-piano" data-m="scollega">${t('barra3.scollega')}</button></div>
+    ${st.memoria ? `<p class="ld-nota">${t('barra3.moodle-senza-portachiavi')}</p>` : ''}`);
+  s.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => { nuovoTurno(); detto(A.turno, { novita: t('barra3.moodle-novita-detto'), scadenze: t('barra3.scadenze'), corsi: t('barra3.moodle-corsi-detto'), scollega: t('barra3.moodle-scollega-detto') }[b.dataset.m]); schedaMoodle(b.dataset.m); }));
   if (A.turno) A.turno.dataset.sintesi = `Moodle · ${nomeMoodle(st)}`;
 }
 function collegaMoodle() {
-  const s = scheda('ld-moodle', `<span class="ld-lbl">Collega Moodle</span>
-    <p>La piattaforma dei corsi del tuo ateneo (Virtuale, Ariel, e-learning…): Lode prende i file nuovi e le scadenze dei corsi che scegli. Solo lettura: non consegna niente e non scrive niente.</p>
-    <form class="ld-riga-form" data-sito><input name="s" placeholder="Indirizzo, per esempio virtuale.unibo.it" aria-label="Indirizzo di Moodle" required autocomplete="off" spellcheck="false"><button class="btn primary" type="submit">Continua</button></form>
+  const s = scheda('ld-moodle', `<span class="ld-lbl">${t('barra3.moodle-collega')}</span>
+    <p>${t('barra3.moodle-collega-intro')}</p>
+    <form class="ld-riga-form" data-sito><input name="s" placeholder="${t('barra3.moodle-indirizzo-esempio')}" aria-label="${t('barra3.moodle-indirizzo')}" required autocomplete="off" spellcheck="false"><button class="btn primary" type="submit">${t('barra3.continua')}</button></form>
     <div class="passo"></div>
-    <p class="ld-nota">Entri come nell'app Moodle ufficiale. Il collegamento resta cifrato su questo computer, mai nel vault; con «scollega moodle» lo togli.</p>`);
+    <p class="ld-nota">${t('barra3.moodle-collega-nota')}</p>`);
   const passo = s.querySelector('.passo'), inp = s.querySelector('[data-sito] input');
   s.querySelector('[data-sito]').addEventListener('submit', async ev => {
     ev.preventDefault(); const indirizzo = inp.value.trim(); if (!indirizzo) return;
-    passo.innerHTML = '<p class="ld-nota">Cerco il sito…</p>';
+    passo.innerHTML = `<p class="ld-nota">${t('barra3.moodle-cerco')}</p>`;
     const v = await BRIDGE.invoca('moodle:verifica', indirizzo).catch(e => ({ ok: false, motivo: e.message }));
-    if (!v.ok) { passo.innerHTML = `<p class="ld-nota">${v.motivo === 'indirizzo' ? 'Questo non sembra un indirizzo.' : `Non trovo un Moodle con l'app attiva a questo indirizzo (${esc(v.motivo)}). Copia l'indirizzo dalla barra del browser quando sei sulla pagina dei tuoi corsi.`}</p>`; return; }
+    if (!v.ok) { passo.innerHTML = `<p class="ld-nota">${v.motivo === 'indirizzo' ? t('barra3.moodle-non-indirizzo') : t('barra3.moodle-non-trovo', { motivo: esc(v.motivo) })}</p>`; return; }
     const fatto = async r => {
-      if (!r.ok) { passo.querySelector('.esito').textContent = r.motivo === 'finestra chiusa' ? 'Accesso annullato.' : `Accesso non riuscito: ${r.motivo}.`; passo.querySelectorAll('button').forEach(b => { b.disabled = false; }); return; }
-      segnala('fatto'); nuovoTurno(); detto(A.turno, 'Corsi di Moodle'); corsiMoodle(r);
+      if (!r.ok) { passo.querySelector('.esito').textContent = r.motivo === 'finestra chiusa' ? t('barra3.moodle-accesso-annullato') : t('barra3.moodle-accesso-fallito', { motivo: r.motivo }); passo.querySelectorAll('button').forEach(b => { b.disabled = false; }); return; }
+      segnala('fatto'); nuovoTurno(); detto(A.turno, t('barra3.moodle-corsi-detto')); corsiMoodle(r);
     };
     if (v.tipo === 'browser') {
-      passo.innerHTML = `<p><b>${esc(v.nome)}</b> · si entra con il login dell'ateneo (SPID o le credenziali d'ateneo), in una finestra di Lode.</p><div class="az"><button type="button" class="btn primary" data-sso>Accedi</button></div><p class="ld-nota esito"></p>`;
-      passo.querySelector('[data-sso]').addEventListener('click', async e => { e.target.disabled = true; passo.querySelector('.esito').textContent = 'Accedi nella finestra che si è aperta…'; fatto(await BRIDGE.invoca('moodle:accediBrowser', indirizzo).catch(x => ({ ok: false, motivo: x.message }))); });
+      passo.innerHTML = `<p>${t('barra3.moodle-entra-sso', { nome: esc(v.nome) })}</p><div class="az"><button type="button" class="btn primary" data-sso>${t('barra3.accedi')}</button></div><p class="ld-nota esito"></p>`;
+      passo.querySelector('[data-sso]').addEventListener('click', async e => { e.target.disabled = true; passo.querySelector('.esito').textContent = t('barra3.moodle-accedi-finestra'); fatto(await BRIDGE.invoca('moodle:accediBrowser', indirizzo).catch(x => ({ ok: false, motivo: x.message }))); });
     } else {
-      passo.innerHTML = `<p><b>${esc(v.nome)}</b> · accesso con utente e password di Moodle.</p><form class="ld-riga-form" data-pw><input name="u" placeholder="Utente" aria-label="Utente" autocomplete="username" required><input name="p" type="password" placeholder="Password" aria-label="Password" autocomplete="current-password" required><button class="btn primary" type="submit">Accedi</button></form><p class="ld-nota esito">La password va solo a Moodle: Lode non la salva.</p>`;
+      passo.innerHTML = `<p>${t('barra3.moodle-entra-password', { nome: esc(v.nome) })}</p><form class="ld-riga-form" data-pw><input name="u" placeholder="${t('barra3.utente')}" aria-label="${t('barra3.utente')}" autocomplete="username" required><input name="p" type="password" placeholder="${t('barra3.password')}" aria-label="${t('barra3.password')}" autocomplete="current-password" required><button class="btn primary" type="submit">${t('barra3.accedi')}</button></form><p class="ld-nota esito">${t('barra3.moodle-password-nota')}</p>`;
       passo.querySelector('[data-pw]').addEventListener('submit', async e => {
         e.preventDefault(); const f = new FormData(e.target); passo.querySelectorAll('button').forEach(b => { b.disabled = true; });
         const r = await BRIDGE.invoca('moodle:accedi', { indirizzo, utente: String(f.get('u')), password: String(f.get('p')) }).catch(x => ({ ok: false, motivo: x.message }));
@@ -2076,54 +2076,54 @@ function collegaMoodle() {
     entra(passo, { dy: 4, blur: 4, ms: 320 });
   });
   requestAnimationFrame(() => inp.focus({ preventScroll: true }));
-  if (A.turno) A.turno.dataset.sintesi = 'collega Moodle';
+  if (A.turno) A.turno.dataset.sintesi = t('barra3.moodle-collega-sintesi');
 }
 // quali corsi seguire e con che nome in Lode: proposto dal nome dell'esame o del corso che Lode conosce già
 async function corsiMoodle(st) {
-  modo('pensa', 'Leggo i tuoi corsi…');
-  let corsi; try { corsi = await BRIDGE.invoca('moodle:corsi'); } catch (e) { modo('riposo'); return rispostaFissa('Non riesco a leggere i corsi: ' + e.message, { errore: true }); }
+  modo('pensa', t('barra3.moodle-leggo-corsi'));
+  let corsi; try { corsi = await BRIDGE.invoca('moodle:corsi'); } catch (e) { modo('riposo'); return rispostaFissa(t('barra3.moodle-corsi-errore', { errore: e.message }), { errore: true }); }
   modo('riposo');
-  if (!corsi.length) return rispostaFissa('Su Moodle non risulti iscritto a nessun corso.');
+  if (!corsi.length) return rispostaFissa(t('barra3.moodle-nessun-corso'));
   const noti = [...new Set([...daFare().map(e => e.nome), ...corsiPossibili()])], adesso = Date.now();
   const proposta = k => st.corsi?.[k.id] || trovaEsame(k.nome, { anche: 'daFare' })?.nome || trovaEsame(k.breve || '', { anche: 'daFare' })?.nome || noti.find(n => norm(k.nome).includes(norm(n)) && norm(n).length >= 4) || '';
   const attivi = [...corsi].sort((a, b) => (b.fine === 0 || b.fine > adesso) - (a.fine === 0 || a.fine > adesso));
-  const s = scheda('ld-moodle', `<span class="ld-lbl">Corsi di Moodle · ${esc(nomeMoodle(st))}</span>
-    <p>Scegli quali seguire e con quale corso di Lode: i loro file nuovi arrivano qui.</p>
-    <div class="ld-corsi-m">${attivi.slice(0, 40).map(k => { const p = proposta(k); return `<label><span><b>${esc(k.nome)}</b>${k.fine && k.fine < adesso ? '<small>concluso</small>' : ''}</span><select data-k="${esc(k.id)}" aria-label="Corso di Lode per ${esc(k.nome)}"><option value="">Non seguire</option>${[...new Set([p, ...noti].filter(Boolean))].map(n => `<option${n === p ? ' selected' : ''}>${esc(n)}</option>`).join('')}<option value="__nuovo">Con il nome di Moodle</option></select></label>`; }).join('')}</div>
-    <div class="az"><button type="button" class="btn primary" data-salva>Salva</button></div>`);
+  const s = scheda('ld-moodle', `<span class="ld-lbl">${t('barra3.moodle-corsi-titolo', { sito: esc(nomeMoodle(st)) })}</span>
+    <p>${t('barra3.moodle-scegli-corsi')}</p>
+    <div class="ld-corsi-m">${attivi.slice(0, 40).map(k => { const p = proposta(k); return `<label><span><b>${esc(k.nome)}</b>${k.fine && k.fine < adesso ? `<small>${t('barra3.concluso')}</small>` : ''}</span><select data-k="${esc(k.id)}" aria-label="${t('barra3.moodle-corso-per', { nome: esc(k.nome) })}"><option value="">${t('barra3.non-seguire')}</option>${[...new Set([p, ...noti].filter(Boolean))].map(n => `<option${n === p ? ' selected' : ''}>${esc(n)}</option>`).join('')}<option value="__nuovo">${t('barra3.moodle-con-nome')}</option></select></label>`; }).join('')}</div>
+    <div class="az"><button type="button" class="btn primary" data-salva>${t('barra3.salva')}</button></div>`);
   s.querySelector('[data-salva]').addEventListener('click', async () => {
     const scelta = {}; s.querySelectorAll('select[data-k]').forEach(x => { const k = corsi.find(c => String(c.id) === x.dataset.k); if (x.value) scelta[x.dataset.k] = x.value === '__nuovo' ? k.nome : x.value; });
     const r = await BRIDGE.invoca('moodle:segui', scelta); segnala('fatto');
     const n = Object.keys(r.corsi || {}).length;
-    await mostraFatto({ testo: n ? `Seguo ${n} ${n === 1 ? 'corso' : 'corsi'} su Moodle.` : 'Nessun corso seguito.', nota: n ? 'Ti avviso quando arrivano file nuovi.' : '', azione: n ? ['File nuovi', () => { nuovoTurno(); detto(A.turno, 'Novità da Moodle'); schedaMoodle('novita'); }] : null }, s);
+    await mostraFatto({ testo: n ? t('barra3.moodle-seguo', { n }) : t('barra3.moodle-nessuno-seguito'), nota: n ? t('barra3.moodle-ti-avviso') : '', azione: n ? [t('barra3.file-nuovi'), () => { nuovoTurno(); detto(A.turno, t('barra3.moodle-novita-detto')); schedaMoodle('novita'); }] : null }, s);
   });
-  if (A.turno) A.turno.dataset.sintesi = 'corsi di Moodle';
+  if (A.turno) A.turno.dataset.sintesi = t('barra3.moodle-corsi-sintesi');
 }
 async function novitaMoodle(st) {
-  modo('pensa', 'Guardo i file su Moodle…');
-  let r; try { r = await BRIDGE.invoca('moodle:novita', { segna: true }); } catch (e) { modo('riposo'); return rispostaFissa('Moodle non risponde: ' + e.message, { errore: true }); }
+  modo('pensa', t('barra3.moodle-guardo'));
+  let r; try { r = await BRIDGE.invoca('moodle:novita', { segna: true }); } catch (e) { modo('riposo'); return rispostaFissa(t('barra3.moodle-non-risponde', { errore: e.message }), { errore: true }); }
   modo('riposo'); moodleNuovi = 0;
   const nuovi = r.file.filter(f => f.nuovo), lista = r.primaVolta ? r.file.slice(0, 20) : nuovi.length ? nuovi : r.file.slice(0, 8);
-  if (!r.file.length) return rispostaFissa(r.errori?.length ? `Non riesco a leggere ${r.errori.map(x => x.corso).join(', ')}: ${r.errori[0].errore}.` : 'Nei corsi che segui non ci sono ancora file.');
-  const s = scheda('ld-moodle', `<span class="ld-lbl">Moodle · ${r.primaVolta ? 'i file più recenti' : nuovi.length ? `${nuovi.length} ${nuovi.length === 1 ? 'file nuovo' : 'file nuovi'}` : 'niente di nuovo, gli ultimi file'}</span>
-    <ul class="ld-file-m">${lista.map(f => `<li><span class="t"><b>${esc(f.nome)}</b><small>${esc(f.corso)}${f.modulo && f.modulo !== f.nome ? ' · ' + esc(f.modulo) : ''} · ${esc(dataBreve(isoDi(f.quando)))}${f.mb >= .1 ? ` · ${esc(num(f.mb))} MB` : ''}${f.nuovo && !r.primaVolta ? ' · <em>nuovo</em>' : ''}</small></span><button type="button" class="btn small" data-i="${f.i}">Apri</button></li>`).join('')}</ul>
-    <p class="ld-nota">«Apri» lo porta in Lode come se lo avessi trascinato: carte, riassunto, programma, quiz.</p>`);
+  if (!r.file.length) return rispostaFissa(r.errori?.length ? t('barra3.moodle-non-leggo', { corsi: r.errori.map(x => x.corso).join(', '), errore: r.errori[0].errore }) : t('barra3.moodle-nessun-file'));
+  const s = scheda('ld-moodle', `<span class="ld-lbl">Moodle · ${r.primaVolta ? t('barra3.moodle-piu-recenti') : nuovi.length ? t('barra3.moodle-file-nuovi', { n: nuovi.length }) : t('barra3.moodle-niente-nuovo')}</span>
+    <ul class="ld-file-m">${lista.map(f => `<li><span class="t"><b>${esc(f.nome)}</b><small>${esc(f.corso)}${f.modulo && f.modulo !== f.nome ? ' · ' + esc(f.modulo) : ''} · ${esc(dataBreve(isoDi(f.quando)))}${f.mb >= .1 ? ` · ${esc(num(f.mb))} MB` : ''}${f.nuovo && !r.primaVolta ? ` · <em>${t('barra3.nuovo')}</em>` : ''}</small></span><button type="button" class="btn small" data-i="${f.i}">${t('barra3.apri')}</button></li>`).join('')}</ul>
+    <p class="ld-nota">${t('barra3.moodle-apri-nota')}</p>`);
   s.querySelectorAll('[data-i]').forEach(b => b.addEventListener('click', async () => {
-    b.disabled = true; b.textContent = 'Scarico…';
+    b.disabled = true; b.textContent = t('barra3.scarico');
     const x = await BRIDGE.invoca('moodle:scarica', +b.dataset.i).catch(e => ({ ok: false, motivo: e.message }));
-    if (!x.ok) { b.textContent = 'Non riesco'; b.title = x.motivo; return; }
-    b.textContent = 'Aperto';
+    if (!x.ok) { b.textContent = t('barra3.non-riesco'); b.title = x.motivo; return; }
+    b.textContent = t('barra3.aperto');
     const file = new File([x.dati], x.nome, { type: x.mime || '' });
-    nuovoTurno(); detto(A.turno, `${x.nome} da Moodle`);
-    try { schedaFile(await FILE.classifica(file), { corso: x.corso }); } catch (e) { rispostaFissa('Non riesco a leggere il file: ' + e.message, { errore: true }); }
+    nuovoTurno(); detto(A.turno, t('barra3.moodle-file-da', { nome: x.nome }));
+    try { schedaFile(await FILE.classifica(file), { corso: x.corso }); } catch (e) { rispostaFissa(t('barra3.file-illeggibile', { errore: e.message }), { errore: true }); }
   }));
-  if (A.turno) A.turno.dataset.sintesi = `Moodle: ${nuovi.length} file nuovi`;
+  if (A.turno) A.turno.dataset.sintesi = t('barra3.moodle-sintesi-nuovi', { n: nuovi.length });
 }
 async function scadenzeMoodle() {
-  let ev; try { ev = await BRIDGE.invoca('moodle:scadenze'); } catch (e) { return rispostaFissa('Moodle non risponde: ' + e.message, { errore: true }); }
-  if (!ev.length) return rispostaFissa('Nessuna scadenza su Moodle nelle prossime settimane.');
-  const s = scheda('ld-moodle', `<span class="ld-lbl">Scadenze su Moodle</span><ul class="ld-file-m">${ev.slice(0, 20).map(e => `<li><span class="t"><b>${esc(e.nome)}</b><small>${esc(e.corso)}</small></span><span class="q">${esc(traQuanto(isoDi(e.quando)))}<small>${esc(dataBreve(isoDi(e.quando)))}</small></span></li>`).join('')}</ul>`);
-  if (A.turno) A.turno.dataset.sintesi = `${ev.length} scadenze`;
+  let ev; try { ev = await BRIDGE.invoca('moodle:scadenze'); } catch (e) { return rispostaFissa(t('barra3.moodle-non-risponde', { errore: e.message }), { errore: true }); }
+  if (!ev.length) return rispostaFissa(t('barra3.moodle-nessuna-scadenza'));
+  const s = scheda('ld-moodle', `<span class="ld-lbl">${t('barra3.moodle-scadenze-titolo')}</span><ul class="ld-file-m">${ev.slice(0, 20).map(e => `<li><span class="t"><b>${esc(e.nome)}</b><small>${esc(e.corso)}</small></span><span class="q">${esc(traQuanto(isoDi(e.quando)))}<small>${esc(dataBreve(isoDi(e.quando)))}</small></span></li>`).join('')}</ul>`);
+  if (A.turno) A.turno.dataset.sintesi = t('barra3.scadenze-sintesi', { n: ev.length });
 }
 // ogni tanto, con Lode aperto: se nei corsi seguiti ci sono file nuovi, la pillola lo propone (una volta per gruppo di file)
 let moodleNuovi = 0;
@@ -2135,7 +2135,7 @@ async function controllaMoodle() {
     if (!nuovi.length || nuovi.length === moodleNuovi) return;
     moodleNuovi = nuovi.length;
     const corsi = [...new Set(nuovi.map(f => f.corso))];
-    mostraProposta({ tipo: 'moodle', titolo: `Moodle · ${corsi.slice(0, 2).join(', ')}${corsi.length > 2 ? '…' : ''}`, testo: `${nuovi.length} ${nuovi.length === 1 ? 'file nuovo' : 'file nuovi'}`, bottone: 'Guarda' });
+    mostraProposta({ tipo: 'moodle', titolo: `Moodle · ${corsi.slice(0, 2).join(', ')}${corsi.length > 2 ? '…' : ''}`, testo: t('barra3.moodle-file-nuovi', { n: nuovi.length }), bottone: t('barra3.guarda') });
   } catch { }
 }
 if (BRIDGE) { setTimeout(controllaMoodle, 90e3); setInterval(controllaMoodle, 3 * 3600e3); }
