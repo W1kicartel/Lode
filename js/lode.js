@@ -737,7 +737,7 @@ function schedaOre() {
 }
 
 /* ---------- cattura veloce in aula ---------- */
-const CATTURE = { stella: ['★ Da esame', 'Cosa ha detto il prof che sarà all\'esame?'], definizione: ['Definizione', 'Termine: definizione'], domanda: ['Domanda', 'La domanda da fare al prof'] };
+const CATTURE = { stella: [t('barra1.cattura-stella'), t('barra1.cattura-stella-campo')], definizione: [t('barra1.cattura-definizione'), t('barra1.cattura-definizione-campo')], domanda: [t('barra1.cattura-domanda'), t('barra1.cattura-domanda-campo')] };
 export function cattura(tipo) {
   A.cattura = tipo; apri({ fisso: true });
   campo.dataset.cattura = tipo;
@@ -746,12 +746,12 @@ export function cattura(tipo) {
   const inp = campo.querySelector('input'); inp.placeholder = CATTURE[tipo][1];
   requestAnimationFrame(() => inp.focus({ preventScroll: true }));
 }
-function fineCattura() { A.cattura = null; delete campo.dataset.cattura; campo.querySelector('.ld-tipo')?.remove(); campo.querySelector('input').placeholder = 'Chiedi o scrivi un comando…'; }
+function fineCattura() { A.cattura = null; delete campo.dataset.cattura; campo.querySelector('.ld-tipo')?.remove(); campo.querySelector('input').placeholder = t('barra1.campo'); }
 async function salvaCattura(tipo, testo, { termine, corso } = {}) {
-  if (tipo === 'definizione' && !termine) { const m = testo.match(/^(.+?)\s*(?:::|:|=|→|—)\s*(.+)$/); if (!m) { rispostaFissa('Scrivila così: **termine: definizione**.'); return false; } termine = m[1]; testo = m[2]; }
-  let l; try { l = await V.annota(tipo, testo, { termine, corso }); } catch (e) { rispostaFissa('Non riesco a scrivere nel vault: ' + e.message, { errore: true }); return false; }
-  const dove = l.corso === 'Appunti sparsi' ? 'negli appunti sparsi di oggi' : `in ${l.corso}`;
-  const testoFatto = tipo === 'stella' ? `★ Segnato ${dove}.` : tipo === 'definizione' ? `«${termine.trim().replace(/^./, c => c.toUpperCase())}» ${dove}.` : `Domanda salvata ${dove}.`;
+  if (tipo === 'definizione' && !termine) { const m = testo.match(/^(.+?)\s*(?:::|:|=|→|—)\s*(.+)$/); if (!m) { rispostaFissa(t('barra1.scrivila-cosi')); return false; } termine = m[1]; testo = m[2]; }
+  let l; try { l = await V.annota(tipo, testo, { termine, corso }); } catch (e) { rispostaFissa(t('barra1.errore-vault', { errore: e.message }), { errore: true }); return false; }
+  const dove = l.corso === 'Appunti sparsi' ? t('barra1.dove-sparsi') : t('barra1.dove-in', { corso: l.corso });
+  const testoFatto = tipo === 'stella' ? t('barra1.segnato-dove', { dove }) : tipo === 'definizione' ? t('barra1.definizione-dove', { termine: termine.trim().replace(/^./, c => c.toUpperCase()), dove }) : t('barra1.domanda-dove', { dove });
   aggiornaTutto();
   return { testo: testoFatto, l };
 }
@@ -759,28 +759,28 @@ async function salvaCattura(tipo, testo, { termine, corso } = {}) {
 /* ---------- trascrivere la lezione ---------- */
 // «Lezione dal computer» (js/computer.js): per chi non frequenta. Prima la scheda: di che corso è, e il patto (la prima volta)
 function schedaComputer(corsoDetto) {
-  if (!V.attivo) return rispostaFissa('La trascrizione delle videolezioni è nell\'**app desktop** di Lode: ascolta l\'audio del computer e scrive nella nota Obsidian della lezione.');
-  if (TR.attiva()) return mostraFatto({ testo: 'Sto già trascrivendo.', nota: `${TR.stato().parole} parole finora.` });
+  if (!V.attivo) return rispostaFissa(t('barra1.videolezioni-app'));
+  if (TR.attiva()) return mostraFatto({ testo: t('barra1.sto-gia-trascrivendo'), nota: t('barra1.parole-finora', { n: TR.stato().parole }) });
   const corsi = corsiPossibili(), scelto = corsoDetto ? (trovaEsame(corsoDetto)?.nome || corsi.find(c => norm(c).startsWith(norm(corsoDetto))) || corsoDetto.replace(/^./, c => c.toUpperCase())) : corsi[0];
   const lista = scelto && !corsi.some(c => norm(c) === norm(scelto)) ? [scelto, ...corsi] : corsi;
-  const s = scheda('ld-computer', `<span class="ld-lbl">Lezione dal computer</span>
-    <p>Fai partire la videolezione (sulla piattaforma del tuo ateneo, su Teams, Zoom o dove la segui): ascolto l'audio che esce dal computer e la scrivo nella nota della lezione, formule comprese.</p>
-    <div class="ld-riga-form ld-per"><span class="ld-lbl">Corso</span>${lista.length ? `<select aria-label="Corso">${lista.map(c => `<option${norm(c) === norm(scelto || '') ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select>` : '<input aria-label="Corso" placeholder="Nome del corso">'}<button type="button" class="btn primary" data-via>Inizia</button></div>
-    ${D.imp.computerOk ? '' : '<p class="ld-nota">Solo per studiare tu: non scarico il video e non carico niente online, l\'audio non si salva e nella nota va solo il testo. Le lezioni sono dei docenti: non condividere la trascrizione se il regolamento del tuo ateneo non lo permette.</p>'}
-    <p class="ld-nota">${window.lodeDesktop?.piattaforma === 'darwin' ? 'La prima volta il Mac ti chiede il permesso di registrare l\'audio del sistema.' : window.lodeDesktop?.piattaforma === 'win32' ? 'Su Windows senti l\'audio come sempre: lo ascolto anch\'io.' : 'Su Linux ascolto il «monitor» dell\'uscita audio.'}</p>`);
+  const s = scheda('ld-computer', `<span class="ld-lbl">${t('barra1.lezione-dal-computer')}</span>
+    <p>${t('barra1.computer-spiega')}</p>
+    <div class="ld-riga-form ld-per"><span class="ld-lbl">${t('barra1.corso')}</span>${lista.length ? `<select aria-label="${t('barra1.corso')}">${lista.map(c => `<option${norm(c) === norm(scelto || '') ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select>` : `<input aria-label="${t('barra1.corso')}" placeholder="${t('barra1.nome-del-corso')}">`}<button type="button" class="btn primary" data-via>${t('barra1.inizia')}</button></div>
+    ${D.imp.computerOk ? '' : `<p class="ld-nota">${t('barra1.computer-patto')}</p>`}
+    <p class="ld-nota">${window.lodeDesktop?.piattaforma === 'darwin' ? t('barra1.computer-mac') : window.lodeDesktop?.piattaforma === 'win32' ? t('barra1.computer-windows') : t('barra1.computer-linux')}</p>`);
   s.querySelector('[data-via]').addEventListener('click', () => {
     const corso = (s.querySelector('select')?.value || s.querySelector('input')?.value || '').trim() || 'Videolezioni';
     D.imp.computerOk = true; salva(); s.querySelector('[data-via]').disabled = true;
-    nuovoTurno(); detto(A.turno, `Trascrivi la videolezione di ${corso}`);
+    nuovoTurno(); detto(A.turno, t('barra1.detto-trascrivi-videolezione', { corso }));
     avviaTrascrizione({ sorgente: 'computer', lezione: lezionePer(corso, oggi()) });
   });
-  if (A.turno) A.turno.dataset.sintesi = 'lezione dal computer';
+  if (A.turno) A.turno.dataset.sintesi = t('barra1.sintesi-lezione-dal-computer');
 }
 // il sistema non dà l'audio: cosa fare, per sistema
 function erroreComputer(e) {
   const mac = window.lodeDesktop?.piattaforma === 'darwin', win = window.lodeDesktop?.piattaforma === 'win32';
-  if (/NotAllowed|Permission/i.test(e?.name + e?.message)) return mac ? 'Il Mac non mi dà l\'audio del computer: in **Impostazioni di Sistema › Privacy e sicurezza › Registrazione audio dello schermo e del sistema** attiva Lode, poi riprova (a volte serve riaprire Lode).' : 'Il sistema non mi dà l\'audio del computer: riprova e conferma la richiesta di condivisione.';
-  return (mac ? 'Non riesco ad ascoltare l\'audio del computer (serve macOS 14.2 o più recente). ' : win ? 'Non riesco ad ascoltare l\'audio del computer. ' : 'Non riesco ad ascoltare l\'audio del computer (serve PulseAudio o PipeWire). ') + (e?.message || '');
+  if (/NotAllowed|Permission/i.test(e?.name + e?.message)) return mac ? t('barra1.computer-permesso-mac') : t('barra1.computer-permesso');
+  return t(mac ? 'barra1.computer-non-sento-mac' : win ? 'barra1.computer-non-sento-windows' : 'barra1.computer-non-sento-linux', { errore: e?.message || '' });
 }
 // lo stream può arrivare muto senza errori (permesso negato in silenzio): dopo 25 s senza un suono, lo dico
 let tMuto = 0;
@@ -789,62 +789,62 @@ function controllaMuto() {
   tMuto = setTimeout(() => {
     if (!TR.attiva() || TR.stato()?.sorgente !== 'computer' || !CO.muto(20000)) return;
     const mac = window.lodeDesktop?.piattaforma === 'darwin';
-    apri({ fisso: true }).then(() => { nuovoTurno(); rispostaFissa(`Non sento niente dal computer. La videolezione è partita, con il volume alzato?${mac ? ' Se sì, il Mac non mi sta dando l\'audio: **Impostazioni di Sistema › Privacy e sicurezza › Registrazione audio dello schermo e del sistema**, attiva Lode e riprova.' : ''}`); });
+    apri({ fisso: true }).then(() => { nuovoTurno(); rispostaFissa(mac ? t('barra1.computer-muto-mac') : t('barra1.computer-muto')); });
   }, 25000);
 }
 if (typeof addEventListener === 'function') addEventListener('lode:computer', e => { if (e.detail?.finito && TR.attiva() && TR.stato()?.sorgente === 'computer') { apri({ fisso: true }).then(() => { nuovoTurno(); fermaTrascrizione(); }); } });
 async function avviaTrascrizione(opz = {}) {
-  if (!V.attivo) return rispostaFissa('La trascrizione delle lezioni è nell\'**app desktop** di Lode: scrive direttamente nella nota Obsidian della lezione.');
-  if (TR.attiva()) return mostraFatto({ testo: 'Sto già trascrivendo.', nota: `${TR.stato().parole} parole finora.` });
-  if (opz.sorgente === 'computer' && !CO.disponibile()) return rispostaFissa('Questa versione non riesce ad ascoltare l\'audio del computer: aggiorna Lode.');
+  if (!V.attivo) return rispostaFissa(t('barra1.trascrizione-app'));
+  if (TR.attiva()) return mostraFatto({ testo: t('barra1.sto-gia-trascrivendo'), nota: t('barra1.parole-finora', { n: TR.stato().parole }) });
+  if (opz.sorgente === 'computer' && !CO.disponibile()) return rispostaFissa(t('barra1.computer-aggiorna'));
   const l = opz.lezione || V.lezioneDaAnnotare();
   if (!opz.daFile && opz.sorgente !== 'computer' && !(await consensoAula())) return;
   try {
-    if (!Voce.pronta()) { modo('pensa', 'Preparo la voce…'); attesaVoce = 'Preparo la voce…'; }
+    if (!Voce.pronta()) { modo('pensa', t('barra1.preparo-voce')); attesaVoce = t('barra1.preparo-voce'); }
     await TR.avvia(l, opz); modo('riposo');
     try { localStorage.setItem('lode:voce', '1'); } catch { }
     if (opz.daFile) {   // una registrazione: si trascrive tutta, poi si chiude da sola
-      await mostraFatto({ testo: `Trascrivo «${opz.daFile}» nella lezione di ${l.corso}.`, nota: 'Puoi chiudere il pannello: ti avviso alla fine.', sintesi: 'registrazione in trascrizione' });
+      await mostraFatto({ testo: t('barra1.trascrivo-file', { file: opz.daFile, corso: l.corso }), nota: t('barra1.puoi-chiudere'), sintesi: t('barra1.sintesi-registrazione') });
       aggiornaTutto();
       await new Promise(ok => { const g = () => { const t = TR.stato(); if (!t || (!t.coda && !TR.occupata())) ok(); else setTimeout(g, 500); }; setTimeout(g, 800); });
       return fermaTrascrizione();
     }
     if (opz.sorgente === 'computer') {
-      await mostraFatto({ testo: `Ascolto l'audio del computer per ${l.corso}.`, nota: 'Fai partire la videolezione: le righe arrivano nella nota ogni 20-30 secondi. Quando finisce, scrivi «fine lezione».', azione: ['Apri in Obsidian', () => apriAppunti(l)], sintesi: 'videolezione in trascrizione' });
+      await mostraFatto({ testo: t('barra1.ascolto-computer', { corso: l.corso }), nota: t('barra1.ascolto-computer-nota'), azione: [t('barra1.apri-in-obsidian'), () => apriAppunti(l)], sintesi: t('barra1.sintesi-videolezione') });
       segnala('focus'); aggiornaTutto(); controllaMuto();
-      dopo(2500, () => { if (A.aperto && !A.attesa) chiudi('Ascolto la videolezione'); });
+      dopo(2500, () => { if (A.aperto && !A.attesa) chiudi(t('barra1.avviso-videolezione')); });
       return;
     }
-    await mostraFatto({ testo: `Trascrivo ${l.corso === 'Appunti sparsi' ? 'gli appunti sparsi' : 'la lezione di ' + l.corso}.`, nota: 'Le righe arrivano nella nota ogni 20-30 secondi.', azione: ['Apri in Obsidian', () => apriAppunti(l)], sintesi: 'trascrizione avviata' });
+    await mostraFatto({ testo: l.corso === 'Appunti sparsi' ? t('barra1.trascrivo-sparsi') : t('barra1.trascrivo-lezione-di', { corso: l.corso }), nota: t('barra1.righe-ogni'), azione: [t('barra1.apri-in-obsidian'), () => apriAppunti(l)], sintesi: t('barra1.sintesi-trascrizione-avviata') });
     segnala('focus'); aggiornaTutto();
-    if (!opz.audioProva) dopo(1200, () => { if (A.aperto && !A.attesa) chiudi('Trascrivo la lezione'); });
-  } catch (e) { modo('riposo'); rispostaFissa(opz.sorgente === 'computer' ? erroreComputer(e) : 'Non riesco a trascrivere: ' + (/Permission|NotAllowed|NotFound|NotReadable/i.test(e.name + e.message) ? Voce.erroreMicrofono(e) : e.message), { errore: true }); }
+    if (!opz.audioProva) dopo(1200, () => { if (A.aperto && !A.attesa) chiudi(t('barra1.avviso-trascrivo')); });
+  } catch (e) { modo('riposo'); rispostaFissa(opz.sorgente === 'computer' ? erroreComputer(e) : t('barra1.errore-trascrivere', { errore: /Permission|NotAllowed|NotFound|NotReadable/i.test(e.name + e.message) ? Voce.erroreMicrofono(e) : e.message }), { errore: true }); }
 }
 async function fermaTrascrizione() {
-  if (!TR.attiva()) return rispostaFissa('Non sto trascrivendo niente.');
-  modo('pensa', 'Trascrivo gli ultimi secondi…'); attesaVoce = 'Trascrivo gli ultimi secondi…';
+  if (!TR.attiva()) return rispostaFissa(t('barra1.non-sto-trascrivendo'));
+  modo('pensa', t('barra1.ultimi-secondi')); attesaVoce = t('barra1.ultimi-secondi');
   const l = TR.stato().lezione, r = await TR.ferma(); modo('riposo'); segnala('fatto'); aggiornaTutto();
-  await mostraFatto({ testo: `Lezione trascritta: ${r.parole.toLocaleString('it-IT')} parole.`, nota: r.sospese ? `${r.sospese} ${r.sospese === 1 ? 'riga non è ancora' : 'righe non sono ancora'} nella nota (la cartella non risponde): le scrivo appena posso, tienimi aperto.` : 'È tutto nella nota.', azione: AI.attiva() ? ['Riordina', () => { nuovoTurno(); detto(A.turno, 'Riordina la lezione'); riordinaLezione(null, l); }] : ['Condividi', () => { nuovoTurno(); detto(A.turno, 'Condividi la sbobina'); condividiLezione(l.corso); }], sintesi: `${r.parole} parole trascritte` });
+  await mostraFatto({ testo: t('barra1.lezione-trascritta', { parole: numero(r.parole, 0) }), nota: r.sospese ? t('barra1.righe-sospese', { n: r.sospese }) : t('barra1.tutto-nella-nota'), azione: AI.attiva() ? [t('barra1.riordina'), () => { nuovoTurno(); detto(A.turno, t('barra1.detto-riordina')); riordinaLezione(null, l); }] : [t('barra1.condividi'), () => { nuovoTurno(); detto(A.turno, t('barra1.detto-condividi')); condividiLezione(l.corso); }], sintesi: t('barra1.sintesi-parole-trascritte', { n: r.parole }) });
   if (r.sorgente !== 'computer' && !(D.imp.ripetiInAula && (lezioneOra() || ripetiAMano()))) O.spegni();   // il microfono resta acceso solo se serve a «Ripeti»
   clearTimeout(tMuto);
-  if (!AI.attiva()) rispostaFissa('Con il **cervello locale** (da «Prepara Lode») la trascrizione diventa appunti ordinati, definizioni e ★ con un clic.');
+  if (!AI.attiva()) rispostaFissa(t('barra1.con-cervello-locale'));
 }
 async function riordinaLezione(corso, lez) {
   await new Promise(r => setTimeout(r, 600));   // il vault rilegge la nota appena scritta
   const l = lez ? (lezioni().find(x => x.file && norm(x.corso) === norm(lez.corso) && x.data === lez.data) || lez) : lezioni().find(x => (x.paroleTrascritte || 0) >= 40 && (!corso || norm(x.corso) === norm(corso)));
-  if (!l?.trascrizione || l.paroleTrascritte < 30) return rispostaFissa(corso ? `Non trovo una trascrizione di **${corso}**.` : 'Non trovo una lezione trascritta. In aula premi **Trascrivi la lezione**.');
-  if (!AI.attiva()) return rispostaFissa('Per riordinare serve l\'AI: installa il **cervello locale** da «Prepara Lode» (gratis, offline) o collega la tua AI: scrivi «AI».');
-  modo('pensa', `Riordino ${l.corso}…`); segnala('pensa');
+  if (!l?.trascrizione || l.paroleTrascritte < 30) return rispostaFissa(corso ? t('barra1.non-trovo-trascrizione-di', { corso }) : t('barra1.non-trovo-trascrizione'));
+  if (!AI.attiva()) return rispostaFissa(t('barra1.riordinare-serve-ai'));
+  modo('pensa', t('barra1.riordino', { corso: l.corso })); segnala('pensa');
   let md;
-  try { md = await AI.riordina({ corso: l.corso, testo: l.trascrizione, appunti: l.appunti, avanza: p => modo('pensa', `Riordino ${l.corso}… ${Math.round(p * 100)}%`) }); }
-  catch (e) { modo('riposo'); return rispostaFissa('Non sono riuscito a riordinare: ' + e.message, { errore: true }); }
+  try { md = await AI.riordina({ corso: l.corso, testo: l.trascrizione, appunti: l.appunti, avanza: p => modo('pensa', t('barra1.riordino-per-cento', { corso: l.corso, n: Math.round(p * 100) })) }); }
+  catch (e) { modo('riposo'); return rispostaFissa(t('barra1.errore-riordinare', { errore: e.message }), { errore: true }); }
   modo('riposo');
-  const card = schedaConferma({ titolo: `Salvare gli appunti riordinati di ${l.corso}?`, extra: `<div class="ld-anteprima">${mdHtml(md.slice(0, 1400))}${md.length > 1400 ? '<span class="ld-tenue"> …</span>' : ''}</div>`,
-    nota: `Vanno nella nota, in «Appunti riordinati da Lode», sotto la trascrizione (che resta). Li ha scritti ${AI.nomeMotore('testo')}: rileggili.` });
+  const card = schedaConferma({ titolo: t('barra1.salvare-riordinati', { corso: l.corso }), extra: `<div class="ld-anteprima">${mdHtml(md.slice(0, 1400))}${md.length > 1400 ? '<span class="ld-tenue"> …</span>' : ''}</div>`,
+    nota: t('barra1.riordinati-nota', { motore: AI.nomeMotore('testo') }) });
   await attendiDecisione(card, async () => {
     await V.annota('riordinati', md, { lezione: l, grezza: true });
-    await mostraFatto({ testo: 'Appunti salvati nella nota.', azione: ['Condividi', () => { nuovoTurno(); detto(A.turno, 'Condividi la sbobina'); condividiLezione(l.corso); }], sintesi: 'lezione riordinata' }, card);
-    nuovoTurno(); detto(A.turno, 'Definizioni dalla lezione');
+    await mostraFatto({ testo: t('barra1.appunti-salvati'), azione: [t('barra1.condividi'), () => { nuovoTurno(); detto(A.turno, t('barra1.detto-condividi')); condividiLezione(l.corso); }], sintesi: t('barra1.sintesi-lezione-riordinata') }, card);
+    nuovoTurno(); detto(A.turno, t('barra1.detto-definizioni-lezione'));
     return chiudiLezione(l.corso, { lezione: l, testo: md.slice(0, 9000) });
   });
 }
@@ -855,23 +855,23 @@ let ripetiManuale = 0;
 const ripetiAMano = () => !!ripetiManuale && Date.now() - ripetiManuale < O.MANUALE;
 async function consensoAula() {
   if (D.imp.trascrizioneOk) return true;
-  const card = schedaConferma({ titolo: 'Ascoltare la lezione?', fuoco: false,
-    righe: [['Ripeti', 'tengo in memoria solo l\'ultimo minuto e mezzo, mai su disco'], ['Trascrivi', 'scrivo la lezione nella nota, l\'audio non si salva'], ['Dove', 'tutto sul computer, niente su internet']],
-    nota: 'Registrare una lezione dipende dal regolamento del tuo ateneo e dal docente: chiedi prima.' });
-  card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = 'Te lo chiedo solo la prima volta.';
-  const r = await attendiDecisione(card, async () => { D.imp.trascrizioneOk = true; salva(); await mostraFatto({ testo: 'D\'accordo.' }, card); return { ok: true }; });
+  const card = schedaConferma({ titolo: t('barra1.ascoltare-lezione'), fuoco: false,
+    righe: [[t('barra1.ripeti'), t('barra1.consenso-ripeti')], [t('barra1.trascrivi'), t('barra1.consenso-trascrivi')], [t('barra1.dove'), t('barra1.consenso-dove')]],
+    nota: t('barra1.consenso-nota') });
+  card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = t('barra1.solo-la-prima-volta');
+  const r = await attendiDecisione(card, async () => { D.imp.trascrizioneOk = true; salva(); await mostraFatto({ testo: t('barra1.d-accordo') }, card); return { ok: true }; });
   return !!r?.ok;
 }
 async function accendiRipeti() {
-  if (!V.attivo) return rispostaFissa('«Ripeti» è nell\'**app desktop** di Lode.');
+  if (!V.attivo) return rispostaFissa(t('barra1.ripeti-app'));
   if (!(await consensoAula())) return;
   try { await O.accendi(); D.imp.ripetiInAula = true; ripetiManuale = lezioneOra() ? 0 : Date.now(); salva(); Voce.prepara().catch(() => { }); aggiornaTutto(); }
   catch (e) { return rispostaFissa(Voce.erroreMicrofono(e), { errore: true }); }
-  return mostraFatto({ testo: 'Ripeti è attivo.', nota: `Tengo in memoria l'ultimo minuto e mezzo, mai su disco. Ti sei perso qualcosa? ${MAC ? '⌃⌥P' : 'Ctrl Alt P'} o «ripeti».${ripetiManuale ? ' Fuori dall\'orario di lezione resto acceso al massimo 3 ore.' : ''}`, ...(ripetiManuale ? { azione: ['Spegni', () => { nuovoTurno(); detto(A.turno, 'Spegni Ripeti'); spegniRipeti(); }] } : {}), sintesi: 'ripeti attivo' });
+  return mostraFatto({ testo: t('barra1.ripeti-e-attivo'), nota: t(ripetiManuale ? 'barra1.ripeti-attivo-nota-fuori' : 'barra1.ripeti-attivo-nota', { tasti: MAC ? '⌃⌥P' : 'Ctrl Alt P' }), ...(ripetiManuale ? { azione: [t('barra1.spegni'), () => { nuovoTurno(); detto(A.turno, t('barra1.detto-spegni-ripeti')); spegniRipeti(); }] } : {}), sintesi: t('barra1.sintesi-ripeti-attivo') });
 }
 function spegniRipeti() {
   const eraAuto = !!D.imp.ripetiInAula; D.imp.ripetiInAula = false; ripetiManuale = 0; salva(); if (!TR.attiva()) O.spegni(); aggiornaTutto();
-  return mostraFatto({ testo: 'Ripeti spento.', nota: `${TR.attiva() ? 'Il microfono resta acceso per la trascrizione, finché non la chiudi.' : 'Il microfono è chiuso.'}${eraAuto ? ` A lezione non si accende più da solo: lo riaccendi con ${MAC ? '⌃⌥P' : 'Ctrl Alt P'}.` : ''}` });
+  return mostraFatto({ testo: t('barra1.ripeti-spento'), nota: (TR.attiva() ? t('barra1.microfono-resta') : t('barra1.microfono-chiuso')) + (eraAuto ? t('barra1.non-si-accende-piu', { tasti: MAC ? '⌃⌥P' : 'Ctrl Alt P' }) : '') });
 }
 // quello che ha detto il prof: l'ultima frase (quella che ti sei perso) in chiaro, il resto prima, più tenue
 function dettoProf(f) {
@@ -891,36 +891,36 @@ function dettoProf(f) {
 async function ripeti(sec = 60, { gesto = false } = {}) {
   if (!O.attivo()) {
     if (gesto || lezioneOra()) return accendiRipeti();
-    return mostraFatto({ testo: 'Ripeti è spento.', nota: `Ripeti ti scrive cosa ha detto il prof negli ultimi 60 secondi: lo accendi qui o con ${MAC ? '⌃⌥P' : 'Ctrl Alt P'}. Se volevi altro, chiedimelo con parole tue.`, azione: ['Accendi', () => { nuovoTurno(); detto(A.turno, 'Accendi Ripeti'); accendiRipeti(); }], sintesi: 'ripeti spento', no: true });
+    return mostraFatto({ testo: t('barra1.ripeti-e-spento'), nota: t('barra1.ripeti-e-spento-nota', { tasti: MAC ? '⌃⌥P' : 'Ctrl Alt P' }), azione: [t('barra1.accendi'), () => { nuovoTurno(); detto(A.turno, t('barra1.detto-accendi-ripeti')); accendiRipeti(); }], sintesi: t('barra1.sintesi-ripeti-spento'), no: true });
   }
-  if (O.secondi() < 1) return rispostaFissa('Ascolto da un attimo: non ho ancora niente da ripeterti.');
+  if (O.secondi() < 1) return rispostaFissa(t('barra1.ascolto-da-un-attimo'));
   const quando = new Date(), audio = O.ultimi(sec);
-  const riascolto = `Riascolto gli ultimi ${Math.round(Math.min(sec, O.secondi()))} secondi…`;
+  const riascolto = t('barra1.riascolto', { n: Math.round(Math.min(sec, O.secondi())) });
   modo('pensa', riascolto); attesaVoce = riascolto; segnala('pensa');
-  let testo = ''; try { testo = await Voce.trascriviAudio(audio, { subito: true }); } catch (e) { modo('riposo'); return rispostaFissa('Non sono riuscito a riascoltare: ' + e.message, { errore: true }); }
+  let testo = ''; try { testo = await Voce.trascriviAudio(audio, { subito: true }); } catch (e) { modo('riposo'); return rispostaFissa(t('barra1.errore-riascoltare', { errore: e.message }), { errore: true }); }
   modo('riposo');
-  if (!testo) return rispostaFissa('Negli ultimi 60 secondi non ho sentito parlare.');
+  if (!testo) return rispostaFissa(t('barra1.niente-sentito'));
   const f = parlatoInFormule(testo), hh = `${String(quando.getHours()).padStart(2, '0')}:${String(quando.getMinutes()).padStart(2, '0')}`;
-  const s = scheda('ld-ripeti', `<span class="ld-lbl">Gli ultimi ${esc(Math.round(Math.min(sec, audio.length / 16000)))} secondi · ${esc(hh)}</span><p class="ld-detto-prof">${dettoProf(f)}</p>
-    <div class="az"><button type="button" class="btn primary" data-r="appunti">Agli appunti</button><button type="button" class="btn" data-r="stella">★ Da esame</button><button type="button" class="btn" data-r="copia">Copia</button></div>`);
-  s.querySelector('[data-r=copia]').addEventListener('click', e => { navigator.clipboard.writeText(f).then(() => { e.target.textContent = 'Copiato'; }); });
-  s.querySelector('[data-r=appunti]').addEventListener('click', async e => { e.target.disabled = true; const l = await V.annota('appunti', `- **${hh}** ${f}`, { grezza: true }); mostraFatto({ testo: `Negli appunti di ${l.corso}.` }); });
-  s.querySelector('[data-r=stella]').addEventListener('click', async e => { e.target.disabled = true; const l = await V.annota('stella', f); mostraFatto({ testo: `★ Segnato in ${l.corso}.` }); aggiornaTutto(); });
+  const s = scheda('ld-ripeti', `<span class="ld-lbl">${t('barra1.ultimi-secondi-ora', { n: esc(Math.round(Math.min(sec, audio.length / 16000))), ora: esc(hh) })}</span><p class="ld-detto-prof">${dettoProf(f)}</p>
+    <div class="az"><button type="button" class="btn primary" data-r="appunti">${t('barra1.agli-appunti')}</button><button type="button" class="btn" data-r="stella">${t('barra1.cattura-stella')}</button><button type="button" class="btn" data-r="copia">${t('barra1.copia')}</button></div>`);
+  s.querySelector('[data-r=copia]').addEventListener('click', e => { navigator.clipboard.writeText(f).then(() => { e.target.textContent = t('barra1.copiato'); }); });
+  s.querySelector('[data-r=appunti]').addEventListener('click', async e => { e.target.disabled = true; const l = await V.annota('appunti', `- **${hh}** ${f}`, { grezza: true }); mostraFatto({ testo: t('barra1.negli-appunti-di', { corso: l.corso }) }); });
+  s.querySelector('[data-r=stella]').addEventListener('click', async e => { e.target.disabled = true; const l = await V.annota('stella', f); mostraFatto({ testo: t('barra1.segnato-dove', { dove: t('barra1.dove-in', { corso: l.corso }) }) }); aggiornaTutto(); });
   if (A.turno) A.turno.dataset.sintesi = f.slice(0, 80);
 }
 
 /* ---------- condividere la sbobina ---------- */
 async function condividiLezione(corso) {
-  if (!V.attivo) return rispostaFissa('Le sbobine si condividono dall\'**app desktop**.');
+  if (!V.attivo) return rispostaFissa(t('barra1.sbobine-app'));
   const l = lezioni().find(x => x.file && (!corso || norm(x.corso) === norm(corso)) && ((x.paroleTrascritte || 0) > 20 || x.riordinata || (x.definizioni || []).length));
-  if (!l) return rispostaFissa(corso ? `Non trovo una lezione di **${corso}** da condividere.` : 'Non trovo una lezione da condividere: prima trascrivila o riordinala.');
-  modo('pensa', 'Preparo la sbobina…');
+  if (!l) return rispostaFissa(corso ? t('barra1.non-trovo-lezione-di', { corso }) : t('barra1.non-trovo-lezione'));
+  modo('pensa', t('barra1.preparo-sbobina'));
   try {
     const sb = SB.crea(await V.leggiNota(l.file), { autore: D.profilo.nome }), pagina = await SB.html(sb);
     const a = await V.salvaFile(`Sbobine/${sb.nome}.md`, { testo: sb.md, sostituisci: true }), b = await V.salvaFile(`Sbobine/${sb.nome}.html`, { testo: pagina, sostituisci: true });
     modo('riposo'); const r = await V.condividi([b.file, a.file]);
-    return mostraFatto({ testo: `Sbobina di ${l.corso} pronta.`, nota: r.esito === 'menu' ? 'Scegli dove mandarla: AirDrop, Messaggi, Mail…' : 'È nella cartella Sbobine del vault.', azione: ['Mostra', () => V.condividi([b.file, a.file])], sintesi: 'sbobina condivisa' });
-  } catch (e) { modo('riposo'); return rispostaFissa('Non riesco a preparare la sbobina: ' + e.message, { errore: true }); }
+    return mostraFatto({ testo: t('barra1.sbobina-pronta', { corso: l.corso }), nota: r.esito === 'menu' ? t('barra1.scegli-dove') : t('barra1.nella-cartella-sbobine'), azione: [t('barra1.mostra'), () => V.condividi([b.file, a.file])], sintesi: t('barra1.sintesi-sbobina-condivisa') });
+  } catch (e) { modo('riposo'); return rispostaFissa(t('barra1.errore-sbobina', { errore: e.message }), { errore: true }); }
 }
 
 /* ---------- esportare per Anki (js/anki.js) ---------- */
@@ -936,19 +936,19 @@ async function esportaAnki(corsoDetto) {
   const e = corsoDetto ? trovaEsame(corsoDetto) : null, nomi = new Set([norm(corsoDetto), norm(e?.nome)].filter(Boolean));
   const carte = D.carte.map(c => ({ id: c.id, fronte: c.fronte, retro: c.retro, corso: esame(c.esameId)?.nome || 'Varie' }));
   const p = preparaAnki({ carte, definizioni: definizioni({ giorni: 3650 }), corso: corsoDetto ? n => nomi.has(norm(n)) : null });
-  if (!p.totale) return rispostaFissa(corsoDetto ? `Non trovo carte né definizioni di **${e?.nome || corsoDetto}** da esportare.` : 'Non ho ancora carte né definizioni da esportare: segna qualche definizione a lezione («def: gradiente = …») o crea delle carte da un PDF.');
+  if (!p.totale) return rispostaFissa(corsoDetto ? t('barra1.anki-non-trovo-di', { corso: e?.nome || corsoDetto }) : t('barra1.anki-non-trovo'));
   const nome = nomeFileAnki(corsoDetto ? p.mazzi[0].corso : null, oggi()), testo = testoAnki(p.mazzi);
-  const quante = `${p.totale} ${p.totale === 1 ? 'carta' : 'carte'} per Anki${p.mazzi.length > 1 ? `, ${p.mazzi.length} mazzi` : ` nel mazzo ${mazzo(p.mazzi[0].corso)}`}.${p.doppioni ? ` ${p.doppioni} ${p.doppioni === 1 ? 'doppione saltato' : 'doppioni saltati'}.` : ''}`;
-  if (!V.attivo) { scaricaTesto(nome, testo); return mostraFatto({ testo: quante, nota: `In Anki: File › Importa, scegli «${nome}» (è tra i download) e come tipo di nota «Basilare» («Basic» in inglese).`, azione: ['Scarica', () => scaricaTesto(nome, testo)], sintesi: 'carte per Anki' }); }
+  const quante = (p.mazzi.length > 1 ? t('barra1.anki-carte-mazzi', { n: p.totale, mazzi: p.mazzi.length }) : t('barra1.anki-carte-mazzo', { n: p.totale, mazzo: mazzo(p.mazzi[0].corso) })) + (p.doppioni ? t('barra1.anki-doppioni', { n: p.doppioni }) : '');
+  if (!V.attivo) { scaricaTesto(nome, testo); return mostraFatto({ testo: quante, nota: t('barra1.anki-importa-download', { file: nome }), azione: [t('barra1.scarica'), () => scaricaTesto(nome, testo)], sintesi: t('barra1.sintesi-anki') }); }
   try {
     const r = await V.salvaFile(`Anki/${nome}`, { testo, sostituisci: true });
-    return mostraFatto({ testo: quante, nota: `In Anki: File › Importa, scegli «${r.file}» nel vault e come tipo di nota «Basilare» («Basic» in inglese).`, azione: ['Mostra', () => V.mostra(r.file).catch(x => rispostaFissa('Non riesco a mostrare il file: ' + x.message, { errore: true }))], sintesi: 'carte per Anki' });
-  } catch (x) { return rispostaFissa('Non riesco a salvare il file per Anki: ' + x.message, { errore: true }); }
+    return mostraFatto({ testo: quante, nota: t('barra1.anki-importa-vault', { file: r.file }), azione: [t('barra1.mostra'), () => V.mostra(r.file).catch(x => rispostaFissa(t('barra1.errore-mostrare', { errore: x.message }), { errore: true }))], sintesi: t('barra1.sintesi-anki') });
+  } catch (x) { return rispostaFissa(t('barra1.errore-anki', { errore: x.message }), { errore: true }); }
 }
 
 /* ---------- i file lasciati sulla pillola ---------- */
 const ICONA_FILE = { pdf: 'doc', slide: 'doc', word: 'doc', testo: 'doc', sbobina: 'appunti', carte: 'ripasso', foto: 'foto', audio: 'audio', altro: 'doc' };
-const NOME_TIPO = { pdf: 'PDF', slide: 'slide PowerPoint', word: 'documento Word', testo: 'testo', sbobina: 'sbobina di Lode', carte: 'carte (Anki/CSV)', foto: 'foto', audio: 'registrazione audio', altro: 'file' };
+const NOME_TIPO = { pdf: t('barra1.tipo-pdf'), slide: t('barra1.tipo-slide'), word: t('barra1.tipo-word'), testo: t('barra1.tipo-testo'), sbobina: t('barra1.tipo-sbobina'), carte: t('barra1.tipo-carte'), foto: t('barra1.tipo-foto'), audio: t('barra1.tipo-audio'), altro: t('barra1.tipo-altro') };
 function corsiPossibili() {
   const c = new Map(); const metti = n => { if (n && n !== 'Appunti sparsi' && !c.has(norm(n))) c.set(norm(n), n); };
   const lo = lezioneOra(); metti(lo?.corso); metti(V.lezioneDaAnnotare().corso); metti(prossimi()[0]?.nome);
@@ -961,27 +961,27 @@ export async function riceviFile(lista) {
   if (!tutti.length) return;
   const f = tutti[0];
   await apri({ fisso: true }); nuovoTurno(); detto(A.turno, f.name);
-  if (tutti.length > 1) rispostaFissa(`Uno alla volta: comincio da **${f.name}**, poi lascia gli altri ${tutti.length - 1}.`);
-  let x; try { x = await FILE.classifica(f); } catch (e) { return rispostaFissa('Non riesco a leggere il file: ' + e.message, { errore: true }); }
+  if (tutti.length > 1) rispostaFissa(t('barra1.uno-alla-volta', { nome: f.name, n: tutti.length - 1 }));
+  let x; try { x = await FILE.classifica(f); } catch (e) { return rispostaFissa(t('barra1.errore-leggere-file', { errore: e.message }), { errore: true }); }
   schedaFile(x);
 }
 function opzioniPer(x) {
-  const ai = AI.attiva(), app = V.attivo, serveAI = ai ? '' : 'serve il cervello locale o la tua AI', serveApp = app ? '' : 'nell\'app desktop';
+  const ai = AI.attiva(), app = V.attivo, serveAI = ai ? '' : t('barra1.serve-ai'), serveApp = app ? '' : t('barra1.serve-app');
   const testo = ['pdf', 'slide', 'word', 'testo'].includes(x.tipo);
-  if (x.tipo === 'sbobina') return [{ k: 'sbobina', t: 'Aggiungi al mio vault', d: 'Diventa una lezione nel tuo Obsidian: definizioni e ★ entrano nei giochi', no: serveApp, primo: true }, { k: 'allega', t: 'Allega soltanto', d: 'Salvo il file negli allegati della lezione', no: serveApp }];
-  if (x.tipo === 'carte') return [{ k: 'importaCarte', t: 'Importa le carte', d: 'Una per riga: domanda, poi Tab, «;» o « = », poi risposta', primo: true }];
-  if (x.tipo === 'audio') return [{ k: 'audio', t: 'Trascrivi la registrazione', d: 'Tutta la lezione in appunti, formule comprese, nella nota della lezione', no: app ? '' : serveApp, primo: true, corso: true, data: true }, { k: 'allega', t: 'Allega alla lezione', d: 'Salvo l\'audio negli allegati, con il link nella nota', no: serveApp, corso: true }];
-  if (x.tipo === 'foto') return [{ k: 'lavagna', t: 'Trascrivi in appunti', d: 'Testo e formule in LaTeX, nella nota della lezione', no: serveAI || serveApp, primo: true, corso: true }, { k: 'carte', t: 'Carte del ripasso', d: 'Le domande che chiederebbero all\'esame', no: serveAI }, { k: 'allega', t: 'Allega alla lezione', d: 'La foto nella nota della lezione', no: serveApp, corso: true }];
+  if (x.tipo === 'sbobina') return [{ k: 'sbobina', t: t('barra1.op-sbobina'), d: t('barra1.op-sbobina-d'), no: serveApp, primo: true }, { k: 'allega', t: t('barra1.op-allega-soltanto'), d: t('barra1.op-allega-soltanto-d'), no: serveApp }];
+  if (x.tipo === 'carte') return [{ k: 'importaCarte', t: t('barra1.op-importa-carte'), d: t('barra1.op-importa-carte-d'), primo: true }];
+  if (x.tipo === 'audio') return [{ k: 'audio', t: t('barra1.op-audio'), d: t('barra1.op-audio-d'), no: app ? '' : serveApp, primo: true, corso: true, data: true }, { k: 'allega', t: t('barra1.op-allega'), d: t('barra1.op-allega-audio-d'), no: serveApp, corso: true }];
+  if (x.tipo === 'foto') return [{ k: 'lavagna', t: t('barra1.op-lavagna'), d: t('barra1.op-lavagna-d'), no: serveAI || serveApp, primo: true, corso: true }, { k: 'carte', t: t('barra1.op-carte'), d: t('barra1.op-carte-foto-d'), no: serveAI }, { k: 'allega', t: t('barra1.op-allega'), d: t('barra1.op-allega-foto-d'), no: serveApp, corso: true }];
   if (testo) return [
-    { k: 'carte', t: 'Carte del ripasso', d: 'Domande e risposte per il ripasso a intervalli', no: serveAI, primo: true },
-    { k: 'riassunto', t: 'Riassunto in Obsidian', d: 'Appunti ordinati con formule, in una nota nuova', no: serveAI || serveApp, corso: true },
-    { k: 'definizioni', t: 'Definizioni per i giochi', d: 'Le aggiungo alla lezione: diventano giochi di memoria', no: serveAI || serveApp, corso: true },
-    { k: 'orale', t: 'Interrogami su questo', d: 'Un prof d\'orale con domande su questo materiale', no: serveAI },
-    { k: 'allega', t: 'Allega alla lezione', d: 'Salvo il file con il link nella nota', no: serveApp, corso: true },
-    { k: 'crocette', t: 'Quiz a crocette', d: 'Domande con 4 risposte, come allo scritto: allenamento o simulazione d\'esame', no: serveAI, corso: true },
-    { k: 'temi', t: 'Temi d\'esame', d: 'Gli esercizi di un compito vecchio, divisi per argomento, uno al giorno nel piano', corso: true },
-    { k: 'programma', t: 'È il programma d\'esame', d: 'Lo divido in argomenti e ti preparo il piano fino all\'appello', corso: true },
-    { k: 'domande', t: 'Domande uscite agli appelli', d: 'Le metto sotto i loro argomenti: quelli che escono di più salgono nel piano', corso: true },
+    { k: 'carte', t: t('barra1.op-carte'), d: t('barra1.op-carte-d'), no: serveAI, primo: true },
+    { k: 'riassunto', t: t('barra1.op-riassunto'), d: t('barra1.op-riassunto-d'), no: serveAI || serveApp, corso: true },
+    { k: 'definizioni', t: t('barra1.op-definizioni'), d: t('barra1.op-definizioni-d'), no: serveAI || serveApp, corso: true },
+    { k: 'orale', t: t('barra1.op-orale'), d: t('barra1.op-orale-d'), no: serveAI },
+    { k: 'allega', t: t('barra1.op-allega'), d: t('barra1.op-allega-d'), no: serveApp, corso: true },
+    { k: 'crocette', t: t('barra1.op-crocette'), d: t('barra1.op-crocette-d'), no: serveAI, corso: true },
+    { k: 'temi', t: t('barra1.op-temi'), d: t('barra1.op-temi-d'), corso: true },
+    { k: 'programma', t: t('barra1.op-programma'), d: t('barra1.op-programma-d'), corso: true },
+    { k: 'domande', t: t('barra1.op-domande'), d: t('barra1.op-domande-d'), corso: true },
   ].map(o => /programm|syllabus|scheda.?(?:del.?)?corso/i.test(x.nome) ? { ...o, primo: o.k === 'programma' } : /compit|(?:^|[^a-z])temi(?:[^a-z]|$)|prova.?scritt|esercitaz/i.test(x.nome) ? { ...o, primo: o.k === 'temi' } : /domande|appell/i.test(x.nome) ? { ...o, primo: o.k === 'domande' } : o);
   return [];
 }
