@@ -2,11 +2,11 @@
 // la barra ci scrive le ★ da esame, le definizioni e le domande, e rilegge tutto quando lo studente scrive in Obsidian.
 // La nota «Lode/Memoria.md» è ciò che Lode ha imparato dello studente: definizioni sicure e da rinforzare, orari, abitudini.
 // Nel browser (senza app) le stesse cose restano nei dati locali, così giochi e ripasso funzionano lo stesso.
-import { D, DESKTOP, definizioni, esame, id, impostaLezioniVault, lezioneOra, lezioni, oggi, salva, serie, minuti, ultimaLezioneFinita, dataLunga, dataBreve, norm, trovaEsame, prossimi, fatti, daFare, media, num, piano, giorniTra, cfuFatti, daRipassare, prossimaLezione } from './dati.js';
+import { D, DESKTOP, definizioni, esame, id, impostaLezioniVault, lezioneOra, lezioni, oggi, salva, serie, minuti, ultimaLezioneFinita, dataLunga, dataLungaIn, dataBreveIn, norm, trovaEsame, prossimi, fatti, daFare, media, num, piano, giorniTra, cfuFatti, daRipassare, prossimaLezione } from './dati.js';
 import { SEZIONI, fileCorso, fileLezione, notaCorso, notaLezione, orarioMd, pulito } from './markdown.js';
 import { aggiornaDiario, sezioneMemoria } from './codice/diario.js';
 import { CONCETTI } from './codice/modelli.js';
-import { t, locale, lingua } from './lingua.js';
+import { lingua, tIn, numeroIn, caricaLingua } from './lingua.js';
 import { nomi, impostaNomi, fileNota } from './nomi.js';
 
 const L = DESKTOP ? window.lodeDesktop : null;
@@ -15,10 +15,12 @@ export let info = null;   // { percorso, nome, obsidian: { installato, registrat
 const avvisa = () => dispatchEvent(new CustomEvent('lode:vault'));
 // i nomi del vault (js/nomi.js) arrivano con vault:info: sono quelli con cui è nato, non quelli della lingua della barra.
 // Nel browser non c'è vault: i nomi della lingua scelta, per i file che si scaricano. Chi scrive nel vault aspetta pronto
-const conInfo = i => { info = i; if (i?.nomi) impostaNomi(i.nomi); avvisa(); };
+// Con i nomi arriva anche il catalogo della lingua del vault: i testi delle note sono nella sua lingua (tv, più sotto)
+let catalogo = Promise.resolve();
+const conInfo = i => { info = i; if (i?.nomi) impostaNomi(i.nomi); catalogo = caricaLingua(nomi().lingua).catch(() => { }); avvisa(); };
 if (!L) impostaNomi(lingua);
-const pronto = L ? L.invoca('vault:info').then(conInfo, () => { }) : Promise.resolve();
-export const nomiPronti = () => pronto;
+const pronto = (L ? L.invoca('vault:info').then(conInfo, () => { }) : Promise.resolve()).then(() => catalogo);
+export const nomiPronti = () => pronto.then(() => catalogo);
 if (L) {
   L.su('vault:lezioni', l => impostaLezioniVault(l));
   L.su('vault:orario', o => { D.orario = o.map(x => ({ id: id(), ...x })); salva(); });
@@ -62,20 +64,28 @@ export async function apri(l) {
 export const apriVault = () => L?.invoca('vault:apri', { file: fileNota('benvenuto') });
 export function scriviOrario() { if (L) pronto.then(() => L.invoca('vault:scrivi', { file: fileNota('orario'), testo: orarioMd(D.orario) })); }
 
+// I testi delle note scritte qui (Memoria, Home, Esami, Glossario, i corsi, le date della navigazione) sono nella lingua del
+// VAULT, la stessa dei titoli (js/nomi.js), non in quella della barra: un vault nato in inglese resta tutto inglese anche con
+// la barra in italiano. In un vault italiano con la barra in italiano sono i testi di sempre (tIn = t)
+const lv = () => nomi().lingua;
+const tv = (k, p) => tIn(lv(), k, p);
+const numV = (x, dec = 1) => numeroIn(lv(), x, dec);
+const dataLungaV = iso => dataLungaIn(lv(), iso), dataBreveV = iso => dataBreveIn(lv(), iso);
 // le proposte dell'allenatore che funzionano (quelle accettate più spesso)
-const NOMI_PROP = { gioco: t('vault.prop-gioco'), ripasso: t('vault.prop-ripasso'), stelle: t('vault.prop-stelle'), orale: t('vault.prop-orale'), focus: t('vault.prop-focus'), stampa: t('vault.prop-stampa') };
+const NOMI_PROP = () => ({ gioco: tv('vault.prop-gioco'), ripasso: tv('vault.prop-ripasso'), stelle: tv('vault.prop-stelle'), orale: tv('vault.prop-orale'), focus: tv('vault.prop-focus'), stampa: tv('vault.prop-stampa') });
 function proposte() {
   const per = {}; for (const x of D.allenatore?.storia || []) { per[x.tipo] ||= { si: 0, tot: 0 }; per[x.tipo].tot++; if (x.esito === 'accettata') per[x.tipo].si++; }
   const k = Object.entries(per).filter(([, v]) => v.tot >= 2).sort((a, b) => b[1].si / b[1].tot - a[1].si / a[1].tot);
-  return k.length ? `- ${t('vault.memoria-proposte', { elenco: k.slice(0, 2).map(([tipo, v]) => t('vault.prop-voce', { nome: NOMI_PROP[tipo] || tipo, si: v.si, tot: v.tot })).join(', ') })}\n` : '';
+  return k.length ? `- ${tv('vault.memoria-proposte', { elenco: k.slice(0, 2).map(([tipo, v]) => tv('vault.prop-voce', { nome: NOMI_PROP()[tipo] || tipo, si: v.si, tot: v.tot })).join(', ') })}\n` : '';
 }
 // la memoria di Lode, leggibile dallo studente: cosa sa, cosa sbaglia, come studia
-const FASCE = { mattina: t('vault.fascia-mattina'), pomeriggio: t('vault.fascia-pomeriggio'), sera: t('vault.fascia-sera') };
+const FASCE = () => ({ mattina: tv('vault.fascia-mattina'), pomeriggio: tv('vault.fascia-pomeriggio'), sera: tv('vault.fascia-sera') });
 export function scriviMemoria() {
   if (!L) return;
-  pronto.then(scriviMemoriaOra);
+  nomiPronti().then(scriviMemoriaOra);
 }
-function scriviMemoriaOra() {
+const scriviMemoriaOra = () => L.invoca('vault:memoria', { testo: testoMemoria() });
+function testoMemoria() {
   const NP = nomi().titoli.notePerLode;
   const defs = definizioni({ giorni: 3650 }), fatte = defs.filter(d => d.m);
   const sicure = fatte.filter(d => d.m.rip >= 2 && d.m.giuste >= d.m.sbagliate * 2);
@@ -88,90 +98,92 @@ function scriviMemoriaOra() {
 tipo: memoria
 aggiornata: ${oggi()}
 ---
-# ${t('vault.memoria-titolo')}
+# ${tv('vault.memoria-titolo')}
 
-%% ${t('vault.memoria-commento', { sezione: NP })} %%
+%% ${tv('vault.memoria-commento', { sezione: NP })} %%
 
-## ${t('vault.titolo-in-breve')}
-- ${t('vault.memoria-in-breve', { lezioni: t('vault.memoria-lezioni', { n: lez.length }), definizioni: t('vault.memoria-definizioni', { n: defs.length }), sicure: sicure.length, deboli: deboli.length, mai: mai.length })}
-- ${t('vault.memoria-serie', { n: serie(), h: Math.round(minuti({ da: oggi().slice(0, 8) + '01' }) / 60) })}
-${fasce[0][1] ? `- ${t('vault.memoria-fascia', { fascia: FASCE[fasce[0][0]] })}\n` : ''}${proposte()}
-## ${t('vault.titolo-da-rinforzare')}
-${deboli.map(d => `- **${d.t}** (${link(d)}): ${t('vault.sbagliata', { n: d.m.sbagliate, tot: d.m.giuste + d.m.sbagliate })}`).join('\n') || `- ${t('vault.niente-per-ora')}`}
+## ${tv('vault.titolo-in-breve')}
+- ${tv('vault.memoria-in-breve', { lezioni: tv('vault.memoria-lezioni', { n: lez.length }), definizioni: tv('vault.memoria-definizioni', { n: defs.length }), sicure: sicure.length, deboli: deboli.length, mai: mai.length })}
+- ${tv('vault.memoria-serie', { n: serie(), h: Math.round(minuti({ da: oggi().slice(0, 8) + '01' }) / 60) })}
+${fasce[0][1] ? `- ${tv('vault.memoria-fascia', { fascia: FASCE()[fasce[0][0]] })}\n` : ''}${proposte()}
+## ${tv('vault.titolo-da-rinforzare')}
+${deboli.map(d => `- **${d.t}** (${link(d)}): ${tv('vault.sbagliata', { n: d.m.sbagliate, tot: d.m.giuste + d.m.sbagliate })}`).join('\n') || `- ${tv('vault.niente-per-ora')}`}
 
-## ${t('vault.titolo-sicure')}
-${sicure.slice(0, 40).map(d => `- ${d.t} (${d.corso})`).join('\n') || `- ${t('vault.sicure-vuoto')}`}
+## ${tv('vault.titolo-sicure')}
+${sicure.slice(0, 40).map(d => `- ${d.t} (${d.corso})`).join('\n') || `- ${tv('vault.sicure-vuoto')}`}
 
 ## ${nomi().titoli.stelleUltime}
-${lez.flatMap(l => (l.stelle || []).map(s => `- ${s.replace(/^\d\d:\d\d\s*/, '')} (${l.file ? `[[${l.file.replace(/\.md$/, '').split('/').pop()}]]` : l.corso})`)).slice(0, 15).join('\n') || `- ${t('vault.ancora-nessuna')}`}
+${lez.flatMap(l => (l.stelle || []).map(s => `- ${s.replace(/^\d\d:\d\d\s*/, '')} (${l.file ? `[[${l.file.replace(/\.md$/, '').split('/').pop()}]]` : l.corso})`)).slice(0, 15).join('\n') || `- ${tv('vault.ancora-nessuna')}`}
 
 ${sezioneMemoria(D.codice, OPZ_DIARIO)}## ${NP}
-%% ${t('vault.note-commento')} %%
+%% ${tv('vault.note-commento')} %%
 `;
-  L.invoca('vault:memoria', { testo });
+  return testo;
 }
 export { SEZIONI, pulito, dataLunga, esame };
 
 /* ---------- le pagine per navigare il vault: Home, Esami, Glossario, i corsi, «← precedente · successiva →» ---------- */
 const nomeNota = f => f.replace(/\.md$/, '').split('/').pop();
-const linkLez = l => l.file ? `[[${nomeNota(l.file)}]]` : `${l.corso} (${dataBreve(l.data)})`;
+const linkLez = l => l.file ? `[[${nomeNota(l.file)}]]` : `${l.corso} (${dataBreveV(l.data)})`;
 const corsiNoti = () => {
   const c = new Map();
   const metti = n => { const k = norm(n); if (n && !sparsi(n) && !c.has(k)) c.set(k, pulito(n)); };
   D.orario.forEach(o => metti(o.corso)); lezioni().forEach(l => metti(l.corso)); D.esami.forEach(e => metti(e.nome));
-  return [...c.values()].sort((a, b) => a.localeCompare(b, locale()));
+  return [...c.values()].sort((a, b) => a.localeCompare(b, nomi().locale));
 };
 function home() {
   const T = oggi(), dow = new Date(T + 'T12:00').getDay(), lez = lezioni(), p = prossimi()[0], m = media(), c = daRipassare().length;
   const oggiOrario = D.orario.filter(o => o.giorni.includes(dow)).sort((a, b) => a.inizio.localeCompare(b.inizio));
   const notaDi = o => lez.find(l => norm(l.corso) === norm(o.corso) && l.data === T), Nn = nomi().note;
-  return `> ${dataLunga(T).replace(/^./, x => x.toUpperCase())}${p ? ` · **${p.nome}** ${giorniTra(T, p.data) === 0 ? t('comune.oggi') : t('comune.traGiorni', { n: giorniTra(T, p.data) })}` : ''}${c ? ` · ${t('vault.home-carte', { n: c })}` : ''}
+  return `> ${dataLungaV(T).replace(/^./, x => x.toUpperCase())}${p ? ` · **${p.nome}** ${giorniTra(T, p.data) === 0 ? tv('comune.oggi') : tv('comune.traGiorni', { n: giorniTra(T, p.data) })}` : ''}${c ? ` · ${tv('vault.home-carte', { n: c })}` : ''}
 
-[[${Nn.orario}]] · [[${Nn.esami}]] · [[${Nn.glossario}]] · [[${Nn.memoria}|${t('vault.alias-memoria')}]] · [[${Nn.benvenuto}|${t('vault.alias-benvenuto')}]]
+[[${Nn.orario}]] · [[${Nn.esami}]] · [[${Nn.glossario}]] · [[${Nn.memoria}|${tv('vault.alias-memoria')}]] · [[${Nn.benvenuto}|${tv('vault.alias-benvenuto')}]]
 
-## ${t('vault.titolo-oggi')}
-${oggiOrario.map(o => `- ${o.inizio}–${o.fine} **[[${pulito(o.corso)}]]**${o.aula ? ` · ${t('vault.aula', { aula: o.aula })}` : ''}${notaDi(o) ? ` → ${linkLez(notaDi(o))}` : ''}`).join('\n') || `- ${t('vault.niente-lezioni-oggi')}`}
+## ${tv('vault.titolo-oggi')}
+${oggiOrario.map(o => `- ${o.inizio}–${o.fine} **[[${pulito(o.corso)}]]**${o.aula ? ` · ${tv('vault.aula', { aula: o.aula })}` : ''}${notaDi(o) ? ` → ${linkLez(notaDi(o))}` : ''}`).join('\n') || `- ${tv('vault.niente-lezioni-oggi')}`}
 
-## ${t('vault.titolo-corsi')}
-${corsiNoti().map(n => { const e = trovaEsame(n), k = lez.filter(l => norm(l.corso) === norm(n)).length; return `- [[${n}]]${k ? ` · ${t('vault.n-lezioni', { n: k })}` : ''}${e?.fatto ? ` · ${e.idoneita ? t('vault.idoneo') : e.lode ? t('vault.voto-e-lode', { voto: e.voto }) : e.voto}` : e?.data ? ` · ${t('vault.appello', { data: dataBreve(e.data) })}` : ''}`; }).join('\n') || `- ${t('vault.corsi-vuoto')}`}
+## ${tv('vault.titolo-corsi')}
+${corsiNoti().map(n => { const e = trovaEsame(n), k = lez.filter(l => norm(l.corso) === norm(n)).length; return `- [[${n}]]${k ? ` · ${tv('vault.n-lezioni', { n: k })}` : ''}${e?.fatto ? ` · ${e.idoneita ? tv('vault.idoneo') : e.lode ? tv('vault.voto-e-lode', { voto: e.voto }) : e.voto}` : e?.data ? ` · ${tv('vault.appello', { data: dataBreveV(e.data) })}` : ''}`; }).join('\n') || `- ${tv('vault.corsi-vuoto')}`}
 
-## ${t('vault.titolo-ultime-lezioni')}
-${lez.filter(l => l.file).slice(0, 8).map(l => `- ${linkLez(l)}${l.stelle?.length ? ` · ★${l.stelle.length}` : ''}${l.definizioni?.length ? ` · ${t('vault.definizioni-n', { n: l.definizioni.length })}` : ''}`).join('\n') || `- ${t('vault.ancora-nessuna')}`}
+## ${tv('vault.titolo-ultime-lezioni')}
+${lez.filter(l => l.file).slice(0, 8).map(l => `- ${linkLez(l)}${l.stelle?.length ? ` · ★${l.stelle.length}` : ''}${l.definizioni?.length ? ` · ${tv('vault.definizioni-n', { n: l.definizioni.length })}` : ''}`).join('\n') || `- ${tv('vault.ancora-nessuna')}`}
 
 ## ${nomi().titoli.stelleUltime}
-${lez.flatMap(l => (l.stelle || []).map(s => `- ${s.replace(/^\d\d:\d\d\s*/, '')} · ${linkLez(l)}`)).slice(0, 8).join('\n') || `- ${t('vault.ancora-nessuna')}`}
-${m.ponderata ? `\n## ${t('vault.titolo-carriera')}\n${t('vault.carriera', { media: num(m.ponderata, 2), base: num(m.base, 1), cfu: cfuFatti(), tot: D.profilo.cfuTotali, esami: `[[${Nn.esami}]]` })}` : ''}`;
+${lez.flatMap(l => (l.stelle || []).map(s => `- ${s.replace(/^\d\d:\d\d\s*/, '')} · ${linkLez(l)}`)).slice(0, 8).join('\n') || `- ${tv('vault.ancora-nessuna')}`}
+${m.ponderata ? `\n## ${tv('vault.titolo-carriera')}\n${tv('vault.carriera', { media: numV(m.ponderata, 2), base: numV(m.base, 1), cfu: cfuFatti(), tot: D.profilo.cfuTotali, esami: `[[${Nn.esami}]]` })}` : ''}`;
 }
 function esami() {
   const p = prossimi(), f = fatti().sort((a, b) => (b.data || '').localeCompare(a.data || '')), m = media(), cella = s => String(s).replace(/\|/g, '\\|');
-  return `## ${t('vault.titolo-prossimi-appelli')}
-${p.length ? `${t('vault.tabella-appelli')}\n|---|---|---|---|---|\n${p.map(e => { const pi = piano(e); return `| [[${cella(pulito(e.nome))}]] | ${dataBreve(e.data)} | ${t('comune.giorniBrevi', { n: giorniTra(oggi(), e.data) })} | ${e.cfu} | ${t('vault.ore-di', { fatte: num(pi.fatte, 0), tot: pi.tot })} |`; }).join('\n')}` : t('vault.nessun-appello')}
-${daFare().filter(e => !e.data).length ? `\n${t('vault.senza-data', { elenco: daFare().filter(e => !e.data).map(e => `[[${pulito(e.nome)}]]`).join(', ') })}\n` : ''}
-## ${t('vault.titolo-libretto')}
-${f.length ? `${t('vault.tabella-libretto')}\n|---|---|---|---|\n${f.map(e => `| [[${cella(pulito(e.nome))}]] | ${e.cfu} | ${e.idoneita ? t('vault.idoneo') : e.lode ? t('vault.voto-l', { voto: e.voto }) : e.voto} | ${e.data ? dataBreve(e.data) : ''} |`).join('\n')}\n\n${t('vault.libretto-piede', { media: m.ponderata ? num(m.ponderata, 2) : '—', base: m.base ? num(m.base, 1) : '—', cfu: cfuFatti(), tot: D.profilo.cfuTotali })}` : t('vault.libretto-vuoto')}`;
+  return `## ${tv('vault.titolo-prossimi-appelli')}
+${p.length ? `${tv('vault.tabella-appelli')}\n|---|---|---|---|---|\n${p.map(e => { const pi = piano(e); return `| [[${cella(pulito(e.nome))}]] | ${dataBreveV(e.data)} | ${tv('comune.giorniBrevi', { n: giorniTra(oggi(), e.data) })} | ${e.cfu} | ${tv('vault.ore-di', { fatte: numV(pi.fatte, 0), tot: pi.tot })} |`; }).join('\n')}` : tv('vault.nessun-appello')}
+${daFare().filter(e => !e.data).length ? `\n${tv('vault.senza-data', { elenco: daFare().filter(e => !e.data).map(e => `[[${pulito(e.nome)}]]`).join(', ') })}\n` : ''}
+## ${tv('vault.titolo-libretto')}
+${f.length ? `${tv('vault.tabella-libretto')}\n|---|---|---|---|\n${f.map(e => `| [[${cella(pulito(e.nome))}]] | ${e.cfu} | ${e.idoneita ? tv('vault.idoneo') : e.lode ? tv('vault.voto-l', { voto: e.voto }) : e.voto} | ${e.data ? dataBreveV(e.data) : ''} |`).join('\n')}\n\n${tv('vault.libretto-piede', { media: m.ponderata ? numV(m.ponderata, 2) : '—', base: m.base ? numV(m.base, 1) : '—', cfu: cfuFatti(), tot: D.profilo.cfuTotali })}` : tv('vault.libretto-vuoto')}`;
 }
 function glossario() {
   const defs = definizioni({ giorni: 3650 }), per = new Map();
   defs.forEach(d => { const k = pulito(d.corso); if (!per.has(k)) per.set(k, []); per.get(k).push(d); });
-  return [...per].sort((a, b) => a[0].localeCompare(b[0], locale())).map(([c, ds]) => `## ${c}\n[[${c}]] · ${t('vault.n-definizioni', { n: ds.length })}\n\n${ds.sort((a, b) => a.t.localeCompare(b.t, locale())).map(d => `- **${d.t}**: ${d.d}${d.file ? ` · [[${nomeNota(d.file)}]]` : ''}${d.m && d.m.sbagliate > d.m.giuste ? ` · ${t('vault.da-rinforzare')}` : ''}`).join('\n')}`).join('\n\n') || t('vault.glossario-vuoto');
+  return [...per].sort((a, b) => a[0].localeCompare(b[0], nomi().locale)).map(([c, ds]) => `## ${c}\n[[${c}]] · ${tv('vault.n-definizioni', { n: ds.length })}\n\n${ds.sort((a, b) => a.t.localeCompare(b.t, nomi().locale)).map(d => `- **${d.t}**: ${d.d}${d.file ? ` · [[${nomeNota(d.file)}]]` : ''}${d.m && d.m.sbagliate > d.m.giuste ? ` · ${tv('vault.da-rinforzare')}` : ''}`).join('\n')}`).join('\n\n') || tv('vault.glossario-vuoto');
 }
 function corso(n) {
   const lez = lezioni().filter(l => norm(l.corso) === norm(n)), e = trovaEsame(n), o = D.orario.filter(x => norm(x.corso) === norm(n)), N = nomi();
   return `[[${N.note.home}]] · [[${N.note.esami}]] · [[${N.note.glossario}#${n}|${N.note.glossario}]]
 
-${e ? `${t('vault.corso-cfu', { cfu: e.cfu })}${e.fatto ? ` · ${e.idoneita ? t('vault.idoneo') : t(e.lode ? 'vault.corso-voto-lode' : 'vault.corso-voto', { voto: e.voto })}` : e.data ? ` · ${t('vault.corso-appello', { data: dataLunga(e.data), n: giorniTra(oggi(), e.data), fatte: num(piano(e).fatte, 0), tot: piano(e).tot })}` : ''}` : ''}${o.length ? `\n${t('vault.corso-lezioni', { elenco: o.map(x => t(x.aula ? 'vault.orario-voce-aula' : 'vault.orario-voce', { giorni: x.giorni.map(g => N.orario.giorni[g]).join(', '), inizio: x.inizio, fine: x.fine, aula: x.aula })).join(' · ') })}` : ''}
+${e ? `${tv('vault.corso-cfu', { cfu: e.cfu })}${e.fatto ? ` · ${e.idoneita ? tv('vault.idoneo') : tv(e.lode ? 'vault.corso-voto-lode' : 'vault.corso-voto', { voto: e.voto })}` : e.data ? ` · ${tv('vault.corso-appello', { data: dataLungaV(e.data), n: giorniTra(oggi(), e.data), fatte: numV(piano(e).fatte, 0), tot: piano(e).tot })}` : ''}` : ''}${o.length ? `\n${tv('vault.corso-lezioni', { elenco: o.map(x => tv(x.aula ? 'vault.orario-voce-aula' : 'vault.orario-voce', { giorni: x.giorni.map(g => N.orario.giorni[g]).join(', '), inizio: x.inizio, fine: x.fine, aula: x.aula })).join(' · ') })}` : ''}
 
 ## ${N.titoli.lezioni}
-${lez.map(l => `- ${linkLez(l)}${l.stelle?.length ? ` · ★${l.stelle.length}` : ''}${l.definizioni?.length ? ` · ${t('vault.definizioni-n', { n: l.definizioni.length })}` : ''}`).join('\n') || `- ${t('vault.lezioni-vuoto')}`}
+${lez.map(l => `- ${linkLez(l)}${l.stelle?.length ? ` · ★${l.stelle.length}` : ''}${l.definizioni?.length ? ` · ${tv('vault.definizioni-n', { n: l.definizioni.length })}` : ''}`).join('\n') || `- ${tv('vault.lezioni-vuoto')}`}
 
 ## ${N.sezioni.stella}
-${lez.flatMap(l => (l.stelle || []).map(s => `- ${s.replace(/^\d\d:\d\d\s*/, '')} · ${linkLez(l)}`)).join('\n') || `- ${t('vault.ancora-nessuna')}`}`;
+${lez.flatMap(l => (l.stelle || []).map(s => `- ${s.replace(/^\d\d:\d\d\s*/, '')} · ${linkLez(l)}`)).join('\n') || `- ${tv('vault.ancora-nessuna')}`}`;
 }
+// per le prove (test/vault-nomi.mjs): i testi delle note, senza scriverle
+export const _note = { memoria: testoMemoria, home, esami, glossario, corso };
 let tPagine = 0;
 export function aggiornaPagine() {
   if (!L) return; clearTimeout(tPagine);
   tPagine = setTimeout(async () => {
-    await pronto;
+    await nomiPronti();
     const b = (file, id, testo, extra = {}) => L.invoca('vault:blocco', { file, id, testo, ...extra }).catch(e => console.warn('Lode:', file, e.message));
     await b(fileNota('home'), 'pagina', home()); await b(fileNota('esami'), 'pagina', esami()); await b(fileNota('glossario'), 'pagina', glossario());
     for (const n of corsiNoti()) await b(fileCorso(n), 'corso', corso(n), { nuovo: notaCorso(n, { cfu: trovaEsame(n)?.cfu, appello: trovaEsame(n)?.data }) });
@@ -181,7 +193,7 @@ export function aggiornaPagine() {
       ls.sort((a, b) => a.data.localeCompare(b.data));
       for (const [i, l] of ls.entries()) {
         const prima = ls[i - 1], dopo = ls[i + 1];
-        await b(l.file, 'nav', `[[${nomi().note.home}]] · [[${pulito(l.corso)}]]${prima ? ` · ← [[${nomeNota(prima.file)}|${dataBreve(prima.data)}]]` : ''}${dopo ? ` · [[${nomeNota(dopo.file)}|${dataBreve(dopo.data)}]] →` : ''}`, { dove: 'titolo' });
+        await b(l.file, 'nav', `[[${nomi().note.home}]] · [[${pulito(l.corso)}]]${prima ? ` · ← [[${nomeNota(prima.file)}|${dataBreveV(prima.data)}]]` : ''}${dopo ? ` · [[${nomeNota(dopo.file)}|${dataBreveV(dopo.data)}]] →` : ''}`, { dove: 'titolo' });
       }
     }
     // informatica: il diario dei progetti (oggi e ieri) e «Cosa so davvero» sulla pagina dei corsi di programmazione

@@ -109,20 +109,29 @@ function portachiavi(app, safeStorage) {
 }
 
 // la copia delle note nella cartella cloud: tutto tranne .lode/ (i dati di Lode arrivano come gruppo nuovo, cifrato se serve:
-// dati.prev.json, dati.recupero.json e le copie del dati.json di prima non vanno mai nel cloud). Si può rifare: un file con la
-// stessa dimensione e la stessa data c'è già e si salta. Niente si cancella, né qui né nel vault di prima.
+// dati.prev.json, dati.recupero.json e le copie del dati.json di prima non vanno mai nel cloud). Da .lode/ passa solo
+// vault.json, i nomi e la lingua del vault (js/nomi.js): l'altro computer che entra nel gruppo crea il vault con quelli, non
+// con la lingua della sua barra, anche quando le note non sono ancora arrivate (se c'è già, resta quello della destinazione).
+// Si può rifare: un file con la stessa dimensione e la stessa data c'è già e si salta. Niente si cancella, né qui né nel
+// vault di prima.
 // Asincrona, con una pausa ogni 25 file: prima era tutta sincrona e bloccava il processo main (e la barra) per tutta la copia,
 // decine di secondi con GB di PDF su NTFS o ext4. Un file tenuto aperto da un antivirus (EBUSY, EPERM su Windows) si riprova
 const OCCUPATO = ['EBUSY', 'EPERM'];
 const pausa = ms => new Promise(r => setTimeout(r, ms));
 async function riprovaFile(f) { for (let i = 0; ; i++) { try { return await f(); } catch (x) { if (i >= 5 || !OCCUPATO.includes(x?.code)) throw x; await pausa(100 * 2 ** i); } } }
-async function copiaNote(da, a, { dopo = null } = {}) {
+async function copiaNomiVault(da, a) {
+  const f = join(da, 'vault.json'), g = join(a, 'vault.json');
+  if (!existsSync(f) || existsSync(g)) return;
+  await fsp.mkdir(a, { recursive: true }); await riprovaFile(() => fsp.copyFile(f, g));
+}
+export async function copiaNote(da, a, { dopo = null } = {}) {
   let n = 0, visti = 0;
   const meta = vero(a);
   const giu = async rel => {
     for (const d of await fsp.readdir(join(da, rel), { withFileTypes: true })) {
       const r = rel ? join(rel, d.name) : d.name;
-      if (r === '.lode' || d.name.includes('.tmp-') || /^\..+\.icloud$/.test(d.name)) continue;
+      if (r === '.lode') { await copiaNomiVault(join(da, r), join(a, r)); continue; }
+      if (d.name.includes('.tmp-') || /^\..+\.icloud$/.test(d.name)) continue;
       // la destinazione dentro il vault (una cartella scelta per sbaglio dentro il vault): mai copiarla dentro se stessa
       if (d.isDirectory() && vero(join(da, r)) === meta) continue;
       if (d.isDirectory()) { await fsp.mkdir(join(a, r), { recursive: true }); await giu(r); continue; }

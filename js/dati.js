@@ -2,7 +2,7 @@
 // Niente account, niente server. La chiave AI non va mai nel vault (i vault si sincronizzano): resta in questo computer.
 // Esami e voti, sessioni di studio, carte del ripasso, impostazioni. Più i conti che servono a uno studente:
 // media ponderata, base di laurea, voto che serve, ore da fare oggi, ripasso a intervalli (SM-2).
-import { t, elenco, numero, lingua } from './lingua.js';
+import { t, elenco, numero, lingua, tIn, elencoIn } from './lingua.js';
 import * as S from './sistemi.js';
 import { numeroInFondo } from './parole.js';
 // i dati di esempio di tutte le lingue: esempio() prende quelli della lingua della barra, il benvenuto li riconosce tutti
@@ -152,6 +152,9 @@ export const GIORNI = elenco('comune.giorni');
 export const MESI = elenco('comune.mesi');
 export const dataLunga = iso => { const d = new Date(iso + 'T12:00'); return t('comune.dataLunga', { giorno: GIORNI[d.getDay()], n: d.getDate(), mese: MESI[d.getMonth()] }); };
 export const dataBreve = iso => { const d = new Date(iso + 'T12:00'); return t('comune.dataBreve', { n: d.getDate(), mese: elenco('comune.mesiBrevi')[d.getMonth()] }); };
+// le stesse date in un'altra lingua: le note del vault sono nella lingua del vault (js/vault.js, js/tasca.js; js/lingua.js, tIn)
+export const dataLungaIn = (cod, iso) => { const d = new Date(iso + 'T12:00'); return tIn(cod, 'comune.dataLunga', { giorno: elencoIn(cod, 'comune.giorni')[d.getDay()], n: d.getDate(), mese: elencoIn(cod, 'comune.mesi')[d.getMonth()] }); };
+export const dataBreveIn = (cod, iso) => { const d = new Date(iso + 'T12:00'); return tIn(cod, 'comune.dataBreve', { n: d.getDate(), mese: elencoIn(cod, 'comune.mesiBrevi')[d.getMonth()] }); };
 export function traQuanto(iso) {
   const n = giorniTra(oggi(), iso);
   return n < 0 ? t('comune.passato') : n === 0 ? t('comune.oggi') : n === 1 ? t('comune.domani') : t('comune.traGiorni', { n });

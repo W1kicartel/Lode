@@ -294,7 +294,7 @@ ipcMain.handle('vault:pulisciCorsi', (_, { nomi }) => {
   let tolte = 0;
   for (const n of nomi) {
     const p = V.dentro(vault(), `${V.nomi().cartelle.corsi}/${n.replace(/[\\/:*?"<>|#^[\]]/g, ' ').trim()}.md`);
-    try { const t = readFileSync(p, 'utf8').replace(/%% lode:corso %%[\s\S]*?%% \/lode:corso %%/, '').replace(/^---[\s\S]*?---/, '').replace(/^# .*$/m, '').replace(/%%[\s\S]*?%%/g, '').replace(/Le lezioni di questo corso[\s\S]*?definizioni\./, '').trim(); if (!t) { rmSync(p); tolte++; } } catch { }
+    try { if (!V.scrittoNelCorso(readFileSync(p, 'utf8'))) { rmSync(p); tolte++; } } catch { }   // i testi di Lode in tutte le lingue (vault.mjs)
   }
   return tolte;
 });
