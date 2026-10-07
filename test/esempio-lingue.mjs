@@ -114,7 +114,7 @@ for (const cod of LINGUE) {
   uguale(`${cod}: restano solo le sessioni dello studente`, d.sessioni.map(s => s.id).sort(), ['sessvera', 'sesslibera'].sort());
   uguale(`${cod}: resta solo l'orario dello studente`, d.orario.map(o => o.id), ['orvero']);
   prova(`${cod}: via lezioni, memoria e segno`, !d.lezioni.length && !Object.keys(d.memoria).length && !('esempio' in d));
-  prova(`${cod}: il profilo torna vuoto (restano crediti e sistema)`, d.profilo.nome === '' && d.profilo.corso === '' && d.profilo.cfuTotali === tot && d.profilo.sistema === sis);
+  prova(`${cod}: il profilo torna vuoto (restano crediti e sistema)`, d.profilo.nome === '' && d.profilo.corso === '' && d.profilo.cfuTotali === tot && d.profilo.sistema === (sis ?? Dati.VUOTO().profilo.sistema));   // in italiano l'esempio non ha il sistema: resta quello di VUOTO ('it')
   prova(`${cod}: dopo, i dati sono ancora validi`, Dati.backupValido(d));
 }
 // i dati di esempio di una Lode di prima (senza il segno d.esempio): il benvenuto li riconosce dallo studente e dai nomi

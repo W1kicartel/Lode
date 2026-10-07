@@ -101,6 +101,9 @@ jobs:
       # «togli i dati di esempio» per tutte le lingue, e le parole stampate da «Cosa stampa?» nella lingua della barra
       - name: Dati di esempio nelle sei lingue
         run: node test/esempio-lingue.mjs
+      # i rami delle lingue insieme: l'esempio di ogni lingua tiene i voti nel sistema del paese, aree e cache complete
+      - name: Lingue insieme (unione)
+        run: node test/unione-lingue.mjs
       # README.md (inglese) e README.it.md: lingue in cima, ancore (anche da rilascio.yml e dai documenti), file, stessi comandi e stessi link
       - name: I README (inglese e italiano)
         run: node test/readme.mjs
