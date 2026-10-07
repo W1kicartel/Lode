@@ -1,0 +1,20 @@
+// Coach texts (English): the suggestions the pill makes at random moments of the day.
+export default {
+  'allenatore.titolo': '{esame} · {quando}',
+  'allenatore.ultima-lezione': '{corso} · last lecture',
+  'allenatore.gioco': '2 minutes on {n} definitions?',
+  'allenatore.gioca': 'Play',
+  'allenatore.ripasso': '{n} cards to review, about {min} minutes',
+  'allenatore.ripassa': 'Review',
+  'allenatore.stelle': 'Reread the {n} things the lecturer said were «for the exam»',
+  'allenatore.rileggi': 'Reread',
+  'allenatore.orale': 'Three quick questions, like at the oral?',
+  'allenatore.interrogami': 'Quiz me',
+  'allenatore.programma-ai': "Today it's «{argomento}»: two questions?",
+  'allenatore.programma': 'In today\'s plan: «{argomento}»',
+  'allenatore.apri-piano': 'Open the plan',
+  'allenatore.focus-testo': "You're {h} h behind today: a {min} focus?",
+  'allenatore.focus': 'Focus',
+  'allenatore.stampa': '{domanda} 1 minute',
+  'allenatore.prova': 'Try',
+};
