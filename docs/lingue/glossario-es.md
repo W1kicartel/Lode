@@ -88,6 +88,20 @@ Español neutro (España y América Latina), «tú». Frasi corte, dirette, amic
 | Pronto per la discussione | Listo para la defensa | Comando del riconoscitore: «listo para la defensa». |
 | ricorsione | recursividad (concetto) / recursión sin fin | «Recursividad» come nome dell'argomento. |
 
+## Parole da evitare (revisione)
+
+Español neutro: niente forme che in America Latina suonano strane o volgari.
+
+| Evitare | Usare | Perché |
+|---|---|---|
+| «Vale, …» (risposta) | «De acuerdo, …» | «Vale» come sì è solo di Spagna. «Vale» = «è valido» va bene. |
+| coger | tomar | In molti paesi dell'America Latina è volgare. |
+| «prueba a + infinito» | «intenta + infinito» | «Prueba a» è solo di Spagna. |
+| ratón | cursor | In America Latina si dice «mouse»: «cursor» va bene ovunque. |
+| carpeta de la nube | carpeta en la nube | Una sola forma in tutti i cataloghi. |
+| test degli agenti | tests | Le «pruebas» sono i casi .in/.out di Lode; i test del progetto restano «tests». |
+| «¿Todavía despierto?» come saluto | «Aún en pie» | Il saluto entra in «{saluto}, {nome}.»: niente punti di domanda, e niente genere. |
+
 ## Nomi del vault
 
 Per ora i vault restano in italiano (cartelle `Lezioni`, `Sbobine`, `Esami`, `Appunti sparsi`, note `In tasca.md`, `Home.md`, sezioni `★ Da esame`, `Trascrizione`…). Quando un testo cita il nome esatto, il nome resta italiano tra «». La fase dopo li rende per lingua.

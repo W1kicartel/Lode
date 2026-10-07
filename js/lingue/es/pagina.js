@@ -2,7 +2,7 @@
 // mazos, ventanas del examen y de los ajustes, copia de seguridad.
 export default {
   // saludo y línea de abajo
-  'pagina.saluto-notte': '¿Todavía despierto?',
+  'pagina.saluto-notte': 'Aún en pie',
   'pagina.saluto-mattina': 'Buenos días',
   'pagina.saluto-pomeriggio': 'Buenas tardes',
   'pagina.saluto-sera': 'Buenas noches',

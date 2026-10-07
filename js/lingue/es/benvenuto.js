@@ -57,7 +57,7 @@ export default {
   'benvenuto.scarico-voce': 'la voz',
   'benvenuto.scarico-pct': '{cosa} {p}%',
   'benvenuto.scarico-continua-voce': 'Todavía estoy descargando: {cosa}. Sigue solo, también con la ventana cerrada; la voz vuelve a la barra en cuanto abras Lode.',
-  'benvenuto.scarico-continua': 'Todavía estoy descargando: {cosa}. Sigue solo, también con la ventana cerrada.',
+  'benvenuto.scarico-continua': 'Todavía estoy descargando: {cosa}. Sigue por su cuenta, también con la ventana cerrada.',
   'benvenuto.scarico-solo-voce': 'Todavía estoy descargando: {cosa}. La voz vuelve a la barra en cuanto abras Lode.',
   // configuración rápida
   'benvenuto.veloce-titolo': '{nome}, ¿quieres la configuración rápida?',

@@ -5,7 +5,7 @@ export default {
   'barra1.tasti': 'Ctrl ⇧ Espacio',
   'barra1.numeri': ['Ninguna', 'Una', 'Dos', 'Tres', 'Cuatro', 'Cinco', 'Seis', 'Siete', 'Ocho', 'Nueve', 'Diez'],
   // el saludo y la frase arriba del panel
-  'barra1.saluto-notte': '¿Todavía despierto?',
+  'barra1.saluto-notte': 'Aún en pie',
   'barra1.saluto-mattina': 'Buenos días',
   'barra1.saluto-pomeriggio': 'Buenas tardes',
   'barra1.saluto-sera': 'Buenas noches',
