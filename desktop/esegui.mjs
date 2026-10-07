@@ -10,6 +10,7 @@
 import { spawn, execFile } from 'node:child_process';
 import { existsSync, statSync, lstatSync } from 'node:fs';
 import { join, dirname, basename, extname, isAbsolute, delimiter, posix } from 'node:path';
+import { t } from './lingua.mjs';
 
 const WIN = process.platform === 'win32', MAC = process.platform === 'darwin';
 export const CARTELLA_LODE = '‹cartella di Lode›';   // al posto di userData/progetti/<id>/bin nei testi per lo studente
@@ -126,17 +127,17 @@ export const TROVA = { compilatore: trovaCompilatore, python: trovaPython, java:
 
 // cosa dire quando manca uno strumento. Lode non scarica e non installa niente da sola
 // Su Windows Lode legge il PATH di quando è partita: chi lo cambia deve uscire da Lode e riaprirla
-const RIAPRI = ' Se lo hai appena aggiunto al PATH, esci da Lode (dal menu) e riaprila.';
+const RIAPRI = () => ' ' + t('desktop.esegui-riapri');
 export function comeInstallare(cosa, piattaforma = process.platform) {
   if (cosa === 'c') return piattaforma === 'win32'
-    ? 'Non trovo un compilatore C. Installa MSYS2 (msys2.org), apri «MSYS2 UCRT64» e scrivi `pacman -S mingw-w64-ucrt-x86_64-gcc`: Lode lo trova da sola in C:\\msys64\\ucrt64\\bin. In alternativa WinLibs (winlibs.com) o WSL. Lode non scarica niente al posto tuo.' + RIAPRI
-    : piattaforma === 'darwin' ? 'Non trovo un compilatore C. Apri il Terminale e scrivi `xcode-select --install`: installa clang di Apple. Poi riprova.'
-      : 'Non trovo un compilatore C. Installa gcc (per esempio `sudo apt install build-essential`), poi riprova.';
-  if (cosa === 'python') return piattaforma === 'win32' ? 'Non trovo Python 3. Installalo da python.org (spunta «Add python.exe to PATH») oppure dal Microsoft Store, poi riprova.' + RIAPRI : 'Non trovo Python 3. Installalo (python.org, oppure dal gestore dei pacchetti), poi riprova.';
-  if (cosa === 'java') return 'Non trovo un JDK (javac e java). Installane uno, per esempio Temurin da adoptium.net, poi riprova.';
+    ? t('desktop.esegui-manca-c-win') + RIAPRI()
+    : piattaforma === 'darwin' ? t('desktop.esegui-manca-c-mac')
+      : t('desktop.esegui-manca-c-linux');
+  if (cosa === 'python') return piattaforma === 'win32' ? t('desktop.esegui-manca-python-win') + RIAPRI() : t('desktop.esegui-manca-python');
+  if (cosa === 'java') return t('desktop.esegui-manca-java');
   // il make di MSYS2 per Windows: mingw32-make.exe in C:\msys64\ucrt64\bin, una cartella che Lode guarda già (da verificare su Windows)
-  if (cosa === 'make') return piattaforma === 'win32' ? 'C\'è un Makefile ma non trovo make. Con MSYS2, in «MSYS2 UCRT64»: `pacman -S mingw-w64-ucrt-x86_64-make`. Oppure togli il Makefile e Lode compila da sola i file .c.' : 'C\'è un Makefile ma non trovo make. Installalo (sul Mac: `xcode-select --install`), poi riprova.';
-  return 'Manca un programma per provare il codice.';
+  if (cosa === 'make') return piattaforma === 'win32' ? t('desktop.esegui-manca-make-win') : t('desktop.esegui-manca-make');
+  return t('desktop.esegui-manca-programma');
 }
 
 /* ---------- dal progetto ai comandi ---------- */
@@ -199,9 +200,10 @@ export async function proponi({ nome, file, leggi, bin, trova = TROVA, piattafor
     const casi = assegna(casiTutti, p.programmi || []);
     const testo = (p.passi || []).map(x => mostraArgv(x.argv, { bin, etichette: ETICHETTE })).join(' && ');
     const pronte = casi.filter(k => k.programma), cartelleCasi = [...new Set(pronte.map(k => posix.dirname(k.in)))];
-    const testoCasi = !casiTutti.length ? (p.tipo === 'make' ? '' : 'Non trovo prove .in/.out: compilo soltanto, il programma non lo lancio.')
-      : p.tipo === 'make' ? `Con il Makefile le ${casiTutti.length} prove .in/.out non le lancio: non so quale programma crea.`
-        : `poi ${pronte.length === 1 ? 'la prova' : `le ${pronte.length} prove`}${cartelleCasi.length === 1 && cartelleCasi[0] !== '.' ? ` in ${cartelleCasi[0]}/` : ''} (file .in → .out atteso)${casi.length > pronte.length ? `; ${casi.length - pronte.length} senza un programma chiaro` : ''}`;
+    const testoCasi = !casiTutti.length ? (p.tipo === 'make' ? '' : t('desktop.esegui-senza-prove'))
+      : p.tipo === 'make' ? t('desktop.esegui-make-prove', { n: casiTutti.length })
+        : (cartelleCasi.length === 1 && cartelleCasi[0] !== '.' ? t('desktop.esegui-poi-prove-in', { n: pronte.length, cartella: cartelleCasi[0] }) : t('desktop.esegui-poi-prove', { n: pronte.length }))
+          + (casi.length > pronte.length ? t('desktop.esegui-senza-programma', { n: casi.length - pronte.length }) : '');
     const chiave = JSON.stringify([p.tipo, (p.passi || []).map(x => x.argv), (p.programmi || []).map(x => x.argv)]);
     // lanciati: i programmi che riceveranno almeno una prova. La conferma vale solo per questi (progetto.mjs)
     return { tipo: p.tipo, passi: p.passi || [], programmi: p.programmi || [], casi, lanciati: lanciati(casi), cartelle: p.cartelle || [], manca: p.manca || null, strumento: p.strumento || null, testo, testoCasi, chiave, note };
@@ -211,11 +213,11 @@ export async function proponi({ nome, file, leggi, bin, trova = TROVA, piattafor
     if (m) {
       // le regole del Makefile chiamano gcc: se gcc sta in una cartella di MinGW fuori dal PATH, quella cartella serve anche qui
       const conTest = /^test\s*:/m.test(leggi(make) || ''), cc = c.length ? await trova.compilatore() : null;
-      note.push('make esegue i comandi scritti nel Makefile: leggilo prima di confermare.');
+      note.push(t('desktop.esegui-make-leggi'));
       return fine({ tipo: 'make', strumento: m, cartelle: [...new Set([...(m.cartelle || []), ...(cc?.cartelle || [])])], passi: [{ ruolo: 'compila', argv: [m.percorso, ...(conTest ? ['test'] : [])] }], programmi: [] });
     }
     if (!c.length) return fine({ tipo: 'make', manca: { cosa: 'make', come: comeInstallare('make', piattaforma) } });
-    note.push('C\'è un Makefile ma non trovo make: compilo io i file .c.');
+    note.push(t('desktop.esegui-make-assente'));
   }
   if (c.length) {
     const cc = await trova.compilatore();
@@ -250,7 +252,7 @@ export async function proponi({ nome, file, leggi, bin, trova = TROVA, piattafor
     });
     return fine({ tipo: 'java', strumento: j, passi: [{ ruolo: 'compila', argv: [j ? j.javac : 'javac', '-encoding', 'UTF-8', '-d', dirJ, ...[...java].sort().map(esplicito)] }], programmi, manca: j ? null : { cosa: 'un JDK', come: comeInstallare('java', piattaforma) } });
   }
-  return fine({ tipo: null, manca: { cosa: 'codice', come: 'Non trovo codice C, Python o Java da provare in questa cartella.' } });
+  return fine({ tipo: null, manca: { cosa: 'codice', come: t('desktop.esegui-niente-codice') } });
 }
 
 // «Cambia»: il testo scritto dallo studente diventa argv (le virgolette restano unite). La cartella di Lode torna percorso vero.
@@ -262,25 +264,25 @@ export function dividiArgv(testo) {
     if (/\s/.test(ch)) { if (ha) { out.push(cur); cur = ''; ha = false; } continue; }
     cur += ch; ha = true;
   }
-  if (dentro) throw new Error('Le virgolette non sono chiuse.');
+  if (dentro) throw new Error(t('desktop.esegui-virgolette'));
   if (ha) out.push(cur);
   return out;
 }
 export function daTesto(testo, { bin, strumento = null, cartelle = [] } = {}) {
   // quello che si conferma deve essere quello che si vede: niente caratteri di controllo, a capo nascosti o testo girato
-  const t = String(testo ?? '').replace(/\t/g, ' ');
-  if (INVISIBILI.test(t)) throw new Error('Nel comando ci sono caratteri invisibili (a capo, controllo o direzione del testo): riscrivilo a mano.');
+  const riga = String(testo ?? '').replace(/\t/g, ' ');
+  if (INVISIBILI.test(riga)) throw new Error(t('desktop.esegui-invisibili'));
   // i segnaposto hanno spazi dentro: diventano un segno senza spazi prima di dividere, il valore vero dopo
-  const argv = dividiArgv(t.split(CARTELLA_LODE).join('\u0001').split(ETICHETTE[CONTROLLO_PY]).join('\u0002'))
+  const argv = dividiArgv(riga.split(CARTELLA_LODE).join('\u0001').split(ETICHETTE[CONTROLLO_PY]).join('\u0002'))
     // dopo la cartella di Lode le barre diventano quelle della cartella stessa (su Windows «…\bin\es1», non «…\bin/es1»)
     .map(a => a === '\u0002' ? CONTROLLO_PY : a.includes('\u0001') ? a.split('\u0001').map((x, i) => i ? x.replace(/[\\/]/g, /\\/.test(bin) ? '\\' : '/') : x).join(bin) : a);
-  if (!argv.length) throw new Error('Il comando è vuoto.');
-  if (argv.some(a => /[\0\u0001\u0002]/.test(a) || a.length > 4000)) throw new Error('Il comando non si legge.');
+  if (!argv.length) throw new Error(t('desktop.esegui-comando-vuoto'));
+  if (argv.some(a => /[\0\u0001\u0002]/.test(a) || a.length > 4000)) throw new Error(t('desktop.esegui-comando-illeggibile'));
   let p = argv[0];
   if (strumento && [strumento.nome, basename(strumento.percorso || '')].includes(p)) p = strumento.percorso;
   else p = cercaNelPath(p, { cartelle }) || (isAbsolute(p) && existsSync(p) ? p : null);
-  if (!p) throw new Error(`Non trovo il programma «${argv[0]}».`);
-  if (WIN && /\.(bat|cmd)$/i.test(p)) throw new Error('I file .bat e .cmd non li lancio: scrivi il comando che contengono.');
+  if (!p) throw new Error(t('desktop.esegui-non-trovo-programma', { programma: argv[0] }));
+  if (WIN && /\.(bat|cmd)$/i.test(p)) throw new Error(t('desktop.esegui-bat'));
   return [p, ...argv.slice(1)];
 }
 
@@ -317,9 +319,9 @@ export function lancia(argv, { cwd, stdin = null, timeout = TEMPO_CASO, limite =
     };
     const timer = setTimeout(() => { scaduto = true; if (p?.pid) uccidiAlbero(p.pid); ultima = setTimeout(() => risultato(null, 'SIGKILL'), 3000); }, timeout);
     try { p = spawn(argv[0], argv.slice(1), { cwd, env, shell: false, windowsHide: true, detached: !WIN, stdio: ['pipe', 'pipe', 'pipe'] }); }
-    catch (e) { return risultato(null, null, e.code === 'ENOENT' ? `Non trovo il programma «${basename(argv[0])}».` : e.message); }
+    catch (e) { return risultato(null, null, e.code === 'ENOENT' ? t('desktop.esegui-non-trovo-programma', { programma: basename(argv[0]) }) : e.message); }
     if (p.pid) vivi.add(p.pid);
-    p.on('error', e => risultato(null, null, e.code === 'ENOENT' ? `Non trovo il programma «${basename(argv[0])}».` : e.message));
+    p.on('error', e => risultato(null, null, e.code === 'ENOENT' ? t('desktop.esegui-non-trovo-programma', { programma: basename(argv[0]) }) : e.message));
     p.stdout.on('data', b => {
       if (troncato) return;
       if (nOut + b.length > limite) { out.push(b.subarray(0, Math.max(0, limite - nOut))); nOut = limite; troncato = true; uccidiAlbero(p.pid); return; }
@@ -381,16 +383,16 @@ export async function eseguiProva({ radice, passi = [], programmi = [], casi = [
     const x = await lancia(p.argv, { cwd: radice, timeout: tempoCompila, env, pezzo: (flusso, testo) => pezzo?.({ fase: 'compila', flusso, testo }) });
     c.stdout += x.stdout; c.stderr += x.stderr; c.durata += x.durata; c.codice = x.codice; c.segnale = x.segnale; c.scaduto ||= x.scaduto;
     if (x.errore) { r.esito = 'errore'; r.messaggio = x.errore; break; }
-    if (x.scaduto) { r.esito = 'non-compila'; r.messaggio = `La compilazione non è finita entro ${Math.round(tempoCompila / 1000)} secondi.`; break; }
+    if (x.scaduto) { r.esito = 'non-compila'; r.messaggio = t('desktop.esegui-compilazione-lenta', { n: Math.round(tempoCompila / 1000) }); break; }
     if (x.codice !== 0) { r.esito = 'non-compila'; r.primo = primoErrore(`${c.stderr}\n${c.stdout}`); break; }
   }
   c.avvisi = (c.stderr.match(/\bwarning:|\bavviso:/gi) || []).length;
   if (r.esito === 'ok') for (const k of casi) {
     const prog = programmi.find(p => p.nome === k.programma);
-    if (!prog) { r.saltati.push({ nome: k.nome, motivo: 'non so a quale programma va' }); continue; }
-    if (prog.argv.length === 1 && isAbsolute(prog.argv[0]) && !existsSync(prog.argv[0])) { r.esito = 'errore'; r.messaggio = 'Il comando non ha creato il programma da provare.'; break; }
+    if (!prog) { r.saltati.push({ nome: k.nome, motivo: t('desktop.esegui-prova-senza-programma') }); continue; }
+    if (prog.argv.length === 1 && isAbsolute(prog.argv[0]) && !existsSync(prog.argv[0])) { r.esito = 'errore'; r.messaggio = t('desktop.esegui-programma-non-creato'); break; }
     let input, atteso;
-    try { input = leggi(k.in); atteso = leggi(k.out).toString('utf8'); } catch { r.saltati.push({ nome: k.nome, motivo: 'non riesco a leggere i file della prova' }); continue; }
+    try { input = leggi(k.in); atteso = leggi(k.out).toString('utf8'); } catch { r.saltati.push({ nome: k.nome, motivo: t('desktop.esegui-prova-illeggibile') }); continue; }
     const x = await lancia(prog.argv, { cwd: radice, stdin: input, timeout: tempoCaso, env, pezzo: (flusso, testo) => pezzo?.({ fase: 'caso', caso: k.nome, flusso, testo }) });
     const cf = confronta(atteso, x.stdout);
     const crash = eCrash(x);

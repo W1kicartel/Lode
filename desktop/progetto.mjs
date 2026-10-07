@@ -603,8 +603,8 @@ export function crea({ dir, conf = {}, salvaConf = () => { }, manda = () => { },
   }
   // l'uscita arriva alla barra a pezzi, ogni 120 ms e al massimo 64 KB per prova
   function flusso(id) {
-    let coda = [], mandati = 0, t = 0;
-    const via = () => { t = 0; for (const x of coda) manda('progetto:uscita', x); coda = []; };
+    let coda = [], mandati = 0, timer = 0;
+    const via = () => { timer = 0; for (const x of coda) manda('progetto:uscita', x); coda = []; };
     return {
       pezzo: x => {
         if (mandati >= 64 * 1024) return;
@@ -612,9 +612,9 @@ export function crea({ dir, conf = {}, salvaConf = () => { }, manda = () => { },
         const u = coda.at(-1);
         if (u && u.fase === x.fase && u.caso === x.caso && u.flusso === x.flusso) u.testo += testo; else coda.push({ id, ...x, testo });
         if (mandati >= 64 * 1024) coda.push({ id, fase: x.fase, caso: x.caso, flusso: 'stderr', testo: '\n… ' + t('desktop.progetto-resto-non-mostro') + '\n' });
-        if (!t) t = setTimeout(via, 120);
+        if (!timer) timer = setTimeout(via, 120);
       },
-      fine: () => { clearTimeout(t); via(); },
+      fine: () => { clearTimeout(timer); via(); },
     };
   }
   // le righe cambiate dopo l'ultima prova riuscita: «guarda prima qui» (per gli errori a run-time di F3)
