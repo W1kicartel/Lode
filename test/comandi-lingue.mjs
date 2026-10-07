@@ -5,7 +5,8 @@
 //   - almeno 3 frasi per ogni tipo che l'italiano riconosce, e gli stessi campi dell'italiano (per tipo, e per azione dove c'è);
 //   - le frasi NON restano null (vanno all'AI): almeno 15 nelle lingue diverse dall'italiano;
 //   - ESEMPI del riconoscitore: stesso numero dell'italiano, e ogni esempio è davvero un comando nella sua lingua;
-//   - ogni riconoscitore in js/comandi/ ha i suoi casi, e quello della lingua scelta è caricato davvero.
+//   - ogni riconoscitore in js/comandi/ ha i suoi casi, e quello della lingua scelta è caricato davvero;
+//   - ogni comando che un testo cita fra virgolette («segui il progetto», «sì», «esci»…) la barra lo capisce davvero.
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -91,5 +92,38 @@ for (const [frase, cosa] of ric?.ESEMPI || []) {
   prova(`${cod}: esempio ${JSON.stringify(frase)} con la spiegazione`, typeof frase === 'string' && typeof cosa === 'string' && !!cosa.trim());
   prova(`${cod}: esempio ${JSON.stringify(frase)} è un comando`, ric.interpreta(frase.replace(/…/g, 'x')) !== null);
 }
+// 5. i comandi citati nei testi: se un testo italiano cita fra virgolette una frase che la barra italiana prende (un
+//    comando, o una parola delle schede: «sì», «esci»…), la stessa chiave nella lingua scelta cita frasi che la barra in
+//    quella lingua prende davvero, almeno quante l'italiano. Se la frase citata è un'etichetta (un bottone, una voce del
+//    menu: il testo intero di un'altra chiave, come «Smetti su questo computer»), basta che la lingua citi la sua etichetta (o un comando).
+//    I dati di esempio (catalogo «esempio») non sono testi della barra e non contano
+const CO = await import('../js/comandi/comune.js');
+const SCHEDE = ['si', 'no', 'basta', 'esci', 'voto'];
+const citate = s => [...String(s).matchAll(/„([^„“]+)“|«\u202f?([^«»]+?)\u202f?»|“([^“”]+)”/g)].map(m => (m[1] ?? m[2] ?? m[3]).trim()).filter(q => !q.includes('{'));
+const testi = v => typeof v === 'string' ? [v] : Array.isArray(v) ? v.flatMap(testi) : v && typeof v === 'object' ? Object.values(v).flatMap(testi) : [];
+const comandoIt = q => RIT.interpreta(q.replace(/…/g, 'x')) != null || SCHEDE.some(k => CO.detto(q, RIT.PAROLE, k));
+const comando = q => C.interpreta(q.replace(/…/g, 'x')) != null || SCHEDE.some(k => C.dice(q, k));
+const CIT = L._cataloghi.it, CAT = L._cataloghi[cod] || CIT;
+const etichette = new Map();
+for (const [k, v] of Object.entries(CIT)) if (typeof v === 'string' && !etichette.has(v)) etichette.set(v, k);
+let citati = 0;
+for (const [k, v] of Object.entries(CIT)) {
+  if (k.startsWith('esempio.')) continue;
+  const it = testi(v).flatMap(citate).filter(comandoIt);
+  if (!it.length) continue;
+  citati++;
+  const loro = testi(CAT[k]).flatMap(citate);
+  const comandi = it.filter(q => !(etichette.has(q) && etichette.get(q) !== k)).length;
+  for (const q of it) if (etichette.has(q) && etichette.get(q) !== k) {
+    const e = etichette.get(q);
+    prova(`${cod}: ${k} cita l'etichetta ${e}`, loro.some(x => x === String(CAT[e]).trim() || comando(x)), `cita ${JSON.stringify(loro)}, l'etichetta è ${JSON.stringify(CAT[e])}`);
+  }
+  const buoni = loro.filter(comando);
+  prova(`${cod}: ${k} cita comandi che la barra capisce`, buoni.length >= comandi, `l'italiano ne cita ${comandi} (${JSON.stringify(it)}), ${cod} ${JSON.stringify(loro)} → capiti ${JSON.stringify(buoni)}`);
+}
+// 6. le parole delle schede con l'apostrofo tipografico: «d’accordo» come «d'accordo»
+for (const k of SCHEDE) for (const w of (ric.PAROLE?.[k] || []).filter(w => w.includes("'")))
+  prova(`${cod}: ${k} «${w.replace(/'/g, '’')}» con l'apostrofo tipografico`, C.dice(w.replace(/'/g, '’'), k) && C.dice(w.replace(/'/g, '’').toUpperCase(), k));
+prova(`${cod}: ci sono testi che citano comandi`, citati >= 30, `(sono ${citati})`);
 console.log(`${cod}: ${ok} prove passate, ${ko} fallite`);
 process.exit(ko ? 1 : 0);

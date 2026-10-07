@@ -9,7 +9,7 @@ export default {
   'impostazioni.lingua-gia': 'Lode already speaks {nome}.',
   'impostazioni.lingua-sconosciuta': "I don't know this language yet. I speak {lingue}.",
   'impostazioni.benvenuto-lingua-titolo': 'Which language should we speak?',
-  'impostazioni.benvenuto-lingua-sotto': 'You can change it any time: type «{comando}» in the bar, or go to Settings.',
+  'impostazioni.benvenuto-lingua-sotto': 'You can change it any time: type “{comando}” in the bar, or go to Settings.',
   'impostazioni.comando-esempio': 'language italian',
   'impostazioni.sistema-nota': "Your language isn't your country: pick where you study.",
 };

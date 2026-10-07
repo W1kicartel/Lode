@@ -77,7 +77,7 @@ export default {
   'pagina.importa-backup': 'Importer une sauvegarde',
   // fenêtre de l'examen
   'pagina.esame-correggi': 'Corrige les infos ou note ta note.',
-  'pagina.esame-aiuto': "Tu peux aussi l'écrire dans la barre : « examen physique 2 le 20 février 6 ects ».",
+  'pagina.esame-aiuto': "Tu peux aussi l'écrire dans la barre : « examen physique 2 le 20 février 6 ects ».",
   'pagina.campo-nome': 'Nom',
   'pagina.esempio-esame': 'Analyse 2',
   'pagina.campo-cfu': 'Crédits',
@@ -104,7 +104,7 @@ export default {
   'pagina.campo-corso': 'Formation',
   'pagina.esempio-corso': 'Licence informatique',
   'pagina.campo-cfu-laurea': 'Crédits du diplôme',
-  'pagina.campo-lode-vale': 'La « lode » vaut',
+  'pagina.campo-lode-vale': 'La « lode » vaut',
   'pagina.campo-focus': 'Focus (minutes)',
   'pagina.campo-pausa': 'Pause (minutes)',
   'pagina.rintocco': 'Petit son à la fin du focus',

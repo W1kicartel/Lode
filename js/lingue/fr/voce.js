@@ -8,7 +8,7 @@ export default {
   'voce.non-ha-funzionato-perche': "La voix n'a pas marché : {motivo}",
   'voce.nessun-microfono-win': 'Je ne trouve pas de micro : branche-le ou choisis-le dans Paramètres > Système > Son > Entrée.',
   'voce.nessun-microfono': 'Je ne trouve pas de micro : branches-en un et réessaie.',
-  'voce.microfono-chiuso-win': "Le micro ne s'ouvre pas : dans Paramètres > Confidentialité et sécurité > Microphone, active « Accès au microphone » et « Autoriser les applications de bureau à accéder à votre microphone ». Si une autre appli l'utilise (Teams, Zoom), ferme-la.",
+  'voce.microfono-chiuso-win': "Le micro ne s'ouvre pas : dans Paramètres > Confidentialité et sécurité > Microphone, active « Accès au microphone » et « Autoriser les applications de bureau à accéder à votre microphone ». Si une autre appli l'utilise (Teams, Zoom), ferme-la.",
   'voce.permesso-microfono-mac': "Il faut l'autorisation du micro : Réglages Système > Confidentialité et sécurité > Microphone > Lode.",
   'voce.browser-senza-voce': "La reconnaissance vocale n'existe pas dans ce navigateur : essaie Chrome ou Edge.",
   'voce.serve-permesso': "Il faut l'autorisation du micro.",

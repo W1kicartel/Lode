@@ -26,7 +26,7 @@ export default {
   'ore.mancano': "Il te reste {circa} à faire avant l'examen de {nome}.",
   'ore.questo-esame': 'cet examen',
   'ore.recuperi': '{testo} · tu rattrapes {circa}',
-  'ore.ripiego': "Avec tes heures, tout ne rentre pas. Tu peux m'écrire des jours de révision en plus (« je révise de 9h à 21h ») ou viser la session d'après : c'est toi qui décides.",
+  'ore.ripiego': "Avec tes heures, tout ne rentre pas. Tu peux m'écrire des jours de révision en plus (« je révise de 9h à 21h ») ou viser la session d'après : c'est toi qui décides.",
   'ore.mancano-ancora': 'Il te manque encore {circa}.',
   'ore.ora-ci-sta': 'Maintenant, ça rentre.',
 };

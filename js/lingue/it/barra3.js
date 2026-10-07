@@ -104,7 +104,7 @@ export default {
   'barra3.quiz-poco-materiale': 'Per un quiz su **{nome}** mi serve più materiale: trascina la dispensa o le slide (scegli «Quiz a crocette»), oppure crea qualche carta.',
   'barra3.quiz-senza-ai': 'Per il quiz senza AI mi servono almeno 4 carte o 4 definizioni di **{nome}**. Con l\'AI (scrivi «AI») lo faccio anche dalla dispensa.',
   'barra3.quiz-fonte-dispensa-nome': 'Domande dalla dispensa «{nome}».',
-  'barra3.quiz-fonte-dispensa': 'Domande dalla dispensa .',
+  'barra3.quiz-fonte-dispensa': 'Domande dalla dispensa.',
   'barra3.quiz-fonte-ai': 'Domande dalle tue carte, definizioni e domande uscite.',
   'barra3.quiz-fonte-carte-definizioni': 'Domande dalle tue carte e definizioni.',
   'barra3.quiz-fonte-carte': 'Domande dalle tue carte.',

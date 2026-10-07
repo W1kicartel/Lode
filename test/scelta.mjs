@@ -82,7 +82,8 @@ const code = ['', ' pure', '  pure', ' Pure', '!', '.', ',', ' !', '!!', '.,!', 
 let frasi = 0, diverse = [];
 for (const b of basi) for (const c of code) for (const testa of ['', ' ']) {
   const f = testa + b + c; frasi++;
-  for (const q of Object.keys(PRIMA)) if (PRIMA[q].test(f) !== detto(f, R.it.PAROLE, q)) diverse.push(`${q}: «${f}»`);
+  // l'unica differenza voluta: l'apostrofo tipografico vale come quello dritto («d’accordo» come «d'accordo»)
+  for (const q of Object.keys(PRIMA)) if (PRIMA[q].test(f.replace(/’/g, "'")) !== detto(f, R.it.PAROLE, q)) diverse.push(`${q}: «${f}»`);
 }
 prova(`italiano: le stesse risposte delle regex di prima (${frasi} frasi × 5)`, frasi > 3000 && !diverse.length, diverse.slice(0, 10).join(' | '));
 const CHIAVI = ['si', 'siCoda', 'no', 'voto', 'basta', 'esci'];

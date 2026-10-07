@@ -10,7 +10,7 @@ export default {
     ['Enuncie o teorema de Schwarz', 'Se as derivadas segundas mistas são contínuas em uma vizinhança, então f_xy = f_yx.'],
     ['Condição para um ponto crítico', 'O gradiente se anula: ∇f(x₀) = 0.'],
     ['Como se classifica um ponto crítico?', 'Com a matriz hessiana: definida positiva → mínimo, definida negativa → máximo, indefinida → ponto de sela.'],
-    ['O que é uma integral dupla sobre uma região simples?', 'Uma integral iterada: primeiro na variável “de dentro”, com limites que dependem da outra, depois na outra.'],
+    ['O que é uma integral dupla sobre uma região simples?', 'Uma integral iterada: primeiro na variável «de dentro», com limites que dependem da outra, depois na outra.'],
     ['Teorema de Green: enunciado', 'A integral de linha sobre ∂D de P dx + Q dy é igual à integral dupla sobre D de (∂Q/∂x − ∂P/∂y).'],
     ['Forma diferencial exata: definição', 'ω é exata se existe uma função U (um potencial) com dU = ω.'],
     ['Série geométrica: quando converge?', 'Para |q| < 1, com soma 1/(1 − q).'],

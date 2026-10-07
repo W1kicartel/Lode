@@ -9,7 +9,7 @@ export default {
     ['Énonce le théorème de Schwarz', "Si les dérivées secondes croisées sont continues au voisinage d'un point, alors f_xy = f_yx."],
     ['Condition pour un point critique', "Le gradient s'annule : ∇f(x₀) = 0."],
     ['Comment classer un point critique ?', 'Avec la matrice hessienne : définie positive → minimum, définie négative → maximum, indéfinie → point selle.'],
-    ["Qu'est-ce qu'une intégrale double sur un domaine élémentaire ?", "Une intégrale itérée : d'abord sur la variable « intérieure », avec des bornes qui dépendent de l'autre, puis sur l'autre."],
+    ["Qu'est-ce qu'une intégrale double sur un domaine élémentaire ?", "Une intégrale itérée : d'abord sur la variable « intérieure », avec des bornes qui dépendent de l'autre, puis sur l'autre."],
     ['Formule de Green-Riemann : énoncé', "L'intégrale curviligne sur ∂D de P dx + Q dy est égale à l'intégrale double sur D de (∂Q/∂x − ∂P/∂y)."],
     ['Forme différentielle exacte : définition', "ω est exacte s'il existe une fonction U (un potentiel) telle que dU = ω."],
     ['Série géométrique : quand converge-t-elle ?', 'Pour |q| < 1, avec pour somme 1/(1 − q).'],

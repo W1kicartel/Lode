@@ -2,7 +2,8 @@
 // 1) ogni catalogo di ogni lingua ha le STESSE chiavi dell'italiano, con gli stessi parametri {x}, gli stessi tag HTML,
 //    elenchi della stessa lunghezza e plurali con «other»; 2) ogni t('…') / elenco('…') scritto nel codice ha la sua
 //    chiave in italiano; 3) ogni file dei cataloghi è nella cache del service worker (sw.js, FILE); 4) ogni chiave
-//    italiana è usata da qualche file (le chiavi composte con una variabile stanno in COMPOSTE).
+//    italiana è usata da qualche file (le chiavi composte con una variabile stanno in COMPOSTE); 5) ogni lingua usa le
+//    sue virgolette.
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { AREE } from '../js/lingue/indice.js';
 import { LINGUE } from '../js/lingua.js';
@@ -54,6 +55,20 @@ for (const f of [...file('js/'), ...file('desktop/').filter(f => !f.includes('no
   for (const m of s.matchAll(/\b(?:t|elenco|tn)\(\s*'([a-z][\w-]*\.[\w.-]+)'/g)) { usate.add(m[1]); prova(`${f}: chiave ${m[1]} in italiano`, m[1] in IT); }
 }
 prova('ci sono chiavi usate', usate.size > 0);
+// 5) le virgolette di ogni lingua, in tutti i testi (fuori da `…`, dove stanno i caratteri di cui si parla):
+//    «» in italiano, spagnolo e portoghese; « » in francese, con lo spazio fine (U+202F) dentro; „“ in tedesco; “” in inglese
+const VIRGOLETTE = {
+  it: { no: /[“”„]/ }, es: { no: /[“”„]/ }, pt: { no: /[“”„]/ },
+  fr: { no: /[“”„]|«(?!\u202f)|(?<!\u202f)»/ }, de: { no: /[«»”]/ }, en: { no: /[«»„]/ },
+};
+const testi = v => typeof v === 'string' ? [v] : Array.isArray(v) ? v.flatMap(testi) : v && typeof v === 'object' ? Object.values(v).flatMap(testi) : [];
+for (const cod of Object.keys(LINGUE)) {
+  const cat = {}; for (const a of AREE) Object.assign(cat, await carica(cod, a) || {});
+  // e le virgolette dritte ("…") solo dove le ha anche l'italiano (nei programmi e nelle stringhe del codice)
+  const fuori = s => s.split('`').filter((x, i) => i % 2 === 0).join(' '), dritte = v => testi(v).some(s => /"[^"]{2,}"/.test(fuori(s)));
+  const storte = Object.entries(cat).filter(([k, v]) => testi(v).some(s => VIRGOLETTE[cod].no.test(fuori(s))) || (dritte(v) && !dritte(IT[k]))).map(([k]) => k);
+  prova(`${cod}: le virgolette della lingua`, storte.length === 0, `${storte.length}: ${storte.slice(0, 8).join(', ')}`);
+}
 // 4) nessuna chiave dimenticata: ogni chiave del catalogo italiano compare nel codice fra virgolette ('area.chiave'),
 //    oppure è costruita da un prefisso che sta in COMPOSTE (chiavi fatte con una variabile). Una chiave che non usa più
 //    nessuno si toglie da tutte e sei le lingue; una chiave nuova composta con una variabile si aggiunge qui
