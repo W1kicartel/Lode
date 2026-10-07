@@ -10,7 +10,7 @@ import { nomi } from '../nomi.js';
 import { ERRORI } from './modelli.js';
 // «Pronto per la discussione»: solo i conti delle funzioni spiegate (si importano a vicenda: qui servono solo a chiamata)
 import { contiDiario } from './discussione.js';
-import { t, elenco, locale } from '../lingua.js';
+import { t, tIn, elencoIn } from '../lingua.js';
 
 /* ---------- gli eventi: lo schema comune a F1, F2 e F3 ----------
   Ogni evento entra in D.codice.eventi con registra(D.codice, evento). Campi di tutti:
@@ -62,11 +62,17 @@ const oraDi = t => { const d = new Date(ms(t)); return `${due(d.getHours())}:${d
 const piuGiorni = (iso, n) => { const d = new Date(iso + 'T12:00'); d.setDate(d.getDate() + n); return giornoDi(d.getTime()); };
 const giorniTra = (a, b) => Math.round((new Date(b + 'T12:00') - new Date(a + 'T12:00')) / 864e5);
 const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-// i nomi dei giorni e dei mesi nella lingua della barra (catalogo comune, come dataLunga e dataBreve di js/dati.js)
-const GIORNI = elenco('comune.giorni'), MESI = elenco('comune.mesi'), MESI_BREVI = elenco('comune.mesiBrevi');
-const dataLunga = iso => { const d = new Date(iso + 'T12:00'); return t('comune.dataLunga', { giorno: GIORNI[d.getDay()], n: d.getDate(), mese: MESI[d.getMonth()] }); };
-const dataBreve = iso => { const d = new Date(iso + 'T12:00'); return t('comune.dataBreve', { n: d.getDate(), mese: MESI_BREVI[d.getMonth()] }); };
-const unisci = xs => xs.length < 2 ? xs.join('') : t('diario.elenco-e', { prima: xs.slice(0, -1).join(', '), ultimo: xs.at(-1) });
+// I testi del diario e di «Cosa so davvero» vanno nelle note: sono nella lingua del VAULT, come i titoli (js/nomi.js; js/vault.js,
+// tv), non in quella della barra. In un vault italiano con la barra in italiano tIn è t: i testi di sempre
+const lv = () => nomi().lingua;
+const tv = (k, p) => tIn(lv(), k, p);
+const localeV = () => nomi().locale;
+// il nome di un argomento di «Cosa stampa?» nella lingua del vault (NOMI_CONCETTI resta nella lingua della barra)
+const nomeConcetto = id => (Object.hasOwn(NOMI_CONCETTI, id) ? tIn(lv(), 'diario.concetto-' + id.slice(2)) : null);
+// i nomi dei giorni e dei mesi nella lingua del vault (catalogo comune, come dataLungaIn e dataBreveIn di js/dati.js)
+const dataLunga = iso => { const d = new Date(iso + 'T12:00'); return tv('comune.dataLunga', { giorno: elencoIn(lv(), 'comune.giorni')[d.getDay()], n: d.getDate(), mese: elencoIn(lv(), 'comune.mesi')[d.getMonth()] }); };
+const dataBreve = iso => { const d = new Date(iso + 'T12:00'); return tv('comune.dataBreve', { n: d.getDate(), mese: elencoIn(lv(), 'comune.mesiBrevi')[d.getMonth()] }); };
+const unisci = xs => xs.length < 2 ? xs.join('') : tv('diario.elenco-e', { prima: xs.slice(0, -1).join(', '), ultimo: xs.at(-1) });
 const cella = s => String(s).replace(/\|/g, '\\|');
 const leggibile = id => String(id).replace(/^[a-z]+:/i, '').replace(/[-_]+/g, ' ').trim().replace(/^./, c => c.toUpperCase());
 // un pezzo di testo che arriva da fuori (nomi di file, messaggi del compilatore): una riga sola e niente «%%», che chiuderebbe il riquadro.
@@ -155,15 +161,15 @@ tags: [diario-progetto]
 }
 const riuscita = p => p.compila === true && (Number(p.passate) || 0) === (Number(p.totale) || 0);
 const numeroRiga = r => r == null || r === '' || !Number.isFinite(+r) ? '' : ':' + +r;
-const doveErrore = x => `${x.file ? pezzo(x.file, 60) + numeroRiga(x.riga) + ' ' : ''}${t('diario.errore-titolo', { titolo: pezzo(x.titolo || x.nome || x.voce || t('diario.errore-generico')) })}`;
-const PASSI = { dove: t('diario.passo-dove'), cosa: t('diario.passo-cosa') };
-const passiVisti = passi => { const p = ['dove', 'cosa'].filter(x => (passi || []).includes(x)).map(x => PASSI[x]); return p.length ? ` · ${t('diario.passi-visti', { n: p.length, passi: unisci(p) })}` : ''; };
+const doveErrore = x => `${x.file ? pezzo(x.file, 60) + numeroRiga(x.riga) + ' ' : ''}${tv('diario.errore-titolo', { titolo: pezzo(x.titolo || x.nome || x.voce || tv('diario.errore-generico')) })}`;
+const PASSI = () => ({ dove: tv('diario.passo-dove'), cosa: tv('diario.passo-cosa') });
+const passiVisti = passi => { const p = ['dove', 'cosa'].filter(x => (passi || []).includes(x)).map(x => PASSI()[x]); return p.length ? ` · ${tv('diario.passi-visti', { n: p.length, passi: unisci(p) })}` : ''; };
 // «nuova `f` in lista.c»: una frase per stato, con e senza il file (uno stato sconosciuto vale «cambiata»)
 function rigaFunzione(f) {
   const nome = codiceIn(f.nome), file = f.file ? pezzo(f.file, 60) : '';
-  if (f.stato === 'nuova') return f.file ? t('diario.funzione-nuova-in', { nome, file }) : t('diario.funzione-nuova', { nome });
-  if (f.stato === 'tolta') return f.file ? t('diario.funzione-tolta-in', { nome, file }) : t('diario.funzione-tolta', { nome });
-  return f.file ? t('diario.funzione-cambiata-in', { nome, file }) : t('diario.funzione-cambiata', { nome });
+  if (f.stato === 'nuova') return f.file ? tv('diario.funzione-nuova-in', { nome, file }) : tv('diario.funzione-nuova', { nome });
+  if (f.stato === 'tolta') return f.file ? tv('diario.funzione-tolta-in', { nome, file }) : tv('diario.funzione-tolta', { nome });
+  return f.file ? tv('diario.funzione-cambiata-in', { nome, file }) : tv('diario.funzione-cambiata', { nome });
 }
 
 function rigaCambio(e) {
@@ -173,23 +179,23 @@ function rigaCambio(e) {
   const meno = Number(e.meno ?? fl.reduce((s, f) => s + (Number(f.meno) || 0), 0)) || 0;
   const cose = [
     ...(Array.isArray(e.funzioni) ? e.funzioni : []).filter(f => f?.nome).map(rigaFunzione),
-    ...fl.filter(f => f.stato === 'nuovo' && f.rel).map(f => t('diario.file-nuovo', { file: pezzo(f.rel, 60) })),
-    ...fl.filter(f => f.stato === 'tolto' && f.rel).map(f => t('diario.file-tolto', { file: pezzo(f.rel, 60) })),
+    ...fl.filter(f => f.stato === 'nuovo' && f.rel).map(f => tv('diario.file-nuovo', { file: pezzo(f.rel, 60) })),
+    ...fl.filter(f => f.stato === 'tolto' && f.rel).map(f => tv('diario.file-tolto', { file: pezzo(f.rel, 60) })),
   ];
   const visti = cose.slice(0, 4), resto = cose.length - visti.length;
-  const quanti = n ? t('diario.cambiati-file', { n }) : t('diario.cambiato-codice');
-  return `${quanti} (+${piu} −${meno})${visti.length ? `: ${visti.join(', ')}${resto ? ' ' + t('diario.altre-modifiche', { n: resto }) : ''}` : ''} · ${t('diario.chi-ha-scritto')}`;
+  const quanti = n ? tv('diario.cambiati-file', { n }) : tv('diario.cambiato-codice');
+  return `${quanti} (+${piu} −${meno})${visti.length ? `: ${visti.join(', ')}${resto ? ' ' + tv('diario.altre-modifiche', { n: resto }) : ''}` : ''} · ${tv('diario.chi-ha-scritto')}`;
 }
 function rigaProva(p, legati) {
   const primo = p.primo || legati.find(x => x.titolo || x.nome || x.file) || null;
-  const cambiato = p.cambiato ? ' · ' + t('diario.cambiato-durante') : '';
+  const cambiato = p.cambiato ? ' · ' + tv('diario.cambiato-durante') : '';
   let r;
-  if (p.compila === false) r = `${primo ? t('diario.prova-non-compila-errore', { errore: doveErrore(primo) }) : t('diario.prova-non-compila')}${cambiato}`;
-  else if (p.compila !== true) r = `${t('diario.prova-non-partita')}${cambiato}`;
+  if (p.compila === false) r = `${primo ? tv('diario.prova-non-compila-errore', { errore: doveErrore(primo) }) : tv('diario.prova-non-compila')}${cambiato}`;
+  else if (p.compila !== true) r = `${tv('diario.prova-non-partita')}${cambiato}`;
   else {
     const tot = Number(p.totale) || 0, ok = Number(p.passate) || 0;
-    if (riuscita(p)) r = t('diario.prova-ok', { prove: tot ? t('diario.prove-conto', { ok, tot }) : t('diario.nessun-caso'), stato: p.cambiato ? t('diario.ma-cambiato') : t('diario.codice-provato') });
-    else r = `${t('diario.prova-ko', { ok, tot })}${primo ? ' · ' + doveErrore(primo) : ''}${cambiato}`;
+    if (riuscita(p)) r = tv('diario.prova-ok', { prove: tot ? tv('diario.prove-conto', { ok, tot }) : tv('diario.nessun-caso'), stato: p.cambiato ? tv('diario.ma-cambiato') : tv('diario.codice-provato') });
+    else r = `${tv('diario.prova-ko', { ok, tot })}${primo ? ' · ' + doveErrore(primo) : ''}${cambiato}`;
   }
   return r + passiVisti(legati.flatMap(x => x.passi || []));
 }
@@ -208,10 +214,10 @@ function riassuntoGiorno(es, legati) {
   const correzioni = es.filter(e => e.tipo === 'correzione-vista').length;
   const uc = es.filter(e => e.tipo === 'cambio').at(-1), up = prove.at(-1);
   const nonProvato = uc && (!up || (ms(uc.t) > ms(up.t) && !(uc.impronta && uc.impronta === up.impronta)));
-  const parti = [prove.length ? t('diario.n-prove', { n: prove.length }) : t('diario.nessuna-prova')];
-  if (errori) parti.push(risolti === errori ? t('diario.errori-risolti', { n: errori }) : `${t('diario.n-errori', { n: errori })}, ${t('diario.n-risolti', { n: risolti })}`);
-  parti.push(t('diario.correzioni-viste', { n: correzioni }));
-  return `${t('diario.oggi', { parti: parti.join(', ') })}${nonProvato ? ' · ' + t('diario.ultima-non-provata') : ''}`;
+  const parti = [prove.length ? tv('diario.n-prove', { n: prove.length }) : tv('diario.nessuna-prova')];
+  if (errori) parti.push(risolti === errori ? tv('diario.errori-risolti', { n: errori }) : `${tv('diario.n-errori', { n: errori })}, ${tv('diario.n-risolti', { n: risolti })}`);
+  parti.push(tv('diario.correzioni-viste', { n: correzioni }));
+  return `${tv('diario.oggi', { parti: parti.join(', ') })}${nonProvato ? ' · ' + tv('diario.ultima-non-provata') : ''}`;
 }
 // il testo del riquadro «diario» per un progetto in un giorno: una riga per evento, poi il riassunto
 export function testoDiario(eventi, giorno, progetto) {
@@ -224,11 +230,11 @@ export function testoDiario(eventi, giorno, progetto) {
   const righe = [];
   for (const e of es) {
     let r = null;
-    if (e.tipo === 'segui') r = e.smetti ? t('diario.smette', { progetto: pezzo(e.progetto, 80) }) : t('diario.segue', { progetto: pezzo(e.progetto, 80) });
+    if (e.tipo === 'segui') r = e.smetti ? tv('diario.smette', { progetto: pezzo(e.progetto, 80) }) : tv('diario.segue', { progetto: pezzo(e.progetto, 80) });
     else if (e.tipo === 'cambio') r = rigaCambio(e);
     else if (e.tipo === 'prova') r = rigaProva(e, legati.get(ms(e.t)) || []);
-    else if (e.tipo === 'errore' && !piegati.has(e)) r = `${t('diario.errore', { errore: doveErrore(e) })}${passiVisti(e.passi)}`;
-    else if (e.tipo === 'correzione-vista') r = t('diario.correzione-vista', { errore: doveErrore(e) });
+    else if (e.tipo === 'errore' && !piegati.has(e)) r = `${tv('diario.errore', { errore: doveErrore(e) })}${passiVisti(e.passi)}`;
+    else if (e.tipo === 'correzione-vista') r = tv('diario.correzione-vista', { errore: doveErrore(e) });
     if (r) righe.push(`- ${oraDi(e.t)} · ${r}`);
   }
   righe.push(`- ${riassuntoGiorno(es, legati)}`);
@@ -238,7 +244,7 @@ export function testoDiario(eventi, giorno, progetto) {
 function rigaSpiegate(codice, progetto) {
   const c = contiDiario(codice, progetto); if (!c) return '';
   const r = c.rivedere.slice(0, 6).map(codiceIn);
-  return `\n- ${r.length ? t('diario.spiegate-rivedere', { spiegate: c.spiegate, totale: c.totale, nomi: r.join(', ') }) + (c.rivedere.length > r.length ? '…' : '') : t('diario.spiegate', { spiegate: c.spiegate, totale: c.totale })}`;
+  return `\n- ${r.length ? tv('diario.spiegate-rivedere', { spiegate: c.spiegate, totale: c.totale, nomi: r.join(', ') }) + (c.rivedere.length > r.length ? '…' : '') : tv('diario.spiegate', { spiegate: c.spiegate, totale: c.totale })}`;
 }
 const corsoDelProgetto = (codice, nome) => (Object.hasOwn(codice?.diari || {}, nome) ? codice.diari[nome].corso : null)
   || [...(codice?.eventi || [])].reverse().find(e => e?.progetto === nome && e.corso)?.corso || null;
@@ -274,9 +280,9 @@ export function diarioDaAprire(codice, { progetto, adesso = Date.now() } = {}) {
 
 /* ---------- «Cosa so davvero»: la pagina del corso ---------- */
 const PRIMA = { 'da rifare': 0, sicuro: 1, 'mai fatto': 2 };
-const quando = (iso, oggi) => { const d = giorniTra(iso, oggi); return d <= 0 ? t('comune.oggi') : d === 1 ? t('diario.ieri') : t('diario.giorni-fa', { n: d }); };
+const quando = (iso, oggi) => { const d = giorniTra(iso, oggi); return d <= 0 ? tv('comune.oggi') : d === 1 ? tv('diario.ieri') : tv('diario.giorni-fa', { n: d }); };
 // lo stato come si legge nella tabella (nei dati resta 'da rifare' | 'sicuro' | 'mai fatto')
-const STATO_TESTO = { 'da rifare': t('diario.stato-da-rifare'), sicuro: t('diario.stato-sicuro'), 'mai fatto': t('diario.stato-mai-fatto') };
+const STATO_TESTO = () => ({ 'da rifare': tv('diario.stato-da-rifare'), sicuro: tv('diario.stato-sicuro'), 'mai fatto': tv('diario.stato-mai-fatto') });
 // gli argomenti di «Cosa stampa?», uno per concetto, dai conti SM-2 in D.codice.memoria (chiavi 'stampa|<concetto>').
 // Un concetto appartiene ai corsi dei suoi eventi 'stampa'. Se non ne ha più (o non ne ha mai avuti), vale per ogni corso.
 // concetti: l'elenco completo di F1 (id, oppure { id, nome }), per le righe «mai fatto».
@@ -294,8 +300,8 @@ export function argomenti(codice, { corso, oggi = giornoDi(Date.now()), concetti
     const m = Object.hasOwn(mem, prefisso + id) ? mem[prefisso + id] : null;
     const giuste = Number(m?.giuste) || 0, esercizi = giuste + (Number(m?.sbagliate) || 0);
     const stato = !esercizi ? 'mai fatto' : (m.scad && m.scad < oggi) || !m.rip ? 'da rifare' : 'sicuro';
-    return { concetto: id, argomento: nomi[id] || nomeDa[id] || NOMI_CONCETTI[id] || leggibile(id), esercizi, giuste, primoColpo: esercizi ? Math.round(giuste / esercizi * 100) : null, ultima: esercizi ? m.ultima || null : null, scad: m?.scad || null, stato };
-  }).sort((a, b) => PRIMA[a.stato] - PRIMA[b.stato] || (a.stato === 'da rifare' ? String(a.scad).localeCompare(String(b.scad)) : 0) || a.argomento.localeCompare(b.argomento, locale()));
+    return { concetto: id, argomento: nomi[id] || nomeDa[id] || nomeConcetto(id) || leggibile(id), esercizi, giuste, primoColpo: esercizi ? Math.round(giuste / esercizi * 100) : null, ultima: esercizi ? m.ultima || null : null, scad: m?.scad || null, stato };
+  }).sort((a, b) => PRIMA[a.stato] - PRIMA[b.stato] || (a.stato === 'da rifare' ? String(a.scad).localeCompare(String(b.scad)) : 0) || a.argomento.localeCompare(b.argomento, localeV()));
 }
 const conteggi = (mappa, tieni) => Object.entries(mappa || {}).filter(([k, n]) => tieni(k) && Number(n) > 0).map(([k, n]) => [k, Number(n)]).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 // gli errori del compilatore (e dell'esecuzione) contati da F3, con il nome della voce preso dall'ultimo evento che lo porta
@@ -306,22 +312,22 @@ export function erroriFrequenti(codice, { nomiErrori = {}, quanti = 5 } = {}) {
 }
 function linkDiari(codice, corso) {
   const righe = Object.entries(codice?.diari || {}).filter(([n, x]) => x?.corso && norm(x.corso) === norm(corso) && opzioniProgetto(codice, n).diario && (x.giorni || []).length)
-    .sort((a, b) => a[0].localeCompare(b[0], locale()))
+    .sort((a, b) => a[0].localeCompare(b[0], localeV()))
     .map(([n, x]) => `- ${pezzo(n, 80)}: ${[...x.giorni].sort().reverse().slice(0, 5).map(g => `[[${fileDiario(n, g).replace(/\.md$/, '')}|${dataBreve(g)}]]`).join(' · ')}`);
-  return righe.length ? `${t('diario.diari-dei-progetti')}\n${righe.join('\n')}` : '';
+  return righe.length ? `${tv('diario.diari-dei-progetti')}\n${righe.join('\n')}` : '';
 }
 // il testo del riquadro «informatica» sulla pagina del corso
 export function cosaSoDavvero(codice, opz = {}) {
   const oggi = opz.oggi || giornoDi(Date.now()), righe = argomenti(codice, { ...opz, oggi });
   const parti = [`## ${nomi().titoli.cosaSoDavvero}`];
-  if (righe.length) parti.push(`*${t('diario.tabella-nota')}*
+  if (righe.length) parti.push(`*${tv('diario.tabella-nota')}*
 
-${t('diario.tabella-testa')}
+${tv('diario.tabella-testa')}
 |---|---|---|---|---|
-${righe.map(r => `| ${cella(pezzo(r.argomento, 80))} | ${r.esercizi} | ${r.primoColpo == null ? '—' : r.primoColpo + '%'} | ${r.ultima ? quando(r.ultima, oggi) : '—'} | ${STATO_TESTO[r.stato]} |`).join('\n')}`);
-  else parti.push(t('diario.nessun-esercizio'));
+${righe.map(r => `| ${cella(pezzo(r.argomento, 80))} | ${r.esercizi} | ${r.primoColpo == null ? '—' : r.primoColpo + '%'} | ${r.ultima ? quando(r.ultima, oggi) : '—'} | ${STATO_TESTO()[r.stato]} |`).join('\n')}`);
+  else parti.push(tv('diario.nessun-esercizio'));
   const err = erroriFrequenti(codice, opz);
-  if (err.length) parti.push(t('diario.errori-frequenti', { errori: err.map(x => `${x.nome} (${x.volte})`).join(', ') }));
+  if (err.length) parti.push(tv('diario.errori-frequenti', { errori: err.map(x => `${x.nome} (${x.volte})`).join(', ') }));
   const diari = opz.corso ? linkDiari(codice, opz.corso) : '';
   if (diari) parti.push(diari);
   return parti.join('\n\n');
@@ -343,16 +349,16 @@ export function corsiInformatica(D) {
 export function righeMemoria(codice, opz = {}) {
   const r = [], oggi = opz.oggi || giornoDi(Date.now());
   const sbagli = conteggi(codice?.errori, k => Object.hasOwn(MUTANTI, k)).slice(0, 5);
-  if (sbagli.length) r.push(`- ${t('diario.sbagli-spesso', { sbagli: sbagli.map(([k, n]) => `${MUTANTI[k]} (${n})`).join(', ') })}`);
+  if (sbagli.length) r.push(`- ${tv('diario.sbagli-spesso', { sbagli: sbagli.map(([k, n]) => `${MUTANTI[k]} (${n})`).join(', ') })}`);
   const tutti = argomenti(codice, { ...opz, corso: null, oggi, concetti: [] }), fatti = tutti.filter(a => a.esercizi);
   if (fatti.length) {
     const tot = fatti.reduce((s, a) => s + a.esercizi, 0), giuste = fatti.reduce((s, a) => s + a.giuste, 0);
-    r.push(`- ${t('diario.memoria-stampa', { n: tot, giuste: Math.round(giuste / tot * 100) })}`);
+    r.push(`- ${tv('diario.memoria-stampa', { n: tot, giuste: Math.round(giuste / tot * 100) })}`);
   }
   const rifare = tutti.filter(a => a.stato === 'da rifare').slice(0, 6);
-  if (rifare.length) r.push(`- ${t('diario.da-rifare', { argomenti: rifare.map(a => pezzo(a.argomento, 80)).join(', ') })}`);
+  if (rifare.length) r.push(`- ${tv('diario.da-rifare', { argomenti: rifare.map(a => pezzo(a.argomento, 80)).join(', ') })}`);
   const err = erroriFrequenti(codice, opz);
-  if (err.length) r.push(`- ${t('diario.errori-frequenti', { errori: err.map(x => `${x.nome} (${x.volte})`).join(', ') })}`);
+  if (err.length) r.push(`- ${tv('diario.errori-frequenti', { errori: err.map(x => `${x.nome} (${x.volte})`).join(', ') })}`);
   return r;
 }
 // la sezione intera, da mettere nel modello di scriviMemoria() prima di «## Note per Lode». Vuota se non c'è niente da dire.

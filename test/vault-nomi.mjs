@@ -286,6 +286,20 @@ VA.crea(EN, [{ corso: 'Calculus 2', giorni: [1, 3], inizio: '09:00', fine: '11:0
   const vuota = T.scriviNota([], [], 'g', T0), piena = T.scriviNota(carta, [], 'g', T0);
   prova('note en: la tasca vuota in inglese', vuota.includes(en('tasca.nota-vuota')) && !vuota.includes(LI.t('tasca.nota-vuota')), vuota);
   prova('note en: la tasca con la data in inglese', piena.includes(en('tasca.nota-capo', { data: Dm.dataLungaIn('en', Dm.piuGiorni(T0, 1)) })) && piena.includes(`## 1 · ${en('tasca.senza-corso')}`), piena.slice(0, 160));
+  // il diario dei progetti e «Cosa so davvero» (js/codice/diario.js), anche nella Memoria: la lingua del vault
+  const cod = DI.codiceVuoto(), adesso = new Date(T0 + 'T10:00').getTime();
+  cod.memoria = { 'stampa|c:for': { giuste: 1, sbagliate: 1, rip: 1, scad: Dm.piuGiorni(T0, -2), ultima: Dm.piuGiorni(T0, -1) } };
+  for (const e of [{ tipo: 'segui', progetto: 'lab' }, { tipo: 'prova', progetto: 'lab', compila: true, passate: 1, totale: 2 }, { tipo: 'stampa', concetto: 'c:for' }]) DI.registra(cod, { ...e, t: adesso }, adesso);
+  const cosa = DI.cosaSoDavvero(cod, { concetti: ['c:for'], oggi: T0 }), diario = DI.testoDiario(cod.eventi, T0, 'lab');
+  prova('note en: «Cosa so davvero» in inglese', cosa.includes(en('diario.tabella-testa')) && cosa.includes(`| ${en('diario.concetto-for')} |`) && cosa.includes(`| ${en('diario.stato-da-rifare')} |`) && cosa.includes(en('diario.ieri')) && !cosa.includes(LI.t('diario.tabella-testa')), cosa);
+  prova('note en: il diario del progetto in inglese', diario.includes(en('diario.segue', { progetto: 'lab' })) && !diario.includes(LI.t('diario.segue', { progetto: 'lab' })), diario);
+  const codPrima = Dm.D.codice; Dm.D.codice = cod;
+  const memInfo = VB._note.memoria();
+  Dm.D.codice = codPrima;
+  prova('note en: la parte di informatica della Memoria in inglese', memInfo.includes(`## ${NM.nomi().titoli.informatica}`) && memInfo.includes(en('modelli.concetti.for')) && !memInfo.includes(LI.t('modelli.concetti.for')), memInfo.slice(-400));
+  NM.impostaNomi('it');
+  prova('note it: «Cosa so davvero» in italiano', DI.cosaSoDavvero(cod, { concetti: ['c:for'], oggi: T0 }).includes(LI.t('diario.tabella-testa')) && DI.testoDiario(cod.eventi, T0, 'lab').includes(LI.t('diario.segue', { progetto: 'lab' })));
+  NM.impostaNomi('en');
   // la barra cambia lingua: le note restano nella lingua del vault
   await LI.usa('de');
   prova('note en, barra in tedesco: la Home resta inglese', VB._note.home().includes(`## ${en('vault.titolo-oggi')}`) && LI.tIn('en', 'vault.titolo-oggi') === LI._cataloghi.en['vault.titolo-oggi']);

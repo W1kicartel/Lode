@@ -115,7 +115,7 @@ ${sicure.slice(0, 40).map(d => `- ${d.t} (${d.corso})`).join('\n') || `- ${tv('v
 ## ${nomi().titoli.stelleUltime}
 ${lez.flatMap(l => (l.stelle || []).map(s => `- ${s.replace(/^\d\d:\d\d\s*/, '')} (${l.file ? `[[${l.file.replace(/\.md$/, '').split('/').pop()}]]` : l.corso})`)).slice(0, 15).join('\n') || `- ${tv('vault.ancora-nessuna')}`}
 
-${sezioneMemoria(D.codice, OPZ_DIARIO)}## ${NP}
+${sezioneMemoria(D.codice, OPZ_DIARIO())}## ${NP}
 %% ${tv('vault.note-commento')} %%
 `;
   return testo;
@@ -201,10 +201,11 @@ export function aggiornaPagine() {
   }, 900);
 }
 // il registro onesto (js/codice/diario.js): solo conti, scritti dentro i segni di Lode. Gli argomenti di «Cosa stampa?»
-// sono tutti quelli di modelli.js, così nella tabella compaiono anche quelli «mai fatti»
-const OPZ_DIARIO = { concetti: Object.keys(CONCETTI), nomi: CONCETTI };
+// sono tutti quelli di modelli.js, così nella tabella compaiono anche quelli «mai fatti». I nomi sono nella lingua del vault
+// (modelli.concetti.*, le stesse chiavi di CONCETTI, che resta nella lingua della barra)
+const OPZ_DIARIO = () => ({ concetti: Object.keys(CONCETTI), nomi: Object.fromEntries(Object.keys(CONCETTI).map(k => [k, tIn(lv(), 'modelli.concetti.' + k.slice(2))])) });
 const scrittore = { blocco: x => L.invoca('vault:blocco', x) };
-export const scriviDiario = () => L ? pronto.then(() => aggiornaDiario(scrittore, D, OPZ_DIARIO)) : Promise.resolve([]);
+export const scriviDiario = () => L ? nomiPronti().then(() => aggiornaDiario(scrittore, D, OPZ_DIARIO())) : Promise.resolve([]);
 export const apriDiario = x => L?.invoca('vault:apri', { file: x.file, nuovo: x.nuovo });
 // una volta al giorno si riscrive tutto anche senza novità: «Ultima volta: 9 giorni fa» e «da rifare» dipendono dalla data
 let giornoScritto = oggi();
