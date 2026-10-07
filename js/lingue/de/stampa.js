@@ -1,7 +1,7 @@
 // «Was gibt das aus?», die Aufgabenkarte (Deutsch).
 export default {
   'stampa.titolo': 'Was gibt das aus?',
-  'stampa.anteprima': 'Was gibt {cosa} aus?',
+  'stampa.anteprima': 'Was gibt das aus: {cosa}?',
   'stampa.risposta-assente': 'Diese Antwort gibt es nicht.',
   'stampa.hai-scritto-altro': 'Du hast `{uscita}` geschrieben: Das gibt das Programm nicht aus.',
   'stampa.nessuna-risposta': 'Keine Antwort.',
