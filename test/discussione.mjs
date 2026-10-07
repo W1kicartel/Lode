@@ -174,6 +174,7 @@ prova('comandi: «preparami alla discussione di lab3» → discussione, lab3', J
 prova('comandi: «discussione», «pronto per la discussione», «funzioni da spiegare» senza nome', ['discussione', 'Pronto per la discussione!', 'funzioni da spiegare'].every(t => I(t)?.azione === 'discussione' && !('nome' in I(t))));
 prova('comandi: «discussione di lab3», «funzioni da spiegare di lab3»', I('discussione di lab3')?.nome === 'lab3' && I('funzioni da spiegare di lab3')?.nome === 'lab3' && I('preparami alla discussione del progetto lab3')?.nome === 'lab3');
 prova('comandi: «discussione di laurea» non è un progetto', I('discussione di laurea') === null && I('discussione della tesi') === null);
+prova('comandi: tesi e laurea non sono progetti, in nessuna forma', I('sono pronta per la discussione della tesi') === null && I('preparami alla discussione di laurea') === null && I('pronto per la discussione di laurea') === null && I('funzioni da spiegare della tesi') === null && I('preparami alla discussione di lab3')?.azione === 'discussione' && I('sono pronta per la discussione di lab3')?.nome === 'lab3');
 prova('comandi: quelli di prima restano uguali', I('Segui progetto')?.azione === 'segui' && I('cosa è cambiato?')?.azione === 'cambiato' && I('compila')?.azione === 'prova' && I('smetti di seguire lab3-liste')?.nome === 'lab3-liste' && I('gioca analisi 2') === null);
 prova('daSpiegare: solo con file C, Java o Python', M.daSpiegare({ file: ['lista.c'] }) && !M.daSpiegare({ file: ['README.md'] }) && !M.daSpiegare({}));
 

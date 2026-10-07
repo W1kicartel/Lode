@@ -108,14 +108,19 @@ const COMANDI = [
   [/^compila (.+)$/, m => seguito(m[1]) ? { azione: 'prova', nome: m[1] } : null],
   [/^smetti di seguire(?: (?:il )?(?:progetto )?(.+))?$/, m => ({ azione: 'smetti', nome: m[1] })],
   // «Pronto per la discussione» (discussione.js): «preparami alla discussione di lab3», «pronto per la discussione», «funzioni da
-  // spiegare di lab3». «discussione di X» da sola solo con il nome di un progetto seguito o che ha l'aria di un laboratorio (un
-  // numero, «lab», «progetto»): «discussione di laurea» o «discussione della tesi» restano domande per l'AI
-  [/^(?:preparami|prepararmi|preparami bene|prepara(?:mi)?) (?:alla|per la|la) discussione(?: (?:di|del|della|dello|per|su|sul) (.+))?$/, m => ({ azione: 'discussione', nome: m[1] })],
-  [/^(?:sono )?pront[oa] per la discussione(?: (?:di|del|della|dello|su|sul) (.+))?$/, m => ({ azione: 'discussione', nome: m[1] })],
-  [/^(?:le )?funzioni da spiegare(?: (?:di|del|della|dello|in|nel) (.+))?$/, m => ({ azione: 'discussione', nome: m[1] })],
+  // spiegare di lab3». Con un nome, in tutte le forme, solo se è un progetto seguito o ha l'aria di un laboratorio (un numero,
+  // «lab», «progetto»): «sono pronta per la discussione della tesi» o «preparami alla discussione di laurea» restano all'AI
+  [/^(?:preparami|prepararmi|preparami bene|prepara(?:mi)?) (?:alla|per la|la) discussione(?: (?:di|del|della|dello|per|su|sul) (.+))?$/, m => perDiscussione(m[1])],
+  [/^(?:sono )?pront[oa] per la discussione(?: (?:di|del|della|dello|su|sul) (.+))?$/, m => perDiscussione(m[1])],
+  [/^(?:le )?funzioni da spiegare(?: (?:di|del|della|dello|in|nel) (.+))?$/, m => perDiscussione(m[1])],
   [/^discussione$/, () => ({ azione: 'discussione' })],
-  [/^discussione (?:di|del|della|dello|su|sul) (.+)$/, m => seguito(m[1].replace(/^(?:il |l')?progetto\s+/, '')) || /\d|\blab|progett/.test(m[1]) ? { azione: 'discussione', nome: m[1] } : null],
+  [/^discussione (?:di|del|della|dello|su|sul) (.+)$/, m => perDiscussione(m[1])],
 ];
+// la guardia delle frasi di «Pronto per la discussione»: senza nome il progetto più recente, con un nome solo un laboratorio
+function perDiscussione(nome) {
+  if (!nome) return { azione: 'discussione' };
+  return seguito(nome.replace(/^(?:il |l')?progetto\s+/, '')) || /\d|\blab|progett/.test(nome) ? { azione: 'discussione', nome } : null;
+}
 // «segui progetto», «cosa è cambiato», «provato?», «prova il progetto», «compila», «smetti di seguire lab3» → { tipo: 'progetto', azione, nome? }
 export function interpreta(testo) {
   const t = String(testo || '').toLowerCase().replace(/\s+/g, ' ').trim().replace(/[.!?]+$/, '').trim();
