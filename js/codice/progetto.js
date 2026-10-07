@@ -4,6 +4,7 @@
 // La barra manda al main solo l'id del progetto: mai percorsi, mai comandi da eseguire. Lode propone, lo studente decide.
 // lode.js passa i suoi strumenti con collega(), perché quelle funzioni sono interne a lode.js (come stampa.js).
 import { coseNuove, linguaDi, segna, dati, cartaDa, esameDi } from './glossario.js';
+import * as DI from './discussione.js';
 
 const L = globalThis.lodeDesktop || null;
 export const attivo = !!L;
@@ -106,6 +107,14 @@ const COMANDI = [
   [/^compila(?: (?:il |l')?(?:progetto|codice|programma)(?: (.+))?)?$/, m => ({ azione: 'prova', nome: m[1] })],
   [/^compila (.+)$/, m => seguito(m[1]) ? { azione: 'prova', nome: m[1] } : null],
   [/^smetti di seguire(?: (?:il )?(?:progetto )?(.+))?$/, m => ({ azione: 'smetti', nome: m[1] })],
+  // «Pronto per la discussione» (discussione.js): «preparami alla discussione di lab3», «pronto per la discussione», «funzioni da
+  // spiegare di lab3». «discussione di X» da sola solo con il nome di un progetto seguito o che ha l'aria di un laboratorio (un
+  // numero, «lab», «progetto»): «discussione di laurea» o «discussione della tesi» restano domande per l'AI
+  [/^(?:preparami|prepararmi|preparami bene|prepara(?:mi)?) (?:alla|per la|la) discussione(?: (?:di|del|della|dello|per|su|sul) (.+))?$/, m => ({ azione: 'discussione', nome: m[1] })],
+  [/^(?:sono )?pront[oa] per la discussione(?: (?:di|del|della|dello|su|sul) (.+))?$/, m => ({ azione: 'discussione', nome: m[1] })],
+  [/^(?:le )?funzioni da spiegare(?: (?:di|del|della|dello|in|nel) (.+))?$/, m => ({ azione: 'discussione', nome: m[1] })],
+  [/^discussione$/, () => ({ azione: 'discussione' })],
+  [/^discussione (?:di|del|della|dello|su|sul) (.+)$/, m => seguito(m[1].replace(/^(?:il |l')?progetto\s+/, '')) || /\d|\blab|progett/.test(m[1]) ? { azione: 'discussione', nome: m[1] } : null],
 ];
 // «segui progetto», «cosa è cambiato», «provato?», «prova il progetto», «compila», «smetti di seguire lab3» → { tipo: 'progetto', azione, nome? }
 export function interpreta(testo) {
@@ -131,12 +140,15 @@ function recente() {
   const t = p => Math.max(p.ultima || 0, p.ultimaProva?.quando || 0, p.vista || 0);
   return [...P.values()].filter(p => p.nome).sort((a, b) => t(b) - t(a))[0] || null;
 }
+const SERVE_SEGUITO = 'Serve un progetto seguito nell\'app: scrivi «segui progetto».';
 export async function esegui(c) {
   if (c.azione === 'segui') return segui();
+  if (c.azione === 'discussione' && !attivo) return risposta(SERVE_SEGUITO);
   if (!attivo) return segui();
   if (!P.size) { const r = await invoca('progetto:stato'); for (const x of r.progetti || []) metti(x); }
   const p = trova(c.nome);
-  if (!p) return risposta(c.nome && P.size ? `Non seguo nessun progetto che si chiama «${c.nome}».` : 'Non seguo nessun progetto. Scrivi **segui progetto** e scegli la cartella del laboratorio.');
+  if (!p) return risposta(c.nome && P.size ? `Non seguo nessun progetto che si chiama «${c.nome}».` : c.azione === 'discussione' ? SERVE_SEGUITO : 'Non seguo nessun progetto. Scrivi **segui progetto** e scegli la cartella del laboratorio.');
+  if (c.azione === 'discussione') return DI.scheda(p, T, invoca);
   if (c.azione === 'cambiato') return schedaCambia(p.id);
   if (c.azione === 'provato') return schedaProvato(p.id);
   if (c.azione === 'prova') return prova(p.id);
@@ -186,6 +198,11 @@ function schedaSegui(r) {
   });
   s.querySelector('[data-si]').focus({ preventScroll: true });
   return s;
+}
+// [Preparati alla discussione] della scheda del turno (lode.js): la stessa scheda del comando, per il progetto del turno
+export function discussione(id) {
+  const p = P.get(id);
+  return p?.nome ? DI.scheda(p, T, invoca) : risposta(SERVE_SEGUITO);
 }
 export function schedaSmetti(id) {
   const p = P.get(id); if (!p) return null;

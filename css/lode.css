@@ -792,6 +792,21 @@ button.ld-ripeti-riga:hover{background:rgba(255,255,255,.06)}
 .ld-cosenuove .az{display:flex;gap:8px;margin-top:6px}
 .ld-cosenuove>.ld-nota{margin-top:6px}
 
+/* Pronto per la discussione (discussione.js) */
+.ld-discussione .lista{margin:8px 0 4px}
+.ld-discussione .voce{padding:9px 0;border-top:1px solid var(--ld-riga)}
+.ld-discussione .voce .t{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 10px;font-size:13.5px}
+.ld-discussione code{font:500 12px var(--mono)}
+.ld-discussione .stato{font-size:11.5px;color:var(--ld-tenue)}
+.ld-discussione .stato.forte{color:var(--ink)}
+.ld-discussione .az{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.ld-discussione .prova{margin-top:6px}
+.ld-discussione .prova p{margin:4px 0 8px;font-size:13.5px;line-height:1.5}
+.ld-discussione .prova textarea{min-height:96px}
+.ld-discussione .codice{margin:6px 0 8px;max-height:340px;overflow:auto;padding:6px 0;border-radius:9px;background:rgba(255,255,255,.025);box-shadow:inset 0 0 0 1px var(--ld-filo);font:12px/1.6 var(--mono);color:rgba(245,245,245,.9);scrollbar-width:thin}
+.ld-discussione .codice .r{display:grid;grid-template-columns:40px max-content;width:max-content;min-width:100%;white-space:pre;padding-right:12px}
+.ld-discussione .codice .r i{font-style:normal;text-align:right;padding-right:10px;color:var(--ld-tenue);user-select:none}
+
 /* Temi d'esame */
 .ld-temi p,.ld-tema p{margin:6px 0 8px;font-size:13.5px;line-height:1.5}
 .ld-temi>.az,.ld-tema .az{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
