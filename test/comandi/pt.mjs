@@ -1,7 +1,7 @@
 // I comandi in portoghese per il banco (test/comandi-lingue.mjs): le stesse azioni dei casi italiani (test/comandi/it.mjs),
 // dette come le direbbe uno studente del Portogallo o del Brasile (anche di fretta, senza accenti), con lo stesso risultato.
 // Gli esami sono quelli portoghesi qui sotto (ESAMI: il banco li aggiunge al libretto solo nel giro del portoghese).
-import { E, prossimo, giornoDetto } from './aiuto.mjs';
+import { E, prossimo, giornoDetto, giorno } from './aiuto.mjs';
 
 // il libretto portoghese del banco: [nome, cfu, voto (fatto), idoneità]. Nomi che non si confondono con quelli italiani e
 // inglesi (Física 2 sarebbe uguale a Fisica 2)
@@ -214,6 +214,21 @@ export const CASI = [
   ['adiciona exame história moderna', { tipo: 'esame', nome: 'história moderna', cfu: null, data: null, esistente: null }],
   ['marca exame de física quântica a 12/06 6 ects', { tipo: 'esame', nome: 'física quântica', cfu: 6, data: prossimo(12, 5), esistente: null }],
   ['prova de termodinâmica dia 3 de fevereiro 6 créditos', { tipo: 'esame', nome: 'termodinâmica', cfu: 6, data: prossimo(3, 1), esistente: null }],
+  // dalla verifica: i nomi che cominciano con «me», «que», «qual» (mecânica, química, qualidade) sono esami; senza accenti
+  // «e» può essere «e» (and), non solo «é»; «hj» è «hoje»
+  ['exame de mecanica dia 20 de fevereiro', { tipo: 'esame', nome: 'mecanica', cfu: null, data: prossimo(20, 1), esistente: E('Mecânica') }],
+  ['exame de mecânica em 2 semanas', { tipo: 'esame', nome: 'mecânica', cfu: null, data: giorno(14), esistente: E('Mecânica') }],
+  ['exame de química orgânica a 12 de janeiro', { tipo: 'esame', nome: 'química orgânica', cfu: null, data: prossimo(12, 0), esistente: null }],
+  ['prova de qualidade de software dia 3 de dezembro 6 ects', { tipo: 'esame', nome: 'qualidade de software', cfu: 6, data: prossimo(3, 11), esistente: null }],
+  ['exame de medicina legal 10/01', { tipo: 'esame', nome: 'medicina legal', cfu: null, data: prossimo(10, 0), esistente: null }],
+  ['exame de bases de dados e redes a 3 de fevereiro', { tipo: 'esame', nome: 'bases de dados e redes', cfu: null, data: prossimo(3, 1), esistente: null }],
+  ['o exame de calculo 2 e a 15/01', { tipo: 'esame', nome: 'Cálculo 2', cfu: null, data: prossimo(15, 0), esistente: E('Cálculo 2') }],
+  ['exame de mecanica hj', { tipo: 'esame', nome: 'mecanica', cfu: null, data: giorno(0), esistente: E('Mecânica') }],
+  ['tenho calculo 2 no dia 13 de outubro', { tipo: 'esame', nome: 'Cálculo 2', cfu: null, data: prossimo(13, 9), esistente: E('Cálculo 2') }],
+  ['tirei nota 28 em calculo 2', { tipo: 'voto', voto: 28, lode: false, esame: E('Cálculo 2'), nomeDetto: 'calculo 2' }],
+  ['tive a nota 27 a mecanica', { tipo: 'voto', voto: 27, lode: false, esame: E('Mecânica'), nomeDetto: 'mecanica' }],
+  ['revisar mecanica hj', { tipo: 'ripasso', esame: E('Mecânica'), nomeDetto: 'mecanica' }],
+  ['comeca o foco', { tipo: 'focus', min: null, esame: null, nomeDetto: '' }],
   ['quanto preciso para 110', { tipo: 'serve', base: 110 }],
   ['de quanto preciso para cento e dez', { tipo: 'serve', base: 110 }],
   ['que média preciso para começar com 105', { tipo: 'serve', base: 105 }],
@@ -282,6 +297,15 @@ export const NON = [
   'tenho exame amanhã e estou nervoso',
   'tive 15 a mecânica e estou triste',
   'me ajuda a entender integrais',
+  // dalla verifica: una data senza mese non si legge, e non diventa il nome «mecanica e dia 5»
+  'o exame de mecânica é dia 5',
+  'o exame de mecanica e dia 5',
+  'exame de quando eu era pequeno',
+  'segunda chamada de cálculo 2',
+  'tenho 20 anos',
+  'estou cansado hoje',
+  'amanhã tenho aula',
+  'quero estudar mais',
   // frasi portoghesi che cominciano con una parola inglese: l'inglese di riserva non le deve prendere (vanno all'AI)
   'today está a ser um dia mau',
   'open a página de física',

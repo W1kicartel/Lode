@@ -56,7 +56,7 @@ export function leggiData(testo) {
   let m;
   if (/ depois de amanha /.test(t)) return { data: piuGiorni(T, 2), pezzo: 'depois de amanha' };
   if (/ amanha /.test(t)) return { data: piuGiorni(T, 1), pezzo: 'amanha' };
-  if (/ hoje /.test(t)) return { data: T, pezzo: 'hoje' };
+  if ((m = t.match(/ (hoje|hj) /))) return { data: T, pezzo: m[1] };   // «hj»: hoje, abbreviato in Brasile
   if ((m = t.match(/ (?:daqui a|dentro de|em) (\d+|\w+) (dias?|semanas?|mes|meses) /))) {
     const k = n(m[1]); if (k) return { data: piuGiorni(T, k * (m[2].startsWith('semana') ? 7 : m[2].startsWith('mes') ? 30 : 1)), pezzo: m[0].trim() };
   }
@@ -251,7 +251,7 @@ export function interpreta(frase) {
     if (v >= 18 && v <= 30) return { tipo: 'simula', voto: v, lode: !!m[2] && v === 30, esame: trovaEsame(pulisci(m[3])), nomeDetto: pulisci(m[3]) };
   }
   // voto: «tirei 28 em mecânica» · «tive 28 a mecânica» · «30 com louvor em cálculo 2» · «passei a inglês»
-  if ((m = casa(new RegExp(`^(?:tirei|tive|fiz|passei com|consegui|levei|sacei|nota)?\\s*(?:um |uma )?(\\d{2})${LOUVOR}\\s+(?:a|em|no|na|ao|à)\\s+(.+)$`), t))) {
+  if ((m = casa(new RegExp(`^(?:tirei|tive|fiz|passei com|consegui|levei|sacei|nota)?\\s*(?:(?:a |uma )?nota (?:de )?)?(?:um |uma )?(\\d{2})${LOUVOR}\\s+(?:a|em|no|na|ao|à)\\s+(.+)$`), t))) {
     const v = +m[1];
     if (v >= 18 && v <= 30) return { tipo: 'voto', voto: v, lode: !!m[2] && v === 30, esame: trovaEsame(pulisci(m[3])), nomeDetto: pulisci(m[3]) };
   }
@@ -259,7 +259,7 @@ export function interpreta(frase) {
     return { tipo: 'idoneita', esame: trovaEsame(pulisci(m[1])), nomeDetto: pulisci(m[1]) };
 
   // focus, anche con i minuti prima: «um pomodoro de 25 minutos em física»
-  if ((m = casa(/^(?:(?:comeca|inicia|iniciar|vamos|bora|faz|faco|fazer|liga|poe|quero) )?(?:a |um |uma )?(?:(\d{1,3})[ -]?(?:minutos?|mins?|m) (?:de )?)?(foco|focus|focar|foca|pomodoro|timer|temporizador|sessao(?: de estudo)?|estudar|estudo|estuda|concentracao|concentrar)\b\s*(.*)$/, t))) {
+  if ((m = casa(/^(?:(?:comeca|inicia|iniciar|vamos|bora|faz|faco|fazer|liga|poe|quero) )?(?:a |o |um |uma )?(?:(\d{1,3})[ -]?(?:minutos?|mins?|m) (?:de )?)?(foco|focus|focar|foca|pomodoro|timer|temporizador|sessao(?: de estudo)?|estudar|estudo|estuda|concentracao|concentrar)\b\s*(.*)$/, t))) {
     let resto = m[3]; const mi = m[1] ? { min: +m[1] } : leggiMinuti(resto); if (mi?.pezzo) resto = resto.replace(mi.pezzo, ' ');
     resto = pulisci(resto.replace(/\s+/g, ' ').trim()); const e = resto ? trovaEsame(resto, { anche: 'daFare' }) || trovaEsame(resto) : null;
     // «estudar é difícil», «estudo entre amigos»: il verbo da solo è un comando con una durata, un esame o niente dopo
@@ -270,18 +270,22 @@ export function interpreta(frase) {
   // «o exame de cálculo é dia 15 de janeiro», «tenho cálculo 2 no dia 13 de outubro», «cálculo 2 foi adiado para 20 de janeiro»
   const QUANDO = '((?:(?:no dia|dia|a|em|para) \\d.+)|amanha|depois de amanha|hoje|(?:daqui a|dentro de) .+|(?:(?:na|no|nesta|neste|esta|este) )?(?:proxim[ao] )?(?:segunda|terca|quarta|quinta|sexta|sabado|domingo).*)';
   if ((m = casa(/^(?:o |a )?(?:exame|teste|prova|frequencia|oral|escrito|exame escrito|exame oral) (?:de |da |do )?(.+?) (?:e|sera|vai ser|cai|calha|fica) (?:no dia |dia |no |na |em |a |para )?(.+)$/, t)) || (m = casa(new RegExp(`^(?:eu )?(?:tenho|vou ter|faco|vou fazer) (?:(?:o |a )?(?:exame|prova|teste|oral|escrito) (?:de |da |do )?)?(.+?) ${QUANDO}$`), t)) || (m = casa(/^(?:o |a )?(?:(?:exame|prova) (?:de |da |do )?)?(.+?) (?:foi |esta |ficou )?(?:adiado|adiada|antecipado|antecipada|mudado|mudada|remarcado|remarcada|passou) (?:para|pra|pro|ao) (?:o |a |dia |o dia )?(.+)$/, t))) {
-    const d = leggiData(m[2]), e = trovaEsame(pulisci(m[1]));
+    // la data viene subito dopo il verbo: senza accenti «e» è anche «e» (and), e «bases de dados e redes a 3 de fevereiro» non è
+    // «bases de dados» il 3 febbraio (va al nuovo esame qui sotto)
+    const d0 = leggiData(m[2]), d = d0 && norm(m[2]).replace(/^(?:(?:no|o) dia|dia|no|na|em|a|para) (?=\d)/, '').startsWith(norm(d0.pezzo)) ? d0 : null, e = trovaEsame(pulisci(m[1]));
     if (d && !/^(?:(?:um|uma|o|a) )?(?:exame|prova|teste|oral|escrito|frequencia)s?$/.test(semAcentos(pulisci(m[1]))) && (e || (/exame|prova|teste|oral|escrito|frequencia/.test(u) && pulisci(m[1]).length >= 3))) return { tipo: 'esame', nome: e?.nome || pulisci(m[1]), cfu: null, data: d.data, esistente: e && !e.fatto ? e : null };
   }
   // nuovo esame: «exame de bases de dados a 15 de janeiro 9 ects», «adiciona exame história moderna»
-  if ((m = casa(/^(?:adiciona |adicionar |acrescenta |novo |nova |marca |marcar |poe |tenho |ha |tem )?(?:um |o |uma |a )?(?:exame|prova|teste)\s*:?\s+(?:de |da |do |dos |das )?(.+)$/, t)) && !/^(?:me|que|quais|qual|quando|proxim|datas?|calendario|epoca|sessao|perguntas|questoes|exercicios|antig|anterior|simulad|simulacao|topicos|oral|escrito|complet|inteir|geral|de escolha|americano)/.test(semAcentos(m[1])) && !/^(?:di|del|della|du|des|der|die|das|von|of|the)\b/.test(semAcentos(m[1]))) {
+  // le parole intere hanno il confine: «me», «que», «qual» non devono escludere «mecânica», «química», «qualidade»
+  if ((m = casa(/^(?:adiciona |adicionar |acrescenta |novo |nova |marca |marcar |poe |tenho |ha |tem )?(?:um |o |uma |a )?(?:exame|prova|teste)\s*:?\s+(?:de |da |do |dos |das )?(.+)$/, t)) && !/^(?:(?:me|que|quais|qual|quando|datas?|calendario|epoca|sessao|perguntas|questoes|exercicios|topicos|oral|escrito|geral|de escolha|americano)\b|proxim|antig|anterior|simulad|simulacao|complet|inteir)/.test(semAcentos(m[1])) &&!/^(?:di|del|della|du|des|der|die|das|von|of|the)\b/.test(semAcentos(m[1]))) {
     let resto = ' ' + m[1].replace(/[,;]/g, ' ') + ' ';
     const c = casa(/(?:com |de |vale |valendo )?(\d{1,2})\s*(?:cfu|creditos?|ects|cr)\b/, resto); let cfu = null; if (c) { cfu = +c[1]; resto = resto.replace(c[0], ' '); }
     const d = leggiData(resto); if (d) resto = tiraPezzo(resto, d.pezzo);
     const nome = pulisci(String(resto).replace(/\s+(?:no dia|dia|a|em|no|na|para|e|com|valendo|vale)\s*$/g, '').replace(/\s+/g, ' ').trim());
     // «teste» da solo è anche una parola inglese e italiana: vale come esame solo con «exame»/«prova», una data o i crediti
     // il resto di una frase («tenho exame amanhã e estou nervoso») non è il nome di un esame
-    if (nome && !/^(?:e|mas|porque|que|estou|tou|to|nao|ja|so)\b/.test(semAcentos(nome)) && (/\b(?:exame|prova)\b/.test(u) || d || cfu)) return { tipo: 'esame', nome, cfu, data: d?.data || null, esistente: trovaEsame(nome) };
+    // «o exame de mecânica é dia 5» (senza mese): una data che non si legge non diventa il nome «mecanica e dia 5»
+    if (nome && !/^(?:e|mas|porque|que|estou|tou|to|nao|ja|so)\b/.test(semAcentos(nome)) && !/ (?:e|sera|vai ser|fica|calha|cai) (?:no |a |em )?(?:dia )?\d/.test(semAcentos(nome).toLowerCase()) && (/\b(?:exame|prova)\b/.test(u) || d || cfu)) return { tipo: 'esame', nome, cfu, data: d?.data || null, esistente: trovaEsame(nome) };
   }
 
   // «quanto preciso para 110», «que média preciso para começar com 105»
@@ -292,7 +296,7 @@ export function interpreta(frase) {
 
   // ripasso
   if ((m = casa(/^(?:vamos |bora |quero |comeca |comecar |inicia )?(?:rever|reve|revisar|revisa|revisao|revisoes|repassar|flashcards|(?:os )?(?:meus )?cartoes|cartas)\b\s*(.*)$/, t))) {
-    const r = pulisci(m[1] || ''); return { tipo: 'ripasso', esame: r ? trovaEsame(r) : null, nomeDetto: r };
+    const r = pulisci((m[1] || '').replace(/\s+(?:hoje|hj)$/i, '')); return { tipo: 'ripasso', esame: r ? trovaEsame(r) : null, nomeDetto: r };   // «rever mecânica hoje»: oggi è già il ripasso di oggi
   }
 
   // la ponte con gli agenti di programmazione: «agentes», «conecta o claude code», «desliga o cursor», «o que fez o agente»
