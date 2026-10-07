@@ -37,6 +37,7 @@ import * as DC from './codice/discussione.js';
 import { ERRORI } from './codice/modelli.js';
 import * as ER from './errori.js';
 import * as TS from './sync-testi.js';
+import * as LB from './libretto.js';
 const BRIDGE = DESKTOP ? window.lodeDesktop : null;
 
 const segnala = (evento, x = {}) => dispatchEvent(new CustomEvent('lode', { detail: { evento, ...x } }));
@@ -183,7 +184,7 @@ function bloccoTrascrizione() {
 function disegnaHome() {
   const r = righeOggi(), lo = lezioneOra(), st = strumenti();
   home._righe = r;
-  home.innerHTML = `${lo ? bloccoAula(lo) : V.attivo && O.attivo() && !TR.stato() ? `<section class="ld-aula">${bloccoRipeti()}</section>` : ''}${lo && !r.length ? '' : `<section class="ld-oggi"><div class="capo"><span class="ld-lbl">${t('barra1.oggi')}</span><span>${D.esami.length ? t('barra1.cfu-di', { fatti: esc(cfuFatti()), tot: esc(D.profilo.cfuTotali) }) : ''}</span></div>
+  home.innerHTML = `${lo ? bloccoAula(lo) : V.attivo && O.attivo() && !TR.stato() ? `<section class="ld-aula">${bloccoRipeti()}</section>` : ''}${lo && !r.length ? '' : `<section class="ld-oggi"><div class="capo"><span class="ld-lbl">${t('barra1.oggi')}</span><span>${D.esami.length ? (LB.italiano() ? t('barra1.cfu-di', { fatti: esc(cfuFatti()), tot: esc(D.profilo.cfuTotali) }) : t('libretto.crediti-di', { fatti: esc(num(cfuFatti(), 0)), tot: esc(num(D.profilo.cfuTotali, 0)), crediti: esc(LB.crediti()) })) : ''}</span></div>
     ${r.map((x, i) => `<div class="ld-riga ${x.cls}"><i class="ld-seg"></i><div class="t"><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div><span class="n">${esc(x.n)}</span><button type="button" class="btn small${i === 0 && x.cls === 'urg' ? ' primary' : ''}" data-ld-riga="${i}">${x.b}</button></div>`).join('') ||
     `<div class="ld-riga info vuota"><i class="ld-seg"></i><div class="t"><b>${t('barra1.inizia-da-qui')}</b><span>${t('barra1.inizia-da-qui-dett')}</span></div><span class="n"></span><button type="button" class="btn small primary" data-ld-esempio>${t('barra1.esempio')}</button></div>`}</section>`}
     <div class="ld-strumenti${st.length === 9 ? ' nove' : ''}">${st.map(([k, nome]) => `<button type="button" class="btn" data-ld-strumento="${k}">${ico(k)}<span>${nome}</span></button>`).join('')}</div>`;
@@ -539,6 +540,7 @@ export async function avviaFocus({ min = D.imp.focus, esameId = null, dove } = {
 }
 
 function schedaLibretto({ base } = {}) {
+  if (!LB.italiano()) return schedaLibrettoSistema({ base });
   const m = media(), cf = cfuFatti(), tot = D.profilo.cfuTotali, obiettivo = base || (m.base && m.base > 104 ? 110 : m.base ? Math.min(110, Math.floor(m.base / 5) * 5 + 5) : 100);
   const sv = m.n ? serve(obiettivo) : null, df = daFare();
   const s = scheda('ld-libretto', `<div class="ld-kpi">
@@ -564,8 +566,37 @@ function schedaLibretto({ base } = {}) {
   if (A.turno) A.turno.dataset.sintesi = m.ponderata ? t('barra1.sintesi-media-base', { media: num(m.ponderata, 2), base: num(m.base, 1) }) : t('barra1.sintesi-libretto-vuoto');
   return s;
 }
-function schedaSimula({ esame: e, voto, lode, nomeDetto }) {
+// la scheda del libretto fuori dall'Italia (js/libretto.js): media ponderata, voto finale del sistema (media, mention,
+// Gesamtnote, classe, GPA), crediti, «quanto mi serve» nella scala del sistema, «e se…» con i voti del sistema
+function schedaLibrettoSistema({ base } = {}) {
+  const q = LB.quadro(), m = q.m, obiettivo = base ?? LB.obiettivo(m), testoServe = LB.testoServe(obiettivo), df = daFare(), sc = LB.scala();
+  const iniz = Math.round((sc.length - 1) * .75);
+  const s = scheda('ld-libretto', `<div class="ld-kpi">
+      <div><span class="ld-lbl">${t('sistemi.ponderata')}</span><b class="v" data-v="m">${esc(q.media)}</b><span class="d">${m.n ? t('barra1.aritmetica-esami', { media: esc(q.aritmetica), n: esc(m.n) }) : t('barra1.nessun-voto')}</span></div>
+      <div><span class="ld-lbl">${esc(q.nomeFinale)}</span><b class="v" data-v="b">${esc(q.valore)}</b><span class="d">${t('libretto.crediti-di', { fatti: esc(num(q.cfu, 0)), tot: esc(num(q.tot, 0)), crediti: esc(q.crediti) })}</span></div>
+    </div>
+    <div class="ld-cfu" aria-hidden="true"><i style="transform:scaleX(0)"></i></div>
+    ${testoServe ? `<p class="ld-serve">${testoServe}</p>` : ''}
+    ${df.length && m.n && sc.length > 1 ? `<div class="ld-sim"><span class="ld-lbl">${t('barra1.e-se')}</span><div class="ld-riga-form"><select aria-label="${t('barra1.esame')}">${opzioniEsami(df[0].id)}</select><input type="range" min="0" max="${sc.length - 1}" value="${iniz}" aria-label="${t('barra1.voto')}"><b class="vv">${esc(LB.formato(sc[iniz]))}</b></div><p class="esito"></p></div>` : ''}`);
+  const barra = s.querySelector('.ld-cfu i'); tween(900, e => { barra.style.transform = `scaleX(${(Math.min(1, q.cfu / q.tot) * e).toFixed(4)})`; }, { ritardo: 200 });
+  const sim = s.querySelector('.ld-sim');
+  if (sim) {
+    const sel = sim.querySelector('select'), r = sim.querySelector('input'), vv = sim.querySelector('.vv'), out = sim.querySelector('.esito');
+    const calc = () => { const v = sc[+r.value]; vv.textContent = LB.formato(v); out.innerHTML = LB.esitoSimula(sel.value, v); };
+    r.addEventListener('input', calc); sel.addEventListener('change', calc); calc();
+  }
+  if (A.turno) A.turno.dataset.sintesi = m.ponderata != null ? t('libretto.sintesi-media-finale', { media: q.media, finale: q.nomeFinale, valore: q.valore }) : t('barra1.sintesi-libretto-vuoto');
+  return s;
+}
+function schedaSimula({ esame: e, voto, lode, nomeDetto, fuoriScala, detto: vd }) {
   if (!e) return rispostaFissa(t('barra1.simula-non-trovo', { nome: nomeDetto }));
+  if (!LB.italiano()) {
+    if (fuoriScala || !LB.valido(voto)) return rispostaFissa(t('libretto.non-valido', { voto: vd ?? voto, sistema: LB.nomeSistema() }));
+    rispostaFissa(LB.testoSimula(e, voto, lode));
+    const x = simula(e.id, voto, lode);
+    A.turno.dataset.sintesi = t('barra1.sintesi-media', { media: LB.formatoMedia(x.dopo.ponderata) });
+    return;
+  }
   const x = simula(e.id, voto, lode);
   if (!x.prima.n) return rispostaFissa(t(lode ? 'barra1.simula-primo-lode' : 'barra1.simula-primo', { voto, nome: e.nome, base: num(voto * 110 / 30, 1) }));
   const d = x.delta;
@@ -1574,6 +1605,22 @@ function schedaGioco(corso) {
 }
 
 /* ---------- eseguire un comando locale ---------- */
+// «ho preso 8,5 in fisica» fuori dall'Italia: il voto nella scala del sistema scelto (js/libretto.js). Un voto che il sistema
+// non ha si dice e non si segna; uno non sufficiente non va nel libretto (tranne nel GPA, dove la F conta)
+async function votoSistema(c) {
+  if (c.tipo === 'voto' && (c.fuoriScala || !LB.valido(c.voto))) return rispostaFissa(t('libretto.non-valido', { voto: c.detto ?? c.voto, sistema: LB.nomeSistema() }));
+  if (c.tipo === 'voto' && !LB.contaNelLibretto(c.voto)) return rispostaFissa(t('libretto.non-superato', { voto: LB.formato(c.voto), nome: c.esame?.nome || c.nomeDetto || '', sufficienza: LB.formato(LB.sis().sufficienza) }));
+  const ann = istantanea(); let e = c.esame, nuovo = false;
+  if (!e) { if (!c.nomeDetto) return rispostaFissa(t('barra2.di-quale-esame')); e = aggiungiEsame({ nome: c.nomeDetto, cfu: LB.sis().esame }); nuovo = true; }
+  const prima = media();
+  registraVoto(e.id, c.tipo === 'idoneita' ? { idoneita: true } : { voto: c.voto, lode: c.lode });
+  const dopo = media(), d = prima.ponderata != null && dopo.ponderata != null ? dopo.ponderata - prima.ponderata : null;
+  const v = c.tipo === 'idoneita' ? t('barra2.idoneita') : LB.votoEsame(e);
+  await mostraFatto({ testo: c.tipo === 'idoneita' ? t('barra2.idoneita-registrata', { nome: e.nome }) : t('barra2.voto-in', { voto: v, nome: e.nome }), nota: nuovo ? t('libretto.nuovo-esame', { n: e.cfu, crediti: LB.crediti() }) : (d != null ? t('barra2.media-diff', { media: LB.formatoMedia(dopo.ponderata), segno: d >= 0 ? '+' : '−', diff: LB.formatoMedia(Math.abs(d)) }) : ''), annulla: ann, sintesi: t('barra2.sintesi-voto', { nome: e.nome, voto: v }) });
+  segnala('fatto'); aggiornaTutto();
+  if (c.tipo === 'voto' && LB.ottimo(c.voto)) rispostaFissa(t('barra2.bel-colpo'));
+  return schedaLibretto();
+}
 async function esegui(c) {
   switch (c.tipo) {
     case 'aiuto': return schedaAiuto();
@@ -1586,6 +1633,7 @@ async function esegui(c) {
       return avviaFocus({ min: c.min || D.imp.focus, esameId: c.esame?.id || null, dove: null });
     }
     case 'voto': case 'idoneita': {
+      if (!LB.italiano()) return votoSistema(c);
       const ann = istantanea(); let e = c.esame, nuovo = false;
       if (!e) { if (!c.nomeDetto) return rispostaFissa(t('barra2.di-quale-esame')); e = aggiungiEsame({ nome: c.nomeDetto, cfu: 6 }); nuovo = true; }
       const prima = media();
@@ -1610,7 +1658,7 @@ async function esegui(c) {
       return mostraFatto({ testo: t('barra2.carta-aggiunta'), nota: c.esame ? c.esame.nome : t('barra2.senza-esame'), annulla: (() => { const id = D.carte.at(-1).id; return () => { D.carte = D.carte.filter(x => x.id !== id); salva(); }; })() });
     }
     case 'simula': return schedaSimula(c);
-    case 'serve': return schedaLibretto({ base: c.base });
+    case 'serve': if (c.fuoriScala) return rispostaFissa(LB.testoObiettivoFuori()); return schedaLibretto({ base: c.base });
     case 'libretto': return schedaLibretto();
     case 'esami': return schedaEsami();
     // «piano»: con il lavoro, una finestra di studio o due esami vicini, la settimana a ore (js/ore.js); se no gli appelli
@@ -1815,6 +1863,7 @@ async function eseguiStrumento(nome, x) {
     return attendiDecisione(card, async () => { const e = aggiungiEsame({ nome: x.nome, cfu: x.cfu || 6, data: /^\d{4}-\d\d-\d\d$/.test(x.data || '') ? x.data : null }); aggiornaTutto(); await mostraFatto({ testo: t('barra2.esame-aggiunto', { nome: e.nome }) }, card); return { esito: 'aggiunto' }; });
   }
   if (nome === 'registra_voto') {
+    if (!LB.italiano() && !LB.valido(x.voto)) return { errore: 'voto fuori dal sistema dei voti scelto' };
     const e = trovaEsame(x.esame);
     const card = schedaConferma({ titolo: x.lode && x.voto === 30 ? t('barra2.registrare-voto-lode', { voto: x.voto }) : t('barra2.registrare-voto', { voto: x.voto }), righe: [[t('barra2.esame'), e?.nome || t('barra2.esame-nuovo-6-cfu', { nome: x.esame })], [t('barra2.voto'), x.lode && x.voto === 30 ? t('barra2.voto-e-lode', { voto: x.voto }) : `${x.voto}`]] });
     return attendiDecisione(card, async () => { const ee = e || aggiungiEsame({ nome: x.esame, cfu: 6 }); registraVoto(ee.id, { voto: x.voto, lode: x.lode }); aggiornaTutto(); await mostraFatto({ testo: t('barra2.voto-registrato'), nota: t('barra2.media', { media: num(media().ponderata, 2) }) }, card); return { esito: 'registrato', media: media().ponderata }; });
@@ -2678,7 +2727,7 @@ export async function invia(testo) {
     if (AI.attiva()) return chiediAI(testo);
     return importaSenzaAI();
   }
-  const c = interpreta(testo);
+  const c = LB.interpretaVoti(testo, interpreta);   // fuori dall'Italia il voto detto si legge nel sistema dei voti scelto
   if (c) { await attendi(120); return esegui(c); }
   if (AI.attiva()) return chiediAI(testo);
   rispostaFissa(t('barra3.non-so-senza-ai'));

@@ -11,6 +11,7 @@ import * as Voce from './voce.js';
 import { leggiOrario as orarioDaFrase, leggiData } from './comandi.js';
 import { GIORNI_BREVI } from './markdown.js';
 import { t, elenco, numero } from './lingua.js';
+import * as LB from './libretto.js';
 
 const L = DESKTOP ? window.lodeDesktop : null;
 // la scorciatoia per parlare, come nella barra (su Windows ⌥ Spazio è il menu della finestra)
@@ -196,16 +197,17 @@ function corso() {
 function libretto() {
   const gia = D.esami.filter(e => e.fatto);
   guscio(`<h1>${t('benvenuto.libretto-titolo')}</h1>
-    <p class="bv-sub">${t('benvenuto.libretto-sotto')}</p>
+    <p class="bv-sub">${LB.italiano() ? t('benvenuto.libretto-sotto') : t('libretto.incolla-sotto', { esempio: esc(LB.rigaEsempio()) })}</p>
     <label class="bv-campo"><textarea id="bv-lib" rows="7" placeholder="${t('benvenuto.libretto-segnaposto')}"></textarea></label>
     <div class="bv-az"><button class="btn" id="bv-leggi">${t('benvenuto.leggi-libretto')}</button><span class="bv-esito"></span></div>
     <div class="bv-tab" id="bv-tab">${tabFatti(gia)}</div>`, { salta: true });
   const ta = main.querySelector('#bv-lib'), esito = main.querySelector('.bv-esito');
   main.querySelector('#bv-leggi').addEventListener('click', async e => {
     const testo = ta.value.trim(); if (!testo) return;
-    e.target.disabled = true; esito.textContent = AI.attiva() ? t('benvenuto.leggo-libretto') : t('benvenuto.leggo');
+    const ai = AI.attiva() && LB.italiano();   // l'AI legge i libretti italiani (Esse3); per gli altri sistemi il lettore di js/sistemi.js
+    e.target.disabled = true; esito.textContent = ai ? t('benvenuto.leggo-libretto') : t('benvenuto.leggo');
     let trovati = [];
-    try { trovati = AI.attiva() ? await AI.leggiLibretto(testo) : librettoSenzaAI(testo); } catch { trovati = librettoSenzaAI(testo); }
+    try { trovati = ai ? await AI.leggiLibretto(testo) : librettoIncollato(testo); } catch { trovati = librettoIncollato(testo); }
     S.fatti = trovati; esito.textContent = trovati.length ? t('benvenuto.esami-trovati', { n: trovati.length }) : t('benvenuto.esami-non-trovati');
     main.querySelector('#bv-tab').innerHTML = tabFatti(trovati, true); e.target.disabled = false;
   });
@@ -213,14 +215,20 @@ function libretto() {
     for (const r of main.querySelectorAll('#bv-tab tr[data-i]')) {
       if (!r.querySelector('input[type=checkbox]')?.checked) continue;
       const x = S.fatti[+r.dataset.i], gia = D.esami.find(e => norm(e.nome) === norm(x.nome));
-      const dati = { voto: x.idoneita ? null : Math.round(+x.voto) || null, lode: !!x.lode, idoneita: !!x.idoneita, fatto: true, data: x.data || oggi(), cfu: Number(x.cfu) || 6 };   // numeri veri, anche se il libretto letto dall'AI li dà come testo
+      const dati = LB.italiano() ? { voto: x.idoneita ? null : Math.round(+x.voto) || null, lode: !!x.lode, idoneita: !!x.idoneita, fatto: true, data: x.data || oggi(), cfu: Number(x.cfu) || 6 }   // numeri veri, anche se il libretto letto dall'AI li dà come testo
+        : votoIncollato(x);
       if (gia) Object.assign(gia, dati); else D.esami.push({ id: id(), nome: x.nome, oreObiettivo: null, ...dati });
     }
     salva(); S.fatti = [];
   };
 }
+// fuori dall'Italia: il voto com'è nel sistema (8,5 · 2,3 · 3,7), senza arrotondare; i crediti di un esame tipico se mancano
+export const votoIncollato = x => ({ voto: x.idoneita || x.voto == null || !Number.isFinite(+x.voto) ? null : +x.voto, lode: !!x.lode, idoneita: !!x.idoneita, fatto: true, data: x.data || oggi(), cfu: Number(x.cfu) || LB.sis().esame });
+// il libretto incollato senza AI: in Italia il lettore di Esse3 di sempre, negli altri sistemi quello generico di js/sistemi.js
+export const librettoIncollato = testo => (LB.italiano() ? librettoSenzaAI(testo) : LB.leggiLibretto(testo));
 function tabFatti(lista, nuovi = false) {
   if (!lista.length) return '';
+  if (!LB.italiano()) return `<table><thead><tr>${nuovi ? '<th></th>' : ''}<th>${t('benvenuto.col-esame')}</th><th class="num">${esc(LB.crediti())}</th><th class="num">${t('benvenuto.col-voto')}</th><th class="num">${t('benvenuto.col-data')}</th></tr></thead><tbody>${lista.map((x, i) => `<tr${nuovi ? ` data-i="${esc(i)}"` : ''}>${nuovi ? `<td><input type="checkbox" checked aria-label="${t('benvenuto.importa')}"></td>` : ''}<td>${esc(x.nome)}</td><td class="num">${esc(x.cfu || '—')}</td><td class="num">${esc(LB.votoEsame(x))}</td><td class="num">${esc(x.data || '')}</td></tr>`).join('')}</tbody></table>`;
   return `<table><thead><tr>${nuovi ? '<th></th>' : ''}<th>${t('benvenuto.col-esame')}</th><th class="num">${t('benvenuto.col-cfu')}</th><th class="num">${t('benvenuto.col-voto')}</th><th class="num">${t('benvenuto.col-data')}</th></tr></thead><tbody>${lista.map((x, i) => `<tr${nuovi ? ` data-i="${esc(i)}"` : ''}>${nuovi ? `<td><input type="checkbox" checked aria-label="${t('benvenuto.importa')}"></td>` : ''}<td>${esc(x.nome)}</td><td class="num">${esc(x.cfu || '—')}</td><td class="num">${x.idoneita ? t('benvenuto.idoneo') : x.lode ? t('benvenuto.voto-lode', { voto: esc(x.voto ?? '—') }) : esc(x.voto ?? '—')}</td><td class="num">${esc(x.data || '')}</td></tr>`).join('')}</tbody></table>`;
 }
 // senza AI: righe con un nome, dei CFU e un voto 18-30 (o «30L», «30 e lode», «idoneo»)

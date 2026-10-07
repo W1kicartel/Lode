@@ -3,6 +3,7 @@
 // Esami e voti, sessioni di studio, carte del ripasso, impostazioni. Più i conti che servono a uno studente:
 // media ponderata, base di laurea, voto che serve, ore da fare oggi, ripasso a intervalli (SM-2).
 import { t, elenco, numero } from './lingua.js';
+import * as S from './sistemi.js';
 const CHIAVE = 'lode:v1';
 export const VUOTO = () => ({
   v: 1,
@@ -23,14 +24,16 @@ export const VUOTO = () => ({
 export const DESKTOP = typeof window !== 'undefined' && !!window.lodeDesktop;
 const chiaveLocale = () => { try { return localStorage.getItem('lode:chiave') || ''; } catch { return ''; } };
 // cfu, voto e ore sempre in forma (un numero, un voto intero 18-30 o null): arrivano anche da un libretto letto dall'AI, da
-// un backup o da un dati.json di un vault sincronizzato, e finiscono nelle pagine
+// un backup o da un dati.json di un vault sincronizzato, e finiscono nelle pagine. Fuori dall'Italia (profilo.sistema) il voto
+// è un numero nella scala del sistema (8.5, 16, 2.3, 3.7: js/sistemi.js); in Italia il controllo è quello di sempre
 const ID = /^[\w-]{1,40}$/, DATA = /^\d{4}-\d{2}-\d{2}$/;
-const inForma = e => e && typeof e === 'object' ? { ...e, cfu: Number(e.cfu) || 6, voto: e.voto !== null && e.voto !== '' && Number.isInteger(+e.voto) && +e.voto >= 18 && +e.voto <= 30 ? +e.voto : null,
+const votoInForma = (v, sis) => v !== null && v !== '' && (!sis || sis === 'it' ? Number.isInteger(+v) && +v >= 18 && +v <= 30 : S.valido(+v, sis)) ? +v : null;
+const inForma = (e, sis) => e && typeof e === 'object' ? { ...e, cfu: Number(e.cfu) || 6, voto: votoInForma(e.voto, sis),
   ...(e.oreObiettivo != null ? { oreObiettivo: Number(e.oreObiettivo) || null } : {}) } : e;
 // i dati di Lode letti dal disco: .lode/dati.json nel vault (che si sincronizza o si condivide: chi può scriverci può
 // metterci di tutto) o localStorage nel browser. Non passano da backupValido(), che rifiuterebbe tutto per un solo esame
 // storto: qui l'esame con un id strano (virgolette, HTML: finirebbe in un data-e="…") si scarta, gli altri restano
-function unisci(d) { return d && d.v === 1 ? { ...VUOTO(), ...d, esami: Array.isArray(d.esami) ? d.esami.filter(e => e && typeof e === 'object' && ID.test(e.id)).map(inForma) : [], profilo: { ...VUOTO().profilo, ...d.profilo }, imp: { ...VUOTO().imp, ...d.imp }, codice: { ...VUOTO().codice, ...d.codice } } : null; }
+function unisci(d) { return d && d.v === 1 ? { ...VUOTO(), ...d, esami: Array.isArray(d.esami) ? d.esami.filter(e => e && typeof e === 'object' && ID.test(e.id)).map(e => inForma(e, d.profilo?.sistema)) : [], profilo: { ...VUOTO().profilo, ...d.profilo }, imp: { ...VUOTO().imp, ...d.imp }, codice: { ...VUOTO().codice, ...d.codice } } : null; }
 // Un backup da importare (magari passato da un compagno) si controlla tutto e, se qualcosa non torna, si rifiuta: non si
 // «aggiusta», perché rigenerare gli id romperebbe i legami fra carte ed esami. Numeri come numeri (o cifre), id semplici,
 // date AAAA-MM-GG, giorni dell'orario 0-6. Poi passa da sostituisci(), che rimette in forma cfu e voti
@@ -119,7 +122,7 @@ export function inverti(p, q, cur) {
   }
 }
 
-export function sostituisci(nuovi) { D = { ...VUOTO(), ...nuovi, esami: (nuovi.esami || []).map(inForma), profilo: { ...VUOTO().profilo, ...nuovi.profilo }, imp: { ...VUOTO().imp, ...nuovi.imp, chiave: D.imp.chiave }, codice: { ...VUOTO().codice, ...nuovi.codice } }; salva(); }
+export function sostituisci(nuovi) { D = { ...VUOTO(), ...nuovi, esami: (nuovi.esami || []).map(e => inForma(e, nuovi.profilo?.sistema)), profilo: { ...VUOTO().profilo, ...nuovi.profilo }, imp: { ...VUOTO().imp, ...nuovi.imp, chiave: D.imp.chiave }, codice: { ...VUOTO().codice, ...nuovi.codice } }; salva(); }
 // la chiave AI non esce mai in un'esportazione
 export function esporta() { const c = structuredClone(D); c.imp.chiave = ''; return c; }
 // in ascolto da altre schede dello stesso browser
@@ -171,36 +174,33 @@ export function aggiungiEsame({ nome, cfu = 6, data = null, voto = null, lode = 
 }
 export function registraVoto(esameId, { voto, lode = false, idoneita = false, data = oggi() }) {
   const e = esame(esameId); if (!e) return null;
-  Object.assign(e, { voto: idoneita ? null : voto, lode: !!lode && voto === 30, idoneita: !!idoneita, fatto: true, data });
+  const s = S.sistema(sistemaVoti());   // la lode solo con il massimo del sistema (30 in Italia, 10 la Matrícula in Spagna)
+  Object.assign(e, { voto: idoneita ? null : voto, lode: !!lode && s.lode && voto === s.max, idoneita: !!idoneita, fatto: true, data });
   salva(); return e;
 }
 
 /* ---------- media e laurea ---------- */
-const valore = e => e.lode ? Number(D.profilo.lode || 30) : e.voto;
-export function media(lista = fatti()) {
-  const conVoto = lista.filter(e => e.voto != null && !e.idoneita);
-  const cfu = conVoto.reduce((s, e) => s + e.cfu, 0);
-  if (!conVoto.length) return { ponderata: null, aritmetica: null, base: null, cfuVoto: 0, somma: 0, n: 0 };
-  const somma = conVoto.reduce((s, e) => s + valore(e) * e.cfu, 0);
-  const ponderata = somma / cfu, aritmetica = conVoto.reduce((s, e) => s + valore(e), 0) / conVoto.length;
-  return { ponderata, aritmetica, base: ponderata * 110 / 30, cfuVoto: cfu, somma, n: conVoto.length };
-}
-export const cfuFatti = () => fatti().reduce((s, e) => s + e.cfu, 0);
-// che media serve nei CFU che mancano per arrivare a una base di partenza (es. 100/110)
-export function serve(baseObiettivo) {
-  const m = media(), mancano = Math.max(0, (D.profilo.cfuTotali || 180) - cfuFatti() - 6); // 6 CFU circa di prova finale, senza voto
-  if (!mancano) return null;
-  const mediaObiettivo = baseObiettivo * 30 / 110;
-  const v = (mediaObiettivo * (m.cfuVoto + mancano) - m.somma) / mancano;
-  return { voto: v, cfu: mancano, possibile: v <= 30, gia: v < 18 };
-}
-// se prendo X in quell'esame, come cambia la media?
+// I conti passano da js/sistemi.js, con il sistema dei voti scelto (profilo.sistema, l'Italia se non c'è): in Italia sono
+// gli stessi di sempre (test/sistemi.mjs li confronta). media(), serve() e simula() restituiscono gli oggetti di prima;
+// il voto finale del sistema (base, mention, Gesamtnote, classe, GPA) lo dà votoFinale()
+export const sistemaVoti = () => D.profilo?.sistema || 'it';
+const opzVoti = () => ({ sistema: sistemaVoti(), lode: D.profilo.lode, totali: D.profilo.cfuTotali });
+const senzaFinale = m => { const { finale, ...r } = m; return r; };
+export function media(lista = fatti()) { return senzaFinale(S.media(lista, opzVoti())); }
+// il voto finale della media ponderata nel sistema scelto: { tipo, valore, max, mention | classe } oppure null
+export const votoFinale = (m = media()) => S.finale(m.ponderata, sistemaVoti());
+// i crediti presi: in Italia tutti gli esami dati (come sempre); altrove un esame non superato (5,0, suspenso, F) non li dà
+export const cfuFatti = () => { const s = S.sistema(sistemaVoti()); return fatti().filter(e => s.cod === 'it' || e.voto == null || e.idoneita || S.superato(Number(e.voto), s)).reduce((x, e) => x + e.cfu, 0); };
+// che media serve nei CFU che mancano per arrivare a una base di partenza (es. 100/110). Fuori dall'Italia l'obiettivo è il
+// voto finale del sistema (la media, la moyenne, la Gesamtnote, il GPA…). 6 CFU circa di prova finale, senza voto (Italia)
+export function serve(baseObiettivo) { return S.serve(baseObiettivo, fatti(), opzVoti()); }
+// se prendo X in quell'esame, come cambia la media? (fuori dall'Italia anche meglio: true se la media migliora, in
+// Germania quando scende)
 export function simula(esameId, voto, lode = false) {
   const e = esame(esameId); if (!e) return null;
-  const finto = { ...e, voto, lode: lode && voto === 30, idoneita: false, fatto: true };
-  const lista = [...fatti().filter(x => x.id !== e.id), finto];
-  const prima = media(), dopo = media(lista);
-  return { prima, dopo, delta: prima.ponderata == null ? null : dopo.ponderata - prima.ponderata };
+  const x = S.simula(e, voto, lode, fatti(), opzVoti());
+  const r = { prima: senzaFinale(x.prima), dopo: senzaFinale(x.dopo), delta: x.delta };
+  return sistemaVoti() === 'it' ? r : { ...r, meglio: x.meglio };
 }
 
 /* ---------- studio ---------- */
