@@ -4,6 +4,12 @@ import { D, DESKTOP, esempio, sostituisci } from './dati.js';
 import { applicaAspetto, collega, disegna } from './pagina.js';
 import { avvia, azioni } from './lode.js';
 import './mascotte.js';
+import { t, lingua } from './lingua.js';
+
+// la lingua scelta (js/lingua.js) anche nella pagina: lang, titolo e descrizione dal catalogo (in italiano restano quelli di index.html)
+document.documentElement.lang = lingua;
+document.title = t('impostazioni.titolo');
+document.querySelector('meta[name=description]')?.setAttribute('content', t('impostazioni.descrizione'));
 
 const q = new URLSearchParams(location.search), quadro = q.has('quadro');
 // la prima volta (e quando la si rifà): la configurazione guidata, al posto di tutto il resto

@@ -1,12 +1,13 @@
 // La pagina sotto la barra: il quadro della carriera a colpo d'occhio. Media, base di laurea, CFU, ore della settimana,
 // i prossimi appelli con il piano, il libretto e i mazzi del ripasso. Tutto il resto si fa dalla barra in alto.
-import { D, VUOTO, backupValido, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esempio, esc, esporta, fatti, giorniTra, media, minuti, num, obiettivo, oggi, ore, piano, prossimi, salva, serie, settimana, sostituisci, traQuanto } from './dati.js';
+import { D, DESKTOP, VUOTO, backupValido, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esempio, esc, esporta, fatti, giorniTra, media, minuti, num, obiettivo, oggi, ore, piano, prossimi, salva, serie, settimana, sostituisci, traQuanto } from './dati.js';
 import { azioni, TASTI } from './lode.js';
 import { conta, tween } from './motore.js';
 import * as AI from './ai.js';
 import * as PG from './programma.js';
 import * as F from './focus.js';
-import { t, elenco } from './lingua.js';
+import { t, elenco, LINGUE, lingua, imposta } from './lingua.js';
+import { CODICI, nomeSistema } from './sistemi.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -119,6 +120,8 @@ function finestraImpostazioni() {
       <label>${t('pagina.campo-corso')}<input name="corso" value="${esc(D.profilo.corso)}" placeholder="${t('pagina.esempio-corso')}"></label>
       <label>${t('pagina.campo-cfu-laurea')}<select name="cfuTotali">${[180, 120, 300, 360].map(v => `<option${D.profilo.cfuTotali === v ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
       <label>${t('pagina.campo-lode-vale')}<select name="lode">${[30, 31, 32, 33].map(v => `<option${D.profilo.lode === v ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
+      <label>${t('impostazioni.lingua')}<select name="lingua">${Object.entries(LINGUE).map(([c, l]) => `<option value="${c}"${c === lingua ? ' selected' : ''}>${esc(l.nome)}</option>`).join('')}</select></label>
+      <label>${t('sistemi.scelta')} <small>${t('impostazioni.sistema-nota')}</small><select name="sistema">${CODICI.map(c => `<option value="${c}"${(D.profilo.sistema || 'it') === c ? ' selected' : ''}>${esc(nomeSistema(c))}</option>`).join('')}</select></label>
       <label>${t('pagina.campo-focus')}<input name="focus" type="number" min="5" max="180" value="${esc(D.imp.focus)}"></label>
       <label>${t('pagina.campo-pausa')}<input name="pausa" type="number" min="1" max="60" value="${esc(D.imp.pausa)}"></label>
       <label class="spunta tutta"><input type="checkbox" name="suoni"${D.imp.suoni ? ' checked' : ''}>${t('pagina.rintocco')}</label>
@@ -135,13 +138,17 @@ function finestraImpostazioni() {
     if (azione === 'azzera') { if (!confirm(t('pagina.conferma-azzera'))) return false;
       const tolta = AI.FORNITORI[AI.scollegaFornitore()]; sostituisci(VUOTO());
       toast(tolta ? t('pagina.dati-cancellati-chiave', { nome: tolta.nome, sito: tolta.sito }) : t('pagina.dati-cancellati')); return; }
-    Object.assign(D.profilo, { nome: String(f.get('nome')).trim(), corso: String(f.get('corso')).trim(), cfuTotali: +f.get('cfuTotali'), lode: +f.get('lode') });
+    Object.assign(D.profilo, { nome: String(f.get('nome')).trim(), corso: String(f.get('corso')).trim(), cfuTotali: +f.get('cfuTotali'), lode: +f.get('lode'), sistema: CODICI.includes(f.get('sistema')) ? f.get('sistema') : 'it' });
+    const nuova = String(f.get('lingua') || lingua);
     const chiave = String(f.get('chiave')).trim(), forn = String(f.get('fornitore') || '');
     Object.assign(D.imp, { focus: Math.max(5, +f.get('focus') || 25), pausa: Math.max(1, +f.get('pausa') || 5), suoni: !!f.get('suoni'), voceAlta: !!f.get('voceAlta'), aspetto: f.get('chiaro') ? 'chiaro' : 'scuro' });
     const tolta = !forn || !chiave ? AI.FORNITORI[AI.scollegaFornitore()] : null;   // la chiave si cancella davvero da qui
     salva(); applicaAspetto(); toast(tolta ? t('pagina.chiave-cancellata', { nome: tolta.nome, sito: tolta.sito }) : t('pagina.impostazioni-salvate'));
-    if (forn && chiave) AI.provaFornitore(forn, chiave).then(r => { AI.collegaFornitore(forn, chiave, r.modello); salva(); toast(r.modello ? t('pagina.ai-collegata-modello', { nome: AI.FORNITORI[forn].nome, modello: r.modello }) : t('pagina.ai-collegata', { nome: AI.FORNITORI[forn].nome })); })
+    const prova = !(forn && chiave) ? Promise.resolve() : AI.provaFornitore(forn, chiave).then(r => { AI.collegaFornitore(forn, chiave, r.modello); salva(); toast(r.modello ? t('pagina.ai-collegata-modello', { nome: AI.FORNITORI[forn].nome, modello: r.modello }) : t('pagina.ai-collegata', { nome: AI.FORNITORI[forn].nome })); })
       .catch(e => toast(e.status === 401 || e.status === 403 ? t('pagina.chiave-non-valida') : t('pagina.chiave-non-verificabile')));
+    // un'altra lingua: si salva e si ricarica (nell'app tutte le finestre, dal processo principale; nel browser questa
+    // pagina), ma dopo la prova della chiave, che altrimenti si perderebbe a metà
+    if (nuova !== lingua && Object.hasOwn(LINGUE, nuova)) prova.finally(() => setTimeout(() => { imposta(nuova); if (!DESKTOP) location.reload(); }, 600));
   });
   d.querySelector('[name=nome]').focus();
 }

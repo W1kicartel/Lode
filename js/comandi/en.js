@@ -425,3 +425,13 @@ export const ESEMPI = [
   ['stop following', 'Lode stops watching the folder and removes its copies'],
   ['sync between computers', 'the same Lode on two or three computers, with the cloud folder you already have'],
 ];
+
+// the small words inside the cards (js/comandi/comune.js, detto()): confirm, cancel, end the oral, leave «explain it»
+export const PAROLE = {
+  si: ['yes', 'yeah', 'yep', 'y', 'ok', 'okay', 'sure', 'confirm', 'confirmed', 'go', 'go ahead', 'do it', 'proceed', 'correct', 'right', 'exactly', 'perfect', 'save', 'save it', 'save them', 'sounds good', 'fine', 'alright', 'all right'],
+  siCoda: ['please'],
+  no: ['no', 'nope', 'cancel', 'stop', 'wait', 'never mind', 'nevermind', 'forget it', 'leave it', 'not now', 'better not', 'nothing'],
+  voto: ['enough', 'grade', 'my grade', 'give me the grade', 'give me my grade', "i'm done", 'im done', 'i am done', 'done', 'finish', 'finished'],
+  basta: ['exit', 'quit', 'cancel', 'stop', 'enough', 'never mind', 'forget it'],
+  esci: ['exit', 'quit', 'close', 'close the oral', 'end oral', 'end the oral', 'stop oral', 'stop the oral', 'quit oral'],
+};

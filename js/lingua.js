@@ -14,7 +14,7 @@ export const LINGUE = {
   es: { nome: 'Español', locale: 'es-ES' },
   fr: { nome: 'Français', locale: 'fr-FR' },
   de: { nome: 'Deutsch', locale: 'de-DE' },
-  pt: { nome: 'Português', locale: 'pt-PT' },
+  pt: { nome: 'Português', locale: 'pt-BR' },   // il portoghese di Lode è quello del Brasile (docs/LINGUE.md)
 };
 const CHIAVE = 'lode:lingua';
 
@@ -24,12 +24,25 @@ export function scelta() {
   // node ha navigator.language (en-US sulle macchine di GitHub) e senza questo controllo la prova girerebbe in inglese
   const node = typeof process !== 'undefined' && !!process.versions?.node && !process.versions?.electron;
   if (typeof window === 'undefined' || node) return (typeof process !== 'undefined' && LINGUE[process.env?.LODE_LINGUA] && process.env.LODE_LINGUA) || 'it';
-  let s = null;
-  try { s = (typeof window !== 'undefined' && window.lodeDesktop?.lingua) || localStorage.getItem(CHIAVE); } catch { }
-  if (s && LINGUE[s]) return s;
+  let salvata = null, dati = null;
+  try { salvata = (typeof window !== 'undefined' && window.lodeDesktop?.lingua) || localStorage.getItem(CHIAVE); } catch { }
+  // nel browser, chi usava Lode prima delle lingue non ha una lingua salvata: servono i suoi dati (dati.js, 'lode:v1')
+  if (!(salvata && LINGUE[salvata]) && !window.lodeDesktop) try { dati = JSON.parse(localStorage.getItem('lode:v1')); } catch { }
   const sis = (typeof navigator !== 'undefined' && (navigator.languages?.[0] || navigator.language)) || 'it';
-  const c = String(sis).slice(0, 2).toLowerCase();
-  return LINGUE[c] ? c : 'en';
+  const r = iniziale({ salvata, dati, sistema: sis });
+  if (r.salva) try { localStorage.setItem(CHIAVE, r.lingua); } catch { }
+  return r.lingua;
+}
+// La lingua all'avvio, senza window né localStorage (per le prove): quella salvata; se no, chi usa già Lode (il benvenuto
+// fatto o degli esami nei dati) resta in italiano, e l'italiano si salva una volta sola (salva: true), così non cambia
+// più nemmeno quando il sistema è in un'altra lingua; se no la lingua del sistema, se Lode la conosce; se no l'inglese.
+// Nell'app la stessa scelta la fa il processo principale con conf.benvenuto (desktop/lingua.mjs, linguaDiPartenza)
+export function iniziale({ salvata = null, dati = null, sistema = '' } = {}) {
+  if (typeof salvata === 'string' && Object.hasOwn(LINGUE, salvata)) return { lingua: salvata, salva: false };
+  const d = dati && typeof dati === 'object' ? dati : null;
+  if (d && (d.imp?.benvenuto || d.benvenuto === true || (Array.isArray(d.esami) && d.esami.length))) return { lingua: 'it', salva: true };
+  const c = String(sistema || '').slice(0, 2).toLowerCase();
+  return { lingua: Object.hasOwn(LINGUE, c) ? c : 'en', salva: false };
 }
 export let lingua = scelta();
 export const locale = () => LINGUE[lingua].locale;
@@ -50,7 +63,7 @@ export async function usa(cod) {
 }
 // salva la scelta (la finestra poi si ricarica: i moduli rileggono i testi)
 export function imposta(cod) {
-  if (!LINGUE[cod]) return false;
+  if (!Object.hasOwn(LINGUE, cod)) return false;
   try { localStorage.setItem(CHIAVE, cod); } catch { }
   if (typeof window !== 'undefined') window.lodeDesktop?.invoca?.('lingua:imposta', cod);
   return true;

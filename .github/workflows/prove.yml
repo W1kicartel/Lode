@@ -82,6 +82,10 @@ jobs:
         run: node test/sistemi.mjs
       - name: Formule dette a voce (italiano e inglese)
         run: node test/formule.mjs
+      # la scelta della lingua e del sistema dei voti: chi usa già Lode resta in italiano, il benvenuto, le Impostazioni, «lingua …»,
+      # le piccole parole dentro le schede (sì/no, basta, voto, esci) in ogni lingua, identiche a prima in italiano
+      - name: Lingua e sistema dei voti (scelta)
+        run: node test/scelta.mjs
       # README.md (inglese) e README.it.md: lingue in cima, ancore (anche da rilascio.yml e dai documenti), file, stessi comandi e stessi link
       - name: I README (inglese e italiano)
         run: node test/readme.mjs

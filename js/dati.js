@@ -3,10 +3,11 @@
 // Esami e voti, sessioni di studio, carte del ripasso, impostazioni. Più i conti che servono a uno studente:
 // media ponderata, base di laurea, voto che serve, ore da fare oggi, ripasso a intervalli (SM-2).
 import { t, elenco, numero } from './lingua.js';
+import { CODICI } from './sistemi.js';
 const CHIAVE = 'lode:v1';
 export const VUOTO = () => ({
   v: 1,
-  profilo: { nome: '', corso: '', cfuTotali: 180, lode: 30 },
+  profilo: { nome: '', corso: '', cfuTotali: 180, lode: 30, sistema: 'it' },   // sistema dei voti (js/sistemi.js): i dati di prima sono italiani
   esami: [],      // {id, nome, cfu, data, voto, lode, idoneita, fatto, oreObiettivo}
   sessioni: [],   // {id, esameId, inizio, min}
   carte: [],      // {id, esameId, fronte, retro, ease, int, rip, scad, creata}
@@ -30,7 +31,9 @@ const inForma = e => e && typeof e === 'object' ? { ...e, cfu: Number(e.cfu) || 
 // i dati di Lode letti dal disco: .lode/dati.json nel vault (che si sincronizza o si condivide: chi può scriverci può
 // metterci di tutto) o localStorage nel browser. Non passano da backupValido(), che rifiuterebbe tutto per un solo esame
 // storto: qui l'esame con un id strano (virgolette, HTML: finirebbe in un data-e="…") si scarta, gli altri restano
-function unisci(d) { return d && d.v === 1 ? { ...VUOTO(), ...d, esami: Array.isArray(d.esami) ? d.esami.filter(e => e && typeof e === 'object' && ID.test(e.id)).map(inForma) : [], profilo: { ...VUOTO().profilo, ...d.profilo }, imp: { ...VUOTO().imp, ...d.imp }, codice: { ...VUOTO().codice, ...d.codice } } : null; }
+// il profilo con i campi che mancano; un sistema dei voti sconosciuto (o assente, nei dati di prima) vale l'Italia
+export function profiloInForma(p) { const x = { ...VUOTO().profilo, ...p }; if (!CODICI.includes(x.sistema)) x.sistema = 'it'; return x; }
+function unisci(d) { return d && d.v === 1 ? { ...VUOTO(), ...d, esami: Array.isArray(d.esami) ? d.esami.filter(e => e && typeof e === 'object' && ID.test(e.id)).map(inForma) : [], profilo: profiloInForma(d.profilo), imp: { ...VUOTO().imp, ...d.imp }, codice: { ...VUOTO().codice, ...d.codice } } : null; }
 // Un backup da importare (magari passato da un compagno) si controlla tutto e, se qualcosa non torna, si rifiuta: non si
 // «aggiusta», perché rigenerare gli id romperebbe i legami fra carte ed esami. Numeri come numeri (o cifre), id semplici,
 // date AAAA-MM-GG, giorni dell'orario 0-6. Poi passa da sostituisci(), che rimette in forma cfu e voti
@@ -49,7 +52,7 @@ export function backupValido(d) {
   const lavoroOk = l => l == null || (ogg(l) && lista(l.turni, turnoOk) && lista(l.eccezioni, eccezioneOk) && numero(l.tetto));
   const impOk = i => ogg(i) && lavoroOk(i.lavoro) && (i.studio == null || (ogg(i.studio) && ora(i.studio.da) && ora(i.studio.a))) && lista(i.oreScelte, x => typeof x === 'string');
   return ogg(d) && d.v === 1 && Array.isArray(d.esami) && d.esami.every(esameOk) && lista(d.carte, cartaOk) && lista(d.orario, orarioOk) && lista(d.sessioni, sessioneOk)
-    && (d.profilo == null || (ogg(d.profilo) && testo(d.profilo.nome) && testo(d.profilo.corso) && numero(d.profilo.cfuTotali) && numero(d.profilo.lode))) && (d.imp == null || impOk(d.imp));
+    && (d.profilo == null || (ogg(d.profilo) && testo(d.profilo.nome) && testo(d.profilo.corso) && numero(d.profilo.cfuTotali) && numero(d.profilo.lode) && (d.profilo.sistema == null || CODICI.includes(d.profilo.sistema)))) && (d.imp == null || impOk(d.imp));
 }
 // i dati non si sono potuti leggere (non «non ci sono»: OneDrive offline, file bloccato): Lode lo dice e non li sovrascrive
 export let datiIllegibili = null;
@@ -119,7 +122,7 @@ export function inverti(p, q, cur) {
   }
 }
 
-export function sostituisci(nuovi) { D = { ...VUOTO(), ...nuovi, esami: (nuovi.esami || []).map(inForma), profilo: { ...VUOTO().profilo, ...nuovi.profilo }, imp: { ...VUOTO().imp, ...nuovi.imp, chiave: D.imp.chiave }, codice: { ...VUOTO().codice, ...nuovi.codice } }; salva(); }
+export function sostituisci(nuovi) { D = { ...VUOTO(), ...nuovi, esami: (nuovi.esami || []).map(inForma), profilo: profiloInForma(nuovi.profilo), imp: { ...VUOTO().imp, ...nuovi.imp, chiave: D.imp.chiave }, codice: { ...VUOTO().codice, ...nuovi.codice } }; salva(); }
 // la chiave AI non esce mai in un'esportazione
 export function esporta() { const c = structuredClone(D); c.imp.chiave = ''; return c; }
 // in ascolto da altre schede dello stesso browser

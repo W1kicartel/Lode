@@ -523,3 +523,13 @@ export const ESEMPI = [
   ['nicht mehr verfolgen', 'Lode beobachtet den Ordner nicht mehr und löscht seine Kopien'],
   ['zwischen Computern synchronisieren', 'dasselbe Lode auf zwei oder drei Computern, mit dem Cloud-Ordner, den du schon hast'],
 ];
+
+// die kleinen Wörter in den Karten (js/comandi/comune.js, detto()): bestätigen, abbrechen, die mündliche Prüfung beenden
+export const PAROLE = {
+  si: ['ja', 'jo', 'jep', 'ok', 'okay', 'klar', 'passt', 'genau', 'richtig', 'perfekt', 'bestätige', 'bestaetige', 'los', 'mach', 'mach das', 'mach es', 'weiter', 'einverstanden', 'speichern', 'speicher', 'speichere', 'gern', 'gerne'],
+  siCoda: ['bitte'],
+  no: ['nein', 'nö', 'abbrechen', 'abbruch', 'stopp', 'stop', 'warte', 'lass es', 'lieber nicht', 'nichts', 'vergiss es'],
+  voto: ['genug', 'note', 'meine note', 'gib mir die note', 'ich bin fertig', 'fertig', 'schluss'],
+  basta: ['beenden', 'raus', 'abbrechen', 'stopp', 'genug', 'vergiss es'],
+  esci: ['beenden', 'raus', 'schließen', 'schliessen', 'prüfung beenden', 'pruefung beenden', 'mündliche beenden', 'muendliche beenden'],
+};

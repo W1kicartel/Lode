@@ -3,10 +3,10 @@
 // «Chiedi o scrivi un comando…». Si parla tenendo premuto ⌥ Spazio. I file trascinati diventano carte del ripasso.
 // Senza AI capisce i comandi in italiano (comandi.js); con il cervello locale (gratis) o la tua AI preferita spiega, crea carte e interroga come all'orale.
 import { inverti, datiIllegibili, piuGiorni, norm, D, DESKTOP, lezioneOra, prossimaLezione, daGiocare, ricorda, aggiungiOrario, lezioni, RISPOSTE, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esc, fatti, media, minuti, num, oggi, ore, piano, prossimi, prossimoIntervallo, registraVoto, rispondi, salva, serie, serve, simula, sostituisci, traQuanto, trovaEsame, intervalloTesto, giorniTra, definizioni } from './dati.js';
-import { t, elenco, numero } from './lingua.js';
+import { t, elenco, numero, LINGUE, lingua as linguaOra, usa, imposta } from './lingua.js';
 import { t as tn } from './lingua.js';   // t() dove una variabile locale si chiama già t (arrivaTurno, schedaTurno, piedeSync, schedaNote)
 import { RIDOTTO, attendi, comprimi, conta, dopo, entra, h, lineare, morbido, ogni, premi, tween } from './motore.js';
-import { ESEMPI, interpreta } from './comandi.js';
+import { ESEMPI, interpreta, dice } from './comandi.js';
 import * as F from './focus.js';
 import * as AI from './ai.js';
 import * as Voce from './voce.js';
@@ -512,8 +512,7 @@ async function annulla() {
   await mostraFatto({ testo: t('barra1.annullato'), nota: t('barra1.niente-cambiato'), sintesi: t('barra1.annullato-minuscolo'), no: true }, a.card.isConnected ? a.card : null);
   a.risolvi({ esito: 'annullato_dallo_studente' });
 }
-const SI = /^(s[iì]|ok(ay)?|conferm[aoi]|confermo|vai|procedi|certo|perfetto|d'accordo|fallo|esatto|giusto|salva(le|li)?)( pure)?[\s,.!]*$/i;
-const NO = /^(no|annulla|lascia (stare|perdere)|aspetta|stop|niente|meglio di no)[\s,.!]*$/i;
+// sì e no scritti invece del clic: le parole della lingua scelta (PAROLE in js/comandi/<codice>.js, dice() di comandi.js)
 
 /* ---------- gli strumenti ---------- */
 const opzioniEsami = (sel, soloDaFare = true) => (soloDaFare ? daFare() : D.esami).map(e => `<option value="${esc(e.id)}"${e.id === sel ? ' selected' : ''}>${esc(e.nome)}</option>`).join('');
@@ -1687,7 +1686,22 @@ async function esegui(c) {
     case 'errore': return spiegaIncollato(c.testo);
     case 'diario': return apriDiario(c.progetto);
     case 'diarioOpz': return opzioneDiario(c);
+    case 'lingua': return cambiaLingua(c.codice);
   }
+}
+
+// «lingua inglese», «language italian»…: prima la conferma nella lingua NUOVA, poi si salva e si ricarica (nell'app ricarica
+// tutte le finestre il processo principale, con lingua:imposta; nel browser questa pagina). La stessa lingua: si salva e basta
+async function cambiaLingua(cod) {
+  if (!Object.hasOwn(LINGUE, cod || '')) return rispostaFissa(t('impostazioni.lingua-sconosciuta', { lingue: Object.values(LINGUE).map(l => l.nome).join(', ') }));
+  // il nome dentro la frase viene dal catalogo della lingua stessa («italiano», «español», «Deutsch»: le maiuscole giuste)
+  if (cod === linguaOra) { imposta(cod); return mostraFatto({ testo: t('impostazioni.lingua-gia', { nome: t('impostazioni.lingua-nome') }) }); }
+  try { await usa(cod); } catch (e) { console.warn(e); }
+  const testo = t('impostazioni.lingua-ora', { nome: linguaOra === cod ? t('impostazioni.lingua-nome') : LINGUE[cod].nome });
+  await mostraFatto({ testo, nota: t('impostazioni.lingua-ricarico'), sintesi: testo });
+  await attendi(1400);
+  imposta(cod);
+  if (!DESKTOP) location.reload();
 }
 
 /* ---------- informatica: gli errori spiegati (F3) e il registro onesto (F4) ---------- */
@@ -1900,7 +1914,7 @@ async function domandaOrale() {
 }
 async function rispostaOrale(testo) {
   const o = A.orale, g = GEN;
-  if (/^(basta|voto|dammi il voto|ho finito)\b/i.test(testo) || !o.corrente) return chiudiOrale();
+  if (dice(testo, 'voto') || !o.corrente) return chiudiOrale();
   modo('pensa', t('barra2.prof-ascolta')); segnala('pensa');
   try {
     const giu = await AI.giudicaRisposta({ nome: o.nome, domanda: o.corrente.domanda, argomento: o.corrente.argomento, risposta: testo, materiale: o.corrente.materiale || o.materiale });
@@ -2662,14 +2676,14 @@ export async function invia(testo) {
     if (r) { segnala('fatto'); return chiudi(r.testo); }
     return;
   }
-  if (A.attesa && !A.attesa.inCorso && !A.attesa.card.dataset.soloClic) { if (SI.test(testo)) return conferma(); if (NO.test(testo)) return annulla(); }
+  if (A.attesa && !A.attesa.inCorso && !A.attesa.card.dataset.soloClic) { if (dice(testo, 'si')) return conferma(); if (dice(testo, 'no')) return annulla(); }
   if (A.spiega) {
     const tu = h('article', 'ld-turno'); filo.append(tu); A.turno = tu; detto(tu, testo); requestAnimationFrame(() => { corpo.scrollTop = corpo.scrollHeight; });
-    if (/^(esci|annulla|basta|lascia stare)$/i.test(testo)) { A.spiega = null; return mostraFatto({ testo: t('barra3.niente-spiegazione') }); }
+    if (dice(testo, 'basta')) { A.spiega = null; return mostraFatto({ testo: t('barra3.niente-spiegazione') }); }
     return valutaSpiego(testo);
   }
   if (A.orale) {
-    if (/^(esci|basta orale|chiudi( l'orale)?|fine orale)$/i.test(testo)) { nuovoTurno(); detto(A.turno, testo); return esciOrale(); }
+    if (dice(testo, 'esci')) { nuovoTurno(); detto(A.turno, testo); return esciOrale(); }
     const tu = h('article', 'ld-turno'); filo.append(tu); A.turno = tu; detto(tu, testo); requestAnimationFrame(() => { corpo.scrollTop = corpo.scrollHeight; });
     return rispostaOrale(testo);
   }

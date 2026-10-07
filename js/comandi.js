@@ -7,7 +7,7 @@
 // Le parti senza lingua (date e orari in cifre, gli errori incollati) stanno in js/comandi/comune.js.
 import { lingua } from './lingua.js';
 import { D } from './dati.js';
-import { inLingua } from './comandi/comune.js';
+import { inLingua, detto } from './comandi/comune.js';
 import * as it from './comandi/it.js';
 import * as en from './comandi/en.js';
 
@@ -52,4 +52,7 @@ export const leggiLavoro = testo => prima('leggiLavoro', testo);
 export const numeri = t => (R[lingua]?.numeri ? R[lingua].numeri(t) : t);
 // gli esempi della lingua scelta: [frase, cosa fa]
 export const ESEMPI = scelto().ESEMPI;
+// le piccole parole dentro le schede nella lingua scelta (sì/no di una conferma, «basta» dell'orale…): dice(testo, 'si')
+export const PAROLE = scelto().PAROLE || en.PAROLE;
+export const dice = (testo, quale) => detto(testo, PAROLE, quale);
 export { D };
