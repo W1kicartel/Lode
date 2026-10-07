@@ -260,7 +260,9 @@ prova('backup: studio storto → rifiutato', !Dm.backupValido(bk({ studio: { da:
   const src = readFileSync(new URL('../js/lode.js', import.meta.url), 'utf8');
   prova('barra: case lavoro e ore subito dopo vediOrario', /case 'vediOrario': return schedaOrario\(\);\n\s*case 'lavoro': return comandoLavoro\(c\);\n\s*case 'ore': return schedaOre\(\);/.test(src));
   prova('barra: «piano» apre la settimana solo se il calendario è attivo', src.includes("case 'oggi': return ORE.calendario().attivo ? schedaOre() : schedaEsami();"));
-  prova('barra: proposte mai al lavoro', src.includes("'Mai a lezione, al lavoro, in focus o nelle ore di silenzio.'"));
+  // la frase sta nel catalogo italiano della barra (js/lingue/it/barra2.js), la barra la chiama con la sua chiave
+  const cat2 = readFileSync(new URL('../js/lingue/it/barra2.js', import.meta.url), 'utf8');
+  prova('barra: proposte mai al lavoro', src.includes("t('barra2.proposte-mai-quando')") && cat2.includes("'barra2.proposte-mai-quando': 'Mai a lezione, al lavoro, in focus o nelle ore di silenzio.'"));
   prova('barra: «La tua settimana»', /scheda\('ld-ore'/.test(src) && src.includes('La tua settimana'));
   const dp = src.slice(src.indexOf('function disegnaProgramma'), src.indexOf('function aggiungiDomandeUscite'));
   prova('barra: il programma cambia solo col calendario attivo', /if \(cal\?\.attivo\) p = /.test(dp) && /oreH = cal\?\.attivo \?/.test(dp) && /if \(cal\?\.attivo\) legaOre/.test(dp));
