@@ -69,6 +69,8 @@ export function leggiData(testo) {
   if ((m = t.match(/ in (\d+|[a-z]+) (tag|tagen|woche|wochen|monat|monaten) /))) {
     const k = n(m[1]); if (k) return { data: piuGiorni(T, k * (m[2].startsWith('woche') ? 7 : m[2].startsWith('monat') ? 30 : 1)), pezzo: m[0].trim() };
   }
+  // «nächste Woche», «kommende Woche»: fra sette giorni, come «in einer Woche»
+  if ((m = t.match(/ (?:(?:in der |die )?(?:nachste|naechste|nachsten|naechsten|kommende|kommenden) woche|in einer woche) /))) return { data: piuGiorni(T, 7), pezzo: m[0].trim() };
   { const c = dataInCifre(t, testo); if (c) return c; }
   // «15. Januar», «am 15 Jänner 2027», «den 3. Okt»: mai l'inizio di un'altra parola («Mars», «Juniorprofessor»)
   if ((m = t.match(new RegExp(` (?:am |den |vom )?(\\d{1,2}) (?:ten )?${MESI} (?:(\\d{4}) )?`)))) return { data: conAnno(+m[1], meseDi(m[2]), m[3] ? +m[3] : null), pezzo: m[0].trim() };
@@ -80,14 +82,16 @@ export function leggiData(testo) {
 }
 // toglie da una frase il pezzo di data trovato da leggiData (che è senza dieresi e senza punti: «am 15 marz»)
 function togli(s, pezzo) {
-  if (s.includes(pezzo)) return s.replace(pezzo, ' ');
-  const re = new RegExp(pezzo.split(' ').map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/a/g, '(?:a|ä)').replace(/o/g, '(?:o|ö)').replace(/u/g, '(?:u|ü)').replace(/ss/g, '(?:ss|ß)')).join('[\\s.,/-]+'), 'i');
-  return s.replace(re, ' ');
+  const esc = w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const corpo = s.includes(pezzo) ? esc(pezzo) : pezzo.split(' ').map(w => esc(w).replace(/a/g, '(?:a|ä)').replace(/o/g, '(?:o|ö)').replace(/u/g, '(?:u|ü)').replace(/ss/g, '(?:ss|ß)')).join('[\\s.,/-]+');
+  // anche l'«am», il «den», il «vom» davanti a una data in cifre: «Klausur am 12.2. in Mathe 2» → «in Mathe 2»
+  return s.replace(new RegExp(`(?:(?<=^|\\s)(?:am|den|vom)\\s+)?${corpo}`, 'i'), ' ');
 }
 
 // articoli e preposizioni attorno al nome di un esame o di un corso: «für die Mathe 2», «von meinem Physik 2»
 const ART = 'der|die|das|den|dem|des|mein|meine|meinen|meinem|meiner|ein|eine|einen|einem|einer|ne|nen';
-const PREP = 'von|vom|für|fürs|in|im|zu|zum|zur|auf|über|bei|beim|aus|mit|an|am|um';
+// «on»: chi mescola l'inglese («Fokus 50 on Physik 2»)
+const PREP = 'von|vom|für|fürs|in|im|zu|zum|zur|auf|über|bei|beim|aus|mit|an|am|um|on';
 const pulisci = s => String(s)
   .replace(r`^\s*(?:${PREP}|${ART}|(?:prüfung|klausur)(?: (?:in|von|für|zu))?)\s+`, '').replace(r`^\s*(?:${ART})\s+`, '')
   .replace(/[?.!,;:]+$/, '').replace(r`\s+(?:${PREP}|${ART}|und)\s*$`, '').trim().replace(r`^(?:${PREP}|${ART})$`, '');
@@ -162,7 +166,7 @@ export function interpreta(frase) {
   // la voce aggiunge maiuscole e un punto finale; i numeri arrivano a parole; «bitte» e «mal» non cambiano il comando
   const grezzo = inCifre(grezzo0.replace(/[.!]+$/, ''));
   const t = grezzo.toLowerCase().replace(/[’`´]/g, "'").replace(/\s+/g, ' ').replace(/[?!.]+$/, '').trim()
-    .replace(/^bitte,? |,? bitte$/g, '').replace(/(?<!\d|\bnoch|\bein) mal (?!\d)/g, ' ');
+    .replace(/^bitte,? |,? bitte$/g, '').replace(/(?<!\d|\bnoch|\bein) mal (?!\d)/g, ' ').replace(/^mal (?!\d)/, '');
   let m;
 
   // la lingua della barra: «Sprache Englisch», «auf Deutsch umstellen», «stell die Sprache auf Spanisch», «Sprache: français»
@@ -197,7 +201,7 @@ export function interpreta(frase) {
   }
   // «lass mich erklären: Green», «ich erklär dir die Potenzreihen»: lo studente spiega, Lode controlla cosa ha detto
   if ((m = t.match(r`^lass mich(?: dir)? (.+?) erklären$`)) && !/^(?:das|es|was)$/.test(m[1])) return { tipo: 'spiego', q: pulisci(m[1]) };
-  if ((m = t.match(r`^(?:lass mich(?: dir)?(?: das| es| was)? erklären|ich erklär(?:e|'s|s)?(?: dir)?(?: es| das)?(?: dir)?|ich will (?:dir )?(?:was |etwas |das )?erklären|jetzt erklär(?:e)? ich(?: dir)?)\b\s*:?\s*(.*)$`))) return { tipo: 'spiego', q: pulisci(m[1] || '') };
+  if ((m = t.match(r`^(?:lass mich(?: dir)?(?: das| es| was)? erklären|ich erklär(?:e|'s|s)?(?: dir)?(?: es| das)?(?: dir)?|ich will (?:dir )?(?:was |etwas |das )?erklären|jetzt erklär(?:e)? ich(?: dir)?)\b\s*:?\s*(?:(?:jetzt|mal|kurz|gerade) )*(.*)$`))) return { tipo: 'spiego', q: pulisci(m[1] || '') };
   // le domande uscite agli appelli: «Prüfungsfragen für Mathe 2: …» (una per riga), i «Gedächtnisprotokolle» delle orali
   const DOM = '(?:prüfungsfragen|klausurfragen|altfragen|fragen aus (?:alten|früheren|vergangenen|den letzten) (?:klausuren|prüfungen)|gedächtnisprotokoll(?:e)?|prüfungsprotokoll(?:e)?)';
   if ((m = grezzo0.match(ri`^(?:(?:hier sind|hier|füg hinzu) )?(?:die |meine )?${DOM}(?:\s+(?:von|für|aus|in|zu|zum|im)\b)?\s*([^:\n]*?)\s*(?:[:\n]([\s\S]*))?$`))) {
@@ -239,7 +243,7 @@ export function interpreta(frase) {
   }
   if (r`^(?:öffne |zeig(?: mir)? )?(?:meine |die )?(?:notizen|mitschrift|mitschriften|obsidian|vault|heutigen notizen|heutige notizen|vorlesungsnotizen)(?: von heute| der vorlesung)?(?: öffnen| zeigen)?$`.test(t)) return { tipo: 'appunti' };
   // «Vorlesung vom Computer»: la videolezione (Zoom, Teams, la piattaforma online) trascritta dall'audio del computer
-  if ((m = t.match(r`^(?:((?:transkribier|transkribiere|nimm|schreib) (?:die |eine )?)?(?:videovorlesung|video-vorlesung|onlinevorlesung|online-vorlesung|aufgezeichnete vorlesung|zoom-vorlesung|vorlesung vom (?:computer|rechner|laptop|pc|mac)|computer-?audio|ton vom (?:computer|rechner|laptop|pc|mac))(?: auf| mit)?)\b\s*(?:von |vom |für |zu |in |aus |über )?(.*?)( (?:transkribieren|aufnehmen|mitschreiben))?$`)) && (m[1] || m[3] || r`vom (?:computer|rechner|laptop|pc|mac)|audio`.test(t))) return { tipo: 'trascrivi', sorgente: 'computer', corso: pulisci(m[2] || '') || null };
+  if ((m = t.match(r`^(?:((?:transkribier|transkribiere|nimm|schreib) (?:die |eine )?)?(?:videovorlesung|video-vorlesung|onlinevorlesung|online-vorlesung|aufgezeichnete vorlesung|zoom-vorlesung|vorlesung vom (?:computer|rechner|laptop|pc|mac)|computer-?audio|ton vom (?:computer|rechner|laptop|pc|mac))(?: auf| mit)?)\b\s*(?:von |vom |für |zu |in |aus |über )?(.*?)((?:(?<=\s)|\s)(?:transkribieren|aufnehmen|mitschreiben))?$`)) && (m[1] || m[3] || r`vom (?:computer|rechner|laptop|pc|mac)|audio`.test(t))) return { tipo: 'trascrivi', sorgente: 'computer', corso: pulisci(m[2] || '') || null };
   if (r`^(?:transkribieren|transkribier|transkribiere)$|^(?:transkribier|transkribiere|nimm|schreib) (?:die |diese |die ganze )?(?:vorlesung|stunde)\b|^(?:die |diese |die ganze )?vorlesung (?:transkribieren|aufnehmen|mitschreiben)$|^(?:starte?|beginne?) (?:die )?(?:transkription|aufnahme|mitschrift)|^(?:transkription|aufnahme|mitschrift) (?:starten|beginnen)$`.test(t)) return { tipo: 'trascrivi' };
   if (r`^(?:nochmal|noch mal|wiederhol das|wiederhole das|wiederhol den letzten satz|(?:wiederhol|wiederhole) die letzten \d+ sekunden|die letzten \d+ sekunden(?: nochmal| wiederholen)|was hat (?:er|sie|der prof|die prof|die professorin|der professor|der dozent|die dozentin) (?:gerade |eben )?gesagt|(?:das )?hab ich nicht verstanden|hab ich verpasst|sag das nochmal|sag's nochmal|sags nochmal|wie bitte)$`.test(t)) { const sec = +(t.match(/(\d+) sekunden/)?.[1] || 60); return { tipo: 'ripeti', sec: Math.min(90, sec) }; }
   if (r`^(?:(?:schalt|schalte|mach) (?:das )?(?:nochmal|wiederholen|nochmal-funktion) aus|(?:das )?(?:nochmal|wiederholen|nochmal-funktion) (?:ausschalten|abschalten|deaktivieren|aus)|kein nochmal mehr)$`.test(t)) return { tipo: 'spegniRipeti' };
@@ -304,14 +308,18 @@ export function interpreta(frase) {
   const FATTO = '(?:\\s+(?:bekommen|gekriegt|geschrieben|erreicht|geholt|gemacht|erhalten))?';
   if ((m = t.match(r`^(?:(?:ich )?(?:hab|habe|hatte|bekam|kriegte|schrieb|hab ich|habe ich)\s+)?(?:eine |ne |'ne |die )?(\d{2})${LODE}\s+(?:in|im|bei|für|auf)\s+(.+?)${FATTO}$`))) s = { v: +m[1], lode: m[2], nome: m[3] };
   else if ((m = t.match(r`^(?:ich )?(?:hab|habe) (?:in|im|bei) (.+?) (?:eine |ne |'ne )?(\d{2})${LODE}${FATTO}$`))) s = { v: +m[2], lode: m[3], nome: m[1] };
-  if (s && s.v >= 18 && s.v <= 30) return { tipo: 'voto', voto: s.v, lode: !!s.lode && s.v === 30, esame: trovaEsame(pulisci(s.nome)), nomeDetto: pulisci(s.nome) };
+  // «bestanden mit»: «ich hab Physik 2 mit 27 bestanden», «Physik 2 hab ich mit 27 bestanden», «Physik 2 bestanden mit 26»
+  else if ((m = t.match(r`^(?:(?:ich )?(?:hab|habe) )?(?:die |den )?(?:prüfung |klausur )?(?:in |von |aus )?(.+?)(?: (?:hab|habe) ich)? mit (?:einer |eine |ne |'ne |der )?(\d{2})${LODE} (?:bestanden|geschafft|abgeschlossen)$`)) || (m = t.match(r`^(?:die |den )?(?:prüfung |klausur )?(?:in |von |aus )?(.+?) (?:bestanden|geschafft) mit (?:einer |eine |ne |'ne |der )?(\d{2})${LODE}$`))) s = { v: +m[2], lode: m[3], nome: m[1] };
+  // «28 im Schnitt» è la media, non il voto di un esame che si chiama «Schnitt»
+  if (s && s.v >= 18 && s.v <= 30 && !r`^(?:schnitt|durchschnitt|notenschnitt|mittel)$`.test(pulisci(s.nome))) return { tipo: 'voto', voto: s.v, lode: !!s.lode && s.v === 30, esame: trovaEsame(pulisci(s.nome)), nomeDetto: pulisci(s.nome) };
   // idoneità (unbenotet, «bestanden»): «ich hab Englisch bestanden», «Englisch geschafft»
   if (((m = t.match(r`^(?:ich )?(?:hab(?:e)? )?(?:die |den )?(?:prüfung |klausur |test |schein )?(?:in |von |für |aus )?(.+?) (?:bestanden|geschafft)$`)) || (m = t.match(r`^bestanden:? (.+)$`))) && !/\d/.test(m[1]) && trovaEsame(pulisci(m[1])))
     return { tipo: 'idoneita', esame: trovaEsame(pulisci(m[1])), nomeDetto: pulisci(m[1]) };
 
   // focus, anche con i minuti prima: «starte einen 25-Minuten-Pomodoro für Mathe». «lerne ich zu viel?» è una domanda
-  if ((m = t.match(r`^(?:(?:starte?|beginne?|mach|lass uns|machen wir) )?(?:eine |einen |ne |nen )?(?:(?:(\d{1,3})[ -]?(?:minuten|min|m)|(\d{1,2}) ?h ?(\d{1,2})?)[ -]?)?(?:fokus|focus|pomodoro|timer|lernsession|lerneinheit|session|lernen|lerne|lern|konzentration|konzentrieren|deep work)\b\s*(.*)$`)) && !FRASE.test(m[4])) {
-    let resto = m[4]; const mi = m[1] ? { min: +m[1] } : m[2] ? { min: +m[2] * 60 + (+m[3] || 0) } : leggiMinuti(resto); if (mi?.pezzo) resto = resto.replace(mi.pezzo, ' ');
+  if ((m = t.match(r`^(?:(?:starte?|beginne?|mach|lass uns|machen wir) )?(?:eine |einen |ne |nen )?(?:(?:(\d{1,3})[ -]?(?:minuten|min|m)|(\d{1,2}) ?h ?(\d{1,2})?)[ -]?)?(?:fokus|focus|pomodoro|timer|lernsession|lerneinheit|session|lernen|lerne|lern|pauken|büffeln|konzentration|konzentrieren|deep work)\b\s*(.*)$`)) && !FRASE.test(m[4])) {
+    // «lerne gerade für Physik 2», «lern jetzt noch Mathe 2»: gli avverbi non sono il nome dell'esame
+    let resto = m[4].replace(r`^(?:(?:gerade|jetzt|noch|kurz|etwas|ein bisschen|ne runde|eine runde)\s+)+`, ''); const mi = m[1] ? { min: +m[1] } : m[2] ? { min: +m[2] * 60 + (+m[3] || 0) } : leggiMinuti(resto); if (mi?.pezzo) resto = resto.replace(mi.pezzo, ' ');
     resto = pulisci(resto.replace(/\s+/g, ' ').trim()); const e = resto ? trovaEsame(resto, { anche: 'daFare' }) || trovaEsame(resto) : null;
     return { tipo: 'focus', min: mi ? Math.min(240, Math.max(1, mi.min)) : null, esame: e, nomeDetto: resto };
   }
@@ -325,12 +333,21 @@ export function interpreta(frase) {
   // «die Prüfung in Mathe 2 ist am 15. Januar», «ich schreibe Mathe 2 am 13. Oktober», «Mathe 2 wurde auf den 20. Januar verschoben»
   const QUANDO = '(am .+|in \\d.+|morgen|übermorgen|nächste.+|diese.+|kommende.+|(?:montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag).*|\\d{1,2}[./].*)';
   const PR = '(?:prüfung|klausur|test|mündliche(?: prüfung)?|schriftliche(?: prüfung)?|abschlussprüfung)';
+  // la data in testa, col verbo al secondo posto: «am Freitag schreibe ich Physik 2», «morgen ist die Mathe 2 Klausur»,
+  // «übermorgen Prüfung Mathe 2». Serve «Prüfung», «Klausur» o «schreiben»: «morgen hab ich Physik 2» può essere la lezione
+  if ((m = t.match(r`^((?:(?:am|diesen|nächsten|kommenden) )?(?:montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)|übermorgen|morgen|(?:am |den )?\d{1,2}\.\s?(?:\d{1,2}\.?(?:\d{2,4})?|\S+)),? (?:(?:schreibe|schreib|hab|habe|ist|mache|mach) (?:ich )?|(?=${PR}))(?:die |eine |meine |ne |den )?(?:${PR} )?(?:in |von |für |zu |über |aus )?(.+?)(?:[ -]${PR})?$`)) && r`prüfung|klausur|mündlich|schreib`.test(t)) {
+    const d = leggiData(m[1]), nome = pulisci(m[2]), e = trovaEsame(nome);
+    // un esame che non c'è ancora solo se il nome è proprio il nome: «übermorgen Prüfung Statistik», «Klausur in Statistik»,
+    // «schreib ich Statistik», «Statistik Klausur»; «morgen ist die Prüfung schwer» resta all'AI
+    const nuovo = nome.length >= 3 && (r`schreib`.test(t) || R(`(?:^\\S+ |^\\S+ \\S+ )${PR} \\S|${PR} (?:in|von|für|zu|über|aus) |[ -]${PR}$`).test(t));
+    if (d && nome && !FRASE.test(nome) && !R(`^${PR}\\b`).test(nome) && (e || nuovo)) return { tipo: 'esame', nome: e?.nome || nome, cfu: null, data: d.data, esistente: e && !e.fatto ? e : null };
+  }
   if ((m = t.match(r`^(?:die )?${PR} (?:in |von |für |zu |über )?(.+?) (?:ist|wäre|findet) (?:am |in |auf |ab )?(.+?)(?: statt)?$`)) || (m = t.match(r`^(?:die )?(.+?)[ -]${PR} (?:ist|findet) (?:am |in |auf )?(.+?)(?: statt)?$`)) || (m = t.match(r`^ich (?:schreibe|schreib|habe|hab|mache|mach) (?:(?:die |eine |meine )?${PR} (?:in |von |für |zu |über )?)?(.+?) ${QUANDO}$`)) || (m = t.match(r`^(?:die )?(?:${PR} )?(?:in |von |für )?(.+?) (?:wurde |ist |wird )?(?:verschoben|vorverlegt|verlegt) (?:auf|zum|nach) (?:den )?(.+)$`)) || (m = t.match(r`^(?:die )?(?:${PR} )?(?:in |von |für )?(.+?) (?:wurde |ist |wird )?auf (?:den )?(.+?) (?:verschoben|vorverlegt|verlegt)(?: worden)?$`))) {
     const d = leggiData(m[2]), e = trovaEsame(pulisci(m[1]));
     if (d && (e || (r`prüfung|klausur|test|mündlich|schriftlich`.test(t) && pulisci(m[1]).length >= 3))) return { tipo: 'esame', nome: e?.nome || pulisci(m[1]), cfu: null, data: d.data, esistente: e && !e.fatto ? e : null };
   }
   // nuovo esame: «Prüfung Datenbanken am 15. Januar 9 ECTS», «neue Klausur Physik 2 mit 6 LP», «Prüfung hinzufügen: …»
-  if ((m = t.match(r`^(?:füg |trag |neue |neuer |markier )?(?:eine |die |ein |einen )?(?:prüfung|klausur|test|prüfungstermin|klausurtermin)(?: hinzufügen| eintragen)?\s*:?\s+(?:in |von |für |zu |über )?(.+?)(?:\s+(?:hinzu|ein|eintragen|hinzufügen))?$`)) && !r`^(?:simulier|simulation|üben|schreiben|vorbereit|lernen|fragen|aufgaben|termin|plan|stoff|themen|bestanden|geschafft|verschoben)|^(?:ist|war|wann|welche|nächste|morgen|heute|mich|mir|ab|der|des)\b`.test(m[1])) {
+  if ((m = t.match(r`^(?:füg |trag |neue |neuer |markier )?(?:eine |die |ein |einen )?(?:prüfung|klausur|test|prüfungstermin|klausurtermin)(?: hinzufügen| eintragen)?\s*:?\s+(?:in |von |für |zu |über )?(.+?)(?:\s+(?:hinzu|ein|eintragen|hinzufügen))?$`)) && !r`^(?:simulier|simulation|üben|schreiben|vorbereit|lernen|fragen|aufgaben|termin|plan|stoff|themen|bestanden|geschafft|verschoben)|^(?:ist|war|wann|welche|nächste|morgen|heute|mich|mir|ab|der|des|wurde|wird|findet|fällt|lief|ging|hat)\b`.test(m[1])) {
     let resto = ' ' + m[1].replace(/[,;]/g, ' ') + ' ';
     const c = resto.match(CREDITI); let cfu = null; if (c) { cfu = +c[1]; resto = resto.replace(c[0], ' '); }
     const d = leggiData(resto); if (d) resto = togli(resto, d.pezzo);
@@ -380,6 +397,13 @@ export function interpreta(frase) {
   if (e && norm(e.nome).startsWith(norm(t)) && norm(t).length >= 3) return { tipo: 'apriEsame', esame: e };
   return null;
 }
+// una frase tedesca non è un comando inglese: comandi.js allora non la passa all'inglese, che altrimenti prenderebbe
+// «Training ist anstrengend» (gioco), «Timer ist kaputt» (focus), «Plan mir die Woche» (oggi) o «was ist der Unterschied
+// zwischen ECTS und LP» (libretto): «training», «timer», «plan», «ECTS» sono parole anche inglesi. Bastano le parole che in
+// un comando inglese non ci sono mai
+const TEDESCO = R(String.raw`\b(?:ist|sind|waren|ich|du|wir|mir|mich|dir|dich|uns|nicht|und|der|das|dem|zwischen|wie|warum|wieso|welche[rsmn]?)\b`);
+export const nonInglese = frase => TEDESCO.test(String(frase || '').toLowerCase());
+
 // i crediti di un esame: ECTS, LP (Leistungspunkte), CP, KP (Kreditpunkte, in Svizzera e in Austria)
 const CREDITI = R(String.raw`(?:mit |à |zu |für )?(\d{1,2})\s*(?:ects|lp|cp|kp|credits?|leistungspunkte|kreditpunkte|credit points|cfu)\b`);
 

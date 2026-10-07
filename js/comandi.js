@@ -23,6 +23,8 @@ const scelto = () => R[lingua] || en;
 function prima(nome, ...a) {
   const s = scelto(), r = s[nome]?.(...a);
   if (r != null || s === en) return r ?? null;
+  // una frase che è chiaramente della lingua scelta non passa all'inglese (se il riconoscitore esporta nonInglese)
+  if (nome === 'interpreta' && s.nonInglese?.(a[0])) return null;
   return en[nome]?.(...a) ?? null;
 }
 

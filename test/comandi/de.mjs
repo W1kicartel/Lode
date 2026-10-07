@@ -2,7 +2,7 @@
 // dette come le direbbe uno studente in Germania, Austria o Svizzera (informale, di fretta, anche senza dieresi), con lo
 // stesso risultato. Gli esami sono quelli tedeschi del libretto del banco (Mathe 2, Physik 2, Datenbanken, Privatrecht,
 // Englisch B2).
-import { E, prossimo, giornoDetto } from './aiuto.mjs';
+import { E, prossimo, giornoDetto, giorno, prossimoGiorno } from './aiuto.mjs';
 
 const ERR = "liste.c:42:5: error: 'knoten' undeclared";
 export const CASI = [
@@ -260,6 +260,24 @@ export const CASI = [
   ['Mathe 2', { tipo: 'apriEsame', esame: E('Mathe 2') }],
   ['Datenbanken', { tipo: 'apriEsame', esame: E('Datenbanken') }],
   ['Physik', { tipo: 'apriEsame', esame: E('Physik 2') }],
+  // dalla verifica: l'ordine tedesco (la data in testa, «mit 27 bestanden»), gli avverbi, «nächste Woche», la data in mezzo
+  ['Pruefung Datenbanken naechste Woche', { tipo: 'esame', nome: 'datenbanken', cfu: null, data: giorno(7), esistente: E('Datenbanken') }],
+  ['Klausur am 12.2. in Mathe 2', { tipo: 'esame', nome: 'mathe 2', cfu: null, data: prossimo(12, 1), esistente: E('Mathe 2') }],
+  ['Am Freitag hab ich Klausur in Physik 2', { tipo: 'esame', nome: 'Physik 2', cfu: null, data: prossimoGiorno(5), esistente: E('Physik 2') }],
+  ['Morgen schreib ich Datenbanken', { tipo: 'esame', nome: 'Datenbanken', cfu: null, data: giorno(1), esistente: E('Datenbanken') }],
+  ['übermorgen Prüfung Mathe 2', { tipo: 'esame', nome: 'Mathe 2', cfu: null, data: giorno(2), esistente: E('Mathe 2') }],
+  ['Morgen ist Mathe 2 Klausur', { tipo: 'esame', nome: 'Mathe 2', cfu: null, data: giorno(1), esistente: E('Mathe 2') }],
+  ['nächsten Dienstag Klausur Statistik', { tipo: 'esame', nome: 'statistik', cfu: null, data: prossimoGiorno(2), esistente: null }],
+  ['ich hab Physik 2 mit 27 bestanden', { tipo: 'voto', voto: 27, lode: false, esame: E('Physik 2'), nomeDetto: 'physik 2' }],
+  ['Physik 2 hab ich mit 27 bestanden', { tipo: 'voto', voto: 27, lode: false, esame: E('Physik 2'), nomeDetto: 'physik 2' }],
+  ['Mathe 2 bestanden mit 30 mit Lode', { tipo: 'voto', voto: 30, lode: true, esame: E('Mathe 2'), nomeDetto: 'mathe 2' }],
+  ['lerne gerade für Physik 2', { tipo: 'focus', min: null, esame: E('Physik 2'), nomeDetto: 'physik 2' }],
+  ['pauken für Mathe 2', { tipo: 'focus', min: null, esame: E('Mathe 2'), nomeDetto: 'mathe 2' }],
+  ['mal Pause', { tipo: 'sospendi' }],
+  ['hab 28 im Schnitt', { tipo: 'libretto' }],
+  ['focus 50 on Physik 2', { tipo: 'focus', min: 50, esame: E('Physik 2'), nomeDetto: 'physik 2' }],
+  ['ich erklär dir jetzt Integrale', { tipo: 'spiego', q: 'integrale' }],
+  ['Videovorlesung transkribieren', { tipo: 'trascrivi', sorgente: 'computer', corso: null }],
 ];
 
 // frasi che non sono comandi: restano all'AI
@@ -294,4 +312,18 @@ export const NON = [
   'ich arbeite montags an meiner Bachelorarbeit 9-13',
   'Was heißt cum laude?',
   'Wann ist die Prüfung?',
+  'die Klausur wurde verschoben',
+  'morgen ist die Prüfung schwer',
+  'Morgen hab ich Physik 2',
+  'morgen ist die Klausur',
+  'Lernen macht keinen Spaß',
+  'Die Karten sind falsch',
+  'ich hab die Prüfung mit 1,3 bestanden',
+  'mal sehen',
+  // frasi tedesche con parole anche inglesi: non passano all'inglese (nonInglese)
+  'Training ist anstrengend',
+  'Pomodoro ist eine Technik',
+  'Timer ist kaputt',
+  'Plan mir die Woche',
+  'Was ist der Unterschied zwischen ECTS und LP?',
 ];
