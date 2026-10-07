@@ -593,8 +593,13 @@ const DISTINTIVE = [/^(?:prim[oaie]|first|primer[oa]?s?|premiere?s?|erste[nmrs]?
   /^(?:solo|soltanto|unicamente|esclusivamente|only|seulement|uniquement|nur|apenas|somente)$/, /^(?:non|not|nicht|nao)$/, /^positi[vf]/, /^negati[vf]/,
   /^(?:maggior[ei]|greater|larger|mayor(?:es)?|superieure?s?|grosser|maior(?:es)?)$/, /^(?:minor[ei]|smaller|lesser|menor(?:es)?|inferieure?s?|kleiner)$/, /^(?:mist[oaie]|mixed|mixt[oa]s?|mixtes?|gemischte?[nmrs]?)$/];
 // i numeri devono essere proprio quelli; le altre basta che siano della stessa famiglia (seconde ~ secondo, positiva ~ positivamente)
-const segno = w => NUMERI.test(w) ? w : DISTINTIVE.findIndex(r => r.test(w));
-const fila = s => parolePiane(s).filter(w => (w.length >= 4 && !VUOTE.has(w)) || segno(w) !== -1);
+// parole delle altre lingue che sono anche parole italiane («must» il mosto, «falle», «pela», le ore «none»): in italiano
+// valgono come prima, parole piene qualsiasi
+const ANCHE_ITALIANE = new Set(['must', 'falle', 'pela', 'none']);
+const straniera = w => lingua === 'it' && ANCHE_ITALIANE.has(w);
+const vuota = w => VUOTE.has(w) && !straniera(w);
+const segno = w => NUMERI.test(w) ? w : straniera(w) ? -1 : DISTINTIVE.findIndex(r => r.test(w));
+const fila = s => parolePiane(s).filter(w => (w.length >= 4 && !vuota(w)) || segno(w) !== -1);
 const uguale = (x, w) => segno(w) !== -1 ? segno(x) === segno(w) : x.startsWith(radice(w));
 // ogni parola distintiva della frase c'è nel pezzo, e vicino (al più 2 parole piene) alla parola più vicina, prima e dopo,
 // che il pezzo ha anche lui: «definita positiva vuol dire massimo» non passa con «definita positiva → minimo, … → massimo»
@@ -634,7 +639,7 @@ const VUOTE = new Set(('della delle dello degli nella nelle nello negli sulla su
 const piana = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const radice = w => w.length <= 5 ? w : w.slice(0, Math.max(5, Math.ceil(w.length * .6)));
 // la cosa che «manca» è già nella risposta? (almeno 3 parole piene su 4 ci sono, con la radice: semidefiniti ~ semidefinita)
-const piene = s => piana(s).split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !VUOTE.has(w));
+const piene = s => piana(s).split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !vuota(w));
 const coperte = (cosa, testo) => { const p = piene(cosa), t = piana(testo); return p.length ? p.filter(w => t.includes(radice(w))).length / p.length : 0; };
 export function giaDetto(cosa, risposta) { return coperte(cosa, risposta) >= .75; }
 // la frase copiata dal modello è davvero dello studente (almeno 4 parole di fila, o tutta se è più corta) e parla della

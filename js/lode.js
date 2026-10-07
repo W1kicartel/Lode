@@ -987,7 +987,7 @@ async function esportaAnki(corsoDetto) {
 // nome con sole parole italiane va dove andava prima
 const PROGRAMMA_FILE = /programm|syllabus|scheda.?(?:del.?)?corso|temario|plan.?de.?estudios|gu[ií]a.?docente|lehrplan|modulbeschreibung|(?:^|[^a-z])ementa|plano.?de.?ensino|plan.?de.?cours|course.?outline/i;
 const TEMI_FILE = /compit|(?:^|[^a-z])temi(?:[^a-z]|$)|prova.?scritt|esercitaz/i;
-const TEMI_ALTRE = /(?:^|[^a-z])(?:exam|exams|examen|ex[aá]menes|examens|klausur|klausuren|provas|prova.?(?:de|final|anterior)\w*|past.?papers?|exercises?|ejercicios|exercices|[uü]bungsbl[aä]tter|aufgaben|exerc[ií]cios|lista.?de.?exerc)(?:[^a-z]|$)/i;
+const TEMI_ALTRE = /(?:^|[^a-z])(?:exam|exams|examen|ex[aá]menes|examens|klausur|klausuren|provas|prova.?(?:de|final|anterior(?:es)?)|past.?papers?|exercises?|ejercicios|exercices|[uü]bungsbl[aä]tter|aufgaben|exerc[ií]cios|lista.?de.?exerc)(?:[^a-z]|$)/i;
 const DOMANDE_FILE = /domande|appell|(?:^|[^a-z])(?:questions|preguntas|[a-zäöü]*fragen|quest[oõ]es|perguntas)(?:[^a-z]|$)/i;
 const ICONA_FILE = { pdf: 'doc', slide: 'doc', word: 'doc', testo: 'doc', sbobina: 'appunti', carte: 'ripasso', foto: 'foto', audio: 'audio', altro: 'doc' };
 const NOME_TIPO = { pdf: t('barra1.tipo-pdf'), slide: t('barra1.tipo-slide'), word: t('barra1.tipo-word'), testo: t('barra1.tipo-testo'), sbobina: t('barra1.tipo-sbobina'), carte: t('barra1.tipo-carte'), foto: t('barra1.tipo-foto'), audio: t('barra1.tipo-audio'), altro: t('barra1.tipo-altro') };
