@@ -428,12 +428,14 @@ export function leggiLavoro(testo) {
 }
 
 // gli stessi esempi dell'italiano, nello stesso ordine
+// gli esempi della barra («Prova a scrivere»): {voto}, {obiettivo} e {simula} sono i voti del sistema scelto
+// (riempiEsempi() di js/comandi/comune.js, esempi() di js/comandi.js)
 export const ESEMPI = [
   ['focus 50 sur analyse 2', 'lance le minuteur et compte les heures'],
-  ["j'ai eu 15 en physique", 'enregistre la note et met à jour ta moyenne'],
+  ["j'ai eu {voto} en physique", 'enregistre la note et met à jour ta moyenne'],
   ['examen bases de données le 15 janvier 6 ECTS', "ajoute la date de l'examen"],
-  ['il me faut combien pour avoir 14 de moyenne', "la moyenne qu'il te faut d'ici la fin"],
-  ["et si j'ai 16 en analyse 2", 'simule ta moyenne'],
+  ['il me faut combien pour avoir {obiettivo} de moyenne', "la moyenne qu'il te faut d'ici la fin"],
+  ["et si j'ai {simula} en analyse 2", 'simule ta moyenne'],
   ["programme d'analyse 2", "colle le programme : une carte des thèmes et un plan jusqu'à l'examen"],
   ['questions tombées en analyse 2 : …', 'celles de ta promo : elles remontent dans le plan'],
   ["annales d'analyse 2 : …", "les exercices d'un ancien sujet : un par jour, sur les thèmes du jour"],

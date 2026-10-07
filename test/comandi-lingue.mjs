@@ -45,6 +45,7 @@ const D = await import('../js/dati.js'), L = await import('../js/lingua.js'), C 
 const { ESAMI } = await import('./comandi/aiuto.mjs');
 const IT = await import('./comandi/it.mjs'), X = cod === 'it' ? IT : await import(`./comandi/${cod}.mjs`);
 const RIT = await import('../js/comandi/it.js');
+const S = await import('../js/sistemi.js'), LB = await import('../js/libretto.js');
 // il libretto del banco: esami italiani e inglesi, fatti e da fare
 D.sostituisci({ ...D.esempio(), esami: [], sessioni: [], carte: [] });
 for (const [nome, cfu, voto, idoneita] of [...ESAMI, ...(X.ESAMI || [])]) {   // X.ESAMI: gli esami della lingua, solo nel suo giro
@@ -88,9 +89,34 @@ for (const f of X.NON || []) { const r = C.interpreta(f); prova(`${cod}: ${JSON.
 // 4. gli esempi: stesso numero dell'italiano, coppie di testi, e ognuno è un comando nella sua lingua
 prova(`${cod}: ESEMPI quanti l'italiano`, ric?.ESEMPI?.length === RIT.ESEMPI.length, `${ric?.ESEMPI?.length} invece di ${RIT.ESEMPI.length}`);
 prova(`${cod}: comandi.js dà gli ESEMPI della lingua scelta`, C.ESEMPI === ric?.ESEMPI);
-for (const [frase, cosa] of ric?.ESEMPI || []) {
+for (const [frase, cosa] of C.esempi(S.predefinito(cod)) || []) {
   prova(`${cod}: esempio ${JSON.stringify(frase)} con la spiegazione`, typeof frase === 'string' && typeof cosa === 'string' && !!cosa.trim());
   prova(`${cod}: esempio ${JSON.stringify(frase)} è un comando`, ric.interpreta(frase.replace(/…/g, 'x')) !== null);
+}
+// 4b. gli esempi con i voti si adattano al sistema dei voti scelto: per ogni sistema, ogni esempio mostrato è un comando
+//     che la barra capisce (interpretaVoti di js/libretto.js, come in js/lode.js) e il suo voto è un voto del sistema
+//     (sistemi.valido) o un obiettivo nella scala del voto finale (in Italia la base di laurea, 66-110). In italiano con il sistema italiano: gli esempi di sempre
+const TIPO_ESEMPIO = { voto: 'voto', obiettivo: 'serve', simula: 'simula' };
+const sistemaPrima = D.D.profilo.sistema;
+for (const sis of S.CODICI) {
+  D.D.profilo.sistema = sis;
+  const mostrati = C.esempi();
+  prova(`${cod}/${sis}: esempi quanti l'italiano`, mostrati.length === RIT.ESEMPI.length);
+  ric.ESEMPI.forEach(([modello], i) => {
+    const [frase] = mostrati[i], k = modello.match(/\{(voto|obiettivo|simula)\}/)?.[1];
+    prova(`${cod}/${sis}: esempio ${JSON.stringify(frase)} senza segnaposto`, !/[{}]/.test(frase));
+    const c = LB.interpretaVoti(frase.replace(/…/g, 'x'), C.interpreta);
+    if (!k) return prova(`${cod}/${sis}: esempio ${JSON.stringify(frase)} è un comando`, c !== null);
+    const buono = c?.tipo === TIPO_ESEMPIO[k] && !c.fuoriScala && (k === 'obiettivo' ? (sis === 'it' ? c.base >= 66 && c.base <= 110 : LB.obiettivoValido(c.base, S.sistema(sis))) : S.valido(c.voto, sis));
+    prova(`${cod}/${sis}: esempio ${JSON.stringify(frase)} è un ${TIPO_ESEMPIO[k]} nella scala`, buono, breve(c));
+  });
+}
+D.D.profilo.sistema = sistemaPrima;
+if (cod === 'it') {
+  D.D.profilo.sistema = 'it';
+  const e = C.esempi().map(([f]) => f);
+  prova('it/it: gli esempi dei voti sono quelli di sempre', e[1] === 'ho preso 28 in fisica' && e[3] === 'quanto mi serve per 110' && e[4] === 'se prendo 30 in analisi 2', JSON.stringify(e.slice(1, 5)));
+  D.D.profilo.sistema = sistemaPrima;
 }
 // 5. i comandi citati nei testi: se un testo italiano cita fra virgolette una frase che la barra italiana prende (un
 //    comando, o una parola delle schede: «sì», «esci»…), la stessa chiave nella lingua scelta cita frasi che la barra in

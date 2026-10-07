@@ -10,7 +10,7 @@
 // I numeri a parole («achtundzwanzig») diventano cifre solo dentro i comandi: non c'è un export «numeri», così le formule
 // dettate in tedesco restano come sono (docs/LINGUE.md, «La voce e le formule»).
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta, VOTO_CIFRE, VOTO_SOLO, numeroVoto, obiettivoDetto } from './comune.js';
 
 // le espressioni si scrivono con le dieresi; chi scrive di fretta le salta o le scioglie: «ü» vale anche «ue» e «u», «ß»
 // anche «ss». \b diventa un confine di parola che conosce le lettere tedesche (quello di JavaScript taglia «über» prima
@@ -297,23 +297,23 @@ export function interpreta(frase) {
   if ((m = grezzo.match(ri`^(?:neue\s+)?(?:karte|karteikarte|lernkarte|kärtchen|flashcard)\s*(?:(?:für|zu|in|von)\s+([^:]+?))?\s*:\s*(.+?)\s*(?:=|->|→|\|)\s*(.+)$`)))
     return { tipo: 'carta', esame: m[1] ? trovaEsame(m[1]) : null, fronte: m[2], retro: m[3] };
 
-  // simulazione: «was wenn ich 28 in Mathe 2 bekomme», «und wenn ich in Physik 2 ne 30 schreibe». I voti sono quelli detti
-  // (scala italiana per ora: il sistema dei voti decide)
+  // simulazione: «was wenn ich 28 in Mathe 2 bekomme», «und wenn ich in Physik 2 ne 30 schreibe». Il voto è quello detto
+  // (28, «ne 1,7», «2,3», 72 %): se il sistema dei voti lo ha lo decide js/libretto.js
   const LODE = '( mit lode| cum laude| e lode| lode| mit auszeichnung| mit lob)?';
   const VERBI = '(?:bekomme|bekomm|kriege|krieg|schreibe|schreib|hole|hol|habe|hab|mache|mach|erreiche|bekäme|hätte|kriegen würde|bekommen würde|schreiben würde)';
   let s = null;
-  if ((m = t.match(r`^(?:und )?(?:was (?:ist|wäre),? )?(?:was )?wenn ich (?:eine |ne |'ne )?(\d{2})${LODE} (?:in|im|bei|für) (.+?) ${VERBI}$`)) || (m = t.match(r`^(?:und )?angenommen,? ich (?:bekomme|krieg|kriege|schreibe|schreib|hab|habe|hole) (?:eine |ne )?(\d{2})${LODE} (?:in|im|bei|für) (.+)$`))) s = { v: +m[1], lode: m[2], nome: m[3] };
-  else if ((m = t.match(r`^(?:und )?(?:was (?:ist|wäre),? )?(?:was )?wenn ich (?:in|im|bei|für) (.+?) (?:eine |ne |'ne )?(\d{2})${LODE} ${VERBI}$`))) s = { v: +m[2], lode: m[3], nome: m[1] };
-  if (s && s.v >= 18 && s.v <= 30) return { tipo: 'simula', voto: s.v, lode: !!s.lode && s.v === 30, esame: trovaEsame(pulisci(s.nome)), nomeDetto: pulisci(s.nome) };
+  if ((m = t.match(r`^(?:und )?(?:was (?:ist|wäre),? )?(?:was )?wenn ich (?:eine |ne |'ne )?${VOTO_CIFRE}${LODE} (?:in|im|bei|für) (.+?) ${VERBI}$`)) || (m = t.match(r`^(?:und )?angenommen,? ich (?:bekomme|krieg|kriege|schreibe|schreib|hab|habe|hole) (?:eine |ne )?${VOTO_CIFRE}${LODE} (?:in|im|bei|für) (.+)$`))) s = { v: numeroVoto(m[1]), lode: m[2], nome: m[3] };
+  else if ((m = t.match(r`^(?:und )?(?:was (?:ist|wäre),? )?(?:was )?wenn ich (?:in|im|bei|für) (.+?) (?:eine |ne |'ne )?${VOTO_CIFRE}${LODE} ${VERBI}$`))) s = { v: numeroVoto(m[2]), lode: m[3], nome: m[1] };
+  if (s && s.v != null) return { tipo: 'simula', voto: s.v, lode: !!s.lode && s.v === 30, esame: trovaEsame(pulisci(s.nome)), nomeDetto: pulisci(s.nome) };
   // voto: «ich hab 28 in Physik 2», «30 cum laude in Mathe 2», «hab in Physik 2 ne 28 geschrieben»
   s = null;
   const FATTO = '(?:\\s+(?:bekommen|gekriegt|geschrieben|erreicht|geholt|gemacht|erhalten))?';
-  if ((m = t.match(r`^(?:(?:ich )?(?:hab|habe|hatte|bekam|kriegte|schrieb|hab ich|habe ich)\s+)?(?:eine |ne |'ne |die )?(\d{2})${LODE}\s+(?:in|im|bei|für|auf)\s+(.+?)${FATTO}$`))) s = { v: +m[1], lode: m[2], nome: m[3] };
-  else if ((m = t.match(r`^(?:ich )?(?:hab|habe) (?:in|im|bei) (.+?) (?:eine |ne |'ne )?(\d{2})${LODE}${FATTO}$`))) s = { v: +m[2], lode: m[3], nome: m[1] };
+  if ((m = t.match(r`^(?:(?:ich )?(?:hab|habe|hatte|bekam|kriegte|schrieb|hab ich|habe ich)\s+|eine |ne |'ne |die )(?:eine |ne |'ne |die )?${VOTO_CIFRE}${LODE}\s+(?:in|im|bei|für|auf)\s+(.+?)${FATTO}$`)) || (m = t.match(r`^${VOTO_SOLO}${LODE}\s+(?:in|im|bei|für|auf)\s+(.+?)${FATTO}$`))) s = { v: numeroVoto(m[1]), lode: m[2], nome: m[3] };
+  else if ((m = t.match(r`^(?:ich )?(?:hab|habe) (?:in|im|bei) (.+?) (?:(?:eine |ne |'ne )${VOTO_CIFRE}|${VOTO_SOLO})${LODE}${FATTO}$`))) s = { v: numeroVoto(m[2] ?? m[3]), lode: m[4], nome: m[1] };
   // «bestanden mit»: «ich hab Physik 2 mit 27 bestanden», «Physik 2 hab ich mit 27 bestanden», «Physik 2 bestanden mit 26»
-  else if ((m = t.match(r`^(?:(?:ich )?(?:hab|habe) )?(?:die |den )?(?:prüfung |klausur )?(?:in |von |aus )?(.+?)(?: (?:hab|habe) ich)? mit (?:einer |eine |ne |'ne |der )?(\d{2})${LODE} (?:bestanden|geschafft|abgeschlossen)$`)) || (m = t.match(r`^(?:die |den )?(?:prüfung |klausur )?(?:in |von |aus )?(.+?) (?:bestanden|geschafft) mit (?:einer |eine |ne |'ne |der )?(\d{2})${LODE}$`))) s = { v: +m[2], lode: m[3], nome: m[1] };
-  // «28 im Schnitt» è la media, non il voto di un esame che si chiama «Schnitt»
-  if (s && s.v >= 18 && s.v <= 30 && !r`^(?:schnitt|durchschnitt|notenschnitt|mittel)$`.test(pulisci(s.nome))) return { tipo: 'voto', voto: s.v, lode: !!s.lode && s.v === 30, esame: trovaEsame(pulisci(s.nome)), nomeDetto: pulisci(s.nome) };
+  else if ((m = t.match(r`^(?:(?:ich )?(?:hab|habe) )?(?:die |den )?(?:prüfung |klausur )?(?:in |von |aus )?(.+?)(?: (?:hab|habe) ich)? mit (?:einer |eine |ne |'ne |der )?${VOTO_CIFRE}${LODE} (?:bestanden|geschafft|abgeschlossen)$`)) || (m = t.match(r`^(?:die |den )?(?:prüfung |klausur )?(?:in |von |aus )?(.+?) (?:bestanden|geschafft) mit (?:einer |eine |ne |'ne |der )?${VOTO_CIFRE}${LODE}$`))) s = { v: numeroVoto(m[2]), lode: m[3], nome: m[1] };
+  // «28 im Schnitt» è la media, non il voto di un esame che si chiama «Schnitt»; «die Prüfung mit 1,3 bestanden» non dice quale
+  if (s && s.v != null && !r`^(?:schnitt|durchschnitt|notenschnitt|mittel|(?:die |der |den )?(?:prüfung|klausur|test|klausuren|prüfungen))$`.test(pulisci(s.nome))) return { tipo: 'voto', voto: s.v, lode: !!s.lode && s.v === 30, esame: trovaEsame(pulisci(s.nome)), nomeDetto: pulisci(s.nome) };
   // idoneità (unbenotet, «bestanden»): «ich hab Englisch bestanden», «Englisch geschafft»
   if (((m = t.match(r`^(?:ich )?(?:hab(?:e)? )?(?:die |den )?(?:prüfung |klausur |test |schein )?(?:in |von |für |aus )?(.+?) (?:bestanden|geschafft)$`)) || (m = t.match(r`^bestanden:? (.+)$`))) && !/\d/.test(m[1]) && trovaEsame(pulisci(m[1])))
     return { tipo: 'idoneita', esame: trovaEsame(pulisci(m[1])), nomeDetto: pulisci(m[1]) };
@@ -358,9 +358,12 @@ export function interpreta(frase) {
     if (nome && (r`prüfung|klausur`.test(t) || d || cfu)) return { tipo: 'esame', nome, cfu, data: d?.data || null, esistente: trovaEsame(nome) };
   }
 
-  // «was brauche ich für 110», «welchen Schnitt brauch ich für 105»
-  if ((m = t.match(r`(?:was|wie ?viel|welchen schnitt|welchen durchschnitt|welche noten?)\s(?:brauch|brauche|muss|müsste|bräuchte)\b.*?(\d{2,3})`))) {
-    const b = Math.min(110, +m[1]); if (b >= 66) return { tipo: 'serve', base: b };
+  // «was brauche ich für 110», «welchen Schnitt brauch ich für 105», «was brauche ich für 2,0», «was brauche ich für die
+  // Bestnote» (1,0). L'obiettivo è il numero detto: se è nella scala del voto finale lo decide js/libretto.js
+  if ((m = t.match(r`(?:was|wie ?viel|welchen schnitt|welchen durchschnitt|welche noten?)\s(?:brauch|brauche|muss|müsste|bräuchte)\b(.*)$`))) {
+    const b = obiettivoDetto(m[1]);
+    if (b != null) return { tipo: 'serve', base: b };
+    if (r`\b(?:die |eine )?(?:bestnote|eins vor dem komma|glatte eins|1er schnitt|einser(?:schnitt)?|summa cum laude|mit auszeichnung)$`.test(m[1])) return { tipo: 'serve', base: 1 };
   }
   if (r`\b(?:schnitt|durchschnitt|notenschnitt|noten|notenspiegel|notenübersicht|leistungsübersicht|transcript|ects|credits|leistungspunkte|lp|abschlussnote|endnote|wie steh(?:e)? ich)\b`.test(t) && !r`\b(?:erklär|erkläre|bedeutet|bedeutung|berechne|berechnet|berechnen|rechnet|heißt)\b`.test(t) && (!r`\b(?:was ist|was sind|wie)\b`.test(t) || r`\b(?:mein|meine|meinen|ich)\b`.test(t))) return { tipo: 'libretto' };
 
@@ -483,12 +486,16 @@ export function leggiLavoro(testo) {
 }
 
 // gli stessi esempi dell'italiano, nello stesso ordine
+// i voti degli esempi detti in tedesco: «ich hab ne 1,7 in Physik 2», come si dice
+export const VOTI_ESEMPIO = { de: { voto: 'ne 1,7' } };
+// gli esempi della barra («Prova a scrivere»): {voto}, {obiettivo} e {simula} sono i voti del sistema scelto
+// (riempiEsempi() di js/comandi/comune.js, esempi() di js/comandi.js)
 export const ESEMPI = [
   ['Fokus 50 auf Mathe 2', 'startet den Timer und zählt die Stunden'],
-  ['ich hab 28 in Physik 2', 'trägt die Note ein und rechnet deinen Schnitt neu'],
+  ['ich hab {voto} in Physik 2', 'trägt die Note ein und rechnet deinen Schnitt neu'],
   ['Prüfung Datenbanken am 15. Januar 9 ECTS', 'trägt den Prüfungstermin ein'],
-  ['was brauche ich für 110', 'der Schnitt, den du ab jetzt bis zum Ende brauchst'],
-  ['was wenn ich 30 in Mathe 2 bekomme', 'simuliert deinen Schnitt'],
+  ['was brauche ich für {obiettivo}', 'der Schnitt, den du ab jetzt bis zum Ende brauchst'],
+  ['was wenn ich {simula} in Mathe 2 bekomme', 'simuliert deinen Schnitt'],
   ['Prüfungsstoff für Mathe 2', 'füg den Prüfungsstoff ein: eine Karte der Themen und ein Plan bis zur Prüfung'],
   ['Prüfungsfragen für Mathe 2: …', 'die aus deiner Semestergruppe: sie rücken im Plan nach oben'],
   ['Altklausuren für Mathe 2: …', 'die Aufgaben einer alten Klausur: eine pro Tag, zu den Themen von heute'],

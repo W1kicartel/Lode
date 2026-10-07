@@ -286,10 +286,24 @@ export const CASI = [
   ['Sprache Japanisch', { tipo: 'lingua', codice: null }],
   ['idioma japonês', { tipo: 'lingua', codice: null }],
   ['stell die Sprache auf Japanisch', { tipo: 'lingua', codice: null }],
+  // i voti tedeschi (1,0-5,0) e degli altri sistemi: il numero detto; l'obiettivo anche a parole («Bestnote»)
+  ['ich hab ne 1,7 in Mathe 2', { tipo: 'voto', voto: 1.7, lode: false, esame: E('Mathe 2'), nomeDetto: 'mathe 2' }],
+  ['ich habe eine 2,3 in Physik 2 bekommen', { tipo: 'voto', voto: 2.3, lode: false, esame: E('Physik 2'), nomeDetto: 'physik 2' }],
+  ['1,3 in Datenbanken', { tipo: 'voto', voto: 1.3, lode: false, esame: E('Datenbanken'), nomeDetto: 'datenbanken' }],
+  ['Physik 2 mit 1,7 bestanden', { tipo: 'voto', voto: 1.7, lode: false, esame: E('Physik 2'), nomeDetto: 'physik 2' }],
+  ['hab in Mathe 2 ne 2 geschrieben', { tipo: 'voto', voto: 2, lode: false, esame: E('Mathe 2'), nomeDetto: 'mathe 2' }],
+  ['was wenn ich ne 1,3 in Mathe 2 bekomme', { tipo: 'simula', voto: 1.3, lode: false, esame: E('Mathe 2'), nomeDetto: 'mathe 2' }],
+  ['und wenn ich in Physik 2 ne 1,0 schreibe', { tipo: 'simula', voto: 1, lode: false, esame: E('Physik 2'), nomeDetto: 'physik 2' }],
+  ['was brauche ich für 2,0', { tipo: 'serve', base: 2 }],
+  ['welchen Schnitt brauch ich für 1,5', { tipo: 'serve', base: 1.5 }],
+  ['was brauche ich für die Bestnote', { tipo: 'serve', base: 1 }],
 ];
 
 // frasi che non sono comandi: restano all'AI
 export const NON = [
+  // una cifra sola senza verbo né articolo non è un voto; «die Prüfung» non dice quale
+  'ich hab in Physik 2',
+
   'erklär mir den Satz von Stokes',
   'was bedeutet Standardfehler',
   'erklär den relativen Fehler',

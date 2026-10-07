@@ -6,7 +6,7 @@
 // riconoscitore della lingua scelta non capisce. Se la frase non è un comando ritorna null e (se c'è la chiave) ci pensa l'AI.
 // I voti restano quelli detti (28, 30 cum laude): come leggerli lo decide il sistema dei voti (js/sistemi.js), non qui.
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, hh, linguaDetta, linguaIgnota, linguaIgnotaDetta } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, hh, linguaDetta, linguaIgnota, linguaIgnotaDetta, VOTO_CIFRE, VOTO_SOLO, VOTO_LETTERA, numeroVoto, obiettivoDetto } from './comune.js';
 
 const GIORNI = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const MESI = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
@@ -102,6 +102,17 @@ function interpretaProgetto(testo) {
   return null;
 }
 
+// gli obiettivi detti a parole («what do I need for a first»): le classi del Regno Unito e gli onori latini degli Stati Uniti
+// (soglie di GPA più comuni: summa 3,9, magna 3,7, cum laude 3,5)
+const OBIETTIVI = [
+  [/\b(?:a )?(?:first(?:[- ]class)?(?: honou?rs)?|1st)(?: degree)?$/, 70, true],
+  [/\b(?:a )?(?:2:1|upper second(?:[- ]class)?(?: honou?rs)?)(?: degree)?$/, 60, true],
+  [/\b(?:a )?(?:2:2|lower second(?:[- ]class)?(?: honou?rs)?)(?: degree)?$/, 50, true],
+  [/\b(?:a )?third(?:[- ]class)?(?: honou?rs)?(?: degree)?$/, 40, true],
+  [/\bsumma cum laude$/, 3.9],
+  [/\bmagna cum laude$/, 3.7],
+  [/\bcum laude$/, 3.5],
+];
 export function interpreta(frase) {
   const grezzo0 = String(frase || '').trim(); if (!grezzo0) return null;
   // informatica: «explain the error», anche con l'errore incollato dopo. Solo se dopo «error» non c'è niente, ci sono i due
@@ -220,16 +231,20 @@ export function interpreta(frase) {
   if ((m = grezzo.match(/^(?:new\s+)?(?:card|flashcard)\s*(?:(?:for|of|in)\s+([^:]+?))?\s*:\s*(.+?)\s*(?:=|->|→|\|)\s*(.+)$/i)))
     return { tipo: 'carta', esame: m[1] ? trovaEsame(m[1]) : null, fronte: m[2], retro: m[3] };
 
-  // simulazione: «what if I get 28 in calculus». I voti sono quelli detti (scala italiana per ora: il sistema dei voti decide)
+  // simulazione: «what if I get 28 in calculus», «what if I get 72 in physics», «what if I get an A in calculus». Il voto è
+  // quello detto (28, 8.5, 1.7, 72 %, A−): se il sistema dei voti lo ha lo decide js/libretto.js
   const LODE = '( with honou?rs| cum laude| e lode| lode| with distinction)?';
-  if ((m = t.match(new RegExp(`^(?:and |so )?(?:what )?if i (?:get|got|score|take) (?:an? )?(\\d{2})${LODE} (?:in|on|for|at)\\s*(.+)$`)))) {
-    const v = +m[1];
-    if (v >= 18 && v <= 30) return { tipo: 'simula', voto: v, lode: !!m[2] && v === 30, esame: trovaEsame(pulisci(m[3])), nomeDetto: pulisci(m[3]) };
+  const VOTO = `(?:${VOTO_CIFRE}|${VOTO_LETTERA})`;
+  const voto = m => numeroVoto(m[1] ?? m[2]);
+  if ((m = t.match(new RegExp(`^(?:and |so )?(?:what )?if i (?:get|got|score|take) (?:an? )?${VOTO}${LODE} (?:in|on|for|at)\\s*(.+)$`, 'u')))) {
+    const v = voto(m);
+    if (v != null) return { tipo: 'simula', voto: v, lode: !!m[3] && v === 30, esame: trovaEsame(pulisci(m[4])), nomeDetto: pulisci(m[4]) };
   }
-  // voto: «I got 28 in physics» · «30 cum laude in calculus» · «I passed english»
-  if ((m = t.match(new RegExp(`^(?:i got|got|i scored|scored|i passed|passed|i took|grade|mark)?\\s*(?:an? )?(\\d{2})${LODE}\\s+(?:in|on|for|at)\\s+(.+)$`)))) {
-    const v = +m[1];
-    if (v >= 18 && v <= 30) return { tipo: 'voto', voto: v, lode: !!m[2] && v === 30, esame: trovaEsame(pulisci(m[3])), nomeDetto: pulisci(m[3]) };
+  // voto: «I got 28 in physics» · «30 cum laude in calculus» · «I got 72% in physics» · «I got an A- in calculus». Senza il
+  // verbo il voto ha due cifre o i decimali («28 in physics», «8.5 in physics»): «2 in a row» non è un voto
+  if ((m = t.match(new RegExp(`^(?:i got|got|i scored|scored|i passed|passed|i took|grade|mark|i got a grade of|i got a mark of) (?:an? )?${VOTO}${LODE}\\s+(?:in|on|for|at)\\s+(.+)$`, 'u'))) || (m = t.match(new RegExp(`^(?:an? )?${VOTO_SOLO}()${LODE}\\s+(?:in|on|for|at)\\s+(.+)$`, 'u')))) {
+    const v = voto(m);
+    if (v != null) return { tipo: 'voto', voto: v, lode: !!m[3] && v === 30, esame: trovaEsame(pulisci(m[4])), nomeDetto: pulisci(m[4]) };
   }
   if ((m = t.match(/^(?:i )?(?:passed|cleared|got through) (?:the )?(?:pass\/fail (?:exam )?(?:in|of|for) |exam (?:in|of|for) |test (?:in|of|for) )?(.+?)(?: \(?pass\/fail\)?)?$/)) && !/\d/.test(m[1]) && trovaEsame(pulisci(m[1])))
     return { tipo: 'idoneita', esame: trovaEsame(pulisci(m[1])), nomeDetto: pulisci(m[1]) };
@@ -266,9 +281,15 @@ export function interpreta(frase) {
     if (nome && !frase && (/\bexam\b/.test(t) || d || cfu)) return { tipo: 'esame', nome, cfu, data: d?.data || null, esistente: trovaEsame(nome) };
   }
 
-  // «what do I need for 110», «what average do I need to get 105»
-  if ((m = t.match(/(?:what|how much|which|what average|what grades?) (?:do |would |will )?(?:i )?(?:need|have to get|must get|have to average).*?(\d{2,3})/))) {
-    const b = Math.min(110, +m[1]); if (b >= 66) return { tipo: 'serve', base: b };
+  // «what do I need for 110», «what average do I need to get 105», «what do I need for 2.0», «what do I need for a first»
+  // (le classi del Regno Unito: First 70, 2:1 60, 2:2 50, Third 40; gli onori latini degli Stati Uniti sul GPA). L'obiettivo è
+  // il numero detto: se è nella scala del voto finale lo decide js/libretto.js
+  if ((m = t.match(/(?:what|how much|which|what average|what grades?|what gpa) (?:do |would |will )?(?:i )?(?:need|have to get|must get|have to average)\b(.*)$/))) {
+    // prima le classi (hanno delle cifre: «2:1»), poi il numero detto, poi gli onori («110 cum laude» resta 110)
+    const w = OBIETTIVI.find(([re, , classe]) => classe && re.test(m[1])), b = obiettivoDetto(m[1]), o = OBIETTIVI.find(([re]) => re.test(m[1]));
+    if (w) return { tipo: 'serve', base: w[1] };
+    if (b != null) return { tipo: 'serve', base: b };
+    if (o) return { tipo: 'serve', base: o[1] };
   }
   if (/\b(average|gpa|grades|my grades|grade record|degree mark|graduation mark|final mark|credits|ects|how am i doing)\b/.test(t) && !/\b(explain|mean|means|meaning|calculate|compute)\b/.test(t) && (!/\b(what is|what's|whats|what are)\b/.test(t) || /\bmy\b/.test(t))) return { tipo: 'libretto' };
 
@@ -385,12 +406,17 @@ export function leggiLavoro(testo) {
 }
 
 // gli stessi esempi dell'italiano, nello stesso ordine
+// i voti degli esempi detti in inglese: la classe del Regno Unito a parole, le lettere con l'articolo; i decimali col punto
+export const VOTI_ESEMPIO = { uk: { obiettivo: 'a first' }, us: { voto: 'an A-', simula: 'an A' } };
+export const VIRGOLA = false;
+// gli esempi della barra («Prova a scrivere»): {voto}, {obiettivo} e {simula} sono i voti del sistema scelto
+// (riempiEsempi() di js/comandi/comune.js, esempi() di js/comandi.js)
 export const ESEMPI = [
   ['focus 50 on calculus 2', 'starts the timer and counts the hours'],
-  ['I got 28 in physics', 'records the grade and updates your average'],
+  ['I got {voto} in physics', 'records the grade and updates your average'],
   ['exam databases on 15 January 9 credits', 'adds the exam date'],
-  ['what do I need for 110', 'the average you need from here to the end'],
-  ['what if I get 30 in calculus 2', 'simulates your average'],
+  ['what do I need for {obiettivo}', 'the average you need from here to the end'],
+  ['what if I get {simula} in calculus 2', 'simulates your average'],
   ['syllabus for calculus 2', 'paste the syllabus: a map of the topics and a plan up to the exam'],
   ['past exam questions for calculus 2: …', 'the ones from your course group: they move up in the plan'],
   ['past papers for calculus 2: …', 'the exercises of an old exam: one a day, on today\'s topics'],

@@ -6,8 +6,8 @@
 // Se la frase non è un comando, ritorna null e (se c'è la chiave) ci pensa l'AI.
 // Le parti senza lingua (date e orari in cifre, gli errori incollati) stanno in js/comandi/comune.js.
 import { lingua } from './lingua.js';
-import { D } from './dati.js';
-import { inLingua, detto } from './comandi/comune.js';
+import { D, sistemaVoti } from './dati.js';
+import { inLingua, detto, riempiEsempi } from './comandi/comune.js';
 import * as it from './comandi/it.js';
 import * as en from './comandi/en.js';
 
@@ -50,8 +50,11 @@ export const leggiLavoro = testo => prima('leggiLavoro', testo);
 // i numeri detti a voce diventano cifre nella lingua scelta («ventotto» → 28, «twenty-eight» → 28; in italiano è la
 // funzione di sempre, che js/formule.js usa per le formule dettate). Una lingua senza le sue parole lascia il testo com'è
 export const numeri = t => (R[lingua]?.numeri ? R[lingua].numeri(t) : t);
-// gli esempi della lingua scelta: [frase, cosa fa]
+// gli esempi della lingua scelta: [frase, cosa fa], con {voto}, {obiettivo} e {simula} al posto dei voti
 export const ESEMPI = scelto().ESEMPI;
+// gli esempi da mostrare, con i voti del sistema scelto (quello con cui la barra legge i voti: js/libretto.js,
+// interpretaVoti), o di quello dato. In italiano con il sistema italiano sono gli esempi di sempre
+export const esempi = (sistema = sistemaVoti(), ric = scelto()) => riempiEsempi(ric.ESEMPI, sistema, { virgola: ric.VIRGOLA !== false, voti: ric.VOTI_ESEMPIO });
 // le piccole parole dentro le schede nella lingua scelta (sì/no di una conferma, «basta» dell'orale…): dice(testo, 'si')
 export const PAROLE = scelto().PAROLE || en.PAROLE;
 export const dice = (testo, quale) => detto(testo, PAROLE, quale);

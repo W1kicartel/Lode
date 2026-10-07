@@ -127,3 +127,59 @@ export function detto(testo, P, quale) {
   if (quale === 'voto') return lista.some(w => x.startsWith(w) && !/\w/.test(x.charAt(w.length)));
   return lista.includes(x);
 }
+
+/* ---------- i voti detti ---------- */
+// Un voto detto nella barra, in qualsiasi sistema (docs/LINGUE.md, «I voti»): «28», «8,5», «1.7», «2,3», «72», «72 %». Il
+// riconoscitore restituisce il numero detto; se il sistema scelto lo ha lo decide js/libretto.js (interpretaVoti) con
+// js/sistemi.js. VOTO_CIFRE vale dopo un verbo o un articolo («I got 8.5», «ich hab ne 2»); VOTO_SOLO, senza verbo, vuole
+// due cifre o i decimali («1,7 in Mathe»: «2 in Mathe» da solo non è un voto)
+export const VOTO_CIFRE = '(\\d{1,3}(?:[.,]\\d{1,2})?(?: ?%)?)';
+export const VOTO_SOLO = '(\\d{2,3}(?:[.,]\\d{1,2})?(?: ?%)?|\\d[.,]\\d{1,2})';
+// le lettere degli Stati Uniti («A», «A-», «B+», nella frase in minuscolo): il numero è il punteggio GPA, come lo salva
+// js/sistemi.js (A− → 3,7)
+export const VOTO_LETTERA = '([abcdf][+\\-−–]?)(?![\\p{L}\\d+\\-−–])';
+const GPA = { 'a+': 4, a: 4, 'a-': 3.7, 'b+': 3.3, b: 3, 'b-': 2.7, 'c+': 2.3, c: 2, 'c-': 1.7, 'd+': 1.3, d: 1, 'd-': 0.7, f: 0 };
+// il numero di un voto detto (cifre o lettera), fra 0 e 100; altrimenti null
+export function numeroVoto(x) {
+  const s = String(x ?? '').trim().toLowerCase().replace(/[−–]/g, '-');
+  if (/^[a-f]/.test(s)) return s in GPA ? GPA[s] : null;
+  const v = Number(s.replace(/\s*%$/, '').replace(',', '.'));
+  return s && Number.isFinite(v) && v >= 0 && v <= 100 ? v : null;
+}
+// l'obiettivo di «quanto mi serve»: l'ultimo numero detto («110», «105», «2,0», «3.5», «7»), come numero. Da 66 in su è la
+// base di laurea italiana (al massimo 110, come prima); sotto è un voto finale di un altro sistema (lo legge js/libretto.js)
+export function obiettivoDetto(resto) {
+  const tutti = [...String(resto ?? '').matchAll(/(?<![\d.,])(\d{1,3}(?:[.,]\d{1,2})?)(?![\d])/g)];
+  if (!tutti.length) return null;
+  const b = Number(tutti[tutti.length - 1][1].replace(',', '.'));
+  if (!Number.isFinite(b) || b <= 0) return null;
+  return b >= 66 ? Math.min(110, b) : b;
+}
+
+/* ---------- i voti negli esempi della barra ---------- */
+// Gli esempi di «Prova a scrivere» (ESEMPI di ogni riconoscitore) hanno {voto}, {obiettivo} e {simula} al posto dei numeri:
+// qui diventano i voti del sistema scelto, così ogni esempio è un voto che il sistema ha. Per ogni sistema: un voto buono,
+// un obiettivo tipico del voto finale, il voto di «e se prendo». In Italia 28, 110 e 30: gli esempi di sempre
+export const VOTI_ESEMPIO = {
+  it: { voto: 28, obiettivo: 110, simula: 30 },
+  es: { voto: 8.5, obiettivo: 8, simula: 9 },
+  fr: { voto: 15, obiettivo: 14, simula: 16 },
+  de: { voto: 1.7, obiettivo: 2, simula: 1.3 },
+  pt: { voto: 16, obiettivo: 14, simula: 17 },
+  br: { voto: 8.5, obiettivo: 7, simula: 9 },
+  uk: { voto: 72, obiettivo: 70, simula: 80 },
+  us: { voto: 'A-', obiettivo: 3.5, simula: 'A' },
+};
+// ESEMPI con i voti del sistema (codice). opz: virgola (il separatore dei decimali della lingua: «8,5»; in inglese «8.5») e
+// voti (le parole della lingua per un sistema, dal riconoscitore: «a first», «an A-»). In Germania i voti hanno sempre un
+// decimale («2,0»), come l'obiettivo del GPA («3.5»)
+export function riempiEsempi(ESEMPI, sistema, { virgola = true, voti = {} } = {}) {
+  const cod = sistema in VOTI_ESEMPIO ? sistema : 'it', base = VOTI_ESEMPIO[cod], proprie = voti?.[cod] || {};
+  const scrivi = k => {
+    const x = proprie[k] ?? base[k];
+    if (typeof x !== 'number') return x;
+    const s = cod === 'de' || (cod === 'us' && k === 'obiettivo') ? x.toFixed(1) : String(x);
+    return virgola ? s.replace('.', ',') : s;
+  };
+  return ESEMPI.map(([frase, cosa]) => [frase.replace(/\{(voto|obiettivo|simula)\}/g, (_, k) => scrivi(k)), cosa]);
+}

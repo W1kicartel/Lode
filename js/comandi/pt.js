@@ -10,7 +10,7 @@
 // I numeri a parole («vinte e oito») diventano cifre solo qui dentro: numeri() non si esporta, perché le formule dettate
 // in portoghese restano come sono (docs/LINGUE.md, «La voce e le formule»).
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta, VOTO_CIFRE, VOTO_SOLO, numeroVoto, obiettivoDetto } from './comune.js';
 
 const DIAS = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
 const MESES = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -246,16 +246,19 @@ export function interpreta(frase) {
   if ((m = casa(/^(?:nov[oa]\s+)?(?:cartao|carta|flashcard|ficha)\s*(?:(?:de|da|do|para|pra)\s+([^:]+?))?\s*:\s*(.+?)\s*(?:=|->|→|\|)\s*(.+)$/i, grezzo)))
     return { tipo: 'carta', esame: m[1] ? trovaEsame(m[1]) : null, fronte: m[2], retro: m[3] };
 
-  // simulazione: «e se eu tirar 28 em cálculo». I voti sono quelli detti (scala italiana per ora: il sistema dei voti decide)
+  // simulazione: «e se eu tirar 28 em cálculo», «e se eu tirar 9 em física», «e se eu tirar 8,5 em cálculo». Il voto è quello
+  // detto: se il sistema dei voti lo ha lo decide js/libretto.js
   const LOUVOR = '( com louvor| cum laude| e louvor| e lode| lode| com distincao)?';
-  if ((m = casa(new RegExp(`^(?:e )?se (?:eu )?(?:tirar|tiver|tiro|fizer|conseguir|levar|sacar) (?:um |uma )?(\\d{2})${LOUVOR} (?:a|em|no|na|ao|à)\\s*(.+)$`), t))) {
-    const v = +m[1];
-    if (v >= 18 && v <= 30) return { tipo: 'simula', voto: v, lode: !!m[2] && v === 30, esame: trovaEsame(pulisci(m[3])), nomeDetto: pulisci(m[3]) };
+  if ((m = casa(new RegExp(`^(?:e )?se (?:eu )?(?:tirar|tiver|tiro|fizer|conseguir|levar|sacar) (?:um |uma |nota )?${VOTO_CIFRE}${LOUVOR} (?:a|em|no|na|ao|à)\\s*(.+)$`), t))) {
+    const v = numeroVoto(m[1]);
+    if (v != null) return { tipo: 'simula', voto: v, lode: !!m[2] && v === 30, esame: trovaEsame(pulisci(m[3])), nomeDetto: pulisci(m[3]) };
   }
-  // voto: «tirei 28 em mecânica» · «tive 28 a mecânica» · «30 com louvor em cálculo 2» · «passei a inglês»
-  if ((m = casa(new RegExp(`^(?:tirei|tive|fiz|passei com|consegui|levei|sacei|nota)?\\s*(?:(?:a |uma )?nota (?:de )?)?(?:um |uma )?(\\d{2})${LOUVOR}\\s+(?:a|em|no|na|ao|à)\\s+(.+)$`), t))) {
-    const v = +m[1];
-    if (v >= 18 && v <= 30) return { tipo: 'voto', voto: v, lode: !!m[2] && v === 30, esame: trovaEsame(pulisci(m[3])), nomeDetto: pulisci(m[3]) };
+  // voto: «tirei 28 em mecânica» · «tive 28 a mecânica» · «tirei 8,5 em física» · «30 com louvor em cálculo 2» · «passei a
+  // inglês». Senza il verbo il voto ha due cifre o i decimali («8,5 em física»): «2 em física» da solo non è un voto
+  if ((m = casa(new RegExp(`^(?:tirei|tive|fiz|passei com|consegui|levei|sacei|nota|tirei nota|tive nota) (?:(?:a |uma )?nota (?:de )?)?(?:um |uma )?${VOTO_CIFRE}${LOUVOR}\\s+(?:a|em|no|na|ao|à)\\s+(.+)$`), t)) || (m = casa(new RegExp(`^(?:(?:a |uma )?nota (?:de )?)?(?:um |uma )?${VOTO_SOLO}${LOUVOR}\\s+(?:a|em|no|na|ao|à)\\s+(.+)$`), t))) {
+    // «tive 15 a mecânica e estou triste» è uno sfogo, non un voto da segnare: resta all'AI
+    const v = /\s(?:e|mas|porque|que) (?:estou|to|tou|fiquei|foi|nao|ja|agora|acho)\b/.test(semAcentos(m[3])) ? null : numeroVoto(m[1]);
+    if (v != null) return { tipo: 'voto', voto: v, lode: !!m[2] && v === 30, esame: trovaEsame(pulisci(m[3])), nomeDetto: pulisci(m[3]) };
   }
   if ((m = casa(/^(?:eu )?(?:passei|fiquei aprovad[oa]|fui aprovad[oa]|despachei) (?:a |o |no |na |em |ao )?(?:cadeira de |disciplina de |exame de |prova de )?(.+?)(?: \(?(?:aprovado|aprovada|apto|apta|sem nota)\)?)?$/, t)) && !/\d/.test(m[1]) && trovaEsame(pulisci(m[1])))
     return { tipo: 'idoneita', esame: trovaEsame(pulisci(m[1])), nomeDetto: pulisci(m[1]) };
@@ -290,9 +293,10 @@ export function interpreta(frase) {
     if (nome && !/^(?:e|mas|porque|que|estou|tou|to|nao|ja|so)\b/.test(semAcentos(nome)) && !/ (?:e|sera|vai ser|fica|calha|cai) (?:no |a |em )?(?:dia )?\d/.test(semAcentos(nome).toLowerCase()) && (/\b(?:exame|prova)\b/.test(u) || d || cfu)) return { tipo: 'esame', nome, cfu, data: d?.data || null, esistente: trovaEsame(nome) };
   }
 
-  // «quanto preciso para 110», «que média preciso para começar com 105»
-  if ((m = u.match(/(?:quanto|que media|qual media|qual a media|que nota|que notas|o que) (?:e que )?(?:eu )?(?:preciso|precisava|tenho de|tenho que|me falta|falta|devo).*?(\d{2,3})/))) {
-    const b = Math.min(110, +m[1]); if (b >= 66) return { tipo: 'serve', base: b };
+  // «quanto preciso para 110», «que média preciso para começar com 105», «quanto preciso para 7», «quanto preciso para
+  // 8,5». L'obiettivo è il numero detto: se è nella scala del voto final lo decide js/libretto.js
+  if ((m = u.match(/(?:quanto|que media|qual media|qual a media|que nota|que notas|o que) (?:e que )?(?:eu )?(?:preciso|precisava|tenho de|tenho que|me falta|falta|devo)\b(.*)$/))) {
+    const b = obiettivoDetto(m[1]); if (b != null) return { tipo: 'serve', base: b };
   }
   if ((/\b(?:media|medias|pauta|caderneta|historico|creditos|ects|nota final|nota de curso|como estou|como vou)\b/.test(u) || /^(?:as )?(?:minhas )?notas$/.test(u)) && !/\b(?:explica|significa|calcula|calcular|quer dizer)\b/.test(u) && (!/\b(?:o que e|que e|qual e|o que sao)\b/.test(u) || /\b(?:minha|minhas|meu|meus)\b/.test(u))) return { tipo: 'libretto' };
 
@@ -404,12 +408,14 @@ export function leggiLavoro(testo) {
 
 // gli stessi esempi dell'italiano, nello stesso ordine (spiegazioni in portoghese del Brasile, come il catalogo pt: «você»,
 // celular, anotações, prova; il riconoscitore capisce anche le forme del Portogallo)
+// gli esempi della barra («Prova a scrivere»): {voto}, {obiettivo} e {simula} sono i voti del sistema scelto
+// (riempiEsempi() di js/comandi/comune.js, esempi() di js/comandi.js)
 export const ESEMPI = [
   ['foco 50 em cálculo 2', 'inicia o cronômetro e conta as horas'],
-  ['tirei 28 em física', 'registra a nota e atualiza a média'],
+  ['tirei {voto} em física', 'registra a nota e atualiza a média'],
   ['prova de banco de dados dia 15 de janeiro 9 créditos', 'adiciona a data da prova'],
-  ['quanto preciso para 110', 'a média que você precisa daqui até o fim'],
-  ['e se eu tirar 30 em cálculo 2', 'simula a média'],
+  ['quanto preciso para {obiettivo}', 'a média que você precisa daqui até o fim'],
+  ['e se eu tirar {simula} em cálculo 2', 'simula a média'],
   ['programa de cálculo 2', 'cole a ementa: mapa dos temas e plano até a prova'],
   ['perguntas de prova de cálculo 2: …', 'as do grupo da disciplina: sobem no plano'],
   ['provas antigas de cálculo 2: …', 'os exercícios de uma prova antiga: um por dia, sobre os temas de hoje'],
