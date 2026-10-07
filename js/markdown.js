@@ -159,7 +159,9 @@ export function leggiOrario(testo) {
     if (c.length < 4) continue;
     const corso = c[0].replace(/^\[\[|\]\]$/g, '').split('|')[0].trim();
     // i giorni del vault aperto; se nessuno corrisponde, quelli italiani (un Orario.md scritto prima o copiato da un altro vault)
-    const gg = c[1].normalize('NFC').toLowerCase().split(/[,\s]+/), dai = elenco => gg.map(g => elenco.findIndex(b => g.startsWith(b))).filter(g => g >= 0);
+    // (senza accenti da tutte e due le parti: «miercoles» e «sabado» valgono come «mié» e «sáb»)
+    const piega = x => x.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+    const gg = c[1].split(/[,\s]+/).map(piega), dai = elenco => gg.map(g => elenco.findIndex(b => g.startsWith(piega(b)))).filter(g => g >= 0);
     let giorni = dai(nomi().orario.giorni); if (!giorni.length && nomi().lingua !== 'it') giorni = dai(IT.orario.giorni);
     const ora = x => { const m = x.match(/^(\d{1,2})(?:[:.](\d{2}))?$/); return m ? `${m[1].padStart(2, '0')}:${m[2] || '00'}` : null; };
     if (corso && giorni.length && ora(c[2]) && ora(c[3])) out.push({ corso, giorni, inizio: ora(c[2]), fine: ora(c[3]), aula: c[4] || '' });

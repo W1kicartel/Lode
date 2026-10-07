@@ -804,15 +804,18 @@ export function creaMotore({ fs, vault: vaultDato, dati, orologio, casuale, regi
   // con questa versione, e il file non mostra mai una vista più povera di quella che lo studente aveva davanti
   async function orario() {
     if (fermo || !st) return;
-    const base = String(nomeOrario() || 'Orario'), OF = `${base}.md`, rxO = new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.*\\.md$`);
-    const nomi = ((await elenca(vaultDir)) || []).filter(n => rxO.test(n.normalize('NFC'))).sort((a, b) => (a === OF ? -1 : b === OF ? 1 : a < b ? -1 : 1));
+    const base = String(nomeOrario() || 'Orario').normalize('NFC'), OF = `${base}.md`, rxO = new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.*\\.md$`);
+    // i nomi letti dal disco si confrontano in una forma sola (NFC): «Horário.md» scomposto da un servizio cloud resta l'orario
+    // principale, e si legge col nome che ha sul disco
+    const nfc = n => n.normalize('NFC'), eOF = n => nfc(n) === OF;
+    const nomi = ((await elenca(vaultDir)) || []).filter(n => rxO.test(nfc(n))).sort((a, b) => (eOF(a) ? -1 : eOF(b) ? 1 : a < b ? -1 : 1));
     let principale = null;
     const nuovi = new Map();
     for (const f of nomi) {
       const t = await leggi(`${vaultDir}/${f}`); if (t == null) continue;
-      const r = eventiDaOrario(t, piegaOra(), f === OF ? orarioVisto : null);
+      const r = eventiDaOrario(t, piegaOra(), eOF(f) ? orarioVisto : null);
       for (const e of r.eventi) if (!noti.has(e.h)) nuovi.set(e.h, e);
-      if (f === OF) principale = r.parziale ? null : { testo: t, marcatore: r.marcatore, righe: r.righe, visto: !!r.marcatore && !!orarioVisto && orarioVisto.h === r.marcatore.h };
+      if (eOF(f)) principale = r.parziale ? null : { testo: t, marcatore: r.marcatore, righe: r.righe, visto: !!r.marcatore && !!orarioVisto && orarioVisto.h === r.marcatore.h };
     }
     // un'aggiunta (o una rimozione) fatta in Obsidian che il diario non prende (disco pieno): il marcatore non si rimette, e le
     // righe viste restano in memoria (orarioVisto, orario.mjs) per riconoscere dopo una riga tolta anche se il file torna come

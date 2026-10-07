@@ -135,13 +135,24 @@ body{--font-text-theme:"Geist",-apple-system,"Segoe UI",sans-serif;--font-monosp
 // i nomi italiani, e non si rinomina niente. Una cartella vuota, o un vault di Obsidian dove Lode non ha mai scritto, nasce
 // nella lingua di adesso (quella della barra). La decisione si scrive subito in vault.json: dopo, la lingua della barra non conta più
 const VAULT_JSON = vault => join(vault, '.lode', 'vault.json');
-const TRACCE_IT = ['Lezioni', 'Corsi', 'Benvenuto.md', 'Home.md', 'Orario.md', 'Esami.md', 'Glossario.md', join('Lode', 'Memoria.md')];
 export function leggiNomi(vault) {
   try { const j = JSON.parse(readFileSync(VAULT_JSON(vault), 'utf8')); if (j && typeof j === 'object' && typeof j.lingua === 'string') return NM.completa(j); } catch { }
   return null;
 }
+// senza vault.json (mai scritto, rovinato, o rimasto indietro con un servizio che non copia le cartelle col punto, come
+// Obsidian Sync) la lingua si riconosce dalle cartelle e dalle note che Lode ha già creato: quella con più tracce, a parità
+// l'italiano (i vault nati prima delle lingue). Nessuna traccia: un vault nuovo, nella lingua della barra
+const tracce = N => [N.cartelle.lezioni, N.cartelle.corsi, N.cartelle.modelli, ...['benvenuto', 'home', 'orario', 'esami', 'glossario'].map(k => NM.md(N.note[k])), join(N.cartelle.lode, NM.md(N.note.memoria))];
+export function linguaDalleTracce(vault) {
+  let meglio = null, punti = 0;
+  for (const cod of NM.LINGUE_NOMI) {
+    const p = tracce(NM.nomiDi(cod)).filter(x => existsSync(join(vault, x))).length;
+    if (p > punti) { meglio = cod; punti = p; }
+  }
+  return meglio;
+}
 export function nomiPer(vault, lingua = 'it') {
-  return leggiNomi(vault) || (TRACCE_IT.some(x => existsSync(join(vault, x))) ? NM.nomiDi('it') : NM.nomiDi(lingua));
+  return leggiNomi(vault) || NM.nomiDi(linguaDalleTracce(vault) || lingua);
 }
 // apre il vault coi suoi nomi (senza scrivere niente): per chi legge un vault senza crearlo
 export function usaNomi(vault, lingua = 'it') { return NM.impostaNomi(nomiPer(vault, lingua)); }

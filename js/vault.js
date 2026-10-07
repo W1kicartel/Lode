@@ -55,6 +55,7 @@ export async function annota(tipo, testo, { corso, termine, lezione, grezza } = 
 // apre la nota in Obsidian; l'esito dice se Obsidian c'è ('ok'), c'è ma il vault va aperto una volta ('da_aprire') o manca ('manca')
 export async function apri(l) {
   if (!L) return { esito: 'web' };
+  await pronto;   // i nomi del vault (la cartella delle lezioni, «Appunti sparsi»)
   const x = l || lezioneDaAnnotare();
   try { return await L.invoca('vault:apri', { file: x.file || fileLezione(x), nuovo: x.file ? undefined : notaLezione(x) }); } catch (e) { return { esito: 'errore', errore: e.message }; }
 }

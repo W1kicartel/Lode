@@ -205,6 +205,57 @@ VA.crea(EN, [{ corso: 'Calculus 2', giorni: [1, 3], inizio: '09:00', fine: '11:0
   prova('riaprire un vault rimette i suoi nomi', VA.nomi().lingua === 'en');
 }
 
+/* ---------- senza vault.json (rovinato, o rimasto indietro: Obsidian Sync non copia .lode) la lingua viene dalle tracce ---------- */
+{
+  const OR = [{ corso: 'A', giorni: [1], inizio: '09:00', fine: '10:00', aula: '' }];
+  const R1 = nuovaCartella('rovinato'); VA.crea(R1, OR, 'en'); writeFileSync(join(R1, '.lode', 'vault.json'), '{rotto');
+  VA.crea(R1, OR, 'de');
+  prova('vault.json rovinato: il vault inglese resta inglese', VA.nomi().lingua === 'en' && !existsSync(join(R1, 'Vorlesungen')) && !existsSync(join(R1, 'Lezioni')));
+  const R2 = nuovaCartella('senzalode'); VA.crea(R2, OR, 'en'); rmSync(join(R2, '.lode'), { recursive: true });
+  VA.crea(R2, OR, 'it');
+  prova('senza .lode e barra italiana: il vault inglese resta inglese (Home.md non basta)', VA.nomi().lingua === 'en' && !existsSync(join(R2, 'Lezioni')) && !existsSync(join(R2, 'Benvenuto.md')) && JSON.parse(leggi(R2, '.lode/vault.json')).lingua === 'en');
+  const R3 = nuovaCartella('es-senzalode'); VA.crea(R3, OR, 'es'); rmSync(join(R3, '.lode'), { recursive: true });
+  VA.crea(R3, OR, 'it');
+  prova('senza .lode: lo spagnolo vince anche se «Lode/Memoria.md» è un nome italiano', VA.nomi().lingua === 'es' && !existsSync(join(R3, 'Lezioni')));
+  const R4 = nuovaCartella('solo-cartelle'); mkdirSync(join(R4, 'Lezioni')); mkdirSync(join(R4, 'Corsi'));
+  VA.crea(R4, OR, 'pt');
+  prova('un vault vecchio con le sole cartelle resta italiano', VA.nomi().lingua === 'it' && !existsSync(join(R4, 'Aulas')));
+  const R5 = nuovaCartella('solo-home'); writeFileSync(join(R5, 'Home.md'), '# Casa\n');
+  VA.crea(R5, null, 'fr');
+  prova('un vault con la sola Home.md resta italiano (come prima)', VA.nomi().lingua === 'it');
+}
+/* ---------- l'orario: i giorni si riconoscono anche senza accenti ---------- */
+{
+  NM.impostaNomi('es');
+  const o = M.leggiOrario('| Asignatura | Días | Inicio | Fin | Aula |\n|---|---|---|---|---|\n| A | miercoles, sabado | 9 | 11 | |\n| B | mié, Sáb | 9 | 11 | |\n');
+  prova('es: «miercoles» e «sabado» senza accento', o.length === 2 && o.every(x => x.giorni.join() === '3,6'), JSON.stringify(o));
+  NM.impostaNomi('pt');
+  const o2 = M.leggiOrario('| D | Dias | Início | Fim | Sala |\n|---|---|---|---|---|\n| A | segunda, quarta, sabado | 9 | 11 | |\n'.normalize('NFD'));
+  prova('pt: giorni interi, senza accento e scomposti (NFD)', o2[0]?.giorni.join() === '1,3,6', JSON.stringify(o2));
+  NM.impostaNomi('it');
+}
+
+/* ---------- la sincronizzazione su disco vero, in un vault pt-BR: l'orario è «Horário.md» (anche scritto scomposto, NFD) ---------- */
+{
+  const fsp = await import('node:fs/promises');
+  const { caso } = await import('./sync-sim/comune.mjs'), { datiIniziali } = await import('./sync-sim/operazioni.mjs');
+  const radice = nuovaCartella('sync-pt'), vault = join(radice, 'vault');
+  NM.impostaNomi('pt');
+  mkdirSync(join(vault, '.lode'), { recursive: true });
+  writeFileSync(join(vault, '.lode', 'dati.json'), JSON.stringify(datiIniziali()));
+  const nome = 'Horário.md'.normalize('NFD');
+  writeFileSync(join(vault, nome), M.orarioMd(datiIniziali().orario));
+  let t = 1790000000000;
+  const A = creaMotore({ fs: fsp, vault, dati: join(radice, 'dati'), orologio: () => (t += 1000), casuale: caso(21), macchina: 'MA', parametri: { kdf: 'scrypt', N: 2 ** 10, r: 8, p: 1 }, nomeOrario: () => NM.nomi().note.orario });
+  await A.apri(); await A.attiva({ modo: 'nuovo' }); await A.arrivati();
+  const vero = (await fsp.readdir(vault)).filter(n => n.normalize('NFC').startsWith('Horário'));
+  const om = vero.length === 1 ? readFileSync(join(vault, vero[0]), 'utf8') : '';
+  prova('sync pt: l\'orario «Horário.md» riceve il marcatore, nessun Orario.md', /<!-- lode2 n=\d+/.test(om) && !existsSync(join(vault, 'Orario.md')) && vero.length === 1, vero.join());
+  prova('sync pt: la lezione dell\'orario arriva nella vista', A.vista().orario?.some(o => o.corso === 'Analisi ZQ 7' && o.giorni.join() === '0,2'), A.vista().orario);
+  await A.chiudi?.();
+  NM.impostaNomi('it');
+}
+
 for (const d of temp) rmSync(d, { recursive: true, force: true });
 NM.impostaNomi('it');
 console.log(`${ok} prove passate, ${ko} fallite`);
