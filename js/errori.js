@@ -1113,7 +1113,7 @@ const VOCI = [
   {
     id: 'py-indice', lingue: ['python'], re: [/^IndexError: (?<cosa>list|string|tuple|range object) index out of range/, /^IndexError: (?<vuota>pop from empty list)/, /^IndexError/],
     etichetta: t('errori.py-indice.etichetta'),
-    frase: d => d.parti.vuota ? t('errori.py-indice.frase') : t('errori.py-indice.frase-2', { cosa: d.parti.cosa === 'string' ? t('errori.py-indice.frase-3') : d.parti.cosa === 'tuple' ? t('errori.py-indice.frase-4') : t('errori.py-indice.frase-5') }),
+    frase: d => d.parti.vuota ? t('errori.py-indice.frase') : d.parti.cosa === 'string' ? t('errori.py-indice.frase-stringa') : d.parti.cosa === 'tuple' ? t('errori.py-indice.frase-tupla') : t('errori.py-indice.frase-lista'),
     dove: d => t('errori.py-indice.dove', { laRiga: laRiga(d) }),
     cosa: () => t('errori.py-indice.cosa'),
     concetto: t('errori.py-indice.concetto'),
@@ -1476,7 +1476,7 @@ export function breve(d) {
 // Il testo breve per il diario (F4): «lista.c:42 «nodo non dichiarato»»
 export function perDiario(d) {
   const dove = d?.file ? `${nomeFile(d.file)}${d.riga ? ':' + d.riga : ''} ` : '';
-  return `${dove}«${breve(d)}»`;
+  return t('errori.per-diario', { dove, breve: breve(d) });
 }
 
 // I tre passi per uno studente del primo anno. Opzioni:
@@ -1502,8 +1502,8 @@ export function spiega(errore, { sorgente = null, righeCambiate = null, valutato
   const file = nomeFile(d.file);
   const luogo = file ? (d.riga ? t('errori.luogo-file-riga', { file, riga: d.riga }) : file) : d.riga ? t('errori.luogo-riga', { riga: d.riga }) : null;
   let frase = v ? v.frase(d, x) : t('errori.non-lo-conosco');
-  if (d.eccezione) frase = `${d.eccezione}: ${frase}`;
-  const intestazione = luogo ? `**${luogo}**${d.eccezione ? ' · ' : ': '}${frase}` : maiuscola(frase);
+  if (d.eccezione) frase = t('errori.con-eccezione', { eccezione: d.eccezione, frase });
+  const intestazione = luogo ? t(d.eccezione ? 'errori.intestazione-eccezione' : 'errori.intestazione', { luogo, frase }) : maiuscola(frase);
   let cosa = v ? v.cosa(d, x) : cosaGenerico(d, x);
   // le voci che sono già avvisi lo dicono da sé («È solo un avviso…»): la parola si cerca nella lingua della barra
   if (v && d.tipo === 'avviso' && !cosa.includes(t('errori.parola-avviso'))) cosa = t('errori.e-un-avviso', { cosa });
