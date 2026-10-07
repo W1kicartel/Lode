@@ -221,7 +221,9 @@ const c = f => C.interpreta(f);
   prova('prova.js: modulo valido con le sue funzioni', ['compiti', 'scegli', 'avvia', 'passo', 'consegna', 'chiudi', 'riepilogo'].every(k => typeof PV[k] === 'function'));
   const sw = leggi('../sw.js');
   prova('sw.js: js/prova.js nella cache, versione nuova', sw.includes("'js/prova.js'") && /CACHE = 'lode-v(\d+)'/.test(sw) && +sw.match(/CACHE = 'lode-v(\d+)'/)[1] >= 11);
-  const lode = leggi('../js/lode.js'), f = lode.slice(lode.indexOf('function provaEsiti'), lode.indexOf("/* ---------- il programma d'esame"));
+  // i testi della barra stanno nel catalogo italiano (js/lingue/it/barra3.js): ${t('chiave')} diventa il testo, poi si controlla come prima
+  const IT = (await import('../js/lingue/it/barra3.js')).default;
+  const lode = leggi('../js/lode.js').replace(/\$\{t\('([\w.-]+)'\)\}/g, (x, k) => typeof IT[k] === 'string' ? IT[k] : x), f = lode.slice(lode.indexOf('function provaEsiti'), lode.indexOf("/* ---------- il programma d'esame"));
   prova('lode.js: le soluzioni solo dopo «Salva»', f.length > 200 && f.indexOf('x.sol') > f.indexOf("salvaB.addEventListener('click'"), f.slice(0, 120));
   const l = lode.slice(lode.indexOf('function provaLascio'), lode.indexOf('function provaScaduta'));
   prova('lode.js: «Lascio perdere» accanto a «Consegno», con conferma, toglie senza chiudere', /data-consegno>Consegno<\/button><button[^>]*data-lascio>Lascio perdere/.test(lode) && l.includes('data-si') && l.includes('PV.togli()') && !l.includes('PV.chiudi') && l.includes("fase === 'prova') F.ferma()"), l.slice(0, 120));
