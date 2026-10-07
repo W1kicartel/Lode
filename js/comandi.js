@@ -7,6 +7,7 @@
 // Le parti senza lingua (date e orari in cifre, gli errori incollati) stanno in js/comandi/comune.js.
 import { lingua } from './lingua.js';
 import { D } from './dati.js';
+import { inLingua } from './comandi/comune.js';
 import * as it from './comandi/it.js';
 import * as en from './comandi/en.js';
 
@@ -25,8 +26,20 @@ function prima(nome, ...a) {
   if (r != null || s === en) return r ?? null;
   return en[nome]?.(...a) ?? null;
 }
+// l'inglese di riserva capisce le frasi inglesi, non quelle nella lingua scelta che cominciano con una parola inglese
+// («today è una giornata storta», «open la pagina di fisica», «review del codice di lab3»): quelle vanno all'AI. Restano
+// buone, anche con parole della lingua scelta, quelle che trovano un esame del libretto («review basi di dati»), l'errore
+// incollato, le carte («flashcard: teorema di Green = …»), i progetti e il cambio di lingua
+const LIBERI = new Set(['errore', 'carta', 'progetto', 'lingua']);
+function interpretaFrase(frase) {
+  const s = scelto(), r = s.interpreta(frase);
+  if (r != null || s === en) return r;
+  const x = en.interpreta(frase);
+  if (x && !LIBERI.has(x.tipo) && !x.esame && !x.esistente && inLingua(frase, lingua)) return null;
+  return x;
+}
 
-export const interpreta = frase => prima('interpreta', frase);
+export const interpreta = frase => interpretaFrase(frase);
 export const leggiData = testo => prima('leggiData', testo);
 // giorni e ore di una frase, l'orario di una lezione, i turni di lavoro (per il benvenuto, js/ore.js e le prove)
 export const giorniEOre = testo => prima('giorniEOre', testo);

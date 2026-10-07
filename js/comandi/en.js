@@ -6,7 +6,7 @@
 // riconoscitore della lingua scelta non capisce. Se la frase non è un comando ritorna null e (se c'è la chiave) ci pensa l'AI.
 // I voti restano quelli detti (28, 30 cum laude): come leggerli lo decide il sistema dei voti (js/sistemi.js), non qui.
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, hh, linguaDetta } from './comune.js';
 
 const GIORNI = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const MESI = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
@@ -26,7 +26,9 @@ function valore(s) {
   return v;
 }
 // «one» resta parola quando è un pronome («this one», «which one»), ma «one hour» e «one hundred» sono numeri
-export const numeri = t => String(t).replace(NUMERO, (w, i, tutto) => (/^one$/i.test(w) && /\b(?:this|that|which|the|each|every|any|no|some) $/i.test(tutto.slice(0, i)) ? w : String(valore(w))));
+// i refusi più comuni di chi scrive in fretta (come SENTITO in it.js per la voce): «fourty», «reveiw», «langauge»
+const REFUSI = { fourty: 'forty', fourtyfive: 'forty-five', reveiw: 'review', reivew: 'review', revew: 'review', langauge: 'language', lanugage: 'language', languge: 'language', pomodorro: 'pomodoro', focsu: 'focus', fcous: 'focus', excercise: 'exercise', excercises: 'exercises' };
+export const numeri = t => String(t).replace(/\b[a-z]+\b/gi, w => REFUSI[w.toLowerCase()] || w).replace(NUMERO, (w, i, tutto) => (/^one$/i.test(w) && /\b(?:this|that|which|the|each|every|any|no|some) $/i.test(tutto.slice(0, i)) ? w : String(valore(w))));
 const NUM = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, twelve: 12, fifteen: 15, twenty: 20, thirty: 30 };
 const n = s => (s in NUM ? NUM[s] : Number(s));
 
@@ -56,6 +58,8 @@ export function leggiData(testo) {
   }
   return null;
 }
+// un esame senza nome: «an exam», «a test», «my final», «the midterm», o solo l'articolo («I have an exam tomorrow»)
+const SENZA_NOME = /^(?:(?:an?|the|my|one|another|this|that) )?(?:exam|test|oral|written|final|midterm|quiz)s?$|^(?:an?|the|my|one|another|this|that|next|coming|on|in|at)$/;
 const pulisci = s => s.replace(/^\s*(?:of|for|on|in|at|about|to|the|my|exam( of| for| in)?)\s+/i, '').replace(/^\s*(?:the|my)\s+/i, '').replace(/[?.!,;:]+$/, '').replace(/\s+(?:for|of|on|in|at|to|with|from|the)\s*$/i, '').trim().replace(/^(?:of|for|on|in|at|about|to|the|my|with)$/i, '');
 
 // minuti detti a parole: «50», «50 minutes», «an hour», «half an hour», «an hour and a half», «2 hours», «90 min»
@@ -176,7 +180,7 @@ export function interpreta(frase) {
   if (/^(?:what does (?:it|this(?: code| program)?) print|what prints|exercises? (?:in |on )?(?:c|programming)|train me (?:on|in) c)$/.test(t)) return { tipo: 'stampa' };
   if ((m = t.match(/^(?:what does (?:it|this(?: code| program)?) print(?: in)?|what prints(?: in)?|exercises? (?:in|on)|train me (?:on|in)) (c|java|python)$/))) return { tipo: 'stampa', lingua: m[1] };
   if ((m = t.match(/^(?:play|let's play|game|minigame|mini game|memory|train me|training|drill(?: me)?(?: on)?(?: the)? definitions|definitions)\b\s*(.*)$/))) {
-    const r = pulisci(m[1] || ''); return { tipo: 'gioco', corso: r || null };
+    const r = pulisci((m[1] || '').replace(/\b(?:with me|together)\b/, ' ').trim()); return { tipo: 'gioco', corso: r || null };
   }
   if (/^(?:open )?(?:my |the )?(?:notes|obsidian|vault|today's notes?|lecture notes?)(?: for today| from today| of today| of the lecture)?$/.test(t)) return { tipo: 'appunti' };
   // «lecture from the computer»: la videolezione (Teams, Zoom, la piattaforma online) trascritta dall'audio del computer
@@ -230,16 +234,22 @@ export function interpreta(frase) {
 
   // focus
   // anche con i minuti prima: «start a 25 minute pomodoro on calculus»
-  if ((m = t.match(/^(?:(?:start|begin|let's|do|set|run) )?(?:a |an )?(?:(\d{1,3})[ -]?(?:minutes?|mins?|m) )?(?:focus|pomodoro|timer|study session|session|study|studying|concentrate|concentration|deep work)\b\s*(.*)$/))) {
-    let resto = m[2]; const mi = m[1] ? { min: +m[1] } : leggiMinuti(resto); if (mi?.pezzo) resto = resto.replace(mi.pezzo, ' ');
-    resto = pulisci(resto.replace(/\s+/g, ' ').trim()); const e = resto ? trovaEsame(resto, { anche: 'daFare' }) || trovaEsame(resto) : null;
-    return { tipo: 'focus', min: mi ? Math.min(240, Math.max(1, mi.min)) : null, esame: e, nomeDetto: resto };
+  if ((m = t.match(/^(?:(?:start|begin|let's|lets|do|set|run) )?(?:a |an )?(?:(\d{1,3})[ -]?(?:minutes?|mins?|m) )?(?:focus|pomodoro|timer|study session|session|study|studying|concentrate|concentration|deep work)\b\s*(.*)$/))) {
+    // «focus for 45 minutes on databases»: il «for» dei minuti non fa parte del nome
+    let resto = m[2].replace(/^for (?=\d|an? |half |one |two |three )/, '').replace(/\b(?:with me|together)\b/, ' ');
+    // «studying is hard», «focus mode doesn't work», «study tips for finals», «session expired»: frasi, non un timer
+    if (!/^(?:is|are|was|were|be|been|has|have|had|does|doesn't|don't|isn't|wasn't|won't|can't|cannot|will|would|should|mode|tips?|advice|techniques?|methods?|music|playlist|apps?|recommendations?|ideas?|group|buddy|partner|expired|ended|sucks|hard|harder)\b/.test(resto.trim())) {
+      const mi = m[1] ? { min: +m[1] } : leggiMinuti(resto); if (mi?.pezzo) resto = resto.replace(mi.pezzo, ' ');
+      resto = pulisci(resto.replace(/\s+/g, ' ').trim()); const e = resto ? trovaEsame(resto, { anche: 'daFare' }) || trovaEsame(resto) : null;
+      return { tipo: 'focus', min: mi ? Math.min(240, Math.max(1, mi.min)) : null, esame: e, nomeDetto: resto };
+    }
   }
 
   // «the calculus exam is on 15 January», «I have calculus 2 on 13 October», «calculus 2 moved to the 20th of January»
   const QUANDO = '(on .+|in \\d.+|tomorrow|the day after tomorrow|next .+|this .+|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday).*)';
   if ((m = t.match(/^(?:the )?(?:exam|test|written exam|written|oral(?: exam)?|final) (?:for |of |in )?(.+?) (?:is|will be|falls) (?:on |in |at )?(.+)$/)) || (m = t.match(/^(?:the )?(.+?) (?:exam|test|oral|written exam|final) (?:is|will be|falls) (?:on |in |at )?(.+)$/)) || (m = t.match(new RegExp(`^i (?:have|got|take|sit) (?:(?:the|an|a|my) (?:exam|test|oral|written exam) (?:for |of |in |on )?|my )?(.+?) (?:exam )?${QUANDO}$`))) || (m = t.match(/^(?:the )?(?:exam (?:for |of |in )?)?(.+?) (?:exam )?(?:is |was |has been )?(?:moved|postponed|brought forward|rescheduled) (?:to|on|for) (.+)$/))) {
-    const d = leggiData(m[2]), e = trovaEsame(pulisci(m[1]));
+    // «I have an exam tomorrow», «I have a test on friday»: senza il nome dell'esame non è un comando (e «an» non è Analisi)
+    const d = SENZA_NOME.test(pulisci(m[1])) ? null : leggiData(m[2]), e = d && trovaEsame(pulisci(m[1]));
     if (d && (e || (/exam|test|written|oral|final/.test(t) && pulisci(m[1]).length >= 3))) return { tipo: 'esame', nome: e?.nome || pulisci(m[1]), cfu: null, data: d.data, esistente: e && !e.fatto ? e : null };
   }
   // nuovo esame: «exam databases on 15 January 9 credits», «add exam physics 2 worth 6 ECTS»
@@ -249,7 +259,9 @@ export function interpreta(frase) {
     const d = leggiData(resto); if (d) { const r = resto.replace(d.pezzo, ' '); resto = r !== resto ? r : norm(resto).replace(d.pezzo, ' '); }
     const nome = pulisci(String(resto).replace(/\b(on|the|of|for|at|and|worth|with|in)\s*$/g, '').replace(/\s+(on|the|of|for|at)\s*$/, '').replace(/\s+/g, ' ').trim());
     // «test» da solo è una parola di tutte le lingue («test non passano»): vale come esame solo con una data o i crediti
-    if (nome && (/\bexam\b/.test(t) || d || cfu)) return { tipo: 'esame', nome, cfu, data: d?.data || null, esistente: trovaEsame(nome) };
+    // «exam anxiety tips», «exam prep strategies»: senza data né crediti sono domande, non un esame nuovo
+    const frase = !d && !cfu && /^(?:anxiety|stress|stressed|nerves|tips?|prep|preparation|strategies|strategy|advice|season|results?|period|week|techniques?|help|questions?|practice|tomorrow)\b/.test(nome);
+    if (nome && !frase && (/\bexam\b/.test(t) || d || cfu)) return { tipo: 'esame', nome, cfu, data: d?.data || null, esistente: trovaEsame(nome) };
   }
 
   // «what do I need for 110», «what average do I need to get 105»
@@ -282,8 +294,9 @@ export function interpreta(frase) {
     const r = pulisci(m[2] || ''); return { tipo: 'crocette', esame: r ? trovaEsame(r) : null, nomeDetto: r, simulazione: /simul/.test(m[1]) };
   }
 
-  if (/^(?:my |the )?(?:exams|upcoming exams|next exams|exam calendar|calendar|exam session|exam dates|when are my exams)\b/.test(t)) return { tipo: 'esami' };
-  if (/^(?:today|plan|today's plan|my plan|plan for today|what (?:do|should) i study(?: today)?|what to study today|what do i do today)\b/.test(t)) return { tipo: 'oggi' };
+  // la frase intera (al più con «please»): «my exams are stressing me out» o «today I learned…» vanno all'AI
+  if (/^(?:my |the )?(?:exams|upcoming exams|next exams|exam calendar|calendar|exam session|exam dates|when are my exams)$/.test(t)) return { tipo: 'esami' };
+  if (/^(?:today|plan|today's plan|my plan|plan for today|what (?:do|should) i study(?: today)?|what to study today|what do i do today)$/.test(t)) return { tipo: 'oggi' };
 
   // ricerca diretta: il nome di un esame da solo apre la sua scheda
   const e = trovaEsame(t);
@@ -291,15 +304,26 @@ export function interpreta(frase) {
   return null;
 }
 
-// giorni e ore di una frase («monday and wednesday 9-11 room 7», «mon wed 2-7pm»): resto è quello che avanza, normalizzato
+// «9-5» all'inglese è dalle 9 alle 17: senza am/pm, una fine prima dell'inizio (tutte e due fino a mezzogiorno) è del pomeriggio.
+// «22-2» resta un turno di notte
+const pomeriggio = o => {
+  if (!o || /am|pm/.test(o.pezzo)) return o;
+  const h = x => +x.slice(0, 2), a = h(o.inizio), b = h(o.fine);
+  return b >= 1 && b < a && a <= 12 ? { ...o, fine: hh(b + 12, o.fine.slice(3)) } : o;
+};
+// giorni e ore di una frase («monday and wednesday 9-11 room 7», «mon wed 2-7pm», «monday to friday 9-5», «mon-fri
+// 9am-5pm»): resto è quello che avanza, normalizzato
 const GIORNO_BREVE = /\b(mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)s?\b/g;
+const DA_A = new RegExp(`${GIORNO_BREVE.source} ?(?:-|–|to|through|thru|till|until) ?${GIORNO_BREVE.source}`, 'g');
 export function giorniEOre(testo) {
   const basso = String(testo).toLowerCase();
-  const o = oreInCifre(basso.replace(/\bfrom (?=\d)/, ''), 'to|until|till');
+  const o = pomeriggio(oreInCifre(basso.replace(/\bfrom (?=\d)/, ''), 'to|until|till'));
   if (!o) return null;
-  let r = ' ' + norm(basso.replace(/\bfrom (?=\d)/, '').replace(o.pezzo, ' ')) + ' ';
-  const giorni = [], G = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-  r = r.replace(/ (?:on |every )?/g, ' ').replace(GIORNO_BREVE, (_, g) => { giorni.push(G.indexOf(g.slice(0, 3))); return ' '; });
+  const giorni = [], G = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'], g3 = g => G.indexOf(g.slice(0, 3));
+  // i giorni da … a …: «monday to friday», «mon-fri», «fri through sun» (tutti quelli in mezzo)
+  let r = basso.replace(o.pezzo, ' ').replace(DA_A, (_, a, b) => { for (let i = g3(a); ; i = (i + 1) % 7) { giorni.push(i); if (i === g3(b)) break; } return ' '; });
+  r = ' ' + norm(r.replace(/\bfrom (?=\d)/, '')) + ' ';
+  r = r.replace(/ (?:on |every )?/g, ' ').replace(GIORNO_BREVE, (_, g) => { giorni.push(g3(g)); return ' '; });
   return { giorni, inizio: o.inizio, fine: o.fine, resto: r.replace(/\s+/g, ' ').replace(/^ ?/, ' ').replace(/ ?$/, ' ') };
 }
 // giorni, ore e aula di una lezione; quello che resta è il nome del corso
@@ -333,7 +357,7 @@ export function leggiLavoro(testo) {
     const mi = leggiMinuti(m[1]); if (mi && /h|min/.test(mi.pezzo) && mi.min >= 15 && mi.min <= 600) return { tipo: 'lavoro', azione: 'tetto', min: mi.min };
   }
   if ((m = t.match(/^(?:usually |normally )?i study (?:from |between )?(.+)$/))) {
-    const x = oreInCifre(m[1], 'to|until|and'), o = x && x.pezzo.trim() === m[1].trim() && orarioOk(x.inizio, x.fine);
+    const x = pomeriggio(oreInCifre(m[1], 'to|until|and')), o = x && x.pezzo.trim() === m[1].trim() && orarioOk(x.inizio, x.fine);
     if (o && o.fine !== '24:00') return { tipo: 'lavoro', azione: 'finestra', da: o.inizio, a: o.fine };
   }
   // un turno in più solo quel giorno: «on saturday I also work 6-11pm», «this week I also work saturday 18-23»

@@ -63,6 +63,11 @@ for (const [frase, atteso] of X.CASI) {
   const r = C.interpreta(frase), a = risolvi(atteso);
   prova(`${cod}: ${JSON.stringify(frase)}`, isDeepStrictEqual(r, a), `\n    dà     ${breve(r)}\n    atteso ${breve(a)}`);
 }
+// 1b. l'inglese di riserva nella lingua scelta (RISERVA del file della lingua, se c'è)
+for (const [frase, atteso] of X.RISERVA || []) {
+  const r = C.interpreta(frase), a = risolvi(atteso);
+  prova(`${cod}: riserva inglese ${JSON.stringify(frase)}`, isDeepStrictEqual(r, a), `\n    dà     ${breve(r)}\n    atteso ${breve(a)}`);
+}
 // 2. i tipi dell'italiano: almeno 3 frasi per tipo, e gli stessi campi (per tipo + azione)
 const firma = o => o.tipo + (o.azione ? ':' + o.azione : '');
 const campi = o => Object.keys(o).sort().join(',');

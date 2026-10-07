@@ -242,4 +242,21 @@ export const NON = [
   'come stai?',
   'qual è la differenza tra limite e derivata?',
   'grazie mille',
+  // frasi italiane che cominciano con una parola inglese: l'inglese di riserva non le deve prendere (vanno all'AI, come prima)
+  'today è una giornata storta',
+  'open la pagina di fisica',
+  'my exams sono troppi',
+  'play con me',
+  'cards per analisi 2',
+  'review del codice di lab3',
+];
+
+// l'inglese di riserva con la barra in italiano: le frasi inglesi restano comandi, anche con il nome italiano di un esame del
+// libretto o con una carta in italiano (il banco le prova solo con LODE_LINGUA=it)
+export const RISERVA = [
+  ['review basi di dati', { tipo: 'ripasso', esame: E('Basi di dati'), nomeDetto: 'basi di dati' }],
+  ['flashcard: teorema di Green = la circuitazione è il flusso del rotore', { tipo: 'carta', esame: null, fronte: 'teorema di Green', retro: 'la circuitazione è il flusso del rotore' }],
+  ['today', { tipo: 'oggi' }],
+  ['study with me', { tipo: 'focus', min: null, esame: null, nomeDetto: '' }],
+  ['language english', { tipo: 'lingua', codice: 'en' }],
 ];

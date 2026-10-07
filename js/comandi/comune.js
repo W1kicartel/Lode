@@ -61,3 +61,18 @@ export function linguaDetta(parola, proprie = {}) {
   const p = norm(parola);
   return proprie[p] || NATIVI[p] || null;
 }
+
+// Le parole piccole di ogni lingua (articoli, preposizioni, «è», «sono»…), già senza accenti come le dà norm(), e solo quelle
+// che non sono anche parole inglesi («come», «mon», «do», «die», «a» restano fuori). Servono a comandi.js: l'inglese di riserva
+// non deve prendere una frase scritta nella lingua scelta che comincia con una parola inglese («today è una giornata storta»,
+// «open la pagina di fisica», «my exams sono troppi»): quella va all'AI, come prima
+export const PAROLE_PROPRIE = {
+  it: 'di del della dello dei delle degli il lo la le gli un una uno e per con su sul sulla nel nella al alla allo ai dal dalla che non sono ho hai mi ti ci ma cosa perche questo questa quando dove anche piu molto troppo',
+  es: 'de del la las los el un una unos unas y o para por con que es estoy tengo mi mis tu pero como cuando muy mas tambien esta este',
+  fr: 'de du des la le les un une et ou pour par avec que qui ne pas est sont je ai ma mes tu mais comment quand tres aussi ce cette',
+  de: 'der das den dem des ein eine einen und oder fur mit von zu ist sind ich habe mein meine nicht aber wie wann sehr auch im',
+  pt: 'de da dos das o os um uma e para por que nao sao estou tenho meu minha mas como quando muito mais tambem na nos nas em',
+};
+const PROPRIE = Object.fromEntries(Object.entries(PAROLE_PROPRIE).map(([c, p]) => [c, new RegExp(` (?:${p.split(' ').join('|')}) `)]));
+// la frase ha parole piccole della lingua cod? (per l'inglese non vale mai)
+export const inLingua = (frase, cod) => !!PROPRIE[cod]?.test(' ' + norm(frase) + ' ');

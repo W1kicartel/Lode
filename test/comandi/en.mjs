@@ -210,10 +210,36 @@ export const CASI = [
   ['calculus 2', { tipo: 'apriEsame', esame: E('Calculus 2') }],
   ['databases', { tipo: 'apriEsame', esame: E('Databases') }],
   ['physics', { tipo: 'apriEsame', esame: E('Physics 2') }],
+  // dalla verifica: frasi scritte come le scrive uno studente, con i refusi più comuni
+  ['Focus for 45 minutes on databases', { tipo: 'focus', min: 45, esame: E('Databases'), nomeDetto: 'databases' }],
+  ['lets focus 30 min on physics 2', { tipo: 'focus', min: 30, esame: E('Physics 2'), nomeDetto: 'physics 2' }],
+  ['focus fourty five on physics 2', { tipo: 'focus', min: 45, esame: E('Physics 2'), nomeDetto: 'physics 2' }],
+  ['study with me', { tipo: 'focus', min: null, esame: null, nomeDetto: '' }],
+  ['play with me', { tipo: 'gioco', corso: null }],
+  ['reveiw calculus 2', { tipo: 'ripasso', esame: E('Calculus 2'), nomeDetto: 'calculus 2' }],
+  ['langauge italian', { tipo: 'lingua', codice: 'it' }],
+  ['I work monday to friday 9-5', { tipo: 'lavoro', azione: 'aggiungi', giorni: [1, 2, 3, 4, 5], inizio: '09:00', fine: '17:00' }],
+  ['I work mon-fri 9am-5pm', { tipo: 'lavoro', azione: 'aggiungi', giorni: [1, 2, 3, 4, 5], inizio: '09:00', fine: '17:00' }],
+  ['my shifts are fri to sun 10-2', { tipo: 'lavoro', azione: 'sostituisci', giorni: [0, 5, 6], inizio: '10:00', fine: '14:00' }],
+  ['I work saturday 22-2', { tipo: 'lavoro', azione: 'aggiungi', giorni: [6], inizio: '22:00', fine: '24:00' }],
+  ['I study from 9 to 5', { tipo: 'lavoro', azione: 'finestra', da: '09:00', a: '17:00' }],
+  ['lecture physics 2 tue-thu 10-12 room 4', { tipo: 'orario', corso: 'Physics 2', giorni: [2, 3, 4], inizio: '10:00', fine: '12:00', aula: '4' }],
 ];
 
 // frasi che non sono comandi: restano all'AI
 export const NON = [
+  // dalla verifica: «an» non è Analisi, «studying» non è sempre un timer, «today»/«my exams» solo da soli
+  'I have an exam tomorrow',
+  'i have a test tomorrow',
+  'i have my exam next friday',
+  'studying is hard',
+  'study tips for finals',
+  'focus mode doesn\'t work',
+  'session expired',
+  'timer app recommendations',
+  'today I learned about integrals',
+  'my exams are stressing me out',
+  'exam anxiety tips',
   "explain Stokes' theorem",
   'what does standard error mean',
   'explain the relative error',
