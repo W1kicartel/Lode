@@ -132,14 +132,15 @@ function scala(s = S.sistema(sistemaVoti())) {
 // i dati dello studente fuori dal sistema italiano: crediti, media e voto finale con le etichette e la scala del sistema
 function contestoSistema(m, p) {
   const s = S.sistema(sistemaVoti()), cr = S.nomeCrediti(s), f = votoFinale(m);
+  const nc = x => num(Number(x) || 0, Number(x) % 1 ? 1 : 0);   // i crediti con un decimale se ce l'hanno (7,5 ECTS)
   const voto = e => e.idoneita ? 'idoneità (superato senza voto)' : altroSistema(e) ? votoAltroSistema(e) : S.formato(e.voto, s, { lode: e.lode });
   const righe = [
     `Oggi è ${dataLunga(oggi())} (${oggi()}).`,
     D.profilo.nome ? `Lo studente si chiama ${D.profilo.nome}${D.profilo.corso ? ` e studia ${D.profilo.corso}` : ''}.` : '',
     `Sistema dei voti: ${PAESE[s.cod]}, ${scala(s)}.`,
-    `Crediti (${cr}): ${num(cfuFatti(), cfuFatti() % 1 ? 1 : 0)} su ${D.profilo.cfuTotali}. Media ponderata: ${m.ponderata != null ? num(m.ponderata, 2) : 'nessun voto'}${f ? `, ${S.etichettaFinale(s)} ${S.formatoFinale(f, s)}` : ''}.`,
-    `Esami sostenuti: ${fatti().map(e => `${e.nome} (${e.cfu} ${cr}, ${voto(e)})`).join('; ') || 'nessuno'}.`,
-    `Prossimi appelli: ${p.map(e => `${e.nome} (${e.cfu} ${cr}) il ${e.data}`).join('; ') || 'nessuno segnato'}.`,
+    `Crediti (${cr}): ${nc(cfuFatti())} su ${D.profilo.cfuTotali}. Media ponderata: ${m.ponderata != null ? num(m.ponderata, 2) : 'nessun voto'}${f ? `, ${S.etichettaFinale(s)} ${S.formatoFinale(f, s)}` : ''}.`,
+    `Esami sostenuti: ${fatti().map(e => `${e.nome} (${nc(e.cfu)} ${cr}, ${voto(e)})`).join('; ') || 'nessuno'}.`,
+    `Prossimi appelli: ${p.map(e => `${e.nome} (${nc(e.cfu)} ${cr}) il ${e.data}`).join('; ') || 'nessuno segnato'}.`,
     `Esami ancora da dare senza data: ${D.esami.filter(e => !e.fatto && !e.data).map(e => e.nome).join('; ') || 'nessuno'}.`,
     `Carte del ripasso: ${D.carte.length}, da ripassare oggi ${daRipassare().length}.`,
     `Orario: ${D.orario.map(o => `${o.corso} (${o.giorni.join(',')} ${o.inizio}-${o.fine})`).join('; ') || 'non impostato'}.${lezioneOra() ? ` Adesso è a lezione di ${lezioneOra().corso}.` : ''}`,

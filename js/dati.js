@@ -243,7 +243,11 @@ export const votoFinale = (m = media()) => S.finale(m.ponderata, sistemaVoti());
 export const cfuFatti = () => { const s = S.sistema(sistemaVoti()); return fatti().filter(e => s.cod === 'it' || e.voto == null || e.idoneita || (altroSistema(e) ? S.superato(Number(e.voto), e.sistema) : S.superato(Number(e.voto), s))).reduce((x, e) => x + e.cfu, 0); };
 // che media serve nei CFU che mancano per arrivare a una base di partenza (es. 100/110). Fuori dall'Italia l'obiettivo è il
 // voto finale del sistema (la media, la moyenne, la Gesamtnote, il GPA…). 6 CFU circa di prova finale, senza voto (Italia)
-export function serve(baseObiettivo) { return S.serve(baseObiettivo, validi(fatti()), opzVoti()); }
+// Un esame con il voto di un altro sistema ha già dato i crediti (come in cfuFatti()), ma il voto non entra nella media:
+// qui vale come un'idoneità. Con i dati di sempre (nessun e.sistema) la lista è quella di prima
+const conCrediti = lista => lista.some(altroSistema) ? lista.flatMap(e => !altroSistema(e) ? [e]
+  : sistemaVoti() === 'it' || S.superato(Number(e.voto), e.sistema) ? [{ ...e, voto: null, lode: false, idoneita: true }] : []) : lista;
+export function serve(baseObiettivo) { return S.serve(baseObiettivo, validi(conCrediti(fatti())), opzVoti()); }
 // se prendo X in quell'esame, come cambia la media? (fuori dall'Italia anche meglio: true se la media migliora, in
 // Germania quando scende)
 export function simula(esameId, voto, lode = false) {

@@ -339,7 +339,15 @@ await L.usa('it');
   prova('AI: i dati dello studente con la scala e i crediti del sistema', ctx.includes('Sistema dei voti: Spagna') && ctx.includes('Crediti (ECTS)') && !ctx.includes('CFU:') && !ctx.includes('base di laurea'), ctx);
   prova('AI: il 28 italiano nei dati dello studente non conta', ctx.includes('nel sistema Italia, non conta qui'));
   prova('AI: niente «studente universitario italiano» con il sistema spagnolo', !AI.sistemaDiBase().includes('universitario italiano') && AI.sistemaDiBase().includes('Spagna') && AI.sistemaLocale().includes('«chiudi lezione»'));
+  Dm.sostituisci({ ...Dm.VUOTO(), esami: [E('Ottica', 7.5, 8)], profilo: { ...Dm.VUOTO().profilo, sistema: 'es' } });
+  prova('AI: crediti con i decimali nei dati dello studente', AI.contesto().includes('Ottica (7,5 ECTS,'), AI.contesto());
+  // «quanto mi serve»: i crediti di un esame superato con un altro sistema sono già presi (come cfuFatti), il voto non conta
+  Dm.sostituisci({ ...Dm.VUOTO(), esami: [E('Analisi 1', 12, 28), E('Fisica', 6, null, false, false)] });
+  Dm.cambiaSistema('de');
+  prova('Germania: «quanto mi serve» conta i crediti del 28 italiano', Dm.serve(2.0)?.cfu === D().profilo.cfuTotali - 12 - S.sistema('de').provaFinale && Dm.media().n === 0, JSON.stringify(Dm.serve(2.0)));
+  Dm.registraVoto(D().esami.find(e => e.nome === 'Fisica').id, { voto: 1.7 });
   Dm.cambiaSistema('it');
+  prova('Italia: «quanto mi serve» conta i crediti dell\'1,7 tedesco, la media solo il 28', Dm.serve(100)?.cfu === 180 - 18 - 6 && Dm.media().ponderata === 28, JSON.stringify(Dm.serve(100)));
   prova('AI: in italiano con il sistema italiano il prompt di sempre', AI.sistemaDiBase().includes('di uno studente universitario italiano.\nParli italiano, dai del tu'));
 }
 

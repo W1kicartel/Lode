@@ -982,10 +982,13 @@ async function esportaAnki(corsoDetto) {
 
 /* ---------- i file lasciati sulla pillola ---------- */
 // il nome del file dice cos'è (programma, compiti d'esame, domande uscite), nelle sei lingue: le parole italiane per prime,
-// con le regex di sempre, poi le altre («Lehrplan», «exam 2023», «preguntas de examen», «questões»)
-const PROGRAMMA_FILE = /programm|syllabus|scheda.?(?:del.?)?corso|temario|plan.?de.?estudios|gu[ií]a.?docente|lehrplan|modulbeschreibung|ementa|plano.?de.?ensino|plan.?de.?cours|course.?outline/i;
-const TEMI_FILE = /compit|(?:^|[^a-z])temi(?:[^a-z]|$)|prova.?scritt|esercitaz|(?:^|[^a-z])(?:exam|exams|examen|ex[aá]menes|examens|klausur|klausuren|provas|prova.?(?:de|final|anterior)\w*|past.?papers?|exercises?|ejercicios|exercices|[uü]bungsbl[aä]tter|aufgaben|exerc[ií]cios|lista.?de.?exerc)(?:[^a-z]|$)/i;
-const DOMANDE_FILE = /domande|appell|(?:^|[^a-z])(?:questions|preguntas|fragen|pr[uü]fungsfragen|quest[oõ]es|perguntas)(?:[^a-z]|$)/i;
+// con le regex di sempre, poi le altre («Lehrplan», «exam 2023», «preguntas de examen», «questões»). L'ordine: programma,
+// compiti (parole italiane), domande, compiti (altre lingue): «preguntas de examen», «exam questions» sono domande, e un
+// nome con sole parole italiane va dove andava prima
+const PROGRAMMA_FILE = /programm|syllabus|scheda.?(?:del.?)?corso|temario|plan.?de.?estudios|gu[ií]a.?docente|lehrplan|modulbeschreibung|(?:^|[^a-z])ementa|plano.?de.?ensino|plan.?de.?cours|course.?outline/i;
+const TEMI_FILE = /compit|(?:^|[^a-z])temi(?:[^a-z]|$)|prova.?scritt|esercitaz/i;
+const TEMI_ALTRE = /(?:^|[^a-z])(?:exam|exams|examen|ex[aá]menes|examens|klausur|klausuren|provas|prova.?(?:de|final|anterior)\w*|past.?papers?|exercises?|ejercicios|exercices|[uü]bungsbl[aä]tter|aufgaben|exerc[ií]cios|lista.?de.?exerc)(?:[^a-z]|$)/i;
+const DOMANDE_FILE = /domande|appell|(?:^|[^a-z])(?:questions|preguntas|[a-zäöü]*fragen|quest[oõ]es|perguntas)(?:[^a-z]|$)/i;
 const ICONA_FILE = { pdf: 'doc', slide: 'doc', word: 'doc', testo: 'doc', sbobina: 'appunti', carte: 'ripasso', foto: 'foto', audio: 'audio', altro: 'doc' };
 const NOME_TIPO = { pdf: t('barra1.tipo-pdf'), slide: t('barra1.tipo-slide'), word: t('barra1.tipo-word'), testo: t('barra1.tipo-testo'), sbobina: t('barra1.tipo-sbobina'), carte: t('barra1.tipo-carte'), foto: t('barra1.tipo-foto'), audio: t('barra1.tipo-audio'), altro: t('barra1.tipo-altro') };
 function corsiPossibili() {
@@ -1021,7 +1024,7 @@ function opzioniPer(x) {
     { k: 'temi', t: t('barra1.op-temi'), d: t('barra1.op-temi-d'), corso: true },
     { k: 'programma', t: t('barra1.op-programma'), d: t('barra1.op-programma-d'), corso: true },
     { k: 'domande', t: t('barra1.op-domande'), d: t('barra1.op-domande-d'), corso: true },
-  ].map(o => PROGRAMMA_FILE.test(x.nome) ? { ...o, primo: o.k === 'programma' } : TEMI_FILE.test(x.nome) ? { ...o, primo: o.k === 'temi' } : DOMANDE_FILE.test(x.nome) ? { ...o, primo: o.k === 'domande' } : o);
+  ].map(o => PROGRAMMA_FILE.test(x.nome) ? { ...o, primo: o.k === 'programma' } : TEMI_FILE.test(x.nome) ? { ...o, primo: o.k === 'temi' } : DOMANDE_FILE.test(x.nome) ? { ...o, primo: o.k === 'domande' } : TEMI_ALTRE.test(x.nome) ? { ...o, primo: o.k === 'temi' } : o);
   return [];
 }
 function schedaFile(x, { corso: suggerito } = {}) {
