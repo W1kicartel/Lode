@@ -13,8 +13,10 @@ const T = D.oggi();
 {
   // il PDF scansionato o illeggibile: il comando suggerito usa il corso vero, mai «analisi 2» scritto fisso
   const src = (await import('node:fs')).readFileSync(new URL('../js/lode.js', import.meta.url), 'utf8');
-  const f = src.slice(src.indexOf('async function temiDaFile'), src.indexOf('async function schedaTemi'));
-  prova('temiDaFile: senza corso la forma generica, niente «analisi 2» fisso', f.length > 100 && !/analisi 2'/.test(f) && f.includes("«temi d\\'esame:»"), f.slice(0, 300));
+  // i testi stanno nel catalogo italiano (js/lingue/it/barra3.js): t('chiave') diventa il testo, poi si controlla come prima
+  const IT = (await import('../js/lingue/it/barra3.js')).default;
+  const f = src.slice(src.indexOf('async function temiDaFile'), src.indexOf('async function schedaTemi')).replace(/\bt\('([\w.-]+)'/g, (x, k) => typeof IT[k] === 'string' ? 't(' + JSON.stringify(IT[k]) : x);
+  prova('temiDaFile: senza corso la forma generica, niente «analisi 2» fisso', f.length > 100 && !/analisi 2["']/.test(f) && f.includes("\"«temi d'esame:»\""), f.slice(0, 300));
 }
 
 /* ---------- dividere ---------- */

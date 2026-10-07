@@ -2148,63 +2148,65 @@ function testoDelCorso(e, mat = PG.materialeDi(e)) {
 }
 async function schedaCrocette(c = {}) {
   let e = c.esame;
-  if (!e && c.nomeDetto && !c.materiale) return rispostaFissa(`Non trovo l'esame **${c.nomeDetto}**.`);
+  if (!e && c.nomeDetto && !c.materiale) return rispostaFissa(t('barra3.non-trovo-esame', { nome: c.nomeDetto }));
   e ||= c.materiale ? null : prossimi()[0] || daFare()[0] || null;
-  const nome = e?.nome || c.nomeFile || 'il tuo materiale', mat = e ? PG.materialeDi(e) : { carte: [], definizioni: [], stelle: [] };
+  const nome = e?.nome || c.nomeFile || t('barra3.il-tuo-materiale'), mat = e ? PG.materialeDi(e) : { carte: [], definizioni: [], stelle: [] };
   const offline = QC.daMateriale(mat, { n: 30 }).length, testo = c.materiale || (e ? testoDelCorso(e, mat) : '');
   const conAI = AI.attiva() && testo.length > 300;
   if (!conAI && offline < 4) return rispostaFissa(AI.attiva() || c.materiale
-    ? `Per un quiz su **${nome}** mi serve più materiale: trascina la dispensa o le slide (scegli «Quiz a crocette»), oppure crea qualche carta.`
-    : `Per il quiz senza AI mi servono almeno 4 carte o 4 definizioni di **${nome}**. Con l'AI (scrivi «AI») lo faccio anche dalla dispensa.`);
+    ? t('barra3.quiz-poco-materiale', { nome })
+    : t('barra3.quiz-senza-ai', { nome }));
   const max = conAI ? 30 : Math.min(30, offline);
-  const da = c.materiale ? `dalla dispensa ${c.nomeFile ? '«' + c.nomeFile + '»' : ''}` : conAI ? 'dalle tue carte, definizioni e domande uscite' : `dalle tue ${mat.carte.length ? 'carte' : ''}${mat.carte.length && mat.definizioni.length ? ' e ' : ''}${mat.definizioni.length ? 'definizioni' : ''}`;
-  const s = scheda('ld-quiz-via', `<span class="ld-lbl">Quiz a crocette · ${esc(nome)}</span>
+  // la frase intera «Domande dalle tue carte.»: da dove vengono le domande
+  const da = c.materiale ? (c.nomeFile ? t('barra3.quiz-fonte-dispensa-nome', { nome: esc(c.nomeFile) }) : t('barra3.quiz-fonte-dispensa')) : conAI ? t('barra3.quiz-fonte-ai')
+    : mat.carte.length && mat.definizioni.length ? t('barra3.quiz-fonte-carte-definizioni') : mat.carte.length ? t('barra3.quiz-fonte-carte') : t('barra3.quiz-fonte-definizioni');
+  const s = scheda('ld-quiz-via', `<span class="ld-lbl">${t('barra3.quiz-titolo', { nome: esc(nome) })}</span>
     <div class="ld-opzioni">
-      <button type="button" class="ld-op primo" data-n="${Math.min(10, max)}"><b>Allenamento · ${Math.min(10, max)} domande</b><span>La correzione subito, con la spiegazione</span></button>
-      <button type="button" class="ld-op" data-n="${max}" data-sim><b>Simulazione d'esame · ${max} domande in ${max} minuti</b><span>Come allo scritto: il tempo scorre, la correzione alla fine, il voto in trentesimi</span></button>
+      <button type="button" class="ld-op primo" data-n="${Math.min(10, max)}"><b>${t('barra3.quiz-allenamento', { n: Math.min(10, max) })}</b><span>${t('barra3.quiz-allenamento-sotto')}</span></button>
+      <button type="button" class="ld-op" data-n="${max}" data-sim><b>${t('barra3.quiz-simulazione', { n: max })}</b><span>${t('barra3.quiz-simulazione-sotto')}</span></button>
     </div>
-    <p class="ld-nota">Domande ${esc(da)}.${conAI ? ` Le scrive ${esc(AI.nomeMotore('testo'))}: tengo solo quelle che il materiale dimostra.` : ' Le risposte sbagliate sono quelle di altre carte del corso.'}</p>`);
+    <p class="ld-nota">${da} ${conAI ? t('barra3.quiz-le-scrive', { motore: esc(AI.nomeMotore('testo')) }) : t('barra3.quiz-sbagliate-altre')}</p>`);
   s.querySelectorAll('[data-n]').forEach(b => b.addEventListener('click', async () => {
     s.querySelectorAll('[data-n]').forEach(x => { x.disabled = true; x.classList.toggle('scelta', x === b); });
     const n = +b.dataset.n, sim = b.hasAttribute('data-sim');
-    nuovoTurno(); detto(A.turno, sim ? `Simulazione d'esame · ${nome}` : `Quiz · ${nome}`);
+    nuovoTurno(); detto(A.turno, sim ? t('barra3.quiz-simulazione-detto', { nome }) : t('barra3.quiz-detto', { nome }));
     let domande = [], scartate = 0;
     if (conAI) {
       const parti = QC.pezzi(testo, Math.ceil(n / 10)), lista = parti.length ? parti : [testo];
       try {
         for (let k = 0; domande.length < n && k < lista.length + 2; k++) {
-          modo('pensa', `Preparo le domande… ${domande.length} di ${n}`); segnala('pensa');
+          modo('pensa', t('barra3.quiz-preparo', { fatte: domande.length, n })); segnala('pensa');
           const pezzo = lista[k % lista.length];
           const v = QC.valida(await AI.crocette({ nome, materiale: pezzo, n: Math.min(12, n - domande.length + 2), fatte: domande.map(q => q.domanda) }), pezzo);
           scartate += v.scartate; const viste = new Set(domande.map(q => norm(q.domanda)));
           domande.push(...v.domande.filter(q => !viste.has(norm(q.domanda))));
         }
-      } catch (err) { console.warn('Lode: quiz con l\'AI', err); if (!domande.length && offline < 4) { modo('riposo'); return rispostaFissa('Non riesco a preparare le domande: ' + err.message, { errore: true }); } }
+      } catch (err) { console.warn('Lode: quiz con l\'AI', err); if (!domande.length && offline < 4) { modo('riposo'); return rispostaFissa(t('barra3.quiz-errore', { errore: err.message }), { errore: true }); } }
       modo('riposo');
     }
     if (domande.length < n) domande.push(...QC.daMateriale(mat, { n: n - domande.length }));
     domande = domande.slice(0, n);
-    if (!domande.length) return rispostaFissa('Non sono riuscito a preparare domande affidabili da questo materiale.');
+    if (!domande.length) return rispostaFissa(t('barra3.quiz-niente'));
     giocaQuiz({ e, nome, domande, simulazione: sim, minuti: domande.length, scartate });
   }));
-  if (A.turno) A.turno.dataset.sintesi = `quiz di ${nome}`;
+  if (A.turno) A.turno.dataset.sintesi = t('barra3.quiz-sintesi', { nome });
   if (c.simulazione) s.querySelector('[data-sim]').click();
 }
 function giocaQuiz({ e, nome, domande, simulazione, minuti, scartate = 0 }) {
   const N = domande.length, scelte = new Array(N).fill(null), t0 = Date.now(), scade = simulazione ? t0 + minuti * 60e3 : null;
   let i = 0, finito = false, mostrata = false, tic = 0;
-  const s = scheda('ld-quiz', `<div class="capo"><span class="ld-lbl">${simulazione ? 'Simulazione' : 'Quiz'} · ${esc(nome)}</span><span class="conto"></span></div><i class="ld-prog"><i></i></i><div class="box"></div>`);
+  const s = scheda('ld-quiz', `<div class="capo"><span class="ld-lbl">${simulazione ? t('barra3.quiz-capo-simulazione', { nome: esc(nome) }) : t('barra3.quiz-detto', { nome: esc(nome) })}</span><span class="conto"></span></div><i class="ld-prog"><i></i></i><div class="box"></div>`);
   const box = s.querySelector('.box'), conto = s.querySelector('.conto'), pr = s.querySelector('.ld-prog i');
   const mmss = ms => { const x = Math.max(0, Math.round(ms / 1000)); return `${Math.floor(x / 60)}:${String(x % 60).padStart(2, '0')}`; };
-  const aggiornaConto = () => { const fatte = scelte.filter(x => x != null).length; conto.textContent = simulazione ? `${mmss(scade - Date.now())} · ${fatte} di ${N}` : `${i + 1} di ${N}`; };
+  const aggiornaConto = () => { const fatte = scelte.filter(x => x != null).length; conto.textContent = simulazione ? t('barra3.quiz-conto-sim', { tempo: mmss(scade - Date.now()), fatte, n: N }) : t('barra3.x-di-n', { x: i + 1, n: N }); };
   if (simulazione) tic = setInterval(() => { if (!s.isConnected) { clearInterval(tic); if (A.quiz?.card === s) A.quiz = null; return; } aggiornaConto(); if (Date.now() >= scade) consegna(true); }, 1000);
   const mostra = () => {
     const q = domande[i]; mostrata = false;
     pr.style.transform = `scaleX(${(simulazione ? scelte.filter(x => x != null).length / N : i / N).toFixed(4)})`; aggiornaConto();
-    box.innerHTML = `<p class="dom"><small>Domanda ${i + 1} di ${N}</small>${esc(q.domanda)}</p>
+    box.innerHTML = `<p class="dom"><small>${t('barra3.quiz-domanda-n', { x: i + 1, n: N })}</small>${esc(q.domanda)}</p>
       <div class="ld-opz">${q.opzioni.map((o, j) => `<button type="button" class="ld-oq${scelte[i] === j ? ' scelta' : ''}" data-j="${j}"><kbd>${'ABCD'[j]}</kbd><span>${esc(o)}</span></button>`).join('')}</div>
       <p class="spieg" hidden></p>
-      <div class="az">${simulazione ? `${i > 0 ? '<button type="button" class="btn ld-piano" data-prec>Indietro</button>' : ''}<button type="button" class="btn ld-piano" data-salta>${i < N - 1 ? 'Salta' : 'Lascia vuota'}</button><button type="button" class="btn" data-consegna>Consegna</button>` : ''}</div>`;
+      <div class="az">${simulazione ? `${i > 0 ? `<button type="button" class="btn ld-piano" data-prec>${t('barra3.indietro')}</button>` : ''}<button type="button" class="btn ld-piano" data-salta>${i < N - 1 ? t('barra3.salta') : t('barra3.lascia-vuota')}</button><button type="button" class="btn" data-consegna>${t('barra3.consegna')}</button>` : ''}</div>`;
     box.querySelectorAll('[data-j]').forEach(b => b.addEventListener('click', () => scegli(+b.dataset.j)));
     box.querySelector('[data-prec]')?.addEventListener('click', () => { i--; mostra(); });
     box.querySelector('[data-salta]')?.addEventListener('click', () => avanti());
@@ -2219,32 +2221,32 @@ function giocaQuiz({ e, nome, domande, simulazione, minuti, scartate = 0 }) {
     if (mostrata) return; mostrata = true; scelte[i] = j;
     const ok = j === q.giusta;
     box.querySelectorAll('[data-j]').forEach(b => { b.disabled = true; const k = +b.dataset.j; if (k === q.giusta) b.classList.add('giusta'); else if (k === j) b.classList.add('errata'); });
-    const sp = box.querySelector('.spieg'); if (q.spiegazione || !ok) { sp.hidden = false; sp.textContent = q.spiegazione || `La risposta giusta è la ${'ABCD'[q.giusta]}.`; entra(sp, { dy: 4, blur: 4, ms: 320 }); }
-    box.querySelector('.az').innerHTML = `<button type="button" class="btn primary" data-av>${i < N - 1 ? 'Avanti' : 'Risultato'} <kbd>Invio</kbd></button>`;
+    const sp = box.querySelector('.spieg'); if (q.spiegazione || !ok) { sp.hidden = false; sp.textContent = q.spiegazione || t('barra3.quiz-giusta-e', { lettera: 'ABCD'[q.giusta] }); entra(sp, { dy: 4, blur: 4, ms: 320 }); }
+    box.querySelector('.az').innerHTML = `<button type="button" class="btn primary" data-av>${i < N - 1 ? t('barra3.avanti') : t('barra3.risultato')} <kbd>${t('barra3.tasto-invio')}</kbd></button>`;
     box.querySelector('[data-av]').addEventListener('click', avanti);
     segnala(ok ? 'fatto' : 'quiete');
   };
   const consegna = scaduto => {
     if (finito) return; finito = true; clearInterval(tic); if (A.quiz?.card === s) A.quiz = null;
     const giuste = domande.filter((q, k) => scelte[k] === q.giusta).length, v = QC.voto(giuste, N), sbagliate = domande.map((q, k) => ({ q, k })).filter(x => scelte[x.k] !== x.q.giusta);
-    pr.style.transform = 'scaleX(1)'; conto.textContent = `${giuste} di ${N}`;
+    pr.style.transform = 'scaleX(1)'; conto.textContent = t('barra3.x-di-n', { x: giuste, n: N });
     // l'esito sugli argomenti del programma: la parte di domande giuste per argomento
     if (PG.programmaDi(e)) {
       const per = new Map();
       domande.forEach((q, k) => { const a = PG.abbina(`${q.domanda} ${q.opzioni[q.giusta]}`, e.programma.argomenti); if (a) { const x = per.get(a.id) || { g: 0, t: 0 }; x.t++; if (scelte[k] === q.giusta) x.g++; per.set(a.id, x); } });
       for (const [id, x] of per) PG.registraEsito(e, id, x.g / x.t >= .8 ? 'giusta' : x.g / x.t >= .5 ? 'parziale' : 'sbagliata', 'quiz');
     }
-    box.innerHTML = `<div class="ld-esito"><b>${esc(giuste)}<small>/${esc(N)}</small></b><span>${simulazione ? `Voto: <em>${esc(v.testo)}</em>${scaduto ? ' · tempo scaduto' : ''}` : giuste === N ? 'Tutte giuste.' : `${N - giuste} da rivedere.`}</span><small>${esc(Math.max(1, Math.round((Date.now() - t0) / 60e3)))} min${scartate ? ` · ${scartate} domande scartate perché il materiale non le dimostrava` : ''}</small></div>
-      ${sbagliate.length ? `<span class="ld-lbl">Da rivedere</span><ol class="ld-sbagliate">${sbagliate.slice(0, 30).map(({ q, k }) => `<li><b>${esc(q.domanda)}</b><span>${scelte[k] == null ? 'Lasciata vuota' : `Hai scelto: ${esc(q.opzioni[scelte[k]])}`}</span><span class="g">Giusta: ${esc(q.opzioni[q.giusta])}</span>${q.spiegazione ? `<small>${esc(q.spiegazione)}</small>` : ''}</li>`).join('')}</ol>` : ''}
-      <div class="az">${sbagliate.length && e ? '<button type="button" class="btn primary" data-carte>Le sbagliate diventano carte</button>' : ''}<button type="button" class="btn" data-ancora>Un altro quiz</button></div>
-      <p class="ld-nota">Una risposta giusta vale 1 punto, sbagliata o vuota 0. ${simulazione ? 'Lo scritto vero può avere regole diverse (penalità per le sbagliate, soglie): è un allenamento.' : ''}</p>`;
+    box.innerHTML = `<div class="ld-esito"><b>${esc(giuste)}<small>/${esc(N)}</small></b><span>${simulazione ? `${t('barra3.quiz-voto', { voto: esc(v.testo) })}${scaduto ? ` · ${t('barra3.tempo-scaduto')}` : ''}` : giuste === N ? t('barra3.quiz-tutte-giuste') : t('barra3.quiz-da-rivedere', { n: N - giuste })}</span><small>${t('comune.minuti', { m: esc(Math.max(1, Math.round((Date.now() - t0) / 60e3))) })}${scartate ? ` · ${t('barra3.quiz-scartate', { n: scartate })}` : ''}</small></div>
+      ${sbagliate.length ? `<span class="ld-lbl">${t('barra3.da-rivedere')}</span><ol class="ld-sbagliate">${sbagliate.slice(0, 30).map(({ q, k }) => `<li><b>${esc(q.domanda)}</b><span>${scelte[k] == null ? t('barra3.lasciata-vuota') : t('barra3.hai-scelto', { x: esc(q.opzioni[scelte[k]]) })}</span><span class="g">${t('barra3.giusta-era', { x: esc(q.opzioni[q.giusta]) })}</span>${q.spiegazione ? `<small>${esc(q.spiegazione)}</small>` : ''}</li>`).join('')}</ol>` : ''}
+      <div class="az">${sbagliate.length && e ? `<button type="button" class="btn primary" data-carte>${t('barra3.quiz-sbagliate-carte')}</button>` : ''}<button type="button" class="btn" data-ancora>${t('barra3.quiz-un-altro')}</button></div>
+      <p class="ld-nota">${t('barra3.quiz-punti')} ${simulazione ? t('barra3.quiz-regole-vere') : ''}</p>`;
     entra(box, { dy: 8, blur: 6, ms: 480 }); segnala(v.superato ? 'confermato' : 'quiete');
     box.querySelector('[data-carte]')?.addEventListener('click', ev => {
       for (const { q } of sbagliate) aggiungiCarta({ esameId: e.id, fronte: q.domanda, retro: q.opzioni[q.giusta] + (q.spiegazione ? `\n\n${q.spiegazione}` : '') });
-      salva(); ev.target.disabled = true; ev.target.textContent = `${sbagliate.length} carte aggiunte: tornano oggi nel ripasso`; aggiornaTutto();
+      salva(); ev.target.disabled = true; ev.target.textContent = t('barra3.quiz-carte-aggiunte', { n: sbagliate.length }); aggiornaTutto();
     });
-    box.querySelector('[data-ancora]').addEventListener('click', () => { nuovoTurno(); detto(A.turno, `Quiz · ${nome}`); schedaCrocette({ esame: e }); });
-    if (A.turno) A.turno.dataset.sintesi = `quiz di ${nome}: ${giuste} su ${N}`;
+    box.querySelector('[data-ancora]').addEventListener('click', () => { nuovoTurno(); detto(A.turno, t('barra3.quiz-detto', { nome })); schedaCrocette({ esame: e }); });
+    if (A.turno) A.turno.dataset.sintesi = t('barra3.quiz-sintesi-esito', { nome, giuste, n: N });
     aggiornaTutto();
   };
   A.quiz = { card: s, scegli, avanti: () => { if (!simulazione && mostrata) avanti(); } };
@@ -2259,28 +2261,28 @@ const minuscola = t => t.charAt(0).toLowerCase() + t.slice(1);
 const argDi = (e, x) => x?.a ? e.programma?.argomenti?.find(a => a.id === x.a) || null : null;
 // «es. 3 del 12/02/2024 · integrali doppi · circa 25 min su carta»
 function rigaTema(e, x) {
-  const da = x.data ? ` del ${TE.dataScritta(x.data)}` : x.fonte && x.fonte !== 'incollato' ? ` di «${x.fonte}»` : '';
-  return [x.es ? `es. ${x.es}${da}` : da.trim(), argDi(e, x) && minuscola(argDi(e, x).t), `circa ${TE.minuti(x.t)} min su carta`].filter(Boolean).join(' · ');
+  const da = x.data ? t('barra3.tema-del', { data: TE.dataScritta(x.data) }) : x.fonte && x.fonte !== 'incollato' ? t('barra3.tema-di', { fonte: x.fonte }) : '';
+  return [x.es ? (da ? t('barra3.tema-es-da', { es: x.es, da }) : t('barra3.tema-es', { es: x.es })) : da, argDi(e, x) && minuscola(argDi(e, x).t), t('barra3.tema-circa', { min: TE.minuti(x.t) })].filter(Boolean).join(' · ');
 }
 async function temiDaFile(x, corso) {
-  modo('pensa', `Leggo ${x.nome}…`); segnala('pensa');
+  modo('pensa', t('barra3.leggo-file', { nome: x.nome })); segnala('pensa');
   let testo = ''; try { testo = await FILE.testoDi(x); } catch { }   // un PDF senza testo: niente errore, lo diciamo sotto
   modo('riposo');
   // il comando da suggerire col corso giusto; senza corso e senza esami, la forma generica (mai un corso inventato)
-  const nome = corso || prossimi()[0]?.nome, cmd = nome ? `«temi d'esame di ${minuscola(nome)}:»` : '«temi d\'esame:»';
+  const nome = corso || prossimi()[0]?.nome, cmd = nome ? t('barra3.cmd-temi-di', { nome: minuscola(nome) }) : t('barra3.cmd-temi');
   const pagine = Math.max(1, ...[...testo.matchAll(/\[Pagina (\d+)\]/g)].map(m => +m[1]));
-  if (x.tipo === 'pdf' && TE.scansione(testo, pagine)) return rispostaFissa(`Questo PDF sembra una scansione: senza AI non leggo le immagini. Incolla il testo degli esercizi con ${cmd} e il testo sotto.`);
-  if (!testo.trim()) return rispostaFissa(`Da questo file non riesco a leggere il testo. Incollalo con ${cmd} e il testo sotto.`);
+  if (x.tipo === 'pdf' && TE.scansione(testo, pagine)) return rispostaFissa(t('barra3.temi-scansione', { cmd }));
+  if (!testo.trim()) return rispostaFissa(t('barra3.temi-illeggibile', { cmd }));
   const e = trovaEsame(corso || '') || (corso ? aggiungiEsame({ nome: corso }) : prossimi()[0]);
-  if (!e) return rispostaFissa('Aggiungi prima l\'esame, per esempio: «esame analisi 2 il 15 gennaio 9 cfu».');
+  if (!e) return rispostaFissa(t('barra3.aggiungi-prima-esame'));
   return controllaTemi(e, testo, { fonte: x.nome });
 }
 async function schedaTemi(c = {}) {
   let e = c.esame;
-  if (!e && c.nomeDetto) return rispostaFissa(`Non trovo l'esame **${c.nomeDetto}**. Aggiungilo prima, per esempio: «esame ${c.nomeDetto} il 15 gennaio 9 cfu».`);
+  if (!e && c.nomeDetto) return rispostaFissa(t('barra3.non-trovo-esame-aggiungi', { nome: c.nomeDetto }));
   // senza esame detto: quello con un esercizio in scadenza oggi, poi il più vicino
   e ||= daFare().find(x => TE.temaDiOggi(x)) || prossimi().find(x => x.temi?.length) || prossimi()[0] || daFare()[0];
-  if (!e) return rispostaFissa('Aggiungi prima un esame, per esempio: «esame analisi 2 il 15 gennaio 9 cfu». Poi incolla un compito vecchio.');
+  if (!e) return rispostaFissa(t('barra3.aggiungi-esame-compito'));
   if (c.testo) return controllaTemi(e, c.testo, { fonte: 'incollato' });
   const x = TE.temaDiOggi(e), s = x ? schedaTema(e, x) : temiVuoti(e);
   invitoProva(e);
@@ -2289,36 +2291,36 @@ async function schedaTemi(c = {}) {
 // sotto la scheda dei temi (fuori dalla scheda dell'esercizio, che resta com'è): il compito intero col tempo vero
 function invitoProva(e) {
   if (!PV.compiti(e).length && (e.temi || []).length < 2) return;
-  const p = h('p', 'ld-prova-invito', 'Vuoi provare un compito intero, col tempo vero? <button type="button" class="btn small">Prova generale</button>');
+  const p = h('p', 'ld-prova-invito', `${t('barra3.prova-invito')} <button type="button" class="btn small">${t('barra3.prova-generale')}</button>`);
   (A.turno || nuovoTurno()).append(p); entra(p, { dy: 4, blur: 4, ms: 360 });
-  p.querySelector('button').addEventListener('click', () => { nuovoTurno(); detto(A.turno, `Prova generale di ${e.nome}`); schedaProva({ esame: e }); });
+  p.querySelector('button').addEventListener('click', () => { nuovoTurno(); detto(A.turno, t('barra3.prova-generale-di', { nome: e.nome })); schedaProva({ esame: e }); });
 }
 // nessun esercizio da fare oggi: quanti ce ne sono per argomento, e il campo per incollare un compito
 function temiVuoti(e) {
   const per = TE.conta(e), prossimo = (e.temi || []).map(x => x.scad).sort()[0];
-  const s = scheda('ld-temi', `<span class="ld-lbl">Temi d'esame · ${esc(e.nome)}</span>
-    ${per.length ? `<p>Nessun esercizio in scadenza oggi.${prossimo ? ` Il prossimo torna ${esc(dataLunga(prossimo))}.` : ''}</p><ul class="ld-temi-conta">${per.map(([t, n]) => `<li><span>${esc(t)}</span><b>${esc(n)}</b></li>`).join('')}</ul>`
-      : '<p class="ld-vuoto">Incolla il testo di un compito vecchio (quelli che girano nel gruppo del corso o sul sito del prof), oppure trascina il PDF. Lo divido in esercizi, li metto sotto i loro argomenti e ogni giorno te ne propongo uno.</p>'}
-    <form class="ld-prog-form"><textarea name="t" rows="5" placeholder="Esercizio 1. Calcolare…&#10;Esercizio 2. Studiare…" aria-label="Testo del compito" required></textarea><button class="btn${per.length ? '' : ' primary'}" type="submit">Dividi in esercizi</button></form>`);
-  s.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const t = String(new FormData(ev.target).get('t') || ''); if (t.trim()) { nuovoTurno(); detto(A.turno, `Temi d'esame di ${e.nome}`); controllaTemi(e, t, { fonte: 'incollato' }); } });
-  if (A.turno) A.turno.dataset.sintesi = `temi d'esame di ${e.nome}`;
+  const s = scheda('ld-temi', `<span class="ld-lbl">${t('barra3.temi-titolo', { nome: esc(e.nome) })}</span>
+    ${per.length ? `<p>${t('barra3.temi-nessuno-oggi')}${prossimo ? ` ${t('barra3.temi-prossimo', { data: esc(dataLunga(prossimo)) })}` : ''}</p><ul class="ld-temi-conta">${per.map(([t, n]) => `<li><span>${esc(t)}</span><b>${esc(n)}</b></li>`).join('')}</ul>`
+      : `<p class="ld-vuoto">${t('barra3.temi-vuoto')}</p>`}
+    <form class="ld-prog-form"><textarea name="t" rows="5" placeholder="${t('barra3.temi-segnaposto')}" aria-label="${t('barra3.temi-testo-compito')}" required></textarea><button class="btn${per.length ? '' : ' primary'}" type="submit">${t('barra3.temi-dividi')}</button></form>`);
+  s.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const tx = String(new FormData(ev.target).get('t') || ''); if (tx.trim()) { nuovoTurno(); detto(A.turno, t('barra3.temi-di', { nome: e.nome })); controllaTemi(e, tx, { fonte: 'incollato' }); } });
+  if (A.turno) A.turno.dataset.sintesi = t('barra3.temi-di-sintesi', { nome: e.nome });
 }
 // la scheda di controllo: i pezzi con le prime due righe e l'argomento; si possono unire o togliere prima di salvarli
 function controllaTemi(e, testo, { fonte = 'incollato' } = {}) {
   const d = TE.dividi(testo), argomenti = e.programma?.argomenti || [];
   let pezzi = d.pezzi.map(p => ({ ...p, a: PG.abbina(p.t, argomenti)?.id || null }));
-  if (!pezzi.length) return rispostaFissa('Non ho trovato esercizi in questo testo.');
-  const s = scheda('ld-temi', `<span class="ld-lbl">Temi d'esame · ${esc(e.nome)}${d.data ? ` · compito ${esc(TE.dataScritta(d.data))}` : ''}</span>
-    ${pezzi.length === 1 ? '<p class="ld-nota">Non ho trovato «Esercizio 1», «Esercizio 2»… Se il compito ha più esercizi, scrivili con quei segni e incollalo di nuovo.</p>' : ''}
-    ${argomenti.length ? '' : `<p class="ld-nota">Per ${esc(e.nome)} non c'è ancora il programma: li salvo senza argomento.</p>`}
+  if (!pezzi.length) return rispostaFissa(t('barra3.temi-nessun-esercizio'));
+  const s = scheda('ld-temi', `<span class="ld-lbl">${t('barra3.temi-titolo', { nome: esc(e.nome) })}${d.data ? ` · ${t('barra3.temi-compito-del', { data: esc(TE.dataScritta(d.data)) })}` : ''}</span>
+    ${pezzi.length === 1 ? `<p class="ld-nota">${t('barra3.temi-un-pezzo')}</p>` : ''}
+    ${argomenti.length ? '' : `<p class="ld-nota">${t('barra3.temi-senza-programma', { nome: esc(e.nome) })}</p>`}
     <ol class="ld-temi-l"></ol>
-    <div class="az"><button type="button" class="btn primary" data-metti>Mettili nel piano</button></div>`);
+    <div class="az"><button type="button" class="btn primary" data-metti>${t('barra3.temi-metti')}</button></div>`);
   const ol = s.querySelector('ol');
   const leggi = () => ol.querySelectorAll('select').forEach((x, i) => { pezzi[i].a = x.value || null; });
   const disegna = () => {
-    ol.innerHTML = pezzi.map((p, i) => `<li><span class="t"><b>Es. ${esc(p.n)}</b>${esc(p.t.split('\n').filter(r => r.trim()).slice(0, 2).join(' ').slice(0, 220))}${p.sol ? '<small>con la soluzione del prof</small>' : ''}</span>
-      <span class="az">${argomenti.length ? `<select aria-label="Argomento dell'esercizio ${esc(p.n)}"><option value="">Che argomento è?</option>${argomenti.map(a => `<option value="${esc(a.id)}"${a.id === p.a ? ' selected' : ''}>${esc(corto(a.t))}</option>`).join('')}</select>` : ''}
-      ${i ? '<button type="button" class="btn small ld-piano" data-unisci>Unisci al precedente</button>' : ''}<button type="button" class="btn small ld-piano" data-togli>Togli</button></span></li>`).join('');
+    ol.innerHTML = pezzi.map((p, i) => `<li><span class="t"><b>${t('barra3.temi-es', { n: esc(p.n) })}</b>${esc(p.t.split('\n').filter(r => r.trim()).slice(0, 2).join(' ').slice(0, 220))}${p.sol ? `<small>${t('barra3.temi-con-soluzione')}</small>` : ''}</span>
+      <span class="az">${argomenti.length ? `<select aria-label="${t('barra3.temi-argomento-di', { n: esc(p.n) })}"><option value="">${t('barra3.temi-che-argomento')}</option>${argomenti.map(a => `<option value="${esc(a.id)}"${a.id === p.a ? ' selected' : ''}>${esc(corto(a.t))}</option>`).join('')}</select>` : ''}
+      ${i ? `<button type="button" class="btn small ld-piano" data-unisci>${t('barra3.temi-unisci')}</button>` : ''}<button type="button" class="btn small ld-piano" data-togli>${t('barra3.togli')}</button></span></li>`).join('');
     ol.querySelectorAll('li').forEach((li, i) => {
       li.querySelector('[data-unisci]')?.addEventListener('click', () => { leggi(); pezzi = TE.unisci(pezzi, i); disegna(); });
       li.querySelector('[data-togli]').addEventListener('click', () => { leggi(); pezzi.splice(i, 1); disegna(); });
@@ -2329,40 +2331,39 @@ function controllaTemi(e, testo, { fonte = 'incollato' } = {}) {
   s.querySelector('[data-metti]').addEventListener('click', ev => {
     leggi(); ev.target.disabled = true; s.querySelectorAll('button,select').forEach(x => { x.disabled = true; });
     const ann = istantanea(), r = TE.metti(e, pezzi, { fonte, data: d.data, durata: d.durata }), n = r.messi;
-    const conArg = argomenti.length ? `: ${n - r.senza} con il loro argomento, ${r.senza} senza` : '';
-    mostraFatto(n ? { testo: `${n} ${n === 1 ? 'esercizio' : 'esercizi'} nel piano${conArg}.`, annulla: ann, sintesi: `temi d'esame di ${e.nome}`,
-      nota: !argomenti.length ? `Senza programma non so dove metterli: incolla il programma di ${minuscola(e.nome)} e li sistemo.` : r.doppi ? `${r.doppi} c'erano già.` : 'Ogni giorno uno sugli argomenti del piano.',
-      azione: !argomenti.length ? ['Programma', () => { nuovoTurno(); programmaVuoto(e); }] : TE.temaDiOggi(e) ? ['Fanne uno', () => { nuovoTurno(); detto(A.turno, `Esercizio di ${e.nome}`); schedaTema(e, TE.temaDiOggi(e)); }] : null }
-      : { testo: 'Questi esercizi c\'erano già.', no: true });
+    mostraFatto(n ? { testo: argomenti.length ? t('barra3.temi-nel-piano-arg', { n, con: n - r.senza, senza: r.senza }) : t('barra3.temi-nel-piano', { n }), annulla: ann, sintesi: t('barra3.temi-di-sintesi', { nome: e.nome }),
+      nota: !argomenti.length ? t('barra3.temi-senza-programma-nota', { nome: minuscola(e.nome) }) : r.doppi ? t('barra3.temi-doppi', { n: r.doppi }) : t('barra3.temi-ogni-giorno'),
+      azione: !argomenti.length ? [t('barra3.programma'), () => { nuovoTurno(); programmaVuoto(e); }] : TE.temaDiOggi(e) ? [t('barra3.fanne-uno'), () => { nuovoTurno(); detto(A.turno, t('barra3.esercizio-di', { nome: e.nome })); schedaTema(e, TE.temaDiOggi(e)); }] : null }
+      : { testo: t('barra3.temi-gia'), no: true });
     aggiornaTutto();
   });
-  if (A.turno) A.turno.dataset.sintesi = `temi d'esame di ${e.nome}: ${pezzi.length} esercizi`;
+  if (A.turno) A.turno.dataset.sintesi = t('barra3.temi-sintesi-n', { nome: e.nome, n: pezzi.length });
 }
 // l'esercizio: il testo con le formule, poi l'esito scelto dallo studente. La soluzione del prof solo dopo l'esito
 function schedaTema(e, x) {
   const a = argDi(e, x);
-  const s = scheda('ld-tema', `<span class="ld-lbl">Esercizio · ${esc(e.nome)}</span>
+  const s = scheda('ld-tema', `<span class="ld-lbl">${t('barra3.tema-titolo', { nome: esc(e.nome) })}</span>
     <p class="ld-tema-meta">${esc(rigaTema(e, x))}</p>
     <div class="ld-tema-testo">${mdHtml(x.t)}</div>
-    <p>Fallo su carta, senza guardare gli appunti. Quando hai finito:</p>
-    <div class="az ld-tema-esiti"><button type="button" class="btn" data-come="giusto">Giusto</button><button type="button" class="btn" data-come="sbagliato">Sbagliato</button><button type="button" class="btn" data-come="nonso">Non sapevo da dove partire</button></div>
-    <p class="ld-nota">Il voto te lo dai tu: Lode non corregge l'esercizio.</p>`);
+    <p>${t('barra3.tema-fallo')}</p>
+    <div class="az ld-tema-esiti"><button type="button" class="btn" data-come="giusto">${t('barra3.giusto')}</button><button type="button" class="btn" data-come="sbagliato">${t('barra3.sbagliato')}</button><button type="button" class="btn" data-come="nonso">${t('barra3.non-sapevo')}</button></div>
+    <p class="ld-nota">${t('barra3.tema-voto-tuo')}</p>`);
   formuleIn(s.querySelector('.ld-tema-testo'), x.t);
   s.querySelectorAll('[data-come]').forEach(b => b.addEventListener('click', () => {
     const come = b.dataset.come, r = TE.esito(e, x.id, come); if (!r) return;
     s.querySelectorAll('[data-come]').forEach(y => { y.disabled = true; y.classList.toggle('scelta', y === b); });
-    const dopoG = `Torna tra ${r.giorni} giorni.`;
-    const testo = come === 'giusto' ? dopoG : come === 'sbagliato' ? `${dopoG} ${x.sol ? 'Guarda la soluzione e rifallo da capo, non rileggerla e basta.' : 'Rileggi l\'argomento e rifallo da capo, senza guardare.'}`
-      : `${dopoG} Prima rileggi l'argomento${a ? `: ${minuscola(a.t)}` : ''}.`;
+    const dopoG = t('barra3.tema-torna', { n: r.giorni });
+    const testo = come === 'giusto' ? dopoG : come === 'sbagliato' ? `${dopoG} ${x.sol ? t('barra3.tema-guarda-soluzione') : t('barra3.tema-rileggi')}`
+      : `${dopoG} ${a ? t('barra3.tema-prima-rileggi-arg', { arg: minuscola(a.t) }) : t('barra3.tema-prima-rileggi')}`;
     const altro = TE.temaDiOggi(e);
-    const f = h('div', 'ld-tema-dopo', `<p>${esc(testo)}</p><div class="az">${x.sol ? '<button type="button" class="btn primary" data-sol>Vedi la soluzione del prof</button>' : ''}${altro ? '<button type="button" class="btn" data-altro>Un altro esercizio</button>' : ''}</div><div class="ld-tema-sol" hidden></div>`);
+    const f = h('div', 'ld-tema-dopo', `<p>${esc(testo)}</p><div class="az">${x.sol ? `<button type="button" class="btn primary" data-sol>${t('barra3.tema-vedi-soluzione')}</button>` : ''}${altro ? `<button type="button" class="btn" data-altro>${t('barra3.tema-altro')}</button>` : ''}</div><div class="ld-tema-sol" hidden></div>`);
     s.querySelector('.ld-tema-esiti').after(f); entra(f, { dy: 4, blur: 4, ms: 360 });
     f.querySelector('[data-sol]')?.addEventListener('click', ev => { const box = f.querySelector('.ld-tema-sol'); box.innerHTML = mdHtml(x.sol); box.hidden = false; formuleIn(box, x.sol); ev.target.remove(); entra(box, { dy: 4, blur: 4, ms: 360 }); });
-    f.querySelector('[data-altro]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, `Esercizio di ${e.nome}`); schedaTema(e, altro); });
+    f.querySelector('[data-altro]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, t('barra3.esercizio-di', { nome: e.nome })); schedaTema(e, altro); });
     segnala(come === 'giusto' ? 'fatto' : 'quiete'); aggiornaTutto();
-    if (A.turno) A.turno.dataset.sintesi = `esercizio di ${e.nome}: ${b.textContent.toLowerCase()}`;
+    if (A.turno) A.turno.dataset.sintesi = t('barra3.esercizio-di-esito', { nome: e.nome, esito: b.textContent.toLowerCase() });
   }));
-  if (A.turno) A.turno.dataset.sintesi = `esercizio di ${e.nome}`;
+  if (A.turno) A.turno.dataset.sintesi = t('barra3.esercizio-di-sintesi', { nome: e.nome });
   return s;
 }
 
