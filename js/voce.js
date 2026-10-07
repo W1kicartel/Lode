@@ -8,6 +8,7 @@
 // • Nel browser: il riconoscimento vocale di Chrome/Edge/Safari.
 // Le risposte si possono leggere ad alta voce con la voce italiana del sistema.
 import { libreria } from './librerie.js';
+import { t } from './lingua.js';
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const DESKTOP = !!window.lodeDesktop;
 export const disponibile = DESKTOP ? !!navigator.mediaDevices?.getUserMedia : !!SR;
@@ -62,7 +63,7 @@ export function testiVoce(m, peso) {
   else whisperTesti();
 }
 // «Parakeet v3 sul Neural Engine del Mac», «Parakeet v3 sul processore» o «Whisper base»/«Whisper small»
-export const descrizioneVoce = () => MOTORE_TESTI === 'mac' ? 'Parakeet v3 sul Neural Engine del Mac' : MOTORE_TESTI === 'onnx' ? 'Parakeet v3 sul processore' : 'Whisper ' + (MODELLO_VOCE.endsWith('small') ? 'small' : 'base');
+export const descrizioneVoce = () => MOTORE_TESTI === 'mac' ? t('voce.parakeet-mac') : MOTORE_TESTI === 'onnx' ? t('voce.parakeet-processore') : 'Whisper ' + (MODELLO_VOCE.endsWith('small') ? 'small' : 'base');
 const sulProcessore = () => { CPU = true; MODELLO_VOCE = BASE; if (MOTORE_TESTI === 'whisper') PESO_VOCE = '200'; };
 const rete = e => /fetch|network|locate/i.test(e?.message) || !navigator.onLine;
 function preparaWhisper() {
@@ -80,7 +81,7 @@ function preparaWhisper() {
     }
     partita = true; avvisa({ fase: 'pronta' });
     return asr;
-  })().catch(e => { caricando = null; console.warn(e); avvisa({ fase: 'errore', testo: rete(e) ? 'Non riesco a scaricare la voce: controlla la connessione e riprova.' : 'La voce non riesce a partire su questo computer.' }); throw e; }).finally(() => staCaricando--);
+  })().catch(e => { caricando = null; console.warn(e); avvisa({ fase: 'errore', testo: rete(e) ? t('voce.non-scarica') : t('voce.non-parte') }); throw e; }).finally(() => staCaricando--);
   return caricando;
 }
 async function carica(dev) {
@@ -124,7 +125,7 @@ function ripiega(e) {
   if (MOTORE === RIPIEGATO) return;
   MOTORE = RIPIEGATO; NATIVO_PRONTO = false; caricaNativo = null; testiVoce('whisper');
   console.warn('Lode: Parakeet non parte, passo a Whisper:', e?.message);
-  avvisa({ fase: 'ripiego', p: 0, testo: 'Parakeet non parte su questo computer: uso Whisper (un po\' più lento). ' + String(e?.message || '').slice(0, 160) });
+  avvisa({ fase: 'ripiego', p: 0, testo: t('voce.ripiego', { motivo: String(e?.message || '').slice(0, 160) }) });
 }
 // A riposo la voce esce dalla memoria: fuori dalla lezione (orecchio spento), dopo 10 minuti senza usarla. Whisper su WebGPU
 // tiene circa 1 GB tra barra e scheda, Parakeet un processo a parte: su un portatile da 8 GB, tutto il giorno, pesa.
@@ -194,7 +195,7 @@ function ascoltaWhisper({ parziale, fine, errore, auto = true }) {
       window.__lodeAudio = { n: campioni, sr: ctx.sampleRate, dati: tutto() };   // per le prove
       if (!parlato) return fine?.('');
       try { while (occupato) await new Promise(r => setTimeout(r, 30)); fine?.(await trascriviAudio(tutto(), { subito: true })); }
-      catch (e) { errore?.('La voce non ha funzionato: ' + e.message); }
+      catch (e) { errore?.(t('voce.non-ha-funzionato-perche', { motivo: e.message })); }
     }
     stato.chiudi = chiudi;
     if (stato.fermo) chiudi();
@@ -206,14 +207,14 @@ function ascoltaWhisper({ parziale, fine, errore, auto = true }) {
 // il microfono che non si apre: cosa fare, detto per il sistema giusto (su Windows c'è un interruttore per le app desktop)
 export function erroreMicrofono(e) {
   const win = window.lodeDesktop?.piattaforma === 'win32';
-  if (/NotFound|Overconstrained/.test(e?.name)) return win ? 'Non trovo un microfono: collegalo o sceglilo in Impostazioni > Sistema > Audio > Input.' : 'Non trovo un microfono: collegane uno e riprova.';
-  if (win) return 'Il microfono non si apre: in Impostazioni > Privacy e sicurezza > Microfono attiva «Accesso al microfono» e «Consenti alle app desktop di accedere al microfono». Se lo sta usando un\'altra app (Teams, Zoom), chiudila.';
-  return 'Serve il permesso del microfono: Impostazioni di sistema > Privacy > Microfono > Lode.';
+  if (/NotFound|Overconstrained/.test(e?.name)) return win ? t('voce.nessun-microfono-win') : t('voce.nessun-microfono');
+  if (win) return t('voce.microfono-chiuso-win');
+  return t('voce.permesso-microfono-mac');
 }
 
 /* ---------- riconoscimento del browser ---------- */
 function ascoltaBrowser({ parziale, fine, errore }) {
-  if (!SR) { errore?.('Il riconoscimento vocale non c\'è in questo browser: prova Chrome o Edge.'); return null; }
+  if (!SR) { errore?.(t('voce.browser-senza-voce')); return null; }
   let finale = '';
   const r = new SR(); r.lang = 'it-IT'; r.interimResults = true; r.continuous = true; r.maxAlternatives = 1;
   r.onresult = e => {
@@ -222,7 +223,7 @@ function ascoltaBrowser({ parziale, fine, errore }) {
     livello = Math.min(1, .35 + Math.random() * .65);
     parziale?.((finale + prov).trim());
   };
-  r.onerror = e => { if (e.error !== 'aborted' && e.error !== 'no-speech') errore?.(e.error === 'not-allowed' ? 'Serve il permesso del microfono.' : 'La voce non ha funzionato: riprova.'); };
+  r.onerror = e => { if (e.error !== 'aborted' && e.error !== 'no-speech') errore?.(e.error === 'not-allowed' ? t('voce.serve-permesso') : t('voce.non-ha-funzionato')); };
   r.onend = () => { const era = rec; rec = null; if (era?._annullato) return; fine?.(finale.trim()); };
   try { r.start(); } catch { }
   return r;
