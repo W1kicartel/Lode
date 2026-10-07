@@ -8,7 +8,7 @@ export default {
   'allenatore.ripassa': 'Review',
   'allenatore.stelle': 'Reread the {n} things the lecturer said were “for the exam”',
   'allenatore.rileggi': 'Reread',
-  'allenatore.orale': 'Three quick questions, like at the oral?',
+  'allenatore.orale': 'Three quick questions, like in the oral?',
   'allenatore.interrogami': 'Quiz me',
   'allenatore.programma-ai': "Today it's “{argomento}”: two questions?",
   'allenatore.programma': 'In today\'s plan: “{argomento}”',

@@ -414,7 +414,7 @@ export default {
   'barra1.op-lavagna': 'Transcribe into notes',
   'barra1.op-lavagna-d': 'Text and formulas in LaTeX, in the lecture note',
   'barra1.op-carte': 'Review cards',
-  'barra1.op-carte-foto-d': "The questions they'd ask at the exam",
+  'barra1.op-carte-foto-d': "The questions they'd ask in the exam",
   'barra1.op-allega-foto-d': 'The photo in the lecture note',
   'barra1.op-carte-d': 'Questions and answers for spaced review',
   'barra1.op-riassunto': 'Summary in Obsidian',

@@ -39,7 +39,7 @@ export default {
   'discussione.non-riesco-leggere': 'I can\'t read {file}: {errore}',
   'discussione.non-trovo-piu': 'I can\'t find <code>{nome}</code> in {file} any more: maybe you renamed or removed it.',
   'discussione.togli': 'Remove from the list',
-  'discussione.spiegala': '<code>{firma}</code> · {file}, line {riga}. Explain it like at the discussion: what it takes, what it returns, how it works. I\'ll show you the code afterwards.',
+  'discussione.spiegala': '<code>{firma}</code> · {file}, line {riga}. Explain it as you would at the discussion: what it takes, what it returns, how it works. I\'ll show you the code afterwards.',
   'discussione.aria-spiegazione': 'Your explanation of {nome}',
   'discussione.ho-finito': 'I\'m done',
   'discussione.alla-buona': 'The points are found by the code, roughly: it doesn\'t tell you whether the explanation is right.',

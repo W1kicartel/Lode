@@ -313,7 +313,7 @@ export default {
 
   // let me explain, and the oral on the syllabus
   'barra3.spiego-titolo': 'Let me explain · {nome}',
-  'barra3.spiego-istruzioni': "Explain it as if you were at the oral, in your own words: type below or hold {tasti} and talk. When you're done, send.",
+  'barra3.spiego-istruzioni': "Explain it as if you were in the oral, in your own words: type below or hold {tasti} and talk. When you're done, send.",
   'barra3.spiego-risponde': '{motore} answers you, using your notes.',
   'barra3.spiego-controllo': { one: "I'll check {n} point taken from the syllabus and your notes: I won't show it to you first.", other: "I'll check {n} points taken from the syllabus and your notes: I won't show them to you first." },
   'barra3.spiego-senza-appunti': "I have no notes on this topic: without AI I can only record that you reviewed it.",
