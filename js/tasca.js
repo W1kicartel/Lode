@@ -77,7 +77,8 @@ export function impronta(testo) {
 // vault: { leggi() → testo | null se la nota non c'è, scrivi(testo) }. Quello vero passa da js/vault.js (vault:leggi,
 // vault:scrivi: il main permette solo «In tasca.md»). Un errore di lettura che non è «non c'è» ferma tutto: mai
 // riscrivere una nota che non si è riusciti a leggere (iCloud che la sta scaricando, file bloccato)
-const NON_CE = /ENOENT|no such file|non c.è/i;
+// (il messaggio di node è sempre in inglese, ENOENT; «non c'è» e gli altri nelle sei lingue se l'errore lo scrive Lode)
+const NON_CE = /ENOENT|no such file|non c.è|not found|NotFoundError|no existe|n.existe pas|existiert nicht|nicht gefunden|não existe/i;
 export const vaultVero = {
   async leggi() { try { return await V.leggiNota(FILE); } catch (e) { if (NON_CE.test(e?.message || '')) return null; throw e; } },
   scrivi: testo => V.scriviTasca(testo),

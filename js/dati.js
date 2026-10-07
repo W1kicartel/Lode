@@ -3,6 +3,7 @@
 // Esami e voti, sessioni di studio, carte del ripasso, impostazioni. Più i conti che servono a uno studente:
 // media ponderata, base di laurea, voto che serve, ore da fare oggi, ripasso a intervalli (SM-2).
 import { t, elenco, numero } from './lingua.js';
+import { numeroInFondo } from './parole.js';
 const CHIAVE = 'lode:v1';
 export const VUOTO = () => ({
   v: 1,
@@ -151,7 +152,7 @@ export const daFare = () => D.esami.filter(e => !e.fatto);
 export const prossimi = () => daFare().filter(e => e.data && e.data >= oggi()).sort((a, b) => a.data.localeCompare(b.data));
 // trova un esame dal nome detto o scritto («analisi», «analisi 2», «fisica uno»)
 export function trovaEsame(testo, { anche = 'tutti' } = {}) {
-  const q = norm(testo).replace(/\buno\b/g, '1').replace(/\bdue\b/g, '2').replace(/\btre\b/g, '3');
+  const q = numeroInFondo(norm(testo).replace(/\buno\b/g, '1').replace(/\bdue\b/g, '2').replace(/\btre\b/g, '3'));   // e «physics two», «Mathe zwei» (parole.js)
   if (!q) return null;
   const lista = anche === 'daFare' ? daFare() : D.esami;
   let migliore = null, punti = 0;
