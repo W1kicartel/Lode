@@ -3,8 +3,8 @@
 // barra: si decidono una volta sola, quando il vault si crea (desktop/vault.mjs, crea), e si salvano in .lode/vault.json
 // ({ lingua, nomi }). Un vault che esiste già senza vault.json tiene i nomi italiani: Lode non rinomina mai niente.
 // I marcatori che nessuno legge (%% lode:pagina %%, <!-- lode-carta -->, le chiavi del frontmatter) sono codici: qui non ci sono.
-// La tabella attiva vive in globalThis (Symbol.for), perché nel processo dell'app markdown.js si carica da due percorsi
-// (desktop/web/js e js/ per la sincronizzazione): due copie del modulo, una tabella sola.
+// La tabella attiva vive in globalThis (Symbol.for), perché questo modulo si può caricare da due percorsi: js/ e la copia in
+// desktop/web/js che usa il processo principale (desktop/web.mjs), per esempio nelle prove in node. Due copie, una tabella sola.
 import it from './lingue/it/vaultnomi.js';
 import en from './lingue/en/vaultnomi.js';
 import es from './lingue/es/vaultnomi.js';
