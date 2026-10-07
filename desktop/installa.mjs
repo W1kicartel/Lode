@@ -12,7 +12,7 @@ import { join, resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { t, numero } from './lingua.mjs';
+import { t, numero, lingua } from './lingua.mjs';
 
 const MAC = process.platform === 'darwin', WIN = process.platform === 'win32';
 const esegui = (cmd, args, opz = {}) => new Promise((ok, ko) => execFile(cmd, args, { maxBuffer: 1 << 24, ...opz }, (e, out, err) => e ? ko(new Error((err || e.message).toString().trim())) : ok(out.toString())));
@@ -183,6 +183,8 @@ export async function installaOllama({ avanza }) {
     return true;
   } finally { pulisci(tmp); }
 }
+// i GB scaricati: in italiano col punto di sempre («1.2 di 3.4 GB»), nelle altre lingue come scrive il loro paese
+const gb = byte => lingua() === 'it' ? (byte / 1e9).toFixed(1) : numero(byte / 1e9, 1);
 export async function scaricaModello(nome, avanza) {
   await avviaOllama();
   const r = await fetch(OLLAMA + '/api/pull', { method: 'POST', body: JSON.stringify({ model: nome, stream: true }) });
@@ -196,7 +198,7 @@ export async function scaricaModello(nome, avanza) {
       if (!riga.trim()) continue; const x = JSON.parse(riga);
       if (x.error) throw new Error(x.error);
       const adesso = Date.now();
-      if (x.total && x.completed && adesso - ultimo > 200) { ultimo = adesso; avanza({ fase: 'scarico', p: x.completed / x.total, testo: t('desktop.installa-scarico-modello', { nome, fatti: numero(x.completed / 1e9, 1), totale: numero(x.total / 1e9, 1) }) }); }
+      if (x.total && x.completed && adesso - ultimo > 200) { ultimo = adesso; avanza({ fase: 'scarico', p: x.completed / x.total, testo: t('desktop.installa-scarico-modello', { nome, fatti: gb(x.completed), totale: gb(x.total) }) }); }
     }
   }
   avanza({ fase: 'fatto', p: 1, testo: t('desktop.installa-modello-pronto', { nome }) });

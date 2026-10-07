@@ -47,7 +47,7 @@ export default {
   // la nota dell'orario: colonne, giorni (domenica per primo) e la riga che spiega
   'vaultnomi.orario-colonne': ['Course', 'Days', 'Start', 'End', 'Room'],
   'vaultnomi.giorni-brevi': ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'],
-  'vaultnomi.orario-spiega': 'Lode reads it to know when you are in class. Edit it here or from the bar ("lecture calculus 2 monday and wednesday 9-11 room 7").',
+  'vaultnomi.orario-spiega': 'Lode reads it to know when you are in class. Edit it here or from the bar (“lecture calculus 2 monday and wednesday 9-11 room 7”).',
   // i commenti dentro le note nuove
   'vaultnomi.commento-definizioni': 'One per line: - **Term**: definition. Lode turns them into memory games and cards.',
   'vaultnomi.commento-corso': 'Write above or below as you like: Lode\'s box (lectures, ★, exam date) updates itself and Lode never touches the rest.',
@@ -68,15 +68,15 @@ export default {
   'vaultnomi.ripasso-collegamenti': 'Links',
   'vaultnomi.ripasso-commento-collegamenti': 'Related lectures and concepts: [[...]]',
   'vaultnomi.memoria-titolo': 'What I know about you',
-  'vaultnomi.memoria-commento': 'Lode writes this note after every game. The "{sezione}" section stays yours: I read it every time I use the AI.',
+  'vaultnomi.memoria-commento': 'Lode writes this note after every game. The “{sezione}” section stays yours: I read it every time I use the AI.',
   'vaultnomi.memoria-in-breve': 'In short',
   'vaultnomi.memoria-ancora-niente': 'Nothing yet: jot down a few definitions in class and play a round.',
-  'vaultnomi.memoria-note-commento': 'Write here how you want to be helped: "explain with practical examples", "short sentences", "the Calculus oral exam is very theoretical".',
+  'vaultnomi.memoria-note-commento': 'Write here how you want to be helped: “explain with practical examples”, “short sentences”, “the Calculus oral exam is very theoretical”.',
   'vaultnomi.parola-corso': 'course',
   'vaultnomi.benvenuto-firma': 'was set up by **Lode**',
-  'vaultnomi.benvenuto-testo': '# Welcome to your vault\n\nThis vault {firma}, the assistant that lives at the top of your screen. It\'s a normal Obsidian vault: the notes are yours, in Markdown, and they stay on this computer.\n\n## How they work together\n- **In class** Lode knows when you\'re in a lecture (from the [[{orario}]]) and keeps the lecture note ready in `{lezioni}/<{corso}>/`. From the bar you jot down on the fly:\n  - **{stella}** (⌃⌥S): what the professor said will be asked;\n  - **Definition** (⌃⌥D): "term: definition";\n  - **Question** (⌃⌥Q): to ask the professor.\n- **Your notes** you write here, in Obsidian, as always. Lode finds on its own the definitions you put in the "{definizioni}" section (`- **Term**: definition`) or write as `Term :: definition`.\n- **At home** the bar offers you a two-minute game on the definitions of the last lecture, right when they\'re about to slip away.\n- **[[{memoria}]]** (in `{lode}/`) is what Lode has learned about you: solid definitions, ones to reinforce, how you study. In the "{notePerLode}" section you can tell it how you want to be helped.\n\n## Shortcuts\n| | Mac | Windows |\n|---|---|---|\n| Open Lode and type | ⌥ Space | Ctrl ⇧ Space |\n| {stella} | ⌃⌥ S | Ctrl Alt S |\n| Definition | ⌃⌥ D | Ctrl Alt D |\n| Question for the professor | ⌃⌥ Q | Ctrl Alt Q |\n| Memory game | ⌃⌥ G | Ctrl Alt G |\n',
+  'vaultnomi.benvenuto-testo': '# Welcome to your vault\n\nThis vault {firma}, the assistant that lives at the top of your screen. It\'s a normal Obsidian vault: the notes are yours, in Markdown, and they stay on this computer.\n\n## How they work together\n- **In class** Lode knows when you\'re in a lecture (from the [[{orario}]]) and keeps the lecture note ready in `{lezioni}/<{corso}>/`. From the bar you jot down on the fly:\n  - **{stella}** (⌃⌥S): what the professor said will be asked;\n  - **Definition** (⌃⌥D): “term: definition”;\n  - **Question** (⌃⌥Q): to ask the professor.\n- **Your notes** you write here, in Obsidian, as always. Lode finds on its own the definitions you put in the “{definizioni}” section (`- **Term**: definition`) or write as `Term :: definition`.\n- **At home** the bar offers you a two-minute game on the definitions of the last lecture, right when they\'re about to slip away.\n- **[[{memoria}]]** (in `{lode}/`) is what Lode has learned about you: solid definitions, ones to reinforce, how you study. In the “{notePerLode}” section you can tell it how you want to be helped.\n\n## Shortcuts\n| | Mac | Windows |\n|---|---|---|\n| Open Lode and type | ⌥ Space | Ctrl ⇧ Space |\n| {stella} | ⌃⌥ S | Ctrl Alt S |\n| Definition | ⌃⌥ D | Ctrl Alt D |\n| Question for the professor | ⌃⌥ Q | Ctrl Alt Q |\n| Memory game | ⌃⌥ G | Ctrl Alt G |\n',
   // frasi della barra che citano un nome del vault: il nome arriva dal vault, non dalla lingua della barra
-  'vaultnomi.frase-orario-nel-vault': 'Your timetable is also in the vault, in "{nota}": you can change it from Obsidian.',
+  'vaultnomi.frase-orario-nel-vault': 'Your timetable is also in the vault, in “{nota}”: you can change it from Obsidian.',
   'vaultnomi.frase-nella-cartella': 'It\'s in the {cartella} folder of your vault.',
-  'vaultnomi.frase-riordinati-nota': 'They go into the note, under "{sezione}", below the transcript (which stays). {motore} wrote them: read them over.',
+  'vaultnomi.frase-riordinati-nota': 'They go into the note, under “{sezione}”, below the transcript (which stays). {motore} wrote them: read them over.',
 };

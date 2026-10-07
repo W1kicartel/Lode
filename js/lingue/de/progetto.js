@@ -3,7 +3,7 @@
 export default {
   'progetto.solo-app': 'Ein Projekt verfolgen geht nur in der Desktop-App von Lode.',
   'progetto.provo': 'ich teste…',
-  'progetto.file-cambiati': '{n} Dateien +{piu} −{meno}',
+  'progetto.file-cambiati': { one: '{n} Datei +{piu} −{meno}', other: '{n} Dateien +{piu} −{meno}' },
   'progetto.fatto-non-provato': 'fertig · nicht getestet',
   'progetto.oggi-non-provato': '{nome}: nicht getestet',
   'progetto.oggi-esito': '{nome}: {breve}',

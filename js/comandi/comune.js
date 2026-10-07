@@ -115,8 +115,10 @@ export const inLingua = (frase, cod) => !!PROPRIE[cod]?.test(' ' + norm(frase) +
 // - si / no: la frase intera, con dopo spazi, virgole, punti o punti esclamativi; il sì può avere una coda («sì pure»);
 // - voto: la frase comincia così e dopo non c'è una lettera o una cifra (come \b: «basta così» sì, «bastava» no);
 // - basta / esci: la frase intera e basta.
+// L'apostrofo tipografico (’, quello che mettono le tastiere dei telefoni e la correzione automatica) vale come ':
+// «d’accordo», «d’accord», «c’est bon».
 export function detto(testo, P, quale) {
-  const x = String(testo ?? '').toLowerCase(), lista = P?.[quale] || [];
+  const x = String(testo ?? '').toLowerCase().replace(/[’‘]/g, "'"), lista = P?.[quale] || [];
   if (quale === 'si' || quale === 'no') {
     const f = x.replace(/[\s,.!]*$/, '');
     if (lista.includes(f)) return true;

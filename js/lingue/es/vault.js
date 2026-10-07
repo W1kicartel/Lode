@@ -30,7 +30,7 @@ export default {
   'vault.ancora-nessuna': 'Ninguna todavía.',
   'vault.note-commento': 'Escribe aquí cómo quieres que te ayude: «explícamelo con ejemplos prácticos», «soy disléxico, frases cortas», «el oral de Cálculo es con García, muy teórico».',
   // Home
-  'vault.home-carte': '{n} tarjetas para repasar',
+  'vault.home-carte': { one: '{n} tarjeta para repasar', other: '{n} tarjetas para repasar' },
   'vault.alias-memoria': 'Lo que Lode sabe de mí',
   'vault.alias-benvenuto': 'Cómo funciona',
   'vault.titolo-oggi': 'Hoy',
@@ -43,7 +43,7 @@ export default {
   'vault.appello': 'examen el {data}',
   'vault.corsi-vuoto': 'Añade el horario desde la barra: «clase cálculo 2 lunes y miércoles 9-11 aula 7».',
   'vault.titolo-ultime-lezioni': 'Últimas clases',
-  'vault.definizioni-n': '{n} definiciones',
+  'vault.definizioni-n': { one: '{n} definición', other: '{n} definiciones' },
   'vault.titolo-carriera': 'Carrera',
   'vault.carriera': 'Media **{media}** · nota base de grado **{base}**/110 · {cfu} de {tot} créditos → {esami}',
   // Esami
@@ -65,7 +65,7 @@ export default {
   'vault.corso-cfu': '**{cfu} créditos**',
   'vault.corso-voto': 'nota {voto}',
   'vault.corso-voto-lode': 'nota {voto} con matrícula',
-  'vault.corso-appello': 'examen el **{data}** (en {n} días) · {fatte} de {tot} h estudiadas',
+  'vault.corso-appello': { one: 'examen el **{data}** (en {n} día) · {fatte} de {tot} h estudiadas', other: 'examen el **{data}** (en {n} días) · {fatte} de {tot} h estudiadas' },
   'vault.corso-lezioni': 'Clases: {elenco}',
   'vault.orario-voce': '{giorni} {inizio}–{fine}',
   'vault.orario-voce-aula': '{giorni} {inizio}–{fine} aula {aula}',

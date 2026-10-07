@@ -180,7 +180,7 @@ function bloccoRipeti() {
 function bloccoTrascrizione() {
   const tr = TR.stato();
   if (!tr) return `<button type="button" class="ld-trascrivi" data-ld-trascrivi><i class="ld-rec"></i><span><b>${t('barra1.trascrivi-lezione')}</b><small>${t('barra1.trascrivi-lezione-dett', { tasti: MAC ? '⌃⌥R' : 'Ctrl Alt R' })}</small></span></button>`;
-  return `<div class="ld-trascrivi on"><i class="ld-rec"></i><span><b>${t(tr.inPausa ? 'barra1.trascrizione-in-pausa' : 'barra1.trascrizione-in-corso', { min: esc(tr.minuti), parole: esc(numero(tr.parole, 0)) })}</b><small>${tr.ultima ? esc(tr.ultima.replace(/^\*\*\d\d:\d\d\*\*\s*/, '').slice(-110)) : t('barra1.prima-riga')}</small></span>
+  return `<div class="ld-trascrivi on"><i class="ld-rec"></i><span><b>${t(tr.inPausa ? 'barra1.trascrizione-in-pausa' : 'barra1.trascrizione-in-corso', { min: esc(tr.minuti), parole: esc(numero(tr.parole, 0)), n: tr.parole })}</b><small>${tr.ultima ? esc(tr.ultima.replace(/^\*\*\d\d:\d\d\*\*\s*/, '').slice(-110)) : t('barra1.prima-riga')}</small></span>
     <button type="button" class="btn small" data-ld-tr="${tr.inPausa ? 'riprendi' : 'pausa'}">${tr.inPausa ? t('barra1.riprendi') : t('barra1.pausa')}</button><button type="button" class="btn small primary" data-ld-tr="fine">${t('barra1.fine')}</button></div>`;
 }
 function disegnaHome() {
@@ -237,7 +237,7 @@ function aggiornaPillola(avviso) {
   const lo = lezioneOra(), pl = prossimaLezione(), sg = suggerimento(), tr = TR.stato(), pp = PR.pillola();
   const p = prossimi()[0], c = daRipassare().length;
   let testo, pieno = false;
-  if (tr) { testo = `<i class="ld-live rec"></i><b>${esc(tr.lezione.corso)}</b><span class="ld-tenue">${t(tr.inPausa ? 'barra1.pillola-trascrizione-in-pausa' : 'barra1.pillola-trascrivo', { parole: numero(tr.parole, 0) })}</span>`; pieno = true; }
+  if (tr) { testo = `<i class="ld-live rec"></i><b>${esc(tr.lezione.corso)}</b><span class="ld-tenue">${t(tr.inPausa ? 'barra1.pillola-trascrizione-in-pausa' : 'barra1.pillola-trascrivo', { parole: numero(tr.parole, 0), n: tr.parole })}</span>`; pieno = true; }
   else if (lo) { const st = stelleOggi(lo.corso); testo = `<i class="ld-live"></i><b>${esc(lo.corso)}</b><span class="ld-tenue">${t('barra1.fine-tra', { n: esc(lo.mancano) })}</span>${st ? `<span class="ld-punto"></span><span class="ld-tenue">★${esc(st)}</span>` : ''}${orecchio}`; pieno = true; }
   else if (pl && pl.tra <= 20) { testo = `<b>${esc(pl.corso)}</b><span class="ld-tenue">${pl.aula ? t('barra1.pillola-aula-tra', { aula: esc(pl.aula), n: esc(pl.tra) }) : t('barra1.lezione-tra', { n: esc(pl.tra) })}</span>${orecchio}`; pieno = true; }
   else if (pp) { testo = pp.html + orecchio; pieno = pp.pieno; }   // il progetto seguito: «lab3 · 2 file +41 −7», «lab3 · fatto · non provato»
@@ -470,7 +470,7 @@ function contesto(html) {
 function mostraFatto(d = {}, dove) {
   d.annulla?.fotografa?.();   // D subito dopo il comando: «Annulla» toglie solo quello che il comando ha cambiato
   const f = h('div', 'ld-fatto' + (d.no ? ' no' : ''), `${d.no ? IC.croce : IC.spunta}<b>${esc(d.testo || t('barra1.fatto'))}</b>${d.nota ? `<span>${esc(d.nota)}</span>` : ''}`);
-  if (d.annulla) { const b = h('button', 'btn small', t('barra1.annulla')); b.type = 'button'; b.addEventListener('click', () => { d.annulla(); b.replaceWith(h('span', '', t('barra1.annullato-minuscolo'))); aggiornaTutto(); }, { once: true }); f.append(b); }
+  if (d.annulla) { const b = h('button', 'btn small', t('barra1.disfa')); b.type = 'button'; b.addEventListener('click', () => { d.annulla(); b.replaceWith(h('span', '', t('barra1.disfatto'))); aggiornaTutto(); }, { once: true }); f.append(b); }
   if (d.azione) { const b = h('button', 'btn small', esc(d.azione[0])); b.type = 'button'; b.addEventListener('click', d.azione[1]); f.append(b); }
   if (dove) dove.replaceWith(f); else (A.turno || nuovoTurno()).append(f);
   if (d.sintesi && A.turno) A.turno.dataset.sintesi = d.sintesi;
@@ -857,7 +857,7 @@ async function fermaTrascrizione() {
   if (!TR.attiva()) return rispostaFissa(t('barra1.non-sto-trascrivendo'));
   modo('pensa', t('barra1.ultimi-secondi')); attesaVoce = t('barra1.ultimi-secondi');
   const l = TR.stato().lezione, r = await TR.ferma(); modo('riposo'); segnala('fatto'); aggiornaTutto();
-  await mostraFatto({ testo: t('barra1.lezione-trascritta', { parole: numero(r.parole, 0) }), nota: r.sospese ? t('barra1.righe-sospese', { n: r.sospese }) : t('barra1.tutto-nella-nota'), azione: AI.attiva() ? [t('barra1.riordina'), () => { nuovoTurno(); detto(A.turno, t('barra1.detto-riordina')); riordinaLezione(null, l); }] : [t('barra1.condividi'), () => { nuovoTurno(); detto(A.turno, t('barra1.detto-condividi')); condividiLezione(l.corso); }], sintesi: t('barra1.sintesi-parole-trascritte', { n: r.parole }) });
+  await mostraFatto({ testo: t('barra1.lezione-trascritta', { parole: numero(r.parole, 0), n: r.parole }), nota: r.sospese ? t('barra1.righe-sospese', { n: r.sospese }) : t('barra1.tutto-nella-nota'), azione: AI.attiva() ? [t('barra1.riordina'), () => { nuovoTurno(); detto(A.turno, t('barra1.detto-riordina')); riordinaLezione(null, l); }] : [t('barra1.condividi'), () => { nuovoTurno(); detto(A.turno, t('barra1.detto-condividi')); condividiLezione(l.corso); }], sintesi: t('barra1.sintesi-parole-trascritte', { n: r.parole }) });
   if (r.sorgente !== 'computer' && !(D.imp.ripetiInAula && (lezioneOra() || ripetiAMano()))) O.spegni();   // il microfono resta acceso solo se serve a «Ripeti»
   clearTimeout(tMuto);
   if (!AI.attiva()) rispostaFissa(t('barra1.con-cervello-locale'));
@@ -2467,7 +2467,7 @@ async function schedaProva(c = {}) {
 }
 // «Compito del 12/02/2024 · 5 esercizi · 32 punti»
 const nomeCompito = c => c.data ? t('barra3.prova-compito-del', { data: TE.dataScritta(c.data) }) : c.fonte === 'scelti' ? t('barra3.prova-scelti') : c.fonte && c.fonte !== 'incollato' ? t('barra3.prova-compito-fonte', { fonte: c.fonte }) : t('barra3.prova-compito-incollato');
-const rigaCompito = c => [nomeCompito(c), t('barra3.n-esercizi', { n: c.temi.length }), c.punti != null ? t('barra3.n-punti', { punti: numeroCorto(c.punti) }) : ''].filter(Boolean).join(' · ');
+const rigaCompito = c => [nomeCompito(c), t('barra3.n-esercizi', { n: c.temi.length }), c.punti != null ? t('barra3.n-punti', { punti: numeroCorto(c.punti), n: c.punti }) : ''].filter(Boolean).join(' · ');
 function provaPartenza(e, comp, cs = [comp]) {
   const s = scheda('ld-prova', `<span class="ld-lbl">${t('barra3.prova-titolo', { nome: esc(e.nome) })}</span>
     <p class="ld-prova-cosa"></p>
@@ -2525,7 +2525,7 @@ function provaInCorso(e, comp, dove) {
   const fine = new Date(st.inizio + st.durata * 60e3), cor = PV.corrente(st), mins = PV.minutiDi(st);
   s.innerHTML = `<span class="ld-lbl">${t('barra3.prova-titolo', { nome: esc(e.nome) })}</span>
     <p class="ld-tema-meta">${esc(rigaCompito(comp))} · ${t('barra3.prova-durata-fino', { min: esc(st.durata), ora: esc(oraBreve(fine)) })}</p>
-    <ol class="ld-prova-l">${comp.temi.map((x, i) => `<li class="${i === cor ? 'ora' : i < cor ? 'fatto' : ''}"><span class="ld-prova-n">${t('barra3.esercizio-n', { n: esc(x.es ?? i + 1) })}${x.punti != null ? ` · ${t('barra3.n-punti', { punti: esc(numeroCorto(x.punti)) })}` : ''}${i < cor && mins[i] != null ? ` · ${t('comune.minuti', { m: esc(mins[i]) })}` : ''}</span>
+    <ol class="ld-prova-l">${comp.temi.map((x, i) => `<li class="${i === cor ? 'ora' : i < cor ? 'fatto' : ''}"><span class="ld-prova-n">${t('barra3.esercizio-n', { n: esc(x.es ?? i + 1) })}${x.punti != null ? ` · ${t('barra3.n-punti', { punti: esc(numeroCorto(x.punti)), n: x.punti })}` : ''}${i < cor && mins[i] != null ? ` · ${t('comune.minuti', { m: esc(mins[i]) })}` : ''}</span>
       <div class="ld-tema-testo">${mdHtml(x.t)}</div>${i === cor && i < comp.temi.length - 1 ? `<button type="button" class="btn small ld-piano" data-passo>${t('barra3.prova-passo')}</button>` : ''}</li>`).join('')}</ol>
     <div class="az"><button type="button" class="btn primary" data-consegno>${t('barra3.consegno')}</button><button type="button" class="btn ld-piano" data-lascio>${t('barra3.lascio-perdere')}</button></div>
     <p class="ld-nota">${t('barra3.prova-nota-tempo')}</p>`;
@@ -2561,7 +2561,7 @@ function provaEsiti(e, comp, s) {
   const st = PV.inCorso(), scelte = comp.temi.map(() => null);
   s.innerHTML = `<span class="ld-lbl">${t('barra3.prova-titolo', { nome: esc(e.nome) })}</span>
     <p>${t('barra3.prova-consegnato')}</p>
-    <ol class="ld-prova-l">${comp.temi.map((x, i) => `<li><span class="ld-prova-n">${t('barra3.esercizio-n', { n: esc(x.es ?? i + 1) })}${x.punti != null ? ` · ${t('barra3.n-punti', { punti: esc(numeroCorto(x.punti)) })}` : ''}</span>
+    <ol class="ld-prova-l">${comp.temi.map((x, i) => `<li><span class="ld-prova-n">${t('barra3.esercizio-n', { n: esc(x.es ?? i + 1) })}${x.punti != null ? ` · ${t('barra3.n-punti', { punti: esc(numeroCorto(x.punti)), n: x.punti })}` : ''}</span>
       <span class="ld-prova-inizio">${esc(x.t.split('\n').find(r => r.trim()).slice(0, 160))}</span>
       <div class="az ld-prova-esiti" role="group" aria-label="${t('barra3.prova-come-andato', { n: esc(x.es ?? i + 1) })}">${Object.entries(PV.COME).map(([k, t]) => `<button type="button" class="btn small" data-i="${i}" data-come="${k}">${t}</button>`).join('')}</div></li>`).join('')}</ol>
     <div class="az"><button type="button" class="btn primary" data-salva disabled>${t('barra3.salva')}</button><button type="button" class="btn ld-piano" data-lascio>${t('barra3.lascio-perdere')}</button></div>
@@ -2708,7 +2708,8 @@ async function valutaSpiego(testo) {
   const c = PG.controllaSpiegazione(e, a, testo);
   if (!c) { PG.registraEsito(e, a.id, 'parziale', 'spiega'); aggiornaTutto(); return mostraFatto({ testo: t('barra3.spiego-segnato', { x: a.t }), nota: t('barra3.spiego-controllo-vero') }); }
   PG.registraEsito(e, a.id, c.esito, 'spiega'); segnala(c.esito === 'giusta' ? 'fatto' : 'quiete');
-  scheda('ld-spiego-esito', `<span class="ld-lbl">${esc(a.t)} · ${t('barra3.punti-su', { x: c.punti.filter(p => p.detto).length, n: c.punti.length })}</span>
+  const detti = c.punti.filter(p => p.detto).length;   // n sceglie il plurale: «1 punto su 4»
+  scheda('ld-spiego-esito', `<span class="ld-lbl">${esc(a.t)} · ${t('barra3.punti-su', { x: detti, n: detti, tot: c.punti.length })}</span>
     <ul class="ld-punti">${c.punti.map(p => `<li class="${p.detto ? 'si' : 'no'}"><b>${p.detto ? '✓' : '○'}</b><span>${esc(p.t)}${!p.detto && p.d ? `<small>${esc(p.d.replace(/^[^:]+:\s*/, ''))}</small>` : ''}</span></li>`).join('')}</ul>
     <p class="ld-nota">${t('barra3.spiego-parole-chiave')} ${c.esito === 'giusta' ? t('barra3.spiego-sicuro') : t('barra3.spiego-cerchio-vuoto')}</p>`);
   aggiornaTutto();

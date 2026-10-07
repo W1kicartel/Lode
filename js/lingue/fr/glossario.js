@@ -16,7 +16,7 @@ export default {
   'glossario.strncpy.domanda': "strncpy(d, s, n) met-elle toujours le '\\0' final ?",
   'glossario.strncpy.risposta': "Non : si s a n caractères ou plus, il n'y a aucun '\\0' dans d. Si s est plus courte, elle remplit le reste avec des zéros.",
   'glossario.strcmp.domanda': 'Que renvoie strcmp si les deux chaînes sont égales ?',
-  'glossario.strcmp.risposta': '0. Un nombre négatif si la première vient avant, positif si elle vient après : c\'est pour ça que if (strcmp(a, b)) veut dire « elles sont différentes ».',
+  'glossario.strcmp.risposta': '0. Un nombre négatif si la première vient avant, positif si elle vient après : c\'est pour ça que if (strcmp(a, b)) veut dire « elles sont différentes ».',
   'glossario.strlen.domanda': "strlen compte-t-elle aussi le '\\0' final ?",
   'glossario.strlen.risposta': "Non : elle compte les caractères avant le '\\0'. Pour copier la chaîne, il faut strlen(s) + 1 octets.",
   'glossario.strcat.domanda': 'Que faut-il pour que strcat(d, s) marche ?',

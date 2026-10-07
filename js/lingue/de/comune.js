@@ -8,7 +8,7 @@ export default {
   'comune.passato': 'vorbei',
   'comune.oggi': 'heute',
   'comune.domani': 'morgen',
-  'comune.traGiorni': 'in {n} Tagen',
+  'comune.traGiorni': { one: 'in {n} Tag', other: 'in {n} Tagen' },
   'comune.oreMinuti': '{h} Std. {m} Min.',
   'comune.ore': '{h} Std.',
   'comune.minuti': '{m} Min.',

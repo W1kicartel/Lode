@@ -36,8 +36,9 @@ export function lezioneDaAnnotare(corsoDetto) {
   const u = ultimaLezioneFinita(); if (u && u.data === oggi()) return u;
   return { corso: nomi().corsi.sparsi, data: oggi() };
 }
-// la nota «Appunti sparsi» (col nome del vault: «Loose notes» in un vault nato in inglese)
-export const sparsi = corso => norm(corso || '') === norm(nomi().corsi.sparsi);
+// la nota «Appunti sparsi» (col nome del vault: «Loose notes» in un vault nato in inglese): il nome esatto, come prima
+// delle lingue («appunti sparsi» in minuscolo è un corso dello studente)
+export const sparsi = corso => corso === nomi().corsi.sparsi;
 export async function annota(tipo, testo, { corso, termine, lezione, grezza } = {}) {
   await pronto;
   const l = lezione || lezioneDaAnnotare(corso);
@@ -127,7 +128,7 @@ const nomeNota = f => f.replace(/\.md$/, '').split('/').pop();
 const linkLez = l => l.file ? `[[${nomeNota(l.file)}]]` : `${l.corso} (${dataBreveV(l.data)})`;
 const corsiNoti = () => {
   const c = new Map();
-  const metti = n => { const k = norm(n); if (n && !sparsi(n) && !c.has(k)) c.set(k, pulito(n)); };
+  const metti = n => { const k = norm(n); if (n && k !== norm(nomi().corsi.sparsi) && !c.has(k)) c.set(k, pulito(n)); };
   D.orario.forEach(o => metti(o.corso)); lezioni().forEach(l => metti(l.corso)); D.esami.forEach(e => metti(e.nome));
   return [...c.values()].sort((a, b) => a.localeCompare(b, nomi().locale));
 };

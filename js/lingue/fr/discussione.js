@@ -21,7 +21,7 @@ export default {
   'discussione.punto-restituisce-valore': 'qu\'elle renvoie une valeur',
   'discussione.punto-restituisce-tipo': 'qu\'elle renvoie un `{tipo}`',
   'discussione.file-non-arrivato': "le fichier n'est pas arrivé",
-  'discussione.nota': "Lode ne sait pas qui a écrit les lignes : « pendant que l'agent travaillait » veut dire que le fichier a changé pendant un de ses tours. Lode ne t'explique pas le code : il vérifie seulement que tu sais l'expliquer.",
+  'discussione.nota': "Lode ne sait pas qui a écrit les lignes : « pendant que l'agent travaillait » veut dire que le fichier a changé pendant un de ses tours. Lode ne t'explique pas le code : il vérifie seulement que tu sais l'expliquer.",
   'discussione.hai-detto': 'Tu as dit : {punti}.',
   'discussione.nessun-punto': 'Je ne trouve aucun des points que je vois dans le code.',
   'discussione.hai-saltato': 'Tu as sauté : {punti}.',

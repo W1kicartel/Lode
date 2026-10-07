@@ -3,14 +3,14 @@
 export default {
   'sync.cifrati': 'die Daten von Lode im Tagebuch (Prüfungen, Noten, Karten und Wiederholungen, Lerneinheiten, Profil, Einstellungen): nicht die Seiten für Obsidian, die Lode daraus macht, siehe unten',
   'sync.in-chiaro': [
-    'Notizen, «Sbobine» (Mitschriften), Dateien für Anki, Tagebücher in «Progetti»',
-    '«Orario.md» mit den Räumen',
-    'die Seiten, die Lode für Obsidian schreibt, gemacht genau aus diesen Daten: «Esami» (Noten, Schnitt, ECTS und Lernstunden pro Prüfung), «Memoria» (Lernstunden im Monat, zu welcher Tageszeit du lernst, die Serie der Tage, die falschen Definitionen und wie oft), «Home» (der nächste Prüfungstermin, wie viele Karten zu wiederholen sind), «Corsi», «Glossario»',
+    'Notizen, „Sbobine“ (Mitschriften), Dateien für Anki, Tagebücher in „Progetti“',
+    '„Orario.md“ mit den Räumen',
+    'die Seiten, die Lode für Obsidian schreibt, gemacht genau aus diesen Daten: „Esami“ (Noten, Schnitt, ECTS und Lernstunden pro Prüfung), „Memoria“ (Lernstunden im Monat, zu welcher Tageszeit du lernst, die Serie der Tage, die falschen Definitionen und wie oft), „Home“ (der nächste Prüfungstermin, wie viele Karten zu wiederholen sind), „Corsi“, „Glossario“',
     'Namen, Größen und Zeiten der Dateien (wann du lernst)',
     'wie viele Computer es gibt, wie viele Dateien jeder schreibt und wie viele Aktionen in jeder Datei stehen (eine Datei pro Tag)',
     'die Gruppendatei (Salt und Passwortprüfung, wann sie entstanden ist und auf welchem Computer, der Fingerabdruck der vorherigen dati.json)',
     'wann das Passwort geändert wurde',
-    'die minimale dati.json, die «Aggiorna Lode» („Lode aktualisieren“) sagt',
+    'die minimale dati.json, die „Aggiorna Lode“ („Lode aktualisieren“) sagt',
   ],
   'sync.sul-computer': 'Auf dem Computer bleibt das Tagebuch von Lode lesbar, geschützt nur durch dein Benutzerkonto.',
   'sync.cronologia': 'Im Verlauf des Cloud-Dienstes bleibt, was vor dem Passwort unverschlüsselt hochgeladen wurde.',

@@ -11,7 +11,7 @@ const VUOTE = new Set(['della delle degli dello dalla dalle dagli nella nelle ne
   'donde cuando sobre entre porque desde hasta estos estas otros otras puede pueden tienen según también siempre todos todas',
   'dans avec pour sont cette entre leurs autre autres peuvent quand comme selon depuis aussi toujours chaque toutes',
   'nicht einer eines einem einen keine diese dieser dieses wenn durch werden wird sind zwischen unter oder über ihrer seine seiner immer jeder jedes',
-  'quando sobre entre porque desde para pelos pelas estes estas outros outras pode podem como segundo também sempre todos todas cada',
+  'quando sobre entre porque desde para pelos pelas estes estas outros outras pode podem como segundo também todos todas cada',   // senza «sempre», che è anche italiano
 ].join(' ').split(' '));
 const mescola = a => { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; };
 
