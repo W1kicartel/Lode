@@ -15,6 +15,7 @@ import { creaMotore, MINIMO, scrittoDaVecchia } from './sync/motore.mjs';
 import { LISTE } from './sync/schema.mjs';
 import { differenze, normalizza } from './sync/differenze.mjs';
 import { t } from './lingua.mjs';
+import { nomi as nomiVault } from '../js/nomi.js';
 
 const MAC = process.platform === 'darwin', WIN = process.platform === 'win32';
 // p sta dentro cartella? Si confrontano i percorsi veri (realpath): un vault raggiunto da un collegamento a una cartella
@@ -198,6 +199,7 @@ export function creaSincronizzazione({ app, safeStorage, dialog, powerMonitor, c
       vault: v, dati: app.getPath('userData'), orologio: () => Date.now(), casuale: () => randomBytes(4).readUInt32BE() / 2 ** 32,
       macchina: impronta(), attendi: ms => new Promise(r => setTimeout(r, ms)), portachiavi: pc,
       registro: (...x) => { if (process.env.LODE_SYNC_REGISTRO) console.log('sync:', ...x); },
+      nomeOrario: () => nomiVault().note.orario,   // il nome dell'orario nel vault aperto (js/nomi.js)
     });
   }
   async function apri() {

@@ -78,7 +78,9 @@ const aadGruppo = gj => { const { firma, ...c } = gj.cifratura || {}; return `gr
 export const firmaGruppo = (k, gj) => (gj.cifratura ? { ...gj, cifratura: { ...gj.cifratura, firma: chiudiBlocco(k, gj.id, aadGruppo(gj)) } } : gj);
 export const gruppoAutentico = (k, gj) => !gj?.cifratura || (!!k && typeof gj.cifratura.firma === 'string' && apriBlocco(k, gj.cifratura.firma, aadGruppo(gj)) === gj.id);
 
-export function creaMotore({ fs, vault: vaultDato, dati, orologio, casuale, registro = () => { }, macchina = null, parametri = KDF, attendi = async () => { }, portachiavi = null }) {
+// nomeOrario: il nome della nota dell'orario nel vault (js/nomi.js: «Orario» in un vault italiano o nato prima delle lingue,
+// «Timetable» in uno nato in inglese…), chiesto a ogni giro perché il vault può cambiare
+export function creaMotore({ fs, vault: vaultDato, dati, orologio, casuale, registro = () => { }, macchina = null, parametri = KDF, attendi = async () => { }, portachiavi = null, nomeOrario = () => 'Orario' }) {
   const S = `${dati}/sync`, COPIE = `${S}/copie`, G = g => `${S}/${g}`;
   const hex = n => Array.from({ length: n }, () => '0123456789abcdef'[Math.floor(casuale() * 16)]).join('');
   const ora = () => Math.floor(orologio());
@@ -802,14 +804,18 @@ export function creaMotore({ fs, vault: vaultDato, dati, orologio, casuale, regi
   // con questa versione, e il file non mostra mai una vista più povera di quella che lo studente aveva davanti
   async function orario() {
     if (fermo || !st) return;
-    const nomi = ((await elenca(vaultDir)) || []).filter(n => /^Orario.*\.md$/.test(n)).sort((a, b) => (a === 'Orario.md' ? -1 : b === 'Orario.md' ? 1 : a < b ? -1 : 1));
+    const base = String(nomeOrario() || 'Orario').normalize('NFC'), OF = `${base}.md`, rxO = new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.*\\.md$`);
+    // i nomi letti dal disco si confrontano in una forma sola (NFC): «Horário.md» scomposto da un servizio cloud resta l'orario
+    // principale, e si legge col nome che ha sul disco
+    const nfc = n => n.normalize('NFC'), eOF = n => nfc(n) === OF;
+    const nomi = ((await elenca(vaultDir)) || []).filter(n => rxO.test(nfc(n))).sort((a, b) => (eOF(a) ? -1 : eOF(b) ? 1 : a < b ? -1 : 1));
     let principale = null;
     const nuovi = new Map();
     for (const f of nomi) {
       const t = await leggi(`${vaultDir}/${f}`); if (t == null) continue;
-      const r = eventiDaOrario(t, piegaOra(), f === 'Orario.md' ? orarioVisto : null);
+      const r = eventiDaOrario(t, piegaOra(), eOF(f) ? orarioVisto : null);
       for (const e of r.eventi) if (!noti.has(e.h)) nuovi.set(e.h, e);
-      if (f === 'Orario.md') principale = r.parziale ? null : { testo: t, marcatore: r.marcatore, righe: r.righe, visto: !!r.marcatore && !!orarioVisto && orarioVisto.h === r.marcatore.h };
+      if (eOF(f)) principale = r.parziale ? null : { testo: t, marcatore: r.marcatore, righe: r.righe, visto: !!r.marcatore && !!orarioVisto && orarioVisto.h === r.marcatore.h };
     }
     // un'aggiunta (o una rimozione) fatta in Obsidian che il diario non prende (disco pieno): il marcatore non si rimette, e le
     // righe viste restano in memoria (orarioVisto, orario.mjs) per riconoscere dopo una riga tolta anche se il file torna come
@@ -832,11 +838,11 @@ export function creaMotore({ fs, vault: vaultDato, dati, orologio, casuale, regi
     // mentre lo studente scrive ancora, e Obsidian salva ogni 2 s circa) non si scrive, e il giro dopo assorbe la versione nuova.
     // Prima il rename la copriva: non arrivava nel diario e non andava in copie/ (giro 3). Il controllo si rifà dopo aver
     // scritto il temporaneo (scriviSeUguale): la finestra resta il solo rename, pochi microsecondi invece delle scritture con fsync
-    const OM = `${vaultDir}/Orario.md`;
+    const OM = `${vaultDir}/${OF}`;
     if (proiezioni && (!m || sopra({ n, x }, m))) {
       if (testo === principale.testo) return;
       if ((await leggi(OM)) !== principale.testo) return;
-      if (studente) await daParte('Orario.md', principale.testo);   // un testo che non ha scritto Lode (quello sul disco adesso): una copia
+      if (studente) await daParte(OF, principale.testo);   // un testo che non ha scritto Lode (quello sul disco adesso): una copia
       await scriviSeUguale(OM, testo, principale.testo);
     } else if (studente && m) await scriviSeUguale(OM, rimarca(m), principale.testo);
   }

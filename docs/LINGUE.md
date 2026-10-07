@@ -12,7 +12,7 @@ L'**italiano resta la lingua di partenza**: ogni testo nasce in italiano, ogni c
 | i comandi che la barra capisce senza AI | il formato dei dati (`dati.json`): le chiavi restano quelle di adesso |
 | date, numeri, plurali | i messaggi di errore per chi sviluppa (console, log) |
 | la lingua in cui risponde l'AI | |
-| i nomi delle cartelle e delle note di un vault **nuovo** | i nomi di un vault che esiste già |
+| i nomi delle cartelle, delle note e delle sezioni di un vault **nuovo** | i nomi di un vault che esiste già (anche se la lingua della barra cambia) |
 | le formule dettate a voce (italiano e inglese) | |
 
 **La lingua non è il paese.** Il sistema dei voti (sezione «Sistemi dei voti») si sceglie a parte: uno studente italiano in Erasmus a Madrid può avere la barra in italiano e i voti spagnoli.
@@ -101,7 +101,24 @@ Le funzioni di libretto, media, «quanto mi serve» ed «e se prendo…» passan
 
 ## Il vault
 
-I nomi delle cartelle e delle note (`Lezioni`, `Esami`, `Glossario`, `Home.md`, `In tasca.md`…) passano da un'unica tabella, `NOMI` in `js/vault.js`, letta dal catalogo `vault`. Si decidono **una volta sola**, alla creazione del vault, e si salvano in `.lode/vault.json`. Un vault che esiste già tiene i nomi che ha: se `vault.json` manca, valgono i nomi italiani.
+I nomi che Lode scrive nel vault e poi rilegge passano da un'unica tabella, `js/nomi.js`, letta dal catalogo `vaultnomi` (`js/lingue/<codice>/vaultnomi.js`):
+- **cartelle:** `Lezioni`, `Corsi`, `Sbobine`, `Anki`, `Allegati`, `Materiali`, `Progetti`, `Modelli`, `Inbox` (la cartella `Lode` resta `Lode` in tutte le lingue);
+- **i «corsi» che inventa Lode:** «Appunti sparsi», «Videolezioni», «Varie»;
+- **note:** `Home`, `Orario`, `Esami`, `Glossario`, `Benvenuto`, `Lode/Memoria`, `In tasca`, i modelli di Obsidian;
+- **sezioni:** quelle della lezione (`SEZIONI` di `js/markdown.js`: «Appunti», «★ Da esame», «Definizioni», «Domande per il prof», «Trascrizione», «Appunti riordinati da Lode») e «Note per Lode», «Cosa ho capito», «Cosa so davvero», «Informatica», «Ripasso in tasca», «Orario delle lezioni»;
+- **parole che si rileggono:** il callout della risposta e le caselle «sapevo» / «non sapevo» della tasca, le colonne e i giorni dell'orario;
+- **i testi delle note che nascono col vault:** benvenuto, modelli, memoria, i commenti `%% … %%` delle note nuove.
+
+Come funziona:
+- I nomi si decidono **una volta sola**, quando il vault nasce (`crea` in `desktop/vault.mjs`), nella lingua della barra di quel momento, e si salvano in `.lode/vault.json` (`{ lingua, nomi }`). Da lì in poi ogni lettura e scrittura usa i nomi del vault, **non** la lingua della barra: cambiare lingua non rinomina niente.
+- Un vault di Lode che esiste già senza `vault.json` (ha `Lezioni/`, `Home.md`, `Lode/Memoria.md`…) tiene i nomi italiani, e `vault.json` si scrive con `{ lingua: 'it' }`. Più in generale, senza `vault.json` (mai scritto, rovinato, o rimasto indietro con un servizio che non copia le cartelle col punto, come Obsidian Sync) la lingua è quella con più tracce nel vault (cartelle delle lezioni, dei corsi e dei modelli, Benvenuto, Home, Orario, Esami, Glossario, Memoria; a parità l'italiano, `linguaDalleTracce`). Una cartella vuota, o un vault di Obsidian dove Lode non ha mai scritto, nasce nella lingua di adesso.
+- I nomi salvati in `vault.json` valgono così come sono: se un catalogo cambia una parola, i vault che esistono già non cambiano. Le voci che mancano (una versione nuova di Lode) prendono il valore della lingua del vault.
+- La barra riceve i nomi con `vault:info` e li imposta con `impostaNomi`; chi scrive nel vault aspetta che siano arrivati. Nel browser, senza vault, valgono i nomi della lingua scelta (servono solo ai file che si scaricano).
+- Il processo principale costruisce le regex dei percorsi permessi dai nomi del vault (`permessi()` in `desktop/vault.mjs`); in italiano sono quelle di sempre. La sincronizzazione riceve il nome della nota dell'orario (`nomeOrario` di `creaMotore`); la sua nota e `CONTROLLO` non cambiano.
+- In lettura Lode capisce anche i nomi italiani (sezioni, giorni dell'orario, caselle della tasca): le note scritte prima restano leggibili.
+- **Non cambiano mai:** i marcatori (`%% lode:pagina %%`, `%% lode:diario %%`, `<!-- lode-carta:… -->`, `<!-- lode-tasca giro:… -->`), le chiavi e i valori del frontmatter (`tipo: lezione`, `corso`, `data`…).
+- Le frasi della barra che citano un nome del vault lo ricevono come parametro (`vaultnomi.frase-orario-nel-vault` con `{nota}`, `vaultnomi.frase-nella-cartella` con `{cartella}`, `vaultnomi.frase-riordinati-nota` con `{sezione}`).
+- Prove: `node --experimental-vm-modules test/vault-nomi.mjs`.
 
 ## L'AI
 

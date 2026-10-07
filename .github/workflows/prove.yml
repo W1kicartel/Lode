@@ -71,6 +71,9 @@ jobs:
         run: node --experimental-vm-modules test/diario.mjs
       - name: Ripasso in tasca
         run: node --experimental-vm-modules test/tasca.mjs
+      # i nomi del vault per lingua (js/nomi.js): decisi alla nascita del vault, salvati in .lode/vault.json, mai rinominati
+      - name: Nomi del vault per lingua
+        run: node --experimental-vm-modules test/vault-nomi.mjs
       - name: Lingue (cataloghi)
         run: node test/lingue.mjs
       # i comandi senza AI in ogni lingua (js/comandi/<codice>.js): stessi oggetti dell'italiano, e le frasi che non sono comandi

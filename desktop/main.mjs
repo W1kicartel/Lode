@@ -132,14 +132,14 @@ const tutte = () => [barra, quadro, benvenuto].filter(w => w && !w.isDestroyed()
 const manda = (canale, x, tranne) => tutte().forEach(w => { if (w.webContents !== tranne) w.webContents.send(canale, x); });
 
 /* ---------- vault ---------- */
-function info() { const o = V.obsidian(vault()); return { percorso: vault(), nome: vault().split(/[\\/]/).pop(), obsidian: { installato: o.installato, registrato: !!o.registrato }, note: V.notePerLode(vault()) }; }
+function info() { const o = V.obsidian(vault()); return { percorso: vault(), nome: vault().split(/[\\/]/).pop(), obsidian: { installato: o.installato, registrato: !!o.registrato }, note: V.notePerLode(vault()), nomi: V.nomi() }; }
 // con la sincronizzazione Orario.md lo legge e lo scrive il motore (docs/SINCRONIZZAZIONE.md §9): il watcher gli fa fare un giro
 function avviaVault() {
   guardiano?.chiudi(); guardiano = null;
   let orario = [];
   try { orario = JSON.parse(readFileSync(fileDati(), 'utf8')).orario || []; } catch { }
   const conSync = sync.acceso();
-  V.crea(vault(), conSync ? null : orario);
+  V.crea(vault(), conSync ? null : orario, linguaScelta());   // la lingua conta solo se il vault nasce adesso (js/nomi.js)
   V.registra(vault());
   guardiano = V.guarda(vault(), {
     lezioniCambiate: () => manda('vault:lezioni', V.lezioni(vault())),
@@ -147,7 +147,7 @@ function avviaVault() {
     noteCambiate: () => manda('vault:info', info()),
     syncCambiato: conSync ? () => sync.cambiato() : null,
   });
-  try { guardiano.segnaOrario(readFileSync(join(vault(), 'Orario.md'), 'utf8')); } catch { }
+  try { guardiano.segnaOrario(readFileSync(join(vault(), V.fileNota('orario')), 'utf8')); } catch { }
 }
 // il vault cambiato da fuori (spostamento nella cartella cloud, «Uso già Lode su un altro computer», «Smetti su questo computer»)
 async function impostaVault(p, { ricarica = true } = {}) {
@@ -293,7 +293,7 @@ ipcMain.handle('benvenuto:fatto', () => { conf.benvenuto = new Date().toISOStrin
 ipcMain.handle('vault:pulisciCorsi', (_, { nomi }) => {
   let tolte = 0;
   for (const n of nomi) {
-    const p = V.dentro(vault(), `Corsi/${n.replace(/[\\/:*?"<>|#^[\]]/g, ' ').trim()}.md`);
+    const p = V.dentro(vault(), `${V.nomi().cartelle.corsi}/${n.replace(/[\\/:*?"<>|#^[\]]/g, ' ').trim()}.md`);
     try { const t = readFileSync(p, 'utf8').replace(/%% lode:corso %%[\s\S]*?%% \/lode:corso %%/, '').replace(/^---[\s\S]*?---/, '').replace(/^# .*$/m, '').replace(/%%[\s\S]*?%%/g, '').replace(/Le lezioni di questo corso[\s\S]*?definizioni\./, '').trim(); if (!t) { rmSync(p); tolte++; } } catch { }
   }
   return tolte;
@@ -302,23 +302,24 @@ ipcMain.handle('vault:lezioni', () => V.lezioni(vault()));
 // i percorsi che arrivano dalla barra passano tutti da V.relativo (barre in «/», niente «..» né cartelle o file che
 // cominciano col punto, come .obsidian o .lode) e solo dopo dal controllo delle cartelle permesse: «Lezioni/../.obsidian/x»
 // non passa più. Le note di una lezione possono stare in sottocartelle (Lezioni/Corso/Esercitazioni/x.md)
-const NOTA_LEZIONE = /^(Lezioni|Corsi)\/(?:[^/.][^/]*\/)*[^/.][^/]*\.md$/;
+// Le cartelle e le note sono quelle del vault (V.permessi, js/nomi.js): in un vault italiano le regex sono quelle di sempre
 ipcMain.handle('vault:annota', (_, x) => {
-  const file = V.relativo(x?.file), corso = x?.corso?.file ? { ...x.corso, file: V.relativo(x.corso.file) } : null;
+  const file = V.relativo(x?.file), corso = x?.corso?.file ? { ...x.corso, file: V.relativo(x.corso.file) } : null, NOTA_LEZIONE = V.permessi().lezione;
   if (!NOTA_LEZIONE.test(file) || (corso && !NOTA_LEZIONE.test(corso.file))) throw new Error('file non permesso');
   return V.annota(vault(), { ...x, file, corso });
 });
 ipcMain.handle('vault:scrivi', (_, { file, testo }) => {
   file = V.relativo(file);
-  if (!/^(Orario|In tasca|Lode\/[\w ]+)\.md$/.test(file)) throw new Error('file non permesso');   // In tasca.md: js/tasca.js
-  if (file === 'Orario.md' && sync.acceso()) return true;   // con la sincronizzazione Orario.md lo scrive il motore, col marcatore
-  if (file === 'Orario.md') guardiano?.segnaOrario(testo);
+  if (!V.permessi().scrivi.test(file)) throw new Error('file non permesso');   // In tasca.md: js/tasca.js
+  const orario = file === V.fileNota('orario');
+  if (orario && sync.acceso()) return true;   // con la sincronizzazione Orario.md lo scrive il motore, col marcatore
+  if (orario) guardiano?.segnaOrario(testo);
   V.scriviSicuro(V.dentro(vault(), file), testo); return true;
 });
 // le pagine che Lode tiene aggiornate (Home, Esami, Glossario, corsi, navigazione delle lezioni, diari dei progetti): solo dentro i suoi segni
 ipcMain.handle('vault:blocco', (_, x) => {
   x = { ...x, file: V.relativo(x?.file) };
-  if (!/^(Home|Esami|Glossario)\.md$|^Corsi\/[^/]+\.md$|^Lezioni\/[^/]+\/[^/]+\.md$|^Progetti\/[^/]+\/[^/]+\.md$/.test(x.file)) throw new Error('file non permesso');
+  if (!V.permessi().blocco.test(x.file)) throw new Error('file non permesso');
   return V.blocco(vault(), x);
 });
 ipcMain.handle('vault:note', () => V.note(vault()));
@@ -326,7 +327,7 @@ ipcMain.handle('vault:note', () => V.note(vault()));
 ipcMain.handle('vault:leggi', (_, { file }) => { file = V.relativo(file); if (!/\.md$/.test(file)) throw new Error('solo note'); return readFileSync(V.dentro(vault(), file), 'utf8'); });
 ipcMain.handle('vault:salvaFile', (_, { file, testo, dati, sostituisci = false }) => {
   file = V.relativo(file);
-  if (!/^(Sbobine|Allegati|Materiali|Lezioni|Anki)\//.test(file)) throw new Error('cartella non permessa');
+  if (!V.permessi().salvaFile.test(file)) throw new Error('cartella non permessa');
   let p = V.dentro(vault(), file), rel = file;
   if (!sostituisci) for (let k = 2; existsSync(p); k++) { rel = file.replace(/(\.[a-z0-9]+)$/i, ` ${k}$1`); p = V.dentro(vault(), rel); }
   mkdirSync(dirname(p), { recursive: true });
@@ -376,7 +377,7 @@ ipcMain.handle('installa:obsidian', async () => {
   try {
     if (!I.obsidianInstallato()) await I.installaObsidian({ vault: vault(), confObsidian: V.obsidian(vault()).conf, avanza: x => progresso('obsidian', x) });
     else V.registra(vault());
-    const l = V.linkObsidian(vault(), 'Home.md');
+    const l = V.linkObsidian(vault(), V.fileNota('home'));
     try { await I.apriObsidian(l.url); } catch (x) { console.warn('Lode: Obsidian installato ma non si apre da qui', x); }
     progresso('obsidian', { fase: 'fatto', p: 1, testo: t('desktop.obsidian-pronto') });
     manda('vault:info', info());
@@ -597,7 +598,7 @@ function creaTray() {
     { label: t('desktop.menu-quadro'), click: apriQuadro },
     { label: t('desktop.menu-rifai-configurazione'), click: apriBenvenuto },
     { type: 'separator' },
-    { label: t('desktop.menu-apri-vault-obsidian'), click: async () => { const l = V.linkObsidian(vault(), 'Home.md'); if (l.url) I.apriObsidian(l.url); else shell.openPath(vault()); } },
+    { label: t('desktop.menu-apri-vault-obsidian'), click: async () => { const l = V.linkObsidian(vault(), V.fileNota('home')); if (l.url) I.apriObsidian(l.url); else shell.openPath(vault()); } },
     { label: t('desktop.menu-mostra-vault'), click: () => shell.openPath(vault()) },
     { label: t('desktop.menu-altro-vault'), click: scegliVault },
     { type: 'separator' },
