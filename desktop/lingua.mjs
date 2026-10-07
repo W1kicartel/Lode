@@ -9,7 +9,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const QUI = dirname(fileURLToPath(import.meta.url));
 const WEB = existsSync(join(QUI, 'web', 'index.html')) ? join(QUI, 'web') : join(QUI, '..');
 const L = await import(pathToFileURL(join(WEB, 'js', 'lingua.js')).href);
-export const { t, elenco, usa, LINGUE } = L;
+export const { t, elenco, usa, LINGUE, numero } = L;
+// la forma dei numeri e delle ore della lingua scelta (it-IT, en-GB…): L.locale() legge la lingua di adesso
+export const locale = () => L.locale();
 export const lingua = () => L.lingua;
 // la lingua del sistema (app.getLocale(), «it-IT», «pt-BR»…) se Lode la conosce, altrimenti l'inglese (docs/LINGUE.md)
 export function dalSistema(locale) { const c = String(locale || '').slice(0, 2).toLowerCase(); return Object.hasOwn(LINGUE, c) ? c : 'en'; }

@@ -3,7 +3,16 @@
 // «completa» (la parola chiave che manca) e «flash» (te la ricordi?). Niente AI: bastano le definizioni del vault.
 import { norm } from './dati.js';
 
-const VUOTE = new Set('della delle degli dello dalla dalle dagli nella nelle negli sulla sulle sugli come cioè quando dove anche ogni sono essere viene vengono questa questo quella quello tutte tutti molto più meno solo ogni fra tra per con una uno che non del dei gli alla alle allo agli sua suo loro'.split(' '));
+// le parole da non nascondere: l'italiano di sempre più le parole vuote (di almeno 5 lettere: le altre non si scelgono mai)
+// delle altre lingue, perché le definizioni vengono dagli appunti, nella lingua in cui li prende lo studente.
+// Niente parole che in italiano sono piene («mediante», «tiene»)
+const VUOTE = new Set(['della delle degli dello dalla dalle dagli nella nelle negli sulla sulle sugli come cioè quando dove anche ogni sono essere viene vengono questa questo quella quello tutte tutti molto più meno solo ogni fra tra per con una uno che non del dei gli alla alle allo agli sua suo loro',
+  'which where there their these those about after before being between through other others could would should under while every always often',
+  'donde cuando sobre entre porque desde hasta estos estas otros otras puede pueden tienen según también siempre todos todas',
+  'dans avec pour sont cette entre leurs autre autres peuvent quand comme selon depuis aussi toujours chaque toutes',
+  'nicht einer eines einem einen keine diese dieser dieses wenn durch werden wird sind zwischen unter oder über ihrer seine seiner immer jeder jedes',
+  'quando sobre entre porque desde para pelos pelas estes estas outros outras pode podem como segundo também sempre todos todas cada',
+].join(' ').split(' '));
 const mescola = a => { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; };
 
 // la parola da nascondere: la più lunga e significativa, che non ripeta il termine

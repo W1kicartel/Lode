@@ -122,13 +122,28 @@ Come funziona:
 
 ## L'AI
 
-Ogni richiesta all'AI (`js/ai.js`) dice in che lingua rispondere, quella della barra.
+Ogni richiesta all'AI (`js/ai.js`) dice in che lingua rispondere, quella della barra. In italiano i prompt restano quelli di sempre, carattere per carattere. Nelle altre lingue si aggiunge in fondo una riga in inglese, che i modelli (anche quelli piccoli) seguono meglio:
+- `inLingua()`: «Always answer in Spanish…». Va nella conversazione (`conversa`, `conversaLocale`, dopo i dati dello studente), nel riordino della lezione e nella foto della lavagna.
+- `inLinguaJSON()`: per le risposte strutturate (carte, «chiudi lezione», crocette, domanda e giudizio dell'orale, verifica). I testi vanno nella lingua dello studente, ma le chiavi e i valori fissi dello schema restano come sono, e una citazione resta copiata parola per parola.
+- `comeScritti()`: per le letture del libretto, dell'orario e del programma. I nomi restano quelli del testo, senza traduzione.
 
-I controlli italiani sul giudizio dell'orale restano solo per l'italiano. In tutte le lingue resta il controllo sulle citazioni, che non dipende dalla lingua.
+Gli esiti dell'orale e di «te lo spiego io» (`giusta`, `parziale`, `sbagliata`, `fuori tema`, `non so`) sono codici interni. Si salvano così e lo studente li vede con `nomeEsito()`, che legge il catalogo `contenuti`.
+
+I controlli italiani sul giudizio dell'orale (`correggiGiudizio`, `mancanze`: NIENTE, NEGATIVO, MANCANZA, CONNETTIVI) restano solo per l'italiano. Nelle altre lingue l'esito resta quello del modello, e il «mancava» si toglie solo se il modello cita davvero le parole dello studente (`citazioneValida`): è il controllo sulle citazioni, che non dipende dalla lingua e vale in tutte.
+
+## I testi incollati dallo studente
+
+Un programma o un compito incollato non è per forza nella lingua della barra: uno studente in Erasmus incolla il compito in tedesco con la barra in italiano. Per questo chi **legge** usa l'**unione delle sei lingue**, con l'italiano sempre per primo e con le regole di prima. In italiano i risultati non cambiano.
+- `js/programma.js`: parole vuote e generiche, titoli d'inizio («Course content», «Temario», «Inhalte», «Ementa»…), parti da saltare (testi, esame, «Assessment», «Literatur»…), segni delle righe («Tema 1.», «Kapitel 2»), frase d'apertura, «Q1:», «Frage 3:».
+- `js/temi.js`: segni degli esercizi («Exercise», «Ejercicio», «Exercice», «Aufgabe», «Questão»…), soluzione e sezione delle soluzioni («Solution», «Corrigé», «Lösung», «Resolução»…), punti («points», «Punkte», «pontos»…), durata («2 hours and 30 minutes», «Bearbeitungszeit: 150 Minuten»), date in lettere («February 12, 2024», «12 de febrero de 2024», «12. März 2024»).
+- `js/giochi.js` (parole da non nascondere), `js/crocette.js` («all of the above», «ninguna de las anteriores»…), `js/tasca.js`, `js/dati.js` (`trovaEsame`: «physics two», «Mathe zwei», solo in fondo al nome).
+- Le parti comuni stanno in `js/parole.js`: mesi delle sei lingue (`meseDa`, `meseAltre`; `meseInglese` per l'ordine «February 12, 2024», che è solo inglese), numeri in fondo al nome di un esame, nomi delle lingue per l'AI e per la voce, `numeroCorto` (al più 2 decimali, senza separatori delle migliaia) e `oraBreve` («14:05»).
+- Chi aggiunge una parola controlla che in italiano non sia una parola piena: «onde», «include», «mais», «tiene» e «mediante» non vanno fra le parole vuote.
+- **Prove:** `node --experimental-vm-modules test/contenuti-lingue.mjs`, con un programma e un compito per ogni lingua.
 
 ## La voce e le formule
 
-- **Voce:** Parakeet v3 e Whisper capiscono tutte e sei le lingue. A Whisper si passa la lingua della barra.
+- **Voce:** Parakeet v3 e Whisper capiscono tutte e sei le lingue. A Whisper si passa la lingua della barra (`WHISPER` di `js/parole.js`: «italian», «english»…). Il riconoscimento del browser e la lettura ad alta voce usano il paese (`PAESE_VOCE`: «it-IT», «pt-BR»…). Parakeet v3 riconosce la lingua da solo: né FluidAudio (`lode-voce` sul Mac) né il transducer di sherpa-onnx hanno un parametro per la lingua. Le frasi che Whisper inventa nel silenzio (`ALLUCINAZIONI` in `js/voce.js`: «Thank you for watching», «Sous-titres réalisés par…», «Untertitel im Auftrag des ZDF», «Legendas pela comunidade…») si scartano in tutte le lingue.
 - **Formule dettate** (`js/formule.js`): italiano e inglese. Nelle altre lingue il testo resta com'è, senza conversione in formule.
   `parlatoInFormule(testo, lingua)` usa la lingua della barra se non gliela passi. In inglese capisce, per esempio, «x squared plus two x», «the integral from zero to one of x squared d x», «d y over d x», «partial f partial x», «the limit as x approaches zero of …», «the sum from n equals one to infinity of …», «f prime of x», «x to the minus one», «x sub n», «square root of», «less than or equal to», «for every epsilon … there exists delta», e anche quello che Whisper scrive già in simboli («f(x) = x^2 + 1», «sin(x)», «sqrt(2)»). I confronti, «in» e «goes to» diventano simboli solo se prima e dopo c'è un pezzo di formula: «x goes to zero» sì, «the function goes to zero» resta frase. Le prove sono in `test/formule.mjs`, con i casi italiani fissati come erano prima delle lingue.
 

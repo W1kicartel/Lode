@@ -6,25 +6,34 @@
 // (2 giorni se non sapevi da dove partire, 3 se sbagliato, 7 e poi il doppio se giusto) e l'esito va sull'argomento,
 // così la mappa del programma si aggiorna. Tutto senza AI e senza OCR: un PDF scansionato si incolla a mano.
 // Dove sta: dentro l'esame (esami[i].temi), come il programma. piano() non si tocca: gli esercizi si agganciano ai suoi giorni.
-import { salva, id, oggi, piuGiorni, norm, MESI } from './dati.js';
+import { salva, id, oggi, piuGiorni, norm } from './dati.js';
+import { meseDa, meseInglese } from './parole.js';
 import { abbina, oggiDi, registraEsito } from './programma.js';
 import { t } from './lingua.js';
 
 /* ---------- dividere il compito in esercizi ---------- */
 // i segni a inizio riga: «Esercizio 1», «ES. 2», «Es 3», «Problema 4», «Quesito 5», «Domanda 6», anche «Esercizio 1 (6 punti)»
-const SEGNO = /^\s*(?:#+\s*)?(?:\*\*)?(?:esercizio|es\.?|problema|quesito|domanda)\s*n?[°º.]?\s*(\d{1,2})\b(?:\*\*)?\s*/i;
+// Le parole dei segni, della soluzione, dei punti e della durata sono l'UNIONE delle sei lingue: un compito incollato può
+// essere in un'altra lingua della barra («Exercise 1 (6 points) … Solution», «Aufgabe 2 (8 Punkte) … Lösung»). L'italiano
+// viene sempre per primo, con le regole di prima.
+const ES = 'esercizio|es\\.?|problema|quesito|domanda|exercise|ex\\.?|problem|question|task|ejercicio|ej\\.?|pregunta|exercice|probl[eè]me|aufgabe|aufg\\.?|frage|exerc[ií]cio|quest[ãa]o';
+const SEGNO = new RegExp(`^\\s*(?:#+\\s*)?(?:\\*\\*)?(?:${ES})\\s*n?[°º.]?\\s*(\\d{1,2})\\b(?:\\*\\*)?\\s*`, 'i');
 // senza segni: righe numerate «1.» «2)» in ordine
 const NUMERO = /^\s*(\d{1,2})\s*[.)]\s+/;
 // la soluzione del prof dentro un esercizio: solo l'etichetta («Soluzione», «Soluzione:», «Soluzione.», «**Soluzione**»,
 // «Soluzione dell'esercizio 3:», «Svolgimento:»). Non «Soluzione di NaCl 0,9%: …» né «Soluzione generale dell'equazione…»,
 // che sono testo dell'esercizio: se finissero in sol, lo studente le vedrebbe solo dopo l'esito (o perderebbe l'esercizio)
-const SOL = /^\s*(?:\*\*)?(?:soluzione|svolgimento|risoluzione)(?:\s+(?:dell['’]\s*|del\s+)?(?:esercizio|es\.?|problema|quesito|domanda)\s*n?[°º.]?\s*\d{0,2})?\s*(?:\*\*)?\s*(?::(?:\*\*)?\s*|\.(?:\*\*)?(?:\s+|$)|$)/i;
-const SEZ_SOL = /^\s*(?:#+\s*)?(?:\*\*)?(?:soluzioni|svolgimenti|risoluzioni)(?: degli esercizi)?\s*:?(?:\*\*)?\s*$/i;
+// (in inglese «Solution», «Answer», «Solution to exercise 3:»; «Solución del ejercicio 3», «Corrigé», «Lösung zu Aufgabe 3:»,
+// «Resolução», «Resposta»). Fra l'etichetta e il segno: «dell'», «del», «of», «to», «de la», «zu», «do»…
+const SOL = new RegExp(`^\\s*(?:\\*\\*)?(?:soluzione|svolgimento|risoluzione|solution|answer|soluci[oó]n|resoluci[oó]n|corrig[ée]|l[öo]sung(?:sweg|svorschlag)?|musterl[öo]sung|solu[çc][ãa]o|resolu[çc][ãa]o|resposta)(?:\\s+(?:dell['’]\\s*|del\\s+|of\\s+|to\\s+|for\\s+|de\\s+la\\s+|de\\s+l['’]\\s*|de\\s+|zu[rm]?\\s+|der\\s+|do\\s+|da\\s+)?(?:${ES})\\s*n?[°º.]?\\s*\\d{0,2})?\\s*(?:\\*\\*)?\\s*(?::(?:\\*\\*)?\\s*|\\.(?:\\*\\*)?(?:\\s+|$)|$)`, 'i');
+const SEZ_SOL = /^\s*(?:#+\s*)?(?:\*\*)?(?:soluzioni|svolgimenti|risoluzioni|solutions|answers|answer key|soluciones|corrig[ée]s?|l[öo]sungen|musterl[öo]sungen|solu[çc][õo]es|resolu[çc][õo]es|respostas|gabarito)(?: degli esercizi| to (?:the )?exercises| de los ejercicios| des exercices| zu den aufgaben| dos exerc[ií]cios)?\s*:?(?:\*\*)?\s*$/i;
 // «(6 punti)», «- 8 pt», «:» dopo il numero: non fanno parte del testo
-const pulisciInizio = s => s.replace(/^\s*(?:\(\s*\d+(?:[.,]\d+)?\s*(?:punti|punto|pt|p)\.?\s*\)|[-–—]\s*\d+(?:[.,]\d+)?\s*(?:punti|pt)\.?)?\s*[.):\-–—]?\s*/i, '');
+// (le parole dei punti nelle sei lingue: punti, points, puntos, pontos, Punkte, Pkt., marks; prima le più lunghe)
+const PT = 'punti|punto|points?|pts|puntos?|pontos?|punkte?|pkt|marks?|pt|p';
+const pulisciInizio = s => s.replace(new RegExp(`^\\s*(?:\\(\\s*\\d+(?:[.,]\\d+)?\\s*(?:${PT})\\.?\\s*\\)|[-–—]\\s*\\d+(?:[.,]\\d+)?\\s*(?:punti|points?|pts|puntos|pontos|punkte|pkt|marks|pt)\\.?)?\\s*[.):\\-–—]?\\s*`, 'i'), '');
 // i punti in testa all'esercizio, prima di pulirlo: «(6 punti)», «(6 pt)», «- 6 punti», «[6 punti]», «6 punti:», «(punti 7,5)».
 // Servono solo alla prova generale (js/prova.js): il testo resta com'era
-const PUNTI = /^\s*[.):]?\s*(?:[(\[]\s*|[-–—]\s*)?(?:(\d{1,3}(?:[.,]\d{1,2})?)\s*(?:punti|punto|pt|p)\.?|punti\s*:?\s*(\d{1,3}(?:[.,]\d{1,2})?))(?![a-zà-ù])/i;
+const PUNTI = new RegExp(`^\\s*[.):]?\\s*(?:[(\\[]\\s*|[-–—]\\s*)?(?:(\\d{1,3}(?:[.,]\\d{1,2})?)\\s*(?:${PT})\\.?|(?:punti|points|puntos|pontos|punkte|marks)\\s*:?\\s*(\\d{1,3}(?:[.,]\\d{1,2})?))(?![a-zà-ù])`, 'i');
 function puntiDi(riga) {
   const m = String(riga || '').match(PUNTI); if (!m) return null;
   const v = Number((m[1] || m[2]).replace(',', '.')); return v > 0 && v <= 100 ? v : null;
@@ -34,8 +43,12 @@ function puntiDi(riga) {
 // di contesto sulla stessa riga (tempo, durata, a disposizione, avete, hai) o fra parentesi: «Analisi Matematica 2 ore 14»
 // è il nome del corso più l'ora di inizio, non 134 minuti. «<n> ore» seguito da un'ora del giorno («ore 9:30», «h 9.00»,
 // «ore 9-12») non è una durata, e le righe sul ritardo («Sono ammessi 30 min di ritardo») non contano
-const DURATA = /(?<![\d/.,:])(\d{1,3}(?:[.,]\d)?)\s*(?:ore|ora|h)(?![a-zà-ù])(?:\s*e\s*(?:(\d{1,2})(?!\d)(?:\s*(?:minuti|min)\b)?|(mezz[ao]))|(\d{2})(?!\d)|\s*(\d{1,2})\s*(?:minuti|min)\b)?|(?<![\d/.,:])(\d{2,3})\s*(?:minuti|min)\b/g;
-const CONTESTO = /\b(?:tempo|durata|a disposizione|avete|hai)\b/, RITARDO = /\b(?:ritard[oi]|ammess[ieao])\b/;
+// (ore e minuti nelle sei lingue: «2 hours», «90 minutes», «2 horas y media», «2 heures et demie», «120 Minuten», «2 Std.»)
+const ORE = 'hours?|hrs?|horas?|heures?|stunden?|std|ore|ora|h', MIN = 'minuti|minutes|minutos|minuten|min';
+const DURATA = new RegExp(`(?<![\\d/.,:])(\\d{1,3}(?:[.,]\\d)?)\\s*(?:${ORE})(?![a-zà-ù])(?:\\s*(?:e|and|y|et|und)\\s*(?:(\\d{1,2})(?!\\d)(?:\\s*(?:${MIN})\\b)?|(mezz[ao]|media|demie|meia|(?:a\\s+)?half))|(\\d{2})(?!\\d)|\\s*(\\d{1,2})\\s*(?:${MIN})\\b)?|(?<![\\d/.,:])(\\d{2,3})\\s*(?:${MIN})\\b`, 'g');
+// le parole che dicono che il numero è la durata del compito, e quelle delle righe sul ritardo, nelle sei lingue
+const CONTESTO = /\b(?:tempo|durata|a disposizione|avete|hai|time|duration|you have|available|tiempo|duraci[oó]n|dispones|tienes|ten[eé]is|dur[ée]e|temps|vous avez|tu as|zeit|bearbeitungszeit|dauer|dura[çc][ãa]o|voc[eê]s? t[eê]m)\b/,
+  RITARDO = /\b(?:ritard[oi]|ammess[ieao]|late|delay|retraso|tarde|retard|versp[äa]tung|atraso)\b/;
 export function durataDi(testo) {
   for (const riga of String(testo || '').toLowerCase().split('\n')) {
     if (RITARDO.test(riga)) continue;
@@ -51,17 +64,25 @@ export function durataDi(testo) {
   }
   return null;
 }
-const MESE = MESI.map(m => m.slice(0, 3)).join('|');
-// la data del compito nell'intestazione: 12/02/2024, 12.02.24, 12-2-2024, «12 febbraio 2024» → ISO
+// la data del compito nell'intestazione: 12/02/2024, 12.02.24, 12-2-2024, «12 febbraio 2024» → ISO. Il mese in lettere
+// in tutte e sei le lingue («12 février 2024», «12. März 2024»), più l'ordine inglese «February 12, 2024»
 export function dataDi(testo) {
   const t = String(testo || ''); let m;
   if ((m = t.match(/(?:^|[^\d])(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4}|\d{2})(?!\d)/))) {
     const g = +m[1], me = +m[2]; let a = +m[3]; if (a < 100) a += 2000;
     if (g >= 1 && g <= 31 && me >= 1 && me <= 12) return `${a}-${String(me).padStart(2, '0')}-${String(g).padStart(2, '0')}`;
   }
-  if ((m = norm(t).match(new RegExp(`\\b(\\d{1,2}) (${MESE})[a-z]* (\\d{4})\\b`)))) {
-    const me = MESI.findIndex(x => x.startsWith(m[2])) + 1, g = +m[1];
-    if (g >= 1 && g <= 31) return `${m[3]}-${String(me).padStart(2, '0')}-${String(g).padStart(2, '0')}`;
+  const n = norm(t), iso = (a, me, g) => `${a}-${String(me).padStart(2, '0')}-${String(g).padStart(2, '0')}`;
+  // la prima data «giorno mese anno» con un mese vero (norm toglie accenti e punti: «12. März» → «12 marz»)
+  // («3 de junio de 2024», «10 de abril de 2024»: il «de» spagnolo e portoghese si salta)
+  for (const x of n.matchAll(/\b(\d{1,2})(?: de)? ([a-z]{3,})(?= (?:de )?(\d{4})\b)/g)) {
+    const me = meseDa(x[2]), g = +x[1];
+    if (me && g >= 1 && g <= 31) return iso(x[3], me, g);
+  }
+  // «February 12, 2024»: solo con un mese inglese (una parola italiana come «settore 12 2024» o «Marco 12 2024» non è una data)
+  for (const x of n.matchAll(/\b([a-z]{3,}) (\d{1,2})(?= (\d{4})\b)/g)) {
+    const me = meseInglese(x[1]), g = +x[2];
+    if (me && g >= 1 && g <= 31) return iso(x[3], me, g);
   }
   return null;
 }

@@ -5,6 +5,7 @@
 import { inverti, datiIllegibili, piuGiorni, norm, D, DESKTOP, lezioneOra, prossimaLezione, daGiocare, ricorda, aggiungiOrario, lezioni, RISPOSTE, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esc, fatti, media, minuti, num, oggi, ore, piano, prossimi, prossimoIntervallo, registraVoto, rispondi, salva, serie, serve, simula, sostituisci, traQuanto, trovaEsame, intervalloTesto, giorniTra, definizioni } from './dati.js';
 import { t, elenco, numero, LINGUE, lingua as linguaOra, usa, imposta } from './lingua.js';
 import { t as tn } from './lingua.js';   // t() dove una variabile locale si chiama già t (arrivaTurno, schedaTurno, piedeSync, schedaNote)
+import { numeroCorto, oraBreve } from './parole.js';   // numeri e ore nella forma della lingua
 import { RIDOTTO, attendi, comprimi, conta, dopo, entra, h, lineare, morbido, ogni, premi, tween } from './motore.js';
 import { ESEMPI, interpreta, dice } from './comandi.js';
 import * as F from './focus.js';
@@ -1258,8 +1259,8 @@ function schedaPrepara(cosa) {
   const s = scheda('ld-prepara', `<span class="ld-lbl">${t('barra2.prepara-lode')}</span>
     ${riga('vault', t('barra2.il-tuo-vault'), true, t('barra2.prep-vault-dett', { percorso: esc(V.info?.percorso || 'Documenti/Lode') }), `<button type="button" class="btn small" data-apri>${t('barra2.apri')}</button>`)}
     ${riga('obsidian', 'Obsidian', st?.obsidian.installato, st?.obsidian.installato ? t('barra2.obs-installato') : t('barra2.obs-da-installare'), st?.obsidian.installato ? `<button type="button" class="btn small" data-apri>${t('barra2.apri')}</button>` : `<button type="button" class="btn small primary" data-installa="obsidian">${t('barra2.installa')}</button>`)}
-    ${riga('cervello', t('barra2.cervello-locale'), !!st?.modello, st?.modello ? t('barra2.cervello-pronto-dett', { modello: esc(st.modello) }) : t('barra2.cervello-da-installare', { etichetta: esc(m?.etichetta || 'Qwen3.5'), perche: esc(m?.perche || ''), gb: m ? String(m.gb + 0.2).replace('.', ',') : '3,5' }), st?.modello ? `<span class="ld-spunta">${t('barra2.pronto')}</span>` : `<button type="button" class="btn small primary" data-installa="cervello">${t('barra2.installa')}</button>`)}
-    ${riga('voce', t('barra2.voce'), Voce.pronta(), Voce.pronta() ? t('barra2.voce-pronta-dett', { voce: Voce.NOME_VOCE, tasti: TASTI }) : t('barra2.voce-da-preparare', { descrizione: Voce.descrizioneVoce(), peso: Voce.PESO_VOCE }), Voce.pronta() ? `<span class="ld-spunta">${t('barra2.pronta')}</span>` : `<button type="button" class="btn small primary" data-voce>${t('barra2.prepara')}</button>`)}
+    ${riga('cervello', t('barra2.cervello-locale'), !!st?.modello, st?.modello ? t('barra2.cervello-pronto-dett', { modello: esc(st.modello) }) : t('barra2.cervello-da-installare', { etichetta: esc(m?.etichetta || 'Qwen3.5'), perche: esc(m?.perche || ''), gb: m ? numeroCorto(m.gb + 0.2, 1) : numeroCorto(3.5, 1) }), st?.modello ? `<span class="ld-spunta">${t('barra2.pronto')}</span>` : `<button type="button" class="btn small primary" data-installa="cervello">${t('barra2.installa')}</button>`)}
+    ${riga('voce', t('barra2.voce'), Voce.pronta(), Voce.pronta() ? t('barra2.voce-pronta-dett', { voce: Voce.NOME_VOCE, tasti: TASTI }) : t('contenuti.voce-da-preparare', { descrizione: Voce.descrizioneVoce(), peso: Voce.PESO_VOCE }), Voce.pronta() ? `<span class="ld-spunta">${t('barra2.pronta')}</span>` : `<button type="button" class="btn small primary" data-voce>${t('barra2.prepara')}</button>`)}
     ${riga('tuaai', `${t('barra2.la-tua-ai')} <small>${t('barra2.facoltativa')}</small>`, !!AI.fornitore(), AI.fornitore() ? t('barra2.tua-ai-collegata-dett', { nome: esc(AI.FORNITORI[AI.fornitore()].nome) }) : t('barra2.tua-ai-da-collegare'), `<button type="button" class="btn small" data-tuaai>${AI.fornitore() ? t('barra2.cambia') : t('barra2.collega')}</button>`)}
     ${BRIDGE ? riga('sync', `${t('barra2.sincronizza-computer')} <small>${t('barra2.sperimentale')}</small>`, !!SYNC?.acceso && !!SYNC.cloud && !syncBloccata(), esc(TS.rigaStato(SYNC)), `<button type="button" class="btn small" data-sync>${syncBloccata() ? t('barra2.sblocca') : SYNC?.acceso && SYNC.cloud ? t('barra2.gestisci') : t('barra2.attiva')}</button>`) : ''}
     ${BRIDGE && !(SYNC?.acceso && SYNC.cloud) ? riga('collega', t('barra2.uso-gia-altrove'), false, t('barra2.collega-dett'), `<button type="button" class="btn small" data-collega>${t('barra2.collega')}</button>`) : ''}
@@ -1280,7 +1281,7 @@ async function chiediInstalla(cosa, s) {
   const m = STATO?.consigliato;
   const card = schedaConferma(cosa === 'obsidian'
     ? { titolo: t('barra2.installare-obsidian'), righe: [[t('barra2.da'), t('barra2.github-obsidian')], [t('barra2.peso'), t('barra2.circa-230-mb')], [t('barra2.dove'), STATO?.piattaforma === 'darwin' ? t('barra2.applicazioni') : t('barra2.il-tuo-utente')]], nota: t('barra2.obs-nota'), fuoco: false }
-    : { titolo: m?.etichetta ? t('barra2.installare-nome', { nome: m.etichetta }) : t('barra2.installare-cervello'), righe: [[t('barra2.cosa'), t('barra2.ollama-motore', { nome: m?.nome || 'qwen3.5' })], [t('barra2.peso'), t('barra2.circa-gb', { gb: m ? String(m.gb + 0.2).replace('.', ',') : '3,5' })], [t('barra2.perche'), m?.perche || '']], nota: t('barra2.cervello-nota'), fuoco: false });
+    : { titolo: m?.etichetta ? t('barra2.installare-nome', { nome: m.etichetta }) : t('barra2.installare-cervello'), righe: [[t('barra2.cosa'), t('barra2.ollama-motore', { nome: m?.nome || 'qwen3.5' })], [t('barra2.peso'), t('barra2.circa-gb', { gb: m ? numeroCorto(m.gb + 0.2, 1) : numeroCorto(3.5, 1) })], [t('barra2.perche'), m?.perche || '']], nota: t('barra2.cervello-nota'), fuoco: false });
   card.dataset.soloClic = '1'; card.querySelector('.az small').textContent = t('barra2.solo-clic');
   await attendiDecisione(card, async () => {
     await mostraFatto({ testo: t('barra2.avviato'), nota: t('barra2.continuo-da-solo') }, card);
@@ -1973,7 +1974,7 @@ async function rispostaOrale(testo) {
     if (g !== GEN || A.orale !== o) return;
     o.storico.push({ ...o.corrente, risposta: testo, ...giu }); o.corrente = null; modo('riposo');
     esitoSulProgramma(o, o.storico.at(-1));
-    const r = nuovaRisposta(); r.aggiungi(`**${cap(giu.esito)}.** ${giu.giudizio}${giu.mancava ? `\n\n${t('barra2.orale-mancava', { cosa: giu.mancava })}` : ''}`); await r.fine();
+    const r = nuovaRisposta(); r.aggiungi(`**${cap(AI.nomeEsito(giu.esito))}.** ${giu.giudizio}${giu.mancava ? `\n\n${t('barra2.orale-mancava', { cosa: giu.mancava })}` : ''}`); await r.fine();
     segnala(giu.esito === 'giusta' ? 'fatto' : 'quiete');
     // il giudizio è il parere di un modello (piccolo, se locale): se era giusta lo studente lo dice, e il voto ne tiene conto
     if (giu.esito !== 'giusta') {
@@ -1994,7 +1995,7 @@ async function chiudiOrale() {
   modo('riposo'); segnala(v.voto >= 27 ? 'confermato' : 'quiete');
   const s = scheda('ld-voto', `<span class="ld-lbl">${t('barra2.orale-titolo', { nome: esc(o.nome), n: esc(o.storico.length) })}</span>
     <div class="ld-voto-n">${esc(v.testo)}</div>
-    <div class="ld-esiti">${o.storico.map((x, i) => `<div class="ld-esito-r e-${x.esito.replace(' ', '-')}"><span class="n">${i + 1}</span><b>${esc(x.argomento || x.domanda)}</b><em>${esc(x.esito)}</em></div>`).join('')}</div>
+    <div class="ld-esiti">${o.storico.map((x, i) => `<div class="ld-esito-r e-${x.esito.replace(' ', '-')}"><span class="n">${i + 1}</span><b>${esc(x.argomento || x.domanda)}</b><em>${esc(AI.nomeEsito(x.esito))}</em></div>`).join('')}</div>
     ${rip.length ? `<span class="ld-lbl">${t('barra2.da-ripassare')}</span><ul class="ld-ripassa">${rip.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
     <p class="ld-nota">${o.storico.some(x => x.contestata) ? t('barra2.orale-calcolo-contestate', { n: o.storico.filter(x => x.contestata).length }) : t('barra2.orale-calcolo')} ${AI.motore() === 'locale' ? t('barra2.orale-giudizi-locale') : t('barra2.orale-giudizi-ai')}</p>`);
   s.querySelectorAll('.ld-esito-r').forEach((x, i) => entra(x, { ritardo: 120 + i * 70, dy: 6, blur: 5, ms: 420 }));
@@ -2452,7 +2453,7 @@ async function schedaProva(c = {}) {
 }
 // «Compito del 12/02/2024 · 5 esercizi · 32 punti»
 const nomeCompito = c => c.data ? t('barra3.prova-compito-del', { data: TE.dataScritta(c.data) }) : c.fonte === 'scelti' ? t('barra3.prova-scelti') : c.fonte && c.fonte !== 'incollato' ? t('barra3.prova-compito-fonte', { fonte: c.fonte }) : t('barra3.prova-compito-incollato');
-const rigaCompito = c => [nomeCompito(c), t('barra3.n-esercizi', { n: c.temi.length }), c.punti != null ? t('barra3.n-punti', { punti: String(c.punti).replace('.', ',') }) : ''].filter(Boolean).join(' · ');
+const rigaCompito = c => [nomeCompito(c), t('barra3.n-esercizi', { n: c.temi.length }), c.punti != null ? t('barra3.n-punti', { punti: numeroCorto(c.punti) }) : ''].filter(Boolean).join(' · ');
 function provaPartenza(e, comp, cs = [comp]) {
   const s = scheda('ld-prova', `<span class="ld-lbl">${t('barra3.prova-titolo', { nome: esc(e.nome) })}</span>
     <p class="ld-prova-cosa"></p>
@@ -2509,8 +2510,8 @@ function provaInCorso(e, comp, dove) {
   if (st.consegnata) return provaEsiti(e, comp, s);
   const fine = new Date(st.inizio + st.durata * 60e3), cor = PV.corrente(st), mins = PV.minutiDi(st);
   s.innerHTML = `<span class="ld-lbl">${t('barra3.prova-titolo', { nome: esc(e.nome) })}</span>
-    <p class="ld-tema-meta">${esc(rigaCompito(comp))} · ${t('barra3.prova-durata-fino', { min: esc(st.durata), ora: esc(fine.toTimeString().slice(0, 5)) })}</p>
-    <ol class="ld-prova-l">${comp.temi.map((x, i) => `<li class="${i === cor ? 'ora' : i < cor ? 'fatto' : ''}"><span class="ld-prova-n">${t('barra3.esercizio-n', { n: esc(x.es ?? i + 1) })}${x.punti != null ? ` · ${t('barra3.n-punti', { punti: esc(String(x.punti).replace('.', ',')) })}` : ''}${i < cor && mins[i] != null ? ` · ${t('comune.minuti', { m: esc(mins[i]) })}` : ''}</span>
+    <p class="ld-tema-meta">${esc(rigaCompito(comp))} · ${t('barra3.prova-durata-fino', { min: esc(st.durata), ora: esc(oraBreve(fine)) })}</p>
+    <ol class="ld-prova-l">${comp.temi.map((x, i) => `<li class="${i === cor ? 'ora' : i < cor ? 'fatto' : ''}"><span class="ld-prova-n">${t('barra3.esercizio-n', { n: esc(x.es ?? i + 1) })}${x.punti != null ? ` · ${t('barra3.n-punti', { punti: esc(numeroCorto(x.punti)) })}` : ''}${i < cor && mins[i] != null ? ` · ${t('comune.minuti', { m: esc(mins[i]) })}` : ''}</span>
       <div class="ld-tema-testo">${mdHtml(x.t)}</div>${i === cor && i < comp.temi.length - 1 ? `<button type="button" class="btn small ld-piano" data-passo>${t('barra3.prova-passo')}</button>` : ''}</li>`).join('')}</ol>
     <div class="az"><button type="button" class="btn primary" data-consegno>${t('barra3.consegno')}</button><button type="button" class="btn ld-piano" data-lascio>${t('barra3.lascio-perdere')}</button></div>
     <p class="ld-nota">${t('barra3.prova-nota-tempo')}</p>`;
@@ -2546,7 +2547,7 @@ function provaEsiti(e, comp, s) {
   const st = PV.inCorso(), scelte = comp.temi.map(() => null);
   s.innerHTML = `<span class="ld-lbl">${t('barra3.prova-titolo', { nome: esc(e.nome) })}</span>
     <p>${t('barra3.prova-consegnato')}</p>
-    <ol class="ld-prova-l">${comp.temi.map((x, i) => `<li><span class="ld-prova-n">${t('barra3.esercizio-n', { n: esc(x.es ?? i + 1) })}${x.punti != null ? ` · ${t('barra3.n-punti', { punti: esc(String(x.punti).replace('.', ',')) })}` : ''}</span>
+    <ol class="ld-prova-l">${comp.temi.map((x, i) => `<li><span class="ld-prova-n">${t('barra3.esercizio-n', { n: esc(x.es ?? i + 1) })}${x.punti != null ? ` · ${t('barra3.n-punti', { punti: esc(numeroCorto(x.punti)) })}` : ''}</span>
       <span class="ld-prova-inizio">${esc(x.t.split('\n').find(r => r.trim()).slice(0, 160))}</span>
       <div class="az ld-prova-esiti" role="group" aria-label="${t('barra3.prova-come-andato', { n: esc(x.es ?? i + 1) })}">${Object.entries(PV.COME).map(([k, t]) => `<button type="button" class="btn small" data-i="${i}" data-come="${k}">${t}</button>`).join('')}</div></li>`).join('')}</ol>
     <div class="az"><button type="button" class="btn primary" data-salva disabled>${t('barra3.salva')}</button><button type="button" class="btn ld-piano" data-lascio>${t('barra3.lascio-perdere')}</button></div>
@@ -2685,7 +2686,7 @@ async function valutaSpiego(testo) {
     try {
       const giu = await AI.giudicaRisposta({ nome: e.nome, domanda: `Spiegami «${a.t}»${a.sotto?.length ? ` (${a.sotto.join(', ')})` : ''}.`, argomento: a.t, risposta: testo, materiale: PG.materialeArgomento(e, a) });
       modo('riposo'); PG.registraEsito(e, a.id, giu.esito, 'spiega');
-      const r = nuovaRisposta(); r.aggiungi(`**${cap(giu.esito)}.** ${giu.giudizio}${giu.mancava ? `\n\n${t('barra3.mancava', { cosa: giu.mancava })}` : ''}`); await r.fine();
+      const r = nuovaRisposta(); r.aggiungi(`**${cap(AI.nomeEsito(giu.esito))}.** ${giu.giudizio}${giu.mancava ? `\n\n${t('barra3.mancava', { cosa: giu.mancava })}` : ''}`); await r.fine();
       segnala(giu.esito === 'giusta' ? 'fatto' : 'quiete'); aggiornaTutto();
       return;
     } catch (err) { modo('riposo'); if (!PG.puntiDi(e, a).length) return rispostaFissa(t('barra3.spiego-errore', { errore: err.message }), { errore: true }); }

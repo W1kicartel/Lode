@@ -53,6 +53,15 @@ export function citazioneNelMateriale(cit, materiale) {
   for (let i = 0; i + k <= c.length; i++) if (m.includes(' ' + c.slice(i, i + k).join(' ') + ' ')) return true;
   return false;
 }
+// «tutte le precedenti», «nessuna delle precedenti» nelle sei lingue (il quiz può essere scritto in un'altra lingua)
+const PRECEDENTI = new RegExp([
+  /\b(tutte|nessuna) (le|delle) (precedenti|altre|risposte)\b/,
+  /\b(?:all|none|both|neither) of (?:the )?(?:above|previous|other (?:answers|options))\b/,
+  /\b(?:todas|ninguna) (?:las|de las) (?:anteriores|otras|respuestas)\b/,
+  /\b(?:toutes|aucune) (?:les|des) (?:r[ée]ponses|propositions) (?:pr[ée]c[ée]dentes|ci-dessus)\b|\btoutes les r[ée]ponses\b|\baucune des r[ée]ponses\b/,
+  /\b(?:alle|keine) (?:der )?(?:oben genannten|vorherigen|vorangehenden|anderen)\b/,
+  /\b(?:todas|nenhuma) (?:as|das) (?:anteriores|alternativas|outras|respostas)\b/,
+].map(r => r.source).join('|'), 'i');
 // le domande del modello → domande pronte, scartando quelle che non tornano (opzioni doppie o vuote, indice fuori posto,
 // «tutte le precedenti», citazione che nel materiale non c'è). Ritorna anche quante ne ha scartate, per dirlo
 export function valida(grezze, materiale, caso = Math.random) {
@@ -60,7 +69,7 @@ export function valida(grezze, materiale, caso = Math.random) {
   for (const q of grezze || []) {
     const op = (q?.opzioni || []).map(x => String(x || '').trim()), g = Number(q?.giusta);
     const ok = q?.domanda?.trim() && op.length === 4 && op.every(Boolean) && new Set(op.map(norm)).size === 4 && Number.isInteger(g) && g >= 0 && g < 4
-      && !op.some(x => /\b(tutte|nessuna) (le|delle) (precedenti|altre|risposte)\b/i.test(x)) && citazioneNelMateriale(q.citazione, materiale) && !visti.has(norm(q.domanda));
+      && !op.some(x => PRECEDENTI.test(x)) && citazioneNelMateriale(q.citazione, materiale) && !visti.has(norm(q.domanda));
     if (!ok) { scartate++; continue; }
     visti.add(norm(q.domanda));
     buone.push(componi({ domanda: q.domanda, giusta: op[g], sbagliate: op.filter((_, i) => i !== g), spiegazione: q.spiegazione || '', fonte: 'materiale' }, caso));

@@ -4,6 +4,7 @@
 // media ponderata, base di laurea, voto che serve, ore da fare oggi, ripasso a intervalli (SM-2).
 import { t, elenco, numero } from './lingua.js';
 import * as S from './sistemi.js';
+import { numeroInFondo } from './parole.js';
 const { CODICI } = S;
 const CHIAVE = 'lode:v1';
 export const VUOTO = () => ({
@@ -160,12 +161,12 @@ export const daFare = () => D.esami.filter(e => !e.fatto);
 export const prossimi = () => daFare().filter(e => e.data && e.data >= oggi()).sort((a, b) => a.data.localeCompare(b.data));
 // trova un esame dal nome detto o scritto («analisi», «analisi 2», «fisica uno»)
 export function trovaEsame(testo, { anche = 'tutti' } = {}) {
-  const q = norm(testo).replace(/\buno\b/g, '1').replace(/\bdue\b/g, '2').replace(/\btre\b/g, '3');
+  const q = numeroInFondo(norm(testo).replace(/\buno\b/g, '1').replace(/\bdue\b/g, '2').replace(/\btre\b/g, '3'));   // e «physics two», «Mathe zwei» (parole.js)
   if (!q) return null;
   const lista = anche === 'daFare' ? daFare() : D.esami;
   let migliore = null, punti = 0;
   for (const e of lista) {
-    const n = norm(e.nome);
+    const n = numeroInFondo(norm(e.nome));   // anche il nome salvato: «Physics Two» si trova con «physics two» come prima
     let p = n === q ? 100 : n.startsWith(q) ? 80 : n.includes(q) ? 60 : 0;
     if (!p) { const parole = q.split(' '); const tutte = parole.every(w => n.split(' ').some(x => x.startsWith(w))); if (tutte) p = 50; }
     if (!p && sigla(e.nome) === q.replace(/ /g, '')) p = 55;

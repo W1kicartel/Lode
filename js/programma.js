@@ -12,9 +12,29 @@ import { elenco } from './lingua.js';
 
 /* ---------- parole: le stesse regole di ai.js (dalMateriale), in piccolo ---------- */
 const piana = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-const VUOTE = new Set('della delle dello degli nella nelle nello negli sulla sulle sullo dalla dalle alla alle allo agli questo questa questi queste quello quella quelli anche come quando perche molto sempre tutto tutti tutte ogni caso casi cosa cose loro sono essere fare nell dell sull dall quell uguale cioe ovvero oppure mediante attraverso relativ relativa relativo relative relativi principali principale elementi elementari generale generali cenni nozioni introduzione parte prima seconda terza'.split(' '));
+// Le parole vuote e quelle generiche sono l'UNIONE delle sei lingue (senza accenti, come le legge piana): un programma
+// incollato può essere in un'altra lingua della barra. Prima l'italiano di sempre; le altre lingue non hanno parole che
+// in italiano siano piene (niente «mais», «onde», «include», «pelo»; «como» sì: in un programma italiano Como non c'è)
+const VUOTE = new Set(['della delle dello degli nella nelle nello negli sulla sulle sullo dalla dalle alla alle allo agli questo questa questi queste quello quella quelli anche come quando perche molto sempre tutto tutti tutte ogni caso casi cosa cose loro sono essere fare nell dell sull dall quell uguale cioe ovvero oppure mediante attraverso relativ relativa relativo relative relativi principali principale elementi elementari generale generali cenni nozioni introduzione parte prima seconda terza',
+  // inglese
+  'with from that this these those their there where when which what into onto over about also such than then them they very more most other others some each both between through using including includes basic basics elements elementary general introduction overview part first second third main related fundamentals notions',
+  // spagnolo
+  'para como sobre entre desde hasta este esta estos estas otro otra otros otras todo todos todas cada donde cuando porque segun tambien muy partir mediante elementos elementales introduccion nociones principales principal primera segunda tercera generalidades',
+  // francese
+  'dans avec pour sont cette leur leurs entre sous comme aussi selon depuis tous toutes autre autres chaque elements elementaires introduction notions generalites principaux principales premiere deuxieme troisieme partie',
+  // tedesco
+  'eine einer eines einem einen oder sind wird werden nicht auch sowie uber unter zwischen durch dieser diese dieses alle allgemeine einfuhrung grundlagen grundbegriffe elemente teil erste zweite dritte wichtige',
+  // portoghese
+  'pelos pelas como sobre entre desde este esta estes estas isso isto seus suas tambem cada quando porque outro outra outros outras todo todos todas muito elementos elementares introducao nocoes principais primeira segunda terceira',
+].join(' ').split(' '));
 // parole che da sole non dicono di che argomento si parla («Teorema di Green»: conta Green)
-const GENERICHE = new Set('teorema teoremi definizione definizioni enunciato enunciati dimostrazione dimostrazioni proprieta formula formule concetto concetti regola regole metodo metodi criterio criteri esempio esempi esercizi esercizio applicazioni applicazione calcolo studio analisi teoria problemi problema'.split(' '));
+const GENERICHE = new Set(['teorema teoremi definizione definizioni enunciato enunciati dimostrazione dimostrazioni proprieta formula formule concetto concetti regola regole metodo metodi criterio criteri esempio esempi esercizi esercizio applicazioni applicazione calcolo studio analisi teoria problemi problema',
+  'theorem theorems definition definitions statement statements proof proofs property properties formula formulas formulae concept concepts rule rules method methods criterion criteria example examples exercise exercises application applications calculation study analysis theory problem problems',
+  'teoremas definicion definiciones enunciado demostracion demostraciones propiedad propiedades formulas concepto conceptos regla reglas metodos criterios ejemplo ejemplos ejercicio ejercicios aplicacion aplicaciones calculo estudio analisis problemas',
+  'theoreme theoremes demonstration demonstrations propriete proprietes concept regle regles methode methodes critere criteres exemple exemples exercice exercices calcul etude analyse theorie probleme problemes',
+  'satz satze theorem definition definitionen beweis beweise eigenschaft eigenschaften formel formeln begriff begriffe regel regeln methode methoden kriterium kriterien beispiel beispiele aufgabe aufgaben ubung ubungen anwendung anwendungen berechnung analyse theorie problem probleme',
+  'definicao definicoes enunciado demonstracao demonstracoes propriedade propriedades conceito conceitos regra regras metodos criterios exemplo exemplos exercicio exercicios aplicacao aplicacoes calculo estudo analise problemas',
+].join(' ').split(' '));
 const radice = w => w.length <= 5 ? w : w.slice(0, Math.max(5, Math.ceil(w.length * .6)));
 const piene = s => piana(s).split(/[^a-z0-9]+/).filter(w => (w.length >= 4 || /\d/.test(w)) && !VUOTE.has(w));
 // le parole che identificano un argomento: quelle piene meno le generiche (se restano solo generiche, tutte)
@@ -28,14 +48,34 @@ export function quanto(argomento, testo) {
 const parla = (a, testo) => quanto(a.t, testo) >= (chiavi(a.t).length >= 3 ? .6 : .5) || (a.sotto || []).some(s => quanto(s, testo) >= .75);
 
 /* ---------- leggere il programma (senza AI) ---------- */
-const STOP = /^(?:testi?(?: consigliati| di riferimento| adottati)?|bibliografia|libri|materiale didattico|modalit[aà]|metodi didattici|prerequisit|obiettivi|risultati (?:di )?apprendimento|orario|ricevimento|propedeuticit|frequenza|valutazione|esame)\b/i;
-const INIZIO = /^(?:programma(?: del corso| dettagliato| d'esame)?|contenuti(?: del corso)?|argomenti(?: del corso| trattati)?|syllabus)\s*:?\s*$/i;
-const PUNTO = /^\s*(?:[-–—•*▪◦·]|\(?\d{1,2}(?:\.\d{1,2})*[.)]|\(?[a-z][.)]|[ivx]{1,5}[.)]|(?:capitolo|modulo|parte|unit[aà]|lezione|tema)\s+\w+\s*[:.\-–]?)\s+/i;
-const pulisciT = s => String(s).replace(/\(\s*\d+\s*(?:ore|h|cfu)\s*\)/gi, '').replace(/\s+/g, ' ').replace(/^[\s:;,.–—-]+|[\s:;,.–—-]+$/g, '').trim();
+// le parti della scheda del corso che non sono il programma (testi, modalità d'esame…), nelle sei lingue: lì ci si ferma
+const STOP = new RegExp('^(?:' + [
+  /testi?(?: consigliati| di riferimento| adottati)?|bibliografia|libri|materiale didattico|modalit[aà]|metodi didattici|prerequisit|obiettivi|risultati (?:di )?apprendimento|orario|ricevimento|propedeuticit|frequenza|valutazione|esame/,
+  // («Reading and writing files», «Examination of the abdomen», «Evaluation of integrals» sono argomenti, non titoli)
+  /(?:recommended |required |suggested )?(?:textbooks?|texts)|(?:recommended |required |suggested )reading|reading list|references|bibliography|teaching (?:methods|materials)|(?:assessment|grading|exam(?:ination)?s?|evaluation)(?!\s+of\b)|prerequisites|learning (?:outcomes|objectives)|objectives|office hours|attendance/,
+  /bibliograf[ií]a|textos?(?: recomendados| de referencia)?|evaluaci[oó]n|ex[aá]men(?:es)?|prerrequisitos|requisitos previos|objetivos|resultados de aprendizaje|metodolog[ií]a(?: docente| de (?:enseñanza|trabajo))?(?=\s*:|\s*$)|horario|tutor[ií]as/,
+  /bibliographie|ouvrages|r[ée]f[ée]rences|[ée]valuation|examens?|pr[ée]requis|objectifs|comp[ée]tences vis[ée]es|modalit[ée]s|m[ée]thodes p[ée]dagogiques|horaires/,
+  /literatur(?:hinweise|liste)?|lehrb[üu]cher|pr[üu]fung(?:sform|sleistung)?|voraussetzungen|lernziele|lernergebnisse|qualifikationsziele|lehrformen|lehr- und lernmethoden|leistungsnachweis|sprechstunde/,
+  // «metodologia» da sola è un titolo solo se la riga finisce lì: «Metodologia della ricerca» è un argomento italiano
+  /bibliografia|refer[êe]ncias|avalia[çc][ãa]o|exames?|pr[ée]-?requisitos|objetivos|metodologia(?: de ensino)?(?=\s*:|\s*$)|hor[áa]rio|crit[ée]rios de avalia[çc][ãa]o/,
+].map(r => r.source).join('|') + ')\\b', 'i');
+// il titolo da cui parte il programma («Programma», «Contenuti», «Course content», «Temario», «Inhalte», «Ementa»…)
+const INIZIO = new RegExp('^(?:' + [
+  /programma(?: del corso| dettagliato| d'esame)?|contenuti(?: del corso)?|argomenti(?: del corso| trattati)?|syllabus/,
+  /(?:course |module )?(?:contents?|programme|program|outline|topics(?: covered)?)|(?:detailed |course )syllabus/,
+  /programa(?: de la asignatura| del curso| detallado)?|contenidos?(?: del curso| de la asignatura)?|temario|temas/,
+  /programme(?: du cours| d[ée]taill[ée])?|contenus?(?: du cours| de l'enseignement)?|plan du cours/,
+  /inhalte?|lehrinhalte|inhalt(?:e)? der (?:veranstaltung|vorlesung)|themen|gliederung/,
+  /programa(?: da disciplina| do curso)?|conte[úu]dos?(?: program[áa]ticos?)?|ementa|t[óo]picos/,
+].map(r => r.source).join('|') + ')\\s*:?\\s*$', 'i');
+// (le parole delle altre lingue solo con un numero, un romano o una lettera dopo: «Unit 3:», «Teil A», non «Unit testing»,
+// «Topic modeling», «Part of speech tagging», che sono argomenti)
+const PUNTO = /^\s*(?:[-–—•*▪◦·]|\(?\d{1,2}(?:\.\d{1,2})*[.)]|\(?[a-z][.)]|[ivx]{1,5}[.)]|(?:capitolo|modulo|parte|unit[aà]|lezione|tema)\s+\w+\s*[:.\-–]?|(?:chapter|module|part|unit|lecture|topic|week|cap[ií]tulo|m[oó]dulo|unidad|lecci[oó]n|semana|chapitre|partie|unit[ée]|le[çc]on|s[ée]ance|kapitel|teil|einheit|vorlesung|woche|unidade)\s+(?:\d{1,2}(?:\.\d{1,2})*|[ivxlc]{1,6}|[a-z])\b\s*[:.\-–]?)\s+/i;
+const pulisciT = s => String(s).replace(/\(\s*\d+\s*(?:ore|h|cfu|hours?|hrs?|horas?|heures?|stunden|std|ects|credits?|cr[ée]ditos?)\s*\)/gi, '').replace(/\s+/g, ' ').replace(/^[\s:;,.–—-]+|[\s:;,.–—-]+$/g, '').trim();
 const maiuscola = t => t.replace(/^\p{Ll}/u, c => c.toUpperCase());
 // «Il corso tratta:», «Il corso si articola nei seguenti argomenti:»: la frase d'apertura non è un argomento
-const APERTURA = /^[^:;]{0,80}?\b(?:tratta|affronta|comprende|riguarda|articola|prevede|verte|seguenti|introduce)\b[^:;]{0,60}:\s*/i;
-const ok = t => t.length >= 3 && t.length <= 160 && piene(t).length > 0 && !INIZIO.test(t) && !/^(?:programma|argomenti|contenuti)$/i.test(t);
+const APERTURA = /^[^:;]{0,80}?\b(?:tratta|affronta|comprende|riguarda|articola|prevede|verte|seguenti|introduce|covers|includes|deals with|addresses|following|introduces|trata|aborda|incluye|siguientes|traite|aborde|comprend|porte sur|suivants|behandelt|umfasst|folgende|inclui|seguintes)\b[^:;]{0,60}:\s*/i;
+const ok = t => t.length >= 3 && t.length <= 160 && piene(t).length > 0 && !INIZIO.test(t) && !/^(?:programma|argomenti|contenuti|contents?|topics|programa|contenidos?|temario|programme|contenus?|inhalte?|themen|conte[úu]dos?|ementa)$/i.test(t);
 // un pezzo di programma → {t, sotto}: «Derivate: definizione, regole, teoremi di Rolle e Lagrange» → t «Derivate», sotto [...]
 function argomentoDa(pezzo) {
   const x = pulisciT(pezzo); if (!x) return null;
@@ -67,7 +107,7 @@ export function leggiProgramma(testo) {
   } else {
     // un paragrafo unico (spesso nelle schede dei corsi): si divide sui punti e virgola, poi sulle frasi
     const tutto = righe.join(' ').replace(APERTURA, '');
-    const parti = tutto.split(/\s*;\s*/).length >= 3 ? tutto.split(/\s*;\s*/) : righe.length >= 3 ? righe : tutto.split(/(?<=[a-zà-ù)\]])\.\s+(?=[A-ZÀ-Ù])/);
+    const parti = tutto.split(/\s*;\s*/).length >= 3 ? tutto.split(/\s*;\s*/) : righe.length >= 3 ? righe : tutto.split(/(?<=[a-zß-ÿ)\]])\.\s+(?=[A-ZÀ-Þ])/);
     out.push(...parti);
   }
   const visti = new Set(), argomenti = [];
@@ -85,7 +125,7 @@ export function leggiDomande(testo) {
   const righe = String(testo || '').replace(/\r/g, '').split('\n').flatMap(r => r.split(/(?<=\?)\s+(?=\S)/));
   const out = new Map();
   for (const r of righe) {
-    const t = r.replace(PUNTO, '').replace(/^(?:domanda|d)\s*\d*\s*[:.)-]\s*/i, '').replace(/\s+/g, ' ').trim();
+    const t = r.replace(PUNTO, '').replace(/^(?:domanda|d|question|q|pregunta|frage|quest[ãa]o)\s*\d*\s*[:.)-]\s*/i, '').replace(/\s+/g, ' ').trim();
     if (t.length < 8 || piene(t).length < 1 || (!/\?$/.test(t) && piene(t).length < 2)) continue;
     const k = norm(t); out.set(k, { t: out.get(k)?.t || t, n: (out.get(k)?.n || 0) + 1 });
   }

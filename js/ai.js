@@ -5,7 +5,22 @@
 // Non scrive mai da sola: ogni modifica ai dati arriva come proposta con «Conferma / Annulla».
 import { D, cfuFatti, dataLunga, fatti, media, num, oggi, prossimi, daRipassare, lezioni, lezioneOra } from './dati.js';
 import { FORNITORI } from './fornitori.js';
-import { t } from './lingua.js';
+import { t, lingua } from './lingua.js';
+import { NOME_INGLESE } from './parole.js';
+
+// La lingua delle risposte: quella della barra. In italiano i prompt restano quelli di sempre, carattere per carattere;
+// nelle altre lingue si aggiunge in fondo una riga in inglese (i modelli, anche quelli piccoli, la seguono meglio di una
+// riga in italiano), che vale anche se i dati dello studente, il materiale o le istruzioni sono in italiano.
+export const inLingua = () => lingua === 'it' ? '' : `\n\nAlways answer in ${NOME_INGLESE[lingua]}, the student's language, even if these instructions, the student's data or the material are in Italian or in another language.`;
+// per le risposte strutturate: i testi nella lingua dello studente, ma le chiavi e i valori fissi dello schema (gli esiti
+// giusta, parziale… sono codici che legge il codice) restano come sono, e una citazione resta copiata parola per parola
+export const inLinguaJSON = () => lingua === 'it' ? '' : `\n\nWrite every text value in ${NOME_INGLESE[lingua]}, the student's language, even where these instructions say Italian. Keep the JSON keys and the fixed values of the schema (enum) exactly as they are, in Italian. A field that asks you to copy words exactly (citazione) stays copied word for word, in the language of the text you copy from.`;
+// per le letture (libretto, orario, programma): i nomi restano quelli del testo, mai tradotti
+const comeScritti = () => lingua === 'it' ? '' : '\n\nKeep names and titles exactly as they are written in the text, in their original language: do not translate them.';
+// gli esiti dell'AI (giusta, parziale, sbagliata, fuori tema, non so) sono codici interni: per lo studente, il testo del catalogo
+const NOME_ESITO = { giusta: () => t('contenuti.esito-giusta'), parziale: () => t('contenuti.esito-parziale'), sbagliata: () => t('contenuti.esito-sbagliata'),
+  'fuori tema': () => t('contenuti.esito-fuori-tema'), 'non so': () => t('contenuti.esito-non-so') };
+export const nomeEsito = e => Object.hasOwn(NOME_ESITO, e) ? NOME_ESITO[e]() : String(e ?? '');
 
 const MODELLO = 'claude-opus-5-5';
 const PONTE = typeof window !== 'undefined' ? window.lodeDesktop : null;
@@ -135,7 +150,7 @@ function valido(nome, x) {
 export async function conversa({ storia, sistema = SISTEMA, strumenti = true, suTesto, esegui, segnale }) {
   for (let giro = 0; giro < 6; giro++) {
     const parametri = {
-      model: MODELLO, max_tokens: 32000, system: sistema + '\n\nDati dello studente adesso:\n' + contesto(),
+      model: MODELLO, max_tokens: 32000, system: sistema + '\n\nDati dello studente adesso:\n' + contesto() + inLingua(),
       messages: storia, output_config: { effort: 'low' },
       betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default',
     };
@@ -201,7 +216,7 @@ Non puoi modificare i dati di Lode: se lo studente vuole salvare carte o definiz
 Non inventare: se non sei sicuro di una definizione o di una formula, dillo.`;
 // conversazione senza strumenti: col modello locale o con un servizio in formato OpenAI
 export async function conversaLocale({ storia, sistema, suTesto, segnale }) {
-  const sis = (sistema || SISTEMA_LOCALE) + '\n\nDati dello studente adesso:\n' + contesto();
+  const sis = (sistema || SISTEMA_LOCALE) + '\n\nDati dello studente adesso:\n' + contesto() + inLingua();
   const testo = motore('chat') === 'cloud'
     ? await chatCloud([{ role: 'system', content: sis }, ...perOpenAI(storia)], { pezzo: suTesto, segnale })
     : await chatLocale([{ role: 'system', content: sis }, ...perOllama(storia)], { pezzo: suTesto, segnale });
@@ -329,7 +344,7 @@ export async function estraiLezione({ corso, appunti, gia = [] }) {
   const r = await strutturato(`Sei l'assistente di uno studente universitario italiano. Qui sopra ci sono i suoi appunti della lezione di «${corso}».
 Estrai:
 - definizioni: i concetti definiti o spiegati negli appunti, con una definizione corta (massimo 25 parole), fedele agli appunti, in italiano. Termini brevi. Niente concetti che negli appunti non ci sono.${gia.length ? ` Salta questi, li ha già: ${gia.join(', ')}.` : ''}
-- da_esame: SOLO le frasi in cui gli appunti dicono esplicitamente che il prof la chiederà all'esame o che è importante (parole come «esame», «importante», «ricordatevi», «attenzione»). Riformulate in breve. Se gli appunti non lo dicono, lista vuota.`, `Appunti di ${corso}:\n\n${appunti}`, SCHEMA_LEZIONE);
+- da_esame: SOLO le frasi in cui gli appunti dicono esplicitamente che il prof la chiederà all'esame o che è importante (parole come «esame», «importante», «ricordatevi», «attenzione»). Riformulate in breve. Se gli appunti non lo dicono, lista vuota.` + inLinguaJSON(), `Appunti di ${corso}:\n\n${appunti}`, SCHEMA_LEZIONE);
   // i modelli piccoli tendono a vedere «cose da esame» ovunque: al massimo tante quante le volte che gli appunti lo dicono
   const segnali = appunti.split(/(?<=[.!?\n])\s+/).filter(f => /esame|important|ricordat|attenzione|lo chiede|chiede sempre|domanda sicura/i.test(f)).length;
   const visti = new Set(gia.map(t => t.toLowerCase().trim()));
@@ -350,7 +365,7 @@ Trasformalo in appunti da studiare, in italiano:
 - formule in LaTeX tra $…$ (Obsidian le mostra), correggendo quelle trascritte male se il senso è chiaro;
 - in **grassetto** i termini definiti;
 - niente che non sia nel testo; se un pezzo è incomprensibile, saltalo.
-Rispondi solo con gli appunti, senza introduzioni.`;
+Rispondi solo con gli appunti, senza introduzioni.` + inLingua();
   const out = [];
   for (const [k, pezzo] of pezzi.entries()) {
     avanza?.(k / pezzi.length);
@@ -369,7 +384,7 @@ Rispondi solo con gli appunti, senza introduzioni.`;
 
 // la foto della lavagna (o di una pagina) diventa appunti: testo fedele, formule in LaTeX, schemi descritti a parole
 export async function trascriviFoto({ blocco, corso }) {
-  const istr = `È una foto di una lavagna o di una pagina di appunti${corso ? ` della lezione di «${corso}»` : ''}. Trascrivila in appunti Markdown in italiano, fedeli a ciò che si vede: titoli con «### », punti con «- », formule in LaTeX tra $…$ (Obsidian le mostra), grafici e schemi descritti in una riga tra parentesi quadre. Se una parte è illeggibile scrivi [illeggibile]. Solo gli appunti, senza introduzioni.`;
+  const istr = `È una foto di una lavagna o di una pagina di appunti${corso ? ` della lezione di «${corso}»` : ''}. Trascrivila in appunti Markdown in italiano, fedeli a ciò che si vede: titoli con «### », punti con «- », formule in LaTeX tra $…$ (Obsidian le mostra), grafici e schemi descritti in una riga tra parentesi quadre. Se una parte è illeggibile scrivi [illeggibile]. Solo gli appunti, senza introduzioni.` + inLingua();
   const M = motore('testo'), msg = [{ role: 'user', content: [blocco, { type: 'text', text: istr }] }];
   if (M === 'claude') { const r = await creaMessaggio({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low' }, messages: msg }); return r.content.filter(b => b.type === 'text').map(b => b.text).join('').trim(); }
   if (M === 'cloud') return (await chatCloud(perOpenAI(msg))).trim();
@@ -385,20 +400,20 @@ export async function riassumi({ corso, testo, nome, avanza }) {
 const SCHEMA_LIBRETTO = { type: 'object', additionalProperties: false, required: ['esami'], properties: { esami: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['nome', 'cfu', 'voto', 'lode', 'idoneita', 'data'], properties: {
   nome: { type: 'string' }, cfu: { type: 'integer' }, voto: { type: ['integer', 'null'] }, lode: { type: 'boolean' }, idoneita: { type: 'boolean' }, data: { type: ['string', 'null'], description: 'YYYY-MM-DD' } } } } } };
 export async function leggiLibretto(testo) {
-  const r = await strutturato('Qui sopra c\'è il libretto universitario di uno studente italiano, copiato da un portale (Esse3 o simili), con tanto testo inutile. Estrai SOLO gli esami superati: nome dell\'insegnamento (senza codici), CFU, voto da 18 a 30 (lode true se «30 e lode» o «30L»), idoneita true se è un\'idoneità senza voto, data in formato YYYY-MM-DD. Ignora gli esami non ancora sostenuti o senza esito.', `Libretto:\n${String(testo).slice(0, 30000)}`, SCHEMA_LIBRETTO);
+  const r = await strutturato('Qui sopra c\'è il libretto universitario di uno studente italiano, copiato da un portale (Esse3 o simili), con tanto testo inutile. Estrai SOLO gli esami superati: nome dell\'insegnamento (senza codici), CFU, voto da 18 a 30 (lode true se «30 e lode» o «30L»), idoneita true se è un\'idoneità senza voto, data in formato YYYY-MM-DD. Ignora gli esami non ancora sostenuti o senza esito.' + comeScritti(), `Libretto:\n${String(testo).slice(0, 30000)}`, SCHEMA_LIBRETTO);
   // cfu e voto diventano numeri: il modello può rispondere con una stringa, e i valori finiscono nelle pagine
   return (r.esami || []).filter(e => typeof e.nome === 'string' && e.nome.trim() && (e.idoneita || (+e.voto >= 18 && +e.voto <= 30))).map(e => ({ ...e, nome: e.nome.trim(), cfu: Number(e.cfu) || 6, voto: e.idoneita ? null : Math.round(+e.voto), lode: !!e.lode, idoneita: !!e.idoneita, data: /^\d{4}-\d\d-\d\d$/.test(e.data || '') ? e.data : null }));
 }
 const SCHEMA_ORARIO = { type: 'object', additionalProperties: false, required: ['lezioni'], properties: { lezioni: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['corso', 'giorni', 'inizio', 'fine', 'aula'], properties: {
   corso: { type: 'string' }, giorni: { type: 'array', items: { type: 'integer', minimum: 0, maximum: 6 }, description: '0 domenica, 1 lunedì … 6 sabato' }, inizio: { type: 'string', description: 'HH:MM' }, fine: { type: 'string', description: 'HH:MM' }, aula: { type: 'string' } } } } } };
 export async function leggiOrario(testo) {
-  const r = await strutturato('Qui sopra c\'è l\'orario settimanale delle lezioni di uno studente universitario italiano, copiato da un sito. Estrai ogni insegnamento con i giorni della settimana (0 domenica, 1 lunedì … 6 sabato), ora di inizio e fine in formato HH:MM e aula (stringa vuota se non c\'è). Un insegnamento che si ripete negli stessi orari in più giorni va in una sola voce con più giorni.', `Orario:\n${String(testo).slice(0, 20000)}`, SCHEMA_ORARIO);
+  const r = await strutturato('Qui sopra c\'è l\'orario settimanale delle lezioni di uno studente universitario italiano, copiato da un sito. Estrai ogni insegnamento con i giorni della settimana (0 domenica, 1 lunedì … 6 sabato), ora di inizio e fine in formato HH:MM e aula (stringa vuota se non c\'è). Un insegnamento che si ripete negli stessi orari in più giorni va in una sola voce con più giorni.' + comeScritti(), `Orario:\n${String(testo).slice(0, 20000)}`, SCHEMA_ORARIO);
   const ora = x => /^\d{1,2}[:.]\d\d$/.test(x || '') ? x.replace('.', ':').padStart(5, '0') : null;
   return (r.lezioni || []).map(l => ({ corso: l.corso?.trim(), giorni: [...new Set(l.giorni || [])].filter(g => g >= 0 && g <= 6), inizio: ora(l.inizio), fine: ora(l.fine), aula: (l.aula || '').trim() })).filter(l => l.corso && l.giorni.length && l.inizio && l.fine);
 }
 
 export async function carteDa(blocchi) {
-  const r = await strutturato('Crea da 8 a 20 carte del ripasso da questo materiale: una sola idea per carta, domanda precisa, risposta corta (massimo 2 frasi), in italiano. Solo concetti presenti nel materiale.', blocchi, SCHEMA_CARTE);
+  const r = await strutturato('Crea da 8 a 20 carte del ripasso da questo materiale: una sola idea per carta, domanda precisa, risposta corta (massimo 2 frasi), in italiano. Solo concetti presenti nel materiale.' + inLinguaJSON(), blocchi, SCHEMA_CARTE);
   return (r.carte || []).filter(c => c.fronte?.trim() && c.retro?.trim()).slice(0, 30);
 }
 
@@ -420,7 +435,7 @@ export async function leggiProgramma({ nome, testo }) {
   const r = await strutturato(`Qui sopra c'è il programma (o la scheda) del corso «${nome}». Elenca gli argomenti del programma d'esame, nell'ordine in cui compaiono:
 - titolo: da 2 a 8 parole, con le parole del programma;
 - voci: i sotto-argomenti che il programma scrive per quell'argomento (anche nessuno), corti.
-Da 4 a 30 argomenti. Solo quello che c'è scritto nel programma: niente testi consigliati, modalità d'esame, obiettivi, orari, prerequisiti.`, String(testo).slice(0, 40000), SCHEMA_PROGRAMMA);
+Da 4 a 30 argomenti. Solo quello che c'è scritto nel programma: niente testi consigliati, modalità d'esame, obiettivi, orari, prerequisiti.` + comeScritti(), String(testo).slice(0, 40000), SCHEMA_PROGRAMMA);
   return (r.argomenti || []).map(a => ({ t: String(a.titolo || '').trim(), sotto: (a.voci || []).map(x => String(x).trim()).filter(Boolean).slice(0, 12) })).filter(a => a.t).slice(0, 40);
 }
 // il quiz a crocette (js/crocette.js): il modello scrive le domande, il codice tiene solo quelle che il materiale dimostra
@@ -434,12 +449,12 @@ export async function crocette({ nome, materiale, n = 10, fatte = [] }) {
 - giusta: la posizione (0, 1, 2 o 3) della risposta giusta in opzioni;
 - citazione: copia IDENTICA dal materiale la frase che dimostra la risposta giusta (almeno 8 parole di fila);
 - spiegazione: una frase che dice perché è giusta.
-Domande su punti diversi del materiale.${fatte.length ? ` Non ripetere queste, già fatte: ${fatte.slice(-30).join(' | ')}.` : ''}`, `Materiale:\n${String(materiale).slice(0, 24000)}`, SCHEMA_CROCETTE);
+Domande su punti diversi del materiale.${fatte.length ? ` Non ripetere queste, già fatte: ${fatte.slice(-30).join(' | ')}.` : ''}` + inLinguaJSON(), `Materiale:\n${String(materiale).slice(0, 24000)}`, SCHEMA_CROCETTE);
   return r.domande || [];
 }
 export async function domandaOrale({ nome, materiale, fatte = [], argomento = '' }) {
   const r = await strutturato(`Sei un docente universitario italiano all'esame orale di «${nome}». Fai UNA sola domanda d'orale, come la farebbe un prof: chiara, su un concetto importante del materiale qui sopra, a cui si risponde a voce in 3-4 frasi.${argomento ? ` La domanda deve essere sull'argomento del programma «${argomento}». Se qui sopra ci sono domande uscite agli appelli, fanne una come quelle, con parole tue.` : ''}${fatte.length ? ` Non ripetere ${argomento ? 'domande già fatte' : 'questi argomenti, già chiesti'}: ${fatte.join('; ')}.` : argomento ? '' : ' È la prima domanda: un argomento centrale del corso.'}
-Rispondi solo con la domanda (massimo 30 parole, dai del tu) e l'argomento in 2-4 parole. Niente saluti, niente giudizi.`, materialeOrale(materiale), SCHEMA_DOMANDA, 'chat');
+Rispondi solo con la domanda (massimo 30 parole, dai del tu) e l'argomento in 2-4 parole. Niente saluti, niente giudizi.` + inLinguaJSON(), materialeOrale(materiale), SCHEMA_DOMANDA, 'chat');
   return { domanda: String(r.domanda || '').trim(), argomento: String(r.argomento || '').trim() };
 }
 export async function giudicaRisposta({ nome, domanda, argomento = '', risposta, materiale }) {
@@ -452,23 +467,26 @@ Giudica SOLO questa risposta a QUESTA domanda:
   una risposta corretta detta con parole diverse dal materiale, o con un metodo equivalente (per esempio gli autovalori al posto dei segni dei minori), è «giusta»: non pretendere la formulazione del materiale e non chiedere cose che la domanda non chiede;
 - giudizio: una frase rivolta allo studente (dagli del tu), massimo 25 parole, concreta: cosa era giusto, cosa no;
 - mancava: la cosa più importante che mancava o andava corretta, massimo 20 parole, SOLO se è scritta nel materiale qui sopra; altrimenti stringa vuota.
-Usa il materiale qui sopra come riferimento. Non inventare ipotesi o condizioni di cui non sei sicuro: meglio dire meno.`, materialeOrale(materiale), SCHEMA_GIUDIZIO, 'chat');
+Usa il materiale qui sopra come riferimento. Non inventare ipotesi o condizioni di cui non sei sicuro: meglio dire meno.` + inLinguaJSON(), materialeOrale(materiale), SCHEMA_GIUDIZIO, 'chat');
   let esito = ['giusta', 'parziale', 'sbagliata', 'fuori tema', 'non so'].includes(r.esito) ? r.esito : 'parziale';
   const base = { esito, giudizio: r.giudizio, mancava: r.mancava, risposta };
-  let c = correggiGiudizio(base);
+  // le correzioni del giudizio (correggiGiudizio, mancanze) leggono frasi italiane: solo in italiano. Nelle altre lingue
+  // l'esito resta quello del modello e si controlla solo il «mancava», con la citazione (che non dipende dalla lingua)
+  const it = lingua === 'it';
+  let c = it ? correggiGiudizio(base) : { esito, giudizio: String(r.giudizio || '').trim(), mancava: String(r.mancava || '').trim() };
   // le mancanze rimaste si controllano una per una con una domanda stretta («l'ha già detto? copia le sue parole»);
   // il «sì» del modello vale solo se la frase copiata c'è davvero nella risposta e parla della stessa cosa
   const smentite = [];
-  for (const x of [...mancanze(c.giudizio), c.mancava].filter(Boolean).slice(0, 2)) {
+  for (const x of [...(it ? mancanze(c.giudizio) : []), c.mancava].filter(Boolean).slice(0, 2)) {
     try {
       const v = await strutturato(`Domanda dell'orale: «${domanda}»
 Risposta dello studente: «${risposta}»
 Il correttore ha scritto che nella risposta manca: «${x}».
-Controlla solo questo: lo studente l'ha già detto, anche con parole diverse? Se sì, in citazione copia IDENTICHE le parole della sua risposta che lo dicono; se no, citazione vuota.`, [], SCHEMA_VERIFICA, 'chat');
+Controlla solo questo: lo studente l'ha già detto, anche con parole diverse? Se sì, in citazione copia IDENTICHE le parole della sua risposta che lo dicono; se no, citazione vuota.` + inLinguaJSON(), [], SCHEMA_VERIFICA, 'chat');
       if (v.detta && citazioneValida(v.citazione, x, risposta)) smentite.push(x);
     } catch { }
   }
-  if (smentite.length) c = correggiGiudizio({ ...base, smentite });
+  if (smentite.length) c = it ? correggiGiudizio({ ...base, smentite }) : { ...c, mancava: smentite.includes(c.mancava) ? '' : c.mancava };
   // il «mancava» si mostra solo se viene dal materiale dello studente (vedi dalMateriale): senza materiale, o se il modello
   // lo scrive a memoria, un modello piccolo sbaglia; allora in «Da ripassare» resta solo l'argomento
   return { esito: c.esito, giudizio: c.giudizio, mancava: materiale && dalMateriale(c.mancava, materiale, [argomento, domanda]) ? c.mancava : '' };

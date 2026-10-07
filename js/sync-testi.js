@@ -3,6 +3,7 @@
 // test/sincronizza-app.mjs controlla che l'elenco di «in chiaro» del README coincida con questo (#4 #23).
 // Le frasi stanno nel catalogo (js/lingue/<codice>/sync.js): qui restano i nomi che usa il resto del codice.
 import { t, elenco } from './lingua.js';
+import { oraBreve } from './parole.js';
 
 // cosa resta in chiaro: onesto e completo, anche con la password
 // (giro 3) cifrati sono i dati nel DIARIO; le pagine per Obsidian ne riportano molti in chiaro, e IN_CHIARO lo dice per esteso
@@ -31,7 +32,7 @@ export function rigaStato(s) {
     case 'da_migrare': return t('sync.da-migrare');
     case 'scrittura': return t('sync.scrittura');
     case 'versione': return t('sync.versione', { dove });
-    case 'in_pari': { const ora = s.ultimo ? new Date(s.ultimo).toTimeString().slice(0, 5) : null;
+    case 'in_pari': { const ora = s.ultimo ? oraBreve(s.ultimo) : null;
       return t(s.cifrato ? (ora ? 'sync.in-pari-cifrato-ora' : 'sync.in-pari-cifrato') : (ora ? 'sync.in-pari-ora' : 'sync.in-pari'), { dove, ora }); }
     default: return t('sync.altro-stato', { stato: s.stato || t('sync.in-avvio') });
   }
