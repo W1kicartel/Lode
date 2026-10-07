@@ -14,7 +14,9 @@ export const LINGUE = {
   es: { nome: 'Español', locale: 'es-ES' },
   fr: { nome: 'Français', locale: 'fr-FR' },
   de: { nome: 'Deutsch', locale: 'de-DE' },
-  pt: { nome: 'Português', locale: 'pt-BR' },   // il portoghese di Lode è quello del Brasile (docs/LINGUE.md)
+  // il portoghese di Lode è quello del Brasile (docs/LINGUE.md). zeroPlurale: per Intl.PluralRules('pt-BR') lo 0 è «one»
+  // («0 arquivo»), ma in Brasile si dice «0 arquivos»; 1 e 1,5 restano «one» («1,5 ponto», come nelle prove brasiliane)
+  pt: { nome: 'Português', locale: 'pt-BR', zeroPlurale: true },
 };
 const CHIAVE = 'lode:lingua';
 
@@ -79,9 +81,11 @@ let regole = null, regoleDi = null;
 const regoleAltre = {};
 function forma(v, n, cod = lingua) {
   if (typeof v !== 'object') return v;
-  if (cod !== lingua) { regoleAltre[cod] ||= new Intl.PluralRules(LINGUE[cod].locale); return v[n === 0 && 'zero' in v ? 'zero' : regoleAltre[cod].select(n)] ?? v.other; }
-  if (regoleDi !== lingua) { regole = new Intl.PluralRules(locale()); regoleDi = lingua; }
-  return v[n === 0 && 'zero' in v ? 'zero' : regole.select(n)] ?? v.other;
+  let r;
+  if (cod !== lingua) r = regoleAltre[cod] ||= new Intl.PluralRules(LINGUE[cod].locale);
+  else { if (regoleDi !== lingua) { regole = new Intl.PluralRules(locale()); regoleDi = lingua; } r = regole; }
+  if (n === 0 && 'zero' in v) return v.zero;
+  return v[n === 0 && LINGUE[cod]?.zeroPlurale ? 'other' : r.select(n)] ?? v.other;
 }
 
 // il testo della chiave, con i parametri; se il valore è un plurale e c'è p.n, sceglie la forma giusta

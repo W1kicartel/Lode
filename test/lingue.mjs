@@ -93,6 +93,17 @@ const inutili = Object.keys(IT).filter(k => {
   return !p;
 });
 prova('ogni chiave del catalogo è usata nel codice', inutili.length === 0, `nessuno usa ${inutili.length}: ${inutili.slice(0, 12).join(', ')}`);
+// 6) lo 0 nei plurali: in italiano e in francese segue Intl.PluralRules («0 carte», «0 carte à réviser»); in portoghese del
+//    Brasile prende la forma other («0 cartões», zeroPlurale di LINGUE) e 1,5 resta one («1,5 ponto»); una forma zero vale prima
+{
+  const L = await import('../js/lingua.js');
+  await L.caricaLingua('fr'); await L.caricaLingua('pt');
+  prova('plurali: lo 0 in italiano', L.tIn('it', 'vault.home-carte', { n: 0 }) === '0 carte da ripassare' && L.tIn('it', 'vault.home-carte', { n: 1 }) === '1 carta da ripassare');
+  prova('plurali: lo 0 in francese è one', L.tIn('fr', 'vault.home-carte', { n: 0 }) === L.tIn('fr', 'vault.home-carte', { n: 1 }).replace('1', '0'));
+  const pt = k => [0, 1, 1.5, 2].map(n => L.tIn('pt', k, { n, punti: n }));
+  const [z, u, m, d] = pt('barra3.n-punti');
+  prova('plurali: lo 0 in portoghese è other, 1 e 1,5 one', z === d.replace('2', '0') && u === m.replace('1.5', '1') && u !== d.replace('2', '1'), [z, u, m, d].join(' | '));
+}
 // cache del service worker
 const sw = readFileSync(new URL('sw.js', R), 'utf8');
 for (const cod of Object.keys(LINGUE)) for (const a of AREE) if (existsSync(new URL(`js/lingue/${cod}/${a}.js`, R))) prova(`sw.js ha js/lingue/${cod}/${a}.js`, sw.includes(`'js/lingue/${cod}/${a}.js'`));
