@@ -10,13 +10,16 @@ import { salva, id, oggi } from './dati.js';
 import { esito } from './temi.js';
 
 /* ---------- i compiti interi ---------- */
-const chiaveDi = x => `${x.fonte || 'incollato'}|${x.data || ''}`;
+// il compito di un tema: fonte e data; senza data, fonte e lotto (l'incollatura da cui viene, js/temi.js metti), così due
+// compiti incollati senza data non si mescolano. I temi vecchi senza lotto restano insieme, «fonte|»
+const chiaveDi = x => `${x.fonte || 'incollato'}|${x.data || x.lotto || ''}`;
 const num = v => typeof v === 'number' && Number.isFinite(v) ? v : null;
 // un compito dai suoi temi: in ordine di esercizio (quelli senza numero in fondo), la durata (la prima scritta), i punti
 // (la somma, solo se ce li hanno tutti) e quando l'hai fatto intero l'ultima volta
 function componi(e, chiave, temi) {
   const t = [...temi].sort((a, b) => (a.es == null) - (b.es == null) || (a.es || 0) - (b.es || 0));
-  const p = t.map(x => num(x.punti)), [fonte, data] = chiave.split('|');
+  // fonte e data dal primo tema (la chiave può avere il lotto al posto della data); gli esercizi scelti a mano: «scelti»
+  const p = t.map(x => num(x.punti)), scelti = chiave.startsWith('scelti|'), fonte = scelti ? 'scelti' : t[0]?.fonte || 'incollato', data = scelti ? null : t[0]?.data || null;
   const fatte = (e.prove || []).filter(x => x.chiave === chiave).map(x => x.g).sort();
   return {
     chiave, fonte, data: data || null, temi: t,

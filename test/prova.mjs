@@ -37,10 +37,17 @@ Esercizio 7 Trovare massimi e minimi di f sul quadrato.`);
 
 /* ---------- durataDi ---------- */
 {
-  const casi = [['Tempo: 2 ore', 120], ['durata 3h', 180], ['120 minuti', 120], ['2 ore e 30', 150], ['tempo a disposizione: 2h30', 150], ['2h30', 150], ['2 ore e mezza', 150],
-    ['durata 10 ore', null], ['Compito di analisi, niente tempo scritto', null], ['Prova del 12/02/2024 ore 9:30. Tempo: 3 ore.', 180], ['15 minuti', null]];
+  const casi = [['Tempo: 2 ore', 120], ['durata 3h', 180], ['Tempo: 120 minuti', 120], ['Durata: 2 ore e 30', 150], ['tempo a disposizione: 2h30', 150], ['(2h30)', 150], ['Avete 2 ore e mezza', 150],
+    ['Hai 90 minuti', 90], ['Analisi 2 (2 ore)', 120], ['durata 10 ore', null], ['Compito di analisi, niente tempo scritto', null], ['Prova del 12/02/2024 ore 9:30. Tempo: 3 ore.', 180], ['Tempo: 15 minuti', null],
+    // senza contesto il numero non conta: «120 minuti», «2h30» da soli non sono la durata del compito
+    ['120 minuti', null], ['2h30', null],
+    // il numero del corso seguito dall'ora di inizio non è una durata; il ritardo ammesso nemmeno
+    ['Analisi Matematica 2 ore 14', null], ['Analisi 1 ore 9:30', null], ['Esame di Analisi 2 h 9.00', null], ['Chimica 3 ore 9-12', null], ['Sono ammessi 30 min di ritardo', null],
+    // … ma se la riga ha anche la durata vera, si prende quella
+    ['Analisi 1 ore 9:30 - tempo a disposizione: 2 ore', 120], ['Chimica 3 ore 9-12 (durata 3 ore)', 180], ['Analisi Matematica 2 ore 14\nTempo: 2 ore e 30', 150]];
   for (const [t, v] of casi) prova(`durataDi: «${t}» → ${v}`, TE.durataDi(t) === v, TE.durataDi(t));
   prova('dividi: la durata dall\'intestazione', TE.dividi('Analisi 2 · 12/02/2024 · Tempo: 2 ore\nEsercizio 1 Calcolare il gradiente di f.\nEsercizio 2 Calcolare la hessiana di f.').durata === 120);
+  prova('dividi: «Analisi Matematica 2 ore 14» nell\'intestazione non è una durata', TE.dividi('Analisi Matematica 2 ore 14 · 12/02/2024\nEsercizio 1 Calcolare il gradiente di f.\nEsercizio 2 Calcolare la hessiana di f.').durata === null);
   prova('dividi: la durata nel testo di un esercizio non conta', TE.dividi('Esercizio 1 Un treno viaggia per 2 ore a 80 km/h.\nEsercizio 2 Calcolare la hessiana di f.').durata === null);
 }
 
@@ -140,6 +147,33 @@ const tema = (id, fonte, data, es, extra = {}) => ({ id, t: `Testo dell'esercizi
   prova('riepilogo: i decimali con la virgola', mezzo.includes('valgono 7,5 punti su 9,5'), mezzo);
 }
 
+/* ---------- due compiti incollati senza data: il lotto ---------- */
+{
+  const e = finto();
+  TE.metti(e, TE.dividi('Tempo: 2 ore\nEsercizio 1 Calcolare l\'integrale doppio di x sul quadrato.\nEsercizio 2 Studiare la serie di potenze di x^n.').pezzi, { durata: 120 });
+  TE.metti(e, TE.dividi('Tempo: 3 ore\nEsercizio 1 Risolvere l\'equazione differenziale y\' = 2y.\nEsercizio 2 Calcolare l\'integrale triplo di z sulla sfera.').pezzi, { durata: 180 });
+  const cs = PV.compiti(e);
+  prova('lotto: due metti() senza data danno due compiti', cs.length === 2 && cs.every(c => c.temi.length === 2 && c.fonte === 'incollato' && c.data === null) && J(cs.map(c => c.durata).sort()) === '[120,180]', J(cs.map(c => [c.chiave, c.temi.length, c.durata])));
+  prova('lotto: un id per chiamata, uguale dentro la stessa', e.temi[0].lotto && e.temi[0].lotto === e.temi[1].lotto && e.temi[1].lotto !== e.temi[2].lotto);
+  // con la data conta la data: due incollature dello stesso compito restano un compito
+  const f = finto();
+  TE.metti(f, [{ n: 1, t: 'Prima metà del compito, esercizio uno' }], { data: '2024-02-12' });
+  TE.metti(f, [{ n: 2, t: 'Seconda metà del compito, esercizio due' }], { data: '2024-02-12' });
+  prova('lotto: con la data stessa chiave di prima', PV.compiti(f).length === 1 && PV.compiti(f)[0].chiave === 'incollato|2024-02-12');
+}
+
+/* ---------- «Lascio perdere»: la prova si toglie e non lascia segni ---------- */
+{
+  const e = finto(), d = TE.dividi(COMPITO);
+  TE.metti(e, d.pezzi, { fonte: 'compito.pdf', data: d.data, durata: d.durata });
+  e.prove = [{ id: 'vecchia', chiave: 'altro|2023-01-01', g: '2026-09-01', esiti: [] }];
+  const c = PV.scegli(e), prima = J(e.prove), temiPrima = J(e.temi);
+  PV.avvia(e, c, 120); PV.passo(); PV.togli();
+  prova('lascio perdere: dopo togli niente prova in corso', PV.inCorso() === null && PV.compitoDi(e) === null);
+  prova('lascio perdere: e.prove e i temi non cambiano', J(e.prove) === prima && J(e.temi) === temiPrima);
+  prova('lascio perdere: il compito resta «mai fatto»', PV.scegli(e).chiave === c.chiave && PV.scegli(e).fatto === null);
+}
+
 /* ---------- il timer: la fase 'prova' ---------- */
 {
   const vero = Date.now; let ora = vero(); Date.now = () => ora;
@@ -189,6 +223,8 @@ const c = f => C.interpreta(f);
   prova('sw.js: js/prova.js nella cache, versione nuova', sw.includes("'js/prova.js'") && /CACHE = 'lode-v(\d+)'/.test(sw) && +sw.match(/CACHE = 'lode-v(\d+)'/)[1] >= 11);
   const lode = leggi('../js/lode.js'), f = lode.slice(lode.indexOf('function provaEsiti'), lode.indexOf("/* ---------- il programma d'esame"));
   prova('lode.js: le soluzioni solo dopo «Salva»', f.length > 200 && f.indexOf('x.sol') > f.indexOf("salvaB.addEventListener('click'"), f.slice(0, 120));
+  const l = lode.slice(lode.indexOf('function provaLascio'), lode.indexOf('function provaScaduta'));
+  prova('lode.js: «Lascio perdere» accanto a «Consegno», con conferma, toglie senza chiudere', /data-consegno>Consegno<\/button><button[^>]*data-lascio>Lascio perdere/.test(lode) && l.includes('data-si') && l.includes('PV.togli()') && !l.includes('PV.chiudi') && l.includes("fase === 'prova') F.ferma()"), l.slice(0, 120));
   prova('lode.js: la durata passa a TE.metti', /TE\.metti\(e, pezzi, \{ fonte, data: d\.data, durata: d\.durata \}\)/.test(lode));
   prova('programma.js: non chiama la prova generale', !leggi('../js/programma.js').includes('prova.js'));
 }

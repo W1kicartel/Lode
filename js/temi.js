@@ -28,13 +28,25 @@ function puntiDi(riga) {
   const m = String(riga || '').match(PUNTI); if (!m) return null;
   const v = Number((m[1] || m[2]).replace(',', '.')); return v > 0 && v <= 100 ? v : null;
 }
-// quanto dura il compito, dall'intestazione: «Tempo: 2 ore», «durata 3h», «120 minuti», «2 ore e 30», «2h30», «2 ore e mezza».
-// In minuti, fra 30 e 300; se no null. Si prende il primo che torna («Prova del 12/02/2024 ore 9:30» non è una durata)
-const DURATA = /(?<![\d/.,:])(\d{1,3}(?:[.,]\d)?)\s*(?:ore|ora|h)(?![a-zà-ù])(?:\s*(?:e\s*)?(?:(\d{2})(?!\d)(?:\s*(?:minuti|min)\b)?|(mezz[ao])))?|(?<![\d/.,:])(\d{2,3})\s*(?:minuti|min)\b/g;
+// quanto dura il compito, dall'intestazione: «Tempo: 2 ore», «durata 3h», «Avete 120 minuti», «Durata: 2 ore e 30»,
+// «tempo a disposizione: 2h30», «(2 ore e mezza)». In minuti, fra 30 e 300; se no null. Il numero conta solo con una parola
+// di contesto sulla stessa riga (tempo, durata, a disposizione, avete, hai) o fra parentesi: «Analisi Matematica 2 ore 14»
+// è il nome del corso più l'ora di inizio, non 134 minuti. «<n> ore» seguito da un'ora del giorno («ore 9:30», «h 9.00»,
+// «ore 9-12») non è una durata, e le righe sul ritardo («Sono ammessi 30 min di ritardo») non contano
+const DURATA = /(?<![\d/.,:])(\d{1,3}(?:[.,]\d)?)\s*(?:ore|ora|h)(?![a-zà-ù])(?:\s*e\s*(?:(\d{1,2})(?!\d)(?:\s*(?:minuti|min)\b)?|(mezz[ao]))|(\d{2})(?!\d)|\s*(\d{1,2})\s*(?:minuti|min)\b)?|(?<![\d/.,:])(\d{2,3})\s*(?:minuti|min)\b/g;
+const CONTESTO = /\b(?:tempo|durata|a disposizione|avete|hai)\b/, RITARDO = /\b(?:ritard[oi]|ammess[ieao])\b/;
 export function durataDi(testo) {
-  for (const m of String(testo || '').toLowerCase().matchAll(DURATA)) {
-    const min = m[4] ? +m[4] : Math.round(Number(m[1].replace(',', '.')) * 60 + (m[2] ? +m[2] : m[3] ? 30 : 0));
-    if (min >= 30 && min <= 300) return min;
+  for (const riga of String(testo || '').toLowerCase().split('\n')) {
+    if (RITARDO.test(riga)) continue;
+    const pezzi = CONTESTO.test(riga) ? [riga] : [...riga.matchAll(/\(([^()]*)\)/g)].map(m => m[1]);
+    for (const t of pezzi) for (const m of t.matchAll(DURATA)) {
+      const dopo = t.slice(m.index + m[0].length);
+      // l'ora del giorno dopo «ore»/«h»: «ore 14», «h 9.00», «ore 9-12»; anche «2h30:00»
+      if (m[1] && !m[2] && !m[3] && !m[4] && !m[5] && /^\s*\d/.test(dopo)) continue;
+      if (m[4] && /^[:.\-]\d/.test(dopo)) continue;
+      const min = m[6] ? +m[6] : Math.round(Number(m[1].replace(',', '.')) * 60 + (m[2] ? +m[2] : m[4] ? +m[4] : m[5] ? +m[5] : m[3] ? 30 : 0));
+      if (min >= 30 && min <= 300) return min;
+    }
   }
   return null;
 }
@@ -120,14 +132,16 @@ const MAX = 200;
 // singolo esercizio) e durata (del compito, in minuti) servono alla prova generale: null se il compito non li dice
 const numeroO = v => typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null;
 export function metti(e, pezzi, { fonte = 'incollato', data = null, durata = null } = {}) {
-  const lista = e.temi ||= [], argomenti = e.programma?.argomenti || [], visti = new Set(lista.map(x => norm(x.t))), T = oggi();
+  // lotto: un id per ogni chiamata, così due compiti incollati senza data restano due compiti (js/prova.js). I temi
+  // salvati prima non ce l'hanno (null): restano raggruppati per fonte e data come prima
+  const lista = e.temi ||= [], argomenti = e.programma?.argomenti || [], visti = new Set(lista.map(x => norm(x.t))), T = oggi(), lotto = id();
   let messi = 0, senza = 0, doppi = 0;
   for (const p of pezzi || []) {
     const t = String(p.t || '').trim(), k = norm(t); if (!k) continue;
     if (visti.has(k)) { doppi++; continue; }
     visti.add(k);
     const a = p.a !== undefined ? (argomenti.some(x => x.id === p.a) ? p.a : null) : abbina(t, argomenti)?.id || null;
-    lista.push({ id: id(), t, sol: p.sol || null, a, fonte: String(fonte || 'incollato').slice(0, 120), data: data || null, es: p.n || null, punti: numeroO(p.punti), durata: numeroO(durata), esiti: [], scad: T });
+    lista.push({ id: id(), t, sol: p.sol || null, a, fonte: String(fonte || 'incollato').slice(0, 120), data: data || null, es: p.n || null, punti: numeroO(p.punti), durata: numeroO(durata), lotto, esiti: [], scad: T });
     messi++; if (!a) senza++;
   }
   // al massimo 200 per esame: restano i più recenti

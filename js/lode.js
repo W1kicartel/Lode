@@ -2379,13 +2379,26 @@ function provaInCorso(e, comp, dove) {
     <p class="ld-tema-meta">${esc(rigaCompito(comp))} · ${esc(st.durata)} minuti, fino alle ${esc(fine.toTimeString().slice(0, 5))}</p>
     <ol class="ld-prova-l">${comp.temi.map((x, i) => `<li class="${i === cor ? 'ora' : i < cor ? 'fatto' : ''}"><span class="ld-prova-n">Esercizio ${esc(x.es ?? i + 1)}${x.punti != null ? ` · ${esc(String(x.punti).replace('.', ','))} punti` : ''}${i < cor && mins[i] != null ? ` · ${esc(mins[i])} min` : ''}</span>
       <div class="ld-tema-testo">${mdHtml(x.t)}</div>${i === cor && i < comp.temi.length - 1 ? '<button type="button" class="btn small ld-piano" data-passo>Passo al prossimo</button>' : ''}</li>`).join('')}</ol>
-    <div class="az"><button type="button" class="btn primary" data-consegno>Consegno</button></div>
+    <div class="az"><button type="button" class="btn primary" data-consegno>Consegno</button><button type="button" class="btn ld-piano" data-lascio>Lascio perdere</button></div>
     <p class="ld-nota">Il tempo scorre nella pillola. «Passo al prossimo» è facoltativo: segna quanto stai su ogni esercizio.</p>`;
   s.querySelectorAll('.ld-tema-testo').forEach((n, i) => formuleIn(n, comp.temi[i].t));
   s.querySelector('[data-passo]')?.addEventListener('click', () => { PV.passo(); provaInCorso(e, comp, s); s.querySelector('li.ora')?.scrollIntoView({ block: 'nearest', behavior: RIDOTTO ? 'auto' : 'smooth' }); });
   s.querySelector('[data-consegno]').addEventListener('click', () => { PV.consegna(); if (F.stato()?.fase === 'prova') F.ferma(); provaEsiti(e, comp, s); });
+  s.querySelector('[data-lascio]').addEventListener('click', () => provaLascio(e, comp, s));
   if (A.turno) A.turno.dataset.sintesi = `prova generale di ${e.nome}`;
   return s;
+}
+// «Lascio perdere»: per una prova partita per sbaglio. Chiede conferma, poi la toglie e ferma il timer della prova. Non
+// scrive niente in e.prove né sui temi: il compito resta «mai fatto» e «prova generale» non la riapre più
+function provaLascio(e, comp, s) {
+  const az = s.querySelector('.az');
+  az.innerHTML = `<span class="ld-prova-chiede">La lascio perdere? Non segno niente: né gli esercizi né il compito.</span><button type="button" class="btn primary" data-si>Sì, lascio perdere</button><button type="button" class="btn ld-piano" data-no>No, continuo</button>`;
+  az.querySelector('[data-no]').addEventListener('click', () => (PV.inCorso()?.consegnata ? provaEsiti : provaInCorso)(e, comp, s));
+  az.querySelector('[data-si]').addEventListener('click', () => {
+    PV.togli(); if (F.stato()?.fase === 'prova') F.ferma();
+    s.innerHTML = `<span class="ld-lbl">Prova generale · ${esc(e.nome)}</span><p>Lasciata perdere: non ho segnato niente. Quando vuoi rifarla, scrivi «prova generale di ${esc(e.nome.toLowerCase())}».</p>`;
+    aggiornaTutto();
+  });
 }
 // il tempo è finito (anche a computer spento: focus.js se ne accorge al ritorno): si consegna e si chiedono gli esiti
 function provaScaduta() {
@@ -2403,8 +2416,9 @@ function provaEsiti(e, comp, s) {
     <ol class="ld-prova-l">${comp.temi.map((x, i) => `<li><span class="ld-prova-n">Esercizio ${esc(x.es ?? i + 1)}${x.punti != null ? ` · ${esc(String(x.punti).replace('.', ','))} punti` : ''}</span>
       <span class="ld-prova-inizio">${esc(x.t.split('\n').find(r => r.trim()).slice(0, 160))}</span>
       <div class="az ld-prova-esiti" role="group" aria-label="Com'è andato l'esercizio ${esc(x.es ?? i + 1)}">${Object.entries(PV.COME).map(([k, t]) => `<button type="button" class="btn small" data-i="${i}" data-come="${k}">${t}</button>`).join('')}</div></li>`).join('')}</ol>
-    <div class="az"><button type="button" class="btn primary" data-salva disabled>Salva</button></div>
+    <div class="az"><button type="button" class="btn primary" data-salva disabled>Salva</button><button type="button" class="btn ld-piano" data-lascio>Lascio perdere</button></div>
     <p class="ld-nota">Lode non corregge: l'esito lo scegli tu.</p>`;
+  s.querySelector('[data-lascio]').addEventListener('click', () => provaLascio(e, comp, s));
   const salvaB = s.querySelector('[data-salva]');
   s.querySelectorAll('[data-come]').forEach(b => b.addEventListener('click', () => {
     const i = +b.dataset.i; scelte[i] = b.dataset.come;
