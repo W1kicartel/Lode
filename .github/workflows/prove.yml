@@ -47,6 +47,8 @@ jobs:
         run: node test/codice.mjs
       - name: Temi d'esame (compiti vecchi divisi in esercizi, uno al giorno nel piano)
         run: node --experimental-vm-modules test/temi.mjs
+      - name: Prova generale (un compito vecchio intero, con il tempo vero)
+        run: node --experimental-vm-modules test/prova.mjs
       - name: Cosa stampa? contro il compilatore vero
         # su Linux e macOS il compilatore c'è sempre: se manca è un errore. Su Windows, senza gcc, salta con un messaggio
         env:

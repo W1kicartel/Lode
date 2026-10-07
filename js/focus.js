@@ -1,5 +1,7 @@
 // Il timer di concentrazione: vive nella pillola. Sopravvive a un ricaricamento della pagina (sta in localStorage).
 // Fine del focus → la sessione entra nelle ore di studio dell'esame, suona un rintocco leggero e parte la pausa.
+// La fase 'prova' è la prova generale (js/prova.js): un compito intero col tempo vero. Alla fine conta le ore come un
+// focus, suona e avvisa «Tempo scaduto», ma la pausa non parte: prima si consegna e si dice com'è andata.
 import { D, esame, registraSessione } from './dati.js';
 const CH = 'lode:focus';
 let T = leggi(), tic = 0;
@@ -14,7 +16,7 @@ export function restante() {
   return Math.max(0, T.durata * 60e3 - passati);
 }
 export const avanzamento = () => T ? 1 - restante() / (T.durata * 60e3) : 0;
-export const etichetta = () => T?.fase === 'pausa' ? 'Pausa' : (esame(T?.esameId)?.nome || 'Studio libero');
+export const etichetta = () => T?.fase === 'pausa' ? 'Pausa' : T?.fase === 'prova' ? 'Prova generale' : (esame(T?.esameId)?.nome || 'Studio libero');
 export const mmss = ms => { const s = Math.ceil(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 
 export function avvia({ min = D.imp.focus, esameId = null, fase = 'focus' } = {}) {
@@ -28,7 +30,7 @@ export function riprendi() { if (!T || !T.fermo) return; T.sospeso += Date.now()
 export function ferma() {
   if (!T) return null;
   const fatti = (T.durata * 60e3 - restante()) / 60e3, era = T;
-  if (era.fase === 'focus' && fatti >= 5) registraSessione(era.esameId, fatti, era.inizio);
+  if ((era.fase === 'focus' || era.fase === 'prova') && fatti >= 5) registraSessione(era.esameId, fatti, era.inizio);
   T = null; scrivi(); avvisa('fermo', { min: fatti, fase: era.fase }); return { min: fatti, era };
 }
 function finito() {
@@ -38,6 +40,10 @@ function finito() {
     rintocco(2); notifica('Focus finito', `${era.durata} minuti su ${esame(era.esameId)?.nome || 'studio libero'}. Pausa di ${D.imp.pausa} minuti.`);
     avvisa('fine', { fase: 'focus', min: era.durata, esameId: era.esameId });
     avvia({ min: D.imp.pausa, esameId: era.esameId, fase: 'pausa' });
+  } else if (era.fase === 'prova') {
+    registraSessione(era.esameId, era.durata, era.inizio);
+    rintocco(2); notifica('Tempo scaduto', 'Consegna e scrivi com\'è andata.');
+    avvisa('fine', { fase: 'prova', esameId: era.esameId });
   } else {
     rintocco(1); notifica('Pausa finita', 'Si riparte quando vuoi.');
     avvisa('fine', { fase: 'pausa', esameId: era.esameId });

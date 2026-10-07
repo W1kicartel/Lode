@@ -125,6 +125,12 @@ export function interpreta(frase) {
   if ((m = t.match(/^(?:(?:fammi fare|fammi|dammi|proponimi|facciamo|faccio) )?(?:un |l'|il mio )?esercizio(?: d'esame| di oggi| del giorno)?(?:\s+(?:di|del|della|dello|per|su)\s+(?!(?:c|c\+\+|java|python|programmazione)$)(.+))?$/))) {
     const nome = pulisci(m[1] || ''); return { tipo: 'temi', esame: nome ? trovaEsame(nome) : null, nomeDetto: nome, testo: '' };
   }
+  // la prova generale (js/prova.js): un compito vecchio intero col tempo vero. «prova generale di analisi 2», «compito intero
+  // di fisica», «fammi fare un compito intero», «simulazione del compito di analisi 2». «simula …» da solo resta del voto e
+  // «simulazione d'esame» resta del quiz a crocette (più sotto)
+  if ((m = t.match(/^(?:(?:fammi fare|fammi|fai(?:mi)?|facciamo|faccio|voglio fare|inizia|avvia|apri) )?(?:una |la |un |il )?(?:prova generale|compito intero|compito completo|simulazione (?:del|di un) compito(?: intero)?)(?:\s+(?:di|del|della|dello|dei|delle|per|su)\b|\s*d')?\s*(.*)$/))) {
+    const nome = pulisci(m[1] || ''); return { tipo: 'prova', esame: nome ? trovaEsame(nome) : null, nomeDetto: nome };
+  }
 
   // in aula: ★ da esame, definizione, domanda per il prof
   if ((m = grezzo.match(/^(?:★|\*{1,2}|!|da esame\s*:?|importante\s*:|stella\s*:?|segna(?: che)?(?: è)? da esame\s*:?|questo è da esame\s*:?)\s*(.+)$/i))) return { tipo: 'stella', testo: m[1].trim() };
@@ -344,6 +350,7 @@ export const ESEMPI = [
   ['programma di analisi 2', 'incolla il programma: mappa degli argomenti e piano fino all\'appello'],
   ['domande uscite di analisi 2: …', 'quelle del gruppo del corso: salgono nel piano'],
   ['temi d\'esame di analisi 2: …', 'gli esercizi di un compito vecchio: uno al giorno, sugli argomenti di oggi'],
+  ['prova generale di analisi 2', 'un compito vecchio intero, con il tempo vero: com\'è andata lo dici tu'],
   ['te lo spiego io: teorema di Green', 'spieghi un argomento, Lode ti dice cosa hai saltato'],
   ['quiz di analisi 2', 'domande a crocette: allenamento, o simulazione d\'esame a tempo'],
   ['trascrivi la videolezione di diritto privato', 'dall\'audio del computer: per chi studia da casa'],
