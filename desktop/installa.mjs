@@ -12,6 +12,7 @@ import { join, resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { t } from './lingua.mjs';
 
 const MAC = process.platform === 'darwin', WIN = process.platform === 'win32';
 const esegui = (cmd, args, opz = {}) => new Promise((ok, ko) => execFile(cmd, args, { maxBuffer: 1 << 24, ...opz }, (e, out, err) => e ? ko(new Error((err || e.message).toString().trim())) : ok(out.toString())));
@@ -28,7 +29,7 @@ export const rete = (url, opz) => net?.fetch ? net.fetch(url, opz) : fetch(url, 
 // scarica un file con l'avanzamento (0-1)
 async function scarica(url, dest, avanza) {
   const r = await rete(url, { redirect: 'follow', headers: { 'User-Agent': 'Lode' } });
-  if (!r.ok) throw new Error(`download non riuscito (${r.status})`);
+  if (!r.ok) throw new Error(t('desktop.installa-download-non-riuscito', { stato: r.status }));
   const tot = +r.headers.get('content-length') || 0; let fatto = 0, ultimo = 0;
   const conta = new TransformStream({ transform(pezzo, c) { fatto += pezzo.byteLength; const t = Date.now(); if (tot && t - ultimo > 150) { ultimo = t; avanza(fatto / tot, fatto); } c.enqueue(pezzo); } });
   await pipeline(Readable.fromWeb(r.body.pipeThrough(conta)), createWriteStream(dest));
@@ -53,7 +54,7 @@ export const FIRME = {
 export const requisitoMac = team => `=anchor apple generic and certificate leaf[subject.OU] = "${team}"`;
 // dal soggetto del certificato (come lo scrive PowerShell: «CN=Ollama Inc., O=Ollama Inc., L=Toronto, …») il nome comune
 export const nomeComune = soggetto => String(soggetto || '').match(/(?:^|,\s*)CN=(?:"([^"]+)"|([^,]+))/)?.slice(1).find(Boolean)?.trim() || '';
-const nonFirmato = nome => new Error(`L'installer di ${nome} non ha la firma ufficiale di ${nome}, quindi non l'ho installato. Riprova più tardi, oppure scaricalo tu dal sito ufficiale.`);
+const nonFirmato = nome => new Error(t('desktop.installa-non-firmato', { nome }));
 async function verificaFirma(chi, percorso) {
   const f = FIRME[chi];
   if (MAC) { try { await esegui('codesign', ['--verify', '--deep', '--strict', '-R', requisitoMac(f.team), percorso]); } catch { throw nonFirmato(f.nome); } return; }
@@ -81,7 +82,7 @@ export const obsidianInstallato = () => percorsiObsidian().some(existsSync);
 async function ultimaObsidian() {
   const r = await rete('https://raw.githubusercontent.com/obsidianmd/obsidian-releases/master/desktop-releases.json', { headers: { 'User-Agent': 'Lode' } });
   const v = (await r.json()).latestVersion;
-  if (!/^\d+\.\d+\.\d+$/.test(v)) throw new Error('versione di Obsidian sconosciuta');
+  if (!/^\d+\.\d+\.\d+$/.test(v)) throw new Error(t('desktop.installa-versione-obsidian'));
   const nome = MAC ? `Obsidian-${v}.dmg` : WIN ? `Obsidian-${v}.exe` : process.arch === 'arm64' ? `Obsidian-${v}-arm64.AppImage` : `Obsidian-${v}.AppImage`;
   return { v, nome, url: `https://github.com/obsidianmd/obsidian-releases/releases/download/v${v}/${nome}` };
 }
@@ -97,9 +98,9 @@ export async function installaObsidian({ vault, confObsidian, avanza }) {
   const tmp = join(tmpdir(), 'lode-' + randomBytes(4).toString('hex')); mkdirSync(tmp, { recursive: true });
   const file = join(tmp, nome);
   try {
-    avanza({ fase: 'scarico', testo: `Scarico Obsidian ${v}` });
-    await scarica(url, file, (p, b) => avanza({ fase: 'scarico', p, testo: `Scarico Obsidian ${v} · ${Math.round(b / 1e6)} MB` }));
-    avanza({ fase: 'installo', testo: 'Installo Obsidian' });
+    avanza({ fase: 'scarico', testo: t('desktop.installa-scarico-obsidian', { versione: v }) });
+    await scarica(url, file, (p, b) => avanza({ fase: 'scarico', p, testo: t('desktop.installa-scarico-obsidian-mb', { versione: v, mb: Math.round(b / 1e6) }) }));
+    avanza({ fase: 'installo', testo: t('desktop.installa-installo-obsidian') });
     if (MAC) {
       const mnt = join(tmp, 'mnt');
       await esegui('hdiutil', ['attach', '-nobrowse', '-noautoopen', '-readonly', '-mountpoint', mnt, file]);
@@ -117,7 +118,7 @@ export async function installaObsidian({ vault, confObsidian, avanza }) {
       await esegui('cp', [file, dest]); chmodSync(dest, 0o755);
     }
     preparaListaVault(confObsidian, vault);
-    avanza({ fase: 'fatto', p: 1, testo: `Obsidian ${v} installato` });
+    avanza({ fase: 'fatto', p: 1, testo: t('desktop.installa-obsidian-installato', { versione: v }) });
     return { versione: v };
   } finally { pulisci(tmp); }
 }
@@ -140,10 +141,10 @@ export function modelloConsigliato() {
   const gb = totalmem() / 2 ** 30;
   // fuori dai Mac con chip Apple (memoria unificata) la memoria non basta: senza una scheda video il modello gira sul
   // processore, e un 9B sarebbe lentissimo. Lì il 9B solo con una NVIDIA; altrimenti il 4B.
-  if (!(MAC && process.arch === 'arm64') && !schedaNvidia()) return { nome: 'qwen3.5:4b', etichetta: 'Qwen3.5 4B', gb: 3.4, perche: 'veloce anche senza scheda video: definizioni, carte, giochi e orale' };
-  if (gb >= 40) return { nome: 'qwen3.5:35b-a3b', etichetta: 'Qwen3.5 35B-A3B', gb: 24, perche: 'il più bravo e veloce come un modello piccolo, per computer con molta memoria' };
-  if (gb >= 15) return { nome: 'qwen3.5:9b', etichetta: 'Qwen3.5 9B', gb: 6.6, perche: 'spiega bene e regge l\'orale' };
-  return { nome: 'qwen3.5:4b', etichetta: 'Qwen3.5 4B', gb: 3.4, perche: `per ${Math.round(gb)} GB di memoria: definizioni, carte, giochi e orale` };
+  if (!(MAC && process.arch === 'arm64') && !schedaNvidia()) return { nome: 'qwen3.5:4b', etichetta: 'Qwen3.5 4B', gb: 3.4, perche: t('desktop.installa-perche-4b') };
+  if (gb >= 40) return { nome: 'qwen3.5:35b-a3b', etichetta: 'Qwen3.5 35B-A3B', gb: 24, perche: t('desktop.installa-perche-35b') };
+  if (gb >= 15) return { nome: 'qwen3.5:9b', etichetta: 'Qwen3.5 9B', gb: 6.6, perche: t('desktop.installa-perche-9b') };
+  return { nome: 'qwen3.5:4b', etichetta: 'Qwen3.5 4B', gb: 3.4, perche: t('desktop.installa-perche-memoria', { gb: Math.round(gb) }) };
 }
 export async function statoOllama() {
   const installato = MAC ? ['/Applications/Ollama.app', join(homedir(), 'Applications', 'Ollama.app')].some(existsSync) || existsSync('/usr/local/bin/ollama')
@@ -154,7 +155,7 @@ export async function statoOllama() {
 }
 async function aspettaOllama(sec = 60) {
   for (let i = 0; i < sec * 2; i++) { if ((await statoOllama()).acceso) return true; await new Promise(r => setTimeout(r, 500)); }
-  throw new Error('Ollama non si è avviato');
+  throw new Error(t('desktop.installa-ollama-non-avviato'));
 }
 export async function avviaOllama() {
   if ((await statoOllama()).acceso) return true;
@@ -164,20 +165,20 @@ export async function avviaOllama() {
   return aspettaOllama();
 }
 export async function installaOllama({ avanza }) {
-  if (!MAC && !WIN) throw new Error('Su Linux installa Ollama da ollama.com con il loro script, poi torna qui.');
+  if (!MAC && !WIN) throw new Error(t('desktop.installa-ollama-linux'));
   const tmp = join(tmpdir(), 'lode-' + randomBytes(4).toString('hex')); mkdirSync(tmp, { recursive: true });
   try {
     const url = MAC ? 'https://ollama.com/download/Ollama-darwin.zip' : 'https://ollama.com/download/OllamaSetup.exe';
     const file = join(tmp, MAC ? 'Ollama.zip' : 'OllamaSetup.exe');
-    await scarica(url, file, (p, b) => avanza({ fase: 'scarico', p, testo: `Scarico Ollama · ${Math.round(b / 1e6)} MB` }));
-    avanza({ fase: 'installo', testo: 'Installo Ollama' });
+    await scarica(url, file, (p, b) => avanza({ fase: 'scarico', p, testo: t('desktop.installa-scarico-ollama-mb', { mb: Math.round(b / 1e6) }) }));
+    avanza({ fase: 'installo', testo: t('desktop.installa-installo-ollama') });
     if (MAC) {
       await esegui('ditto', ['-x', '-k', file, tmp]);
       await verificaFirma('ollama', join(tmp, 'Ollama.app'));   // firmata da chi fa Ollama (Team ID), non da uno qualunque
       const dest = join(cartellaApp(), 'Ollama.app'); rmSync(dest, { recursive: true, force: true });
       await esegui('ditto', [join(tmp, 'Ollama.app'), dest]);
     } else { await verificaFirma('ollama', file); await esegui(file, ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART']); }   // prima la firma (Ollama Inc.)
-    avanza({ fase: 'avvio', testo: 'Avvio Ollama' });
+    avanza({ fase: 'avvio', testo: t('desktop.installa-avvio-ollama') });
     await (WIN ? aspettaOllama(20).catch(() => avviaOllama()) : avviaOllama());   // su Windows lo avvia già l'installer: non ne apriamo un secondo
     return true;
   } finally { pulisci(tmp); }
@@ -185,7 +186,7 @@ export async function installaOllama({ avanza }) {
 export async function scaricaModello(nome, avanza) {
   await avviaOllama();
   const r = await fetch(OLLAMA + '/api/pull', { method: 'POST', body: JSON.stringify({ model: nome, stream: true }) });
-  if (!r.ok || !r.body) throw new Error('Ollama non risponde');
+  if (!r.ok || !r.body) throw new Error(t('desktop.installa-ollama-non-risponde'));
   const lettore = r.body.getReader(), dec = new TextDecoder(); let resto = '', ultimo = 0;
   for (; ;) {
     const { done, value } = await lettore.read(); if (done) break;
@@ -194,11 +195,11 @@ export async function scaricaModello(nome, avanza) {
     for (const riga of righe) {
       if (!riga.trim()) continue; const x = JSON.parse(riga);
       if (x.error) throw new Error(x.error);
-      const t = Date.now();
-      if (x.total && x.completed && t - ultimo > 200) { ultimo = t; avanza({ fase: 'scarico', p: x.completed / x.total, testo: `Scarico ${nome} · ${(x.completed / 1e9).toFixed(1)} di ${(x.total / 1e9).toFixed(1)} GB` }); }
+      const adesso = Date.now();
+      if (x.total && x.completed && adesso - ultimo > 200) { ultimo = adesso; avanza({ fase: 'scarico', p: x.completed / x.total, testo: t('desktop.installa-scarico-modello', { nome, fatti: (x.completed / 1e9).toFixed(1), totale: (x.total / 1e9).toFixed(1) }) }); }
     }
   }
-  avanza({ fase: 'fatto', p: 1, testo: `${nome} pronto` });
+  avanza({ fase: 'fatto', p: 1, testo: t('desktop.installa-modello-pronto', { nome }) });
   return true;
 }
 // una chat col modello locale, in streaming: i pezzi arrivano a chi chiama
@@ -208,7 +209,7 @@ export const CALDO = totalmem() <= 9 * 2 ** 30 ? '4m' : '15m';
 export async function chatLocale({ modello, messaggi, formato, segnale, pezzo }) {
   await avviaOllama();
   const r = await fetch(OLLAMA + '/api/chat', { method: 'POST', signal: segnale, body: JSON.stringify({ model: modello, messages: messaggi, stream: true, ...(formato ? { format: formato } : {}), ...(/^qwen3/.test(modello) ? { think: false } : {}), options: { temperature: formato ? 0.2 : 0.6, num_ctx: 8192, num_predict: 4096 }, keep_alive: CALDO }) });
-  if (!r.ok || !r.body) throw new Error(r.status === 404 ? `Il modello ${modello} non è installato` : 'Il modello locale non risponde');
+  if (!r.ok || !r.body) throw new Error(r.status === 404 ? t('desktop.installa-modello-assente', { modello }) : t('desktop.installa-modello-non-risponde'));
   const lettore = r.body.getReader(), dec = new TextDecoder(); let resto = '', tutto = '';
   for (; ;) {
     const { done, value } = await lettore.read(); if (done) break;

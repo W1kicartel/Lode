@@ -42,6 +42,7 @@
            | 'da_scaricare' (Mac: Scarica) | 'errore' (rete assente, GitHub che non risponde: si riprova al prossimo giro) */
 import { execFile } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { t } from './lingua.mjs';
 
 export const PROPRIETARIO = 'W1kicartel', REPO = 'Lode';
 export const API_ULTIMA = `https://api.github.com/repos/${PROPRIETARIO}/${REPO}/releases/latest`;
@@ -251,14 +252,14 @@ export function registra({ ipcMain, app, net, shell, conf, salvaConf, manda, pri
     if (S.modo === 'automatico' && au) { (await au.checkForUpdates())?.downloadPromise?.catch(() => { }); return; }   // il resto lo fanno gli eventi (anche gli errori)
     imposta({ fase: 'controllo', errore: null });
     // al massimo 30 secondi: una rete appesa non deve bloccare i controlli dopo
-    const c = new AbortController(), t = orologio.setTimeout(() => c.abort(), 30e3);
+    const c = new AbortController(), limite = orologio.setTimeout(() => c.abort(), 30e3);
     let release = null;
     try {
       const r = await net.fetch(API_ULTIMA, { signal: c.signal, headers: { 'User-Agent': `Lode/${versione}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' } });
       if (r.status === 404) { download = null; return imposta({ fase: 'aggiornata', nuova: null, controllato: Date.now() }); }   // ancora nessuna Release
-      if (!r.ok) throw new Error(`GitHub risponde ${r.status}`);
+      if (!r.ok) throw new Error(t('desktop.aggiorna-github-risponde', { stato: r.status }));
       release = await r.json();
-    } finally { orologio.clearTimeout(t); }
+    } finally { orologio.clearTimeout(limite); }
     const x = daProporre(release, { versione, piattaforma, arch });
     download = x ? x.download || x.pagina : null;
     imposta(x ? { fase: 'da_scaricare', nuova: { versione: x.versione }, controllato: Date.now() } : { fase: 'aggiornata', nuova: null, controllato: Date.now() });
@@ -290,11 +291,11 @@ export function registra({ ipcMain, app, net, shell, conf, salvaConf, manda, pri
     orologio.clearTimeout(attesaUscita); attesaUscita = null;
     if (esce) return;
     annullaUscita();
-    imposta({ errore: 'L\'aggiornamento non si è installato' + (e ? ': ' + breve(e) : '') + '. Riprova, o chiudi Lode: si installa all\'uscita.' });
+    imposta({ errore: e ? t('desktop.aggiorna-non-installato-perche', { motivo: breve(e) }) : t('desktop.aggiorna-non-installato') });
   }
   async function riavvia() {
     await prepara();
-    if (S.fase !== 'pronta' || !au) return { errore: 'Non c\'è un aggiornamento pronto da installare.' };
+    if (S.fase !== 'pronta' || !au) return { errore: t('desktop.aggiorna-niente-pronto') };
     primaDiUscire();   // i dati in sospeso sul disco, e la barra smette di rifiutare la chiusura
     orologio.setTimeout(() => { try { au.quitAndInstall(true, true); } catch (e) { console.error('Lode aggiorna:', e); nonEsce(e); } }, 50);   // Windows: in silenzio, poi riparte
     // quitAndInstall non dice se l'installer è partito (BaseUpdater.install può rispondere false senza uscire): se fra 10 s
@@ -305,7 +306,7 @@ export function registra({ ipcMain, app, net, shell, conf, salvaConf, manda, pri
   }
   async function scarica() {
     await prepara();
-    if (!download || !urlSicuro(download)) return { errore: 'Non so ancora dove scaricarla: riprova fra poco.' };
+    if (!download || !urlSicuro(download)) return { errore: t('desktop.aggiorna-dove-scaricare') };
     await shell.openExternal(download);
     return { ok: true };
   }
