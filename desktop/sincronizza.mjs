@@ -493,6 +493,9 @@ export function creaSincronizzazione({ app, safeStorage, dialog, powerMonitor, c
     // una cartella qualunque (il vault di prima, una cartella vuota) non è un vault sincronizzato: prima si accettava e Lode
     // restava «in arrivo» per sempre, con la barra vuota e nessuna strada per tornare indietro
     if (!existsSync(join(v, '.lode', 'sync'))) return { esito: 'errore', errore: t('desktop.sync-non-e-vault-sincronizzato') };
+    // la lingua del vault (.lode/vault.json, copiaNote) serve prima di impostaVault: senza, il vault nascerebbe nella lingua
+    // della barra di questo computer. iCloud a volte la lascia «nel cloud» (.vault.json.icloud): si fa scaricare, come sopra
+    if (MAC && !prova && !existsSync(join(v, '.lode', 'vault.json'))) try { execFileSync('brctl', ['download', join(v, '.lode')], { timeout: 10000 }); } catch { }
     const prima = conf().sync;
     // dopo «Smetti su questo computer» (cloud null) il motore ha un gruppo locale: lo lascia e si unisce al vault scelto, con
     // tutti i suoi eventi. Prima rispondeva «prima Smetti», cioè proprio quello che lo studente aveva appena fatto. Lo stesso
