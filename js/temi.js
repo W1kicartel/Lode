@@ -74,7 +74,8 @@ export function dataDi(testo) {
   }
   const n = norm(t), iso = (a, me, g) => `${a}-${String(me).padStart(2, '0')}-${String(g).padStart(2, '0')}`;
   // la prima data «giorno mese anno» con un mese vero (norm toglie accenti e punti: «12. März» → «12 marz»)
-  for (const x of n.matchAll(/\b(\d{1,2}) ([a-z]{3,})(?= (\d{4})\b)/g)) {
+  // («3 de junio de 2024», «10 de abril de 2024»: il «de» spagnolo e portoghese si salta)
+  for (const x of n.matchAll(/\b(\d{1,2})(?: de)? ([a-z]{3,})(?= (?:de )?(\d{4})\b)/g)) {
     const me = meseDa(x[2]), g = +x[1];
     if (me && g >= 1 && g <= 31) return iso(x[3], me, g);
   }
