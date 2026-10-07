@@ -32,9 +32,9 @@ export const leggiData = testo => prima('leggiData', testo);
 export const giorniEOre = testo => prima('giorniEOre', testo);
 export const leggiOrario = testo => prima('leggiOrario', testo);
 export const leggiLavoro = testo => prima('leggiLavoro', testo);
-// i numeri detti a voce diventano cifre («ventotto» → 28), nella lingua scelta; per le altre lingue senza parole sue,
-// quelle italiane (js/formule.js li usa per le formule dettate)
-export const numeri = t => (R[lingua]?.numeri || it.numeri)(t);
+// i numeri detti a voce diventano cifre nella lingua scelta («ventotto» → 28, «twenty-eight» → 28; in italiano è la
+// funzione di sempre, che js/formule.js usa per le formule dettate). Una lingua senza le sue parole lascia il testo com'è
+export const numeri = t => (R[lingua]?.numeri ? R[lingua].numeri(t) : t);
 // gli esempi della lingua scelta: [frase, cosa fa]
 export const ESEMPI = scelto().ESEMPI;
 export { D };

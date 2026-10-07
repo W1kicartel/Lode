@@ -112,12 +112,12 @@ export function interpreta(frase) {
   const pr = interpretaProgetto(grezzo0); if (pr) return pr;
   // la voce aggiunge maiuscole e un punto finale; i numeri arrivano a parole
   const grezzo = numeri(grezzo0.replace(/[.!]+$/, ''));
-  const t = grezzo.toLowerCase().replace(/[’`]/g, "'").replace(/\s+/g, ' ').replace(/[?!.]+$/, '').trim();
+  const t = grezzo.toLowerCase().replace(/[’`]/g, "'").replace(/\s+/g, ' ').replace(/[?!.]+$/, '').trim().replace(/^please,? |,? please$/g, '');
   let m;
 
   // la lingua della barra: «language italian», «switch to German», «change language to Spanish», «language: español»
-  if ((m = t.match(/^(?:(?:change|switch|set)(?: the)?(?: app)?(?: language)?(?: to| into)?|language:?(?: to)?|(?:speak|talk|answer|reply) in|use) (\S+)(?: please)?$/)) && linguaDetta(m[1], LINGUE_EN)) return { tipo: 'lingua', codice: linguaDetta(m[1], LINGUE_EN) };
-  if (/^(help|\?|what can you do|what can i (?:say|type|ask)|commands)$/.test(t)) return { tipo: 'aiuto' };
+  if ((m = t.match(/^(?:(?:change|switch|set)(?: the)?(?: app)?(?: language)?(?: to| into)?|language:?(?: to)?|(?:speak|talk|answer|reply) in|use|i want (?:lode |the app |it )?in|in) (\S+)$/)) && linguaDetta(m[1], LINGUE_EN)) return { tipo: 'lingua', codice: linguaDetta(m[1], LINGUE_EN) };
+  if (/^(help|help me|\?|what can you do|what can i (?:say|type|ask)|commands)$/.test(t)) return { tipo: 'aiuto' };
   if (/^(stop|end|finish|quit|enough|cancel)(?: (?:the |my )?(?:focus|timer|pomodoro|session|break))?$/.test(t)) return { tipo: 'ferma' };
   if (/^(pause|pause (?:the )?timer|hold on)$/.test(t)) return { tipo: 'sospendi' };
   if (/^(resume|continue|go on|keep going|resume (?:the )?timer)$/.test(t)) return { tipo: 'riprendi' };
@@ -181,7 +181,7 @@ export function interpreta(frase) {
   if (/^(?:open )?(?:my |the )?(?:notes|obsidian|vault|today's notes?|lecture notes?)(?: for today| from today| of today| of the lecture)?$/.test(t)) return { tipo: 'appunti' };
   // «lecture from the computer»: la videolezione (Teams, Zoom, la piattaforma online) trascritta dall'audio del computer
   if ((m = t.match(/^(?:(?:transcribe|record|listen to)(?: (?:the|this|a))? ?(?:video lecture|videolecture|video|computer audio|audio (?:from|of) the (?:computer|pc|mac)|lecture (?:from|on) the (?:computer|pc|mac|browser)|online lecture|recorded lecture)|(?:lecture|video lecture) from the (?:computer|pc|mac)|listen to the (?:computer|pc|mac))\b\s*(?:of |for |on |from |in )?(.*)$/))) return { tipo: 'trascrivi', sorgente: 'computer', corso: pulisci(m[1] || '') || null };
-  if (/^(?:transcribe|record|listen to)(?: (?:the|the whole|this))? (?:lecture|class)\b|^(?:start|begin) (?:the )?(?:transcription|transcribing|recording)/.test(t)) return { tipo: 'trascrivi' };
+  if (/^transcribe$|^(?:transcribe|record|listen to)(?: (?:the|the whole|this))? (?:lecture|class)\b|^(?:start|begin) (?:the )?(?:transcription|transcribing|recording)/.test(t)) return { tipo: 'trascrivi' };
   if (/^(?:repeat|repeat that|repeat (?:the last sentence|the last \d+ seconds|what (?:he|she|they) said)|what did (?:he|she|they|the prof|the professor|the lecturer) (?:just )?say|i didn't (?:get|catch) that|i missed (?:something|a sentence|that)|say that again)$/.test(t)) { const sec = +(t.match(/(\d+) seconds/)?.[1] || 60); return { tipo: 'ripeti', sec: Math.min(90, sec) }; }
   if (/^(?:turn off|disable|stop)(?: the)? repeat$/.test(t)) return { tipo: 'spegniRipeti' };
   if ((m = t.match(/^(?:suggestions|tips)\s+(never|off|few|rare|normal|frequent|often|many|lots)$|^(?:turn off|disable|stop|no more)(?: the)? (?:suggestions|tips)$/))) return { tipo: 'proposte', livello: !m[1] || /never|off/.test(m[1]) ? 'mai' : /few|rare/.test(m[1]) ? 'poco' : /frequent|often|many|lots/.test(m[1]) ? 'spesso' : 'normale' };
@@ -229,8 +229,9 @@ export function interpreta(frase) {
     return { tipo: 'idoneita', esame: trovaEsame(pulisci(m[1])), nomeDetto: pulisci(m[1]) };
 
   // focus
-  if ((m = t.match(/^(?:start |begin |let's |do |a |an )?(?:focus|pomodoro|timer|study session|session|study|studying|concentrate|concentration|deep work)\b\s*(.*)$/))) {
-    let resto = m[1]; const mi = leggiMinuti(resto); if (mi) resto = resto.replace(mi.pezzo, ' ');
+  // anche con i minuti prima: «start a 25 minute pomodoro on calculus»
+  if ((m = t.match(/^(?:(?:start|begin|let's|do|set|run) )?(?:a |an )?(?:(\d{1,3})[ -]?(?:minutes?|mins?|m) )?(?:focus|pomodoro|timer|study session|session|study|studying|concentrate|concentration|deep work)\b\s*(.*)$/))) {
+    let resto = m[2]; const mi = m[1] ? { min: +m[1] } : leggiMinuti(resto); if (mi?.pezzo) resto = resto.replace(mi.pezzo, ' ');
     resto = pulisci(resto.replace(/\s+/g, ' ').trim()); const e = resto ? trovaEsame(resto, { anche: 'daFare' }) || trovaEsame(resto) : null;
     return { tipo: 'focus', min: mi ? Math.min(240, Math.max(1, mi.min)) : null, esame: e, nomeDetto: resto };
   }
@@ -242,8 +243,8 @@ export function interpreta(frase) {
     if (d && (e || (/exam|test|written|oral|final/.test(t) && pulisci(m[1]).length >= 3))) return { tipo: 'esame', nome: e?.nome || pulisci(m[1]), cfu: null, data: d.data, esistente: e && !e.fatto ? e : null };
   }
   // nuovo esame: «exam databases on 15 January 9 credits», «add exam physics 2 worth 6 ECTS»
-  if ((m = t.match(/^(?:add |new |mark |put |i have |there's |there is )?(?:an |the |a )?(?:exam|test)\s+(?:for |of |in |on )?(.+)$/)) && !/^(?:me|what|which|when|next|upcoming|dates?|schedule|calendar|session|questions|exercises|papers?|simulation|topics)\b/.test(m[1]) && !/^(?:di|del|della|de|du|des|der|die|das|von|da|do|dos)\b/.test(m[1])) {
-    let resto = ' ' + m[1] + ' ';
+  if ((m = t.match(/^(?:add |new |mark |put |i have |there's |there is )?(?:an |the |a )?(?:exam|test)\s*:?\s+(?:for |of |in |on )?(.+)$/)) && !/^(?:me|what|which|when|next|upcoming|dates?|schedule|calendar|session|questions|exercises|papers?|simulation|topics)\b/.test(m[1]) && !/^(?:di|del|della|de|du|des|der|die|das|von|da|do|dos)\b/.test(m[1])) {
+    let resto = ' ' + m[1].replace(/[,;]/g, ' ') + ' ';
     const c = resto.match(/(?:worth |with |of |for )?(\d{1,2})\s*(?:cfu|credits?|ects|credit hours|cr)\b/); let cfu = null; if (c) { cfu = +c[1]; resto = resto.replace(c[0], ' '); }
     const d = leggiData(resto); if (d) { const r = resto.replace(d.pezzo, ' '); resto = r !== resto ? r : norm(resto).replace(d.pezzo, ' '); }
     const nome = pulisci(String(resto).replace(/\b(on|the|of|for|at|and|worth|with|in)\s*$/g, '').replace(/\s+(on|the|of|for|at)\s*$/, '').replace(/\s+/g, ' ').trim());
@@ -269,7 +270,7 @@ export function interpreta(frase) {
   // Moodle in sola lettura: «connect moodle», «what's new on moodle», «deadlines», «disconnect moodle»
   if (/^(?:disconnect|log out of|remove)(?: from)? moodle$/.test(t)) return { tipo: 'moodle', cosa: 'scollega' };
   if (/^(?:what's new|whats new|what is new|new files|news|updates|check)(?: (?:on|in|from))? moodle$|^moodle (?:news|updates)$/.test(t)) return { tipo: 'moodle', cosa: 'novita' };
-  if (/^(?:my )?(?:deadlines|due dates|assignments)(?: (?:on|in|from) moodle)?$/.test(t)) return { tipo: 'moodle', cosa: 'scadenze' };
+  if (/^(?:my )?(?:deadlines|due dates|assignments)(?: (?:on|in|from) moodle)?$|^(?:what's|what is|whats) due(?: (?:on|in) moodle)?$/.test(t)) return { tipo: 'moodle', cosa: 'scadenze' };
   if (/^(?:my )?courses (?:on|in|from) moodle$|^moodle courses$/.test(t)) return { tipo: 'moodle', cosa: 'corsi' };
   if (/^(?:(?:connect|link|add|open|set up)(?: to)?(?: the)? )?(?:moodle|e-?learning(?: platform)?)$/.test(t)) return { tipo: 'moodle', cosa: null };
   // interrogazione (prima del quiz: «quiz me» è l'orale)
