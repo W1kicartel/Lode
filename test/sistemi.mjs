@@ -62,7 +62,7 @@ prova('simula esame che non c\'è', S.simula(null, 28, false, []) === null);
 
 /* ---------- 2. i sistemi ---------- */
 prova('otto sistemi', S.CODICI.join() === 'it,es,fr,de,pt,br,uk,us');
-for (const [l, c] of [['it', 'it'], ['es', 'es'], ['fr', 'fr'], ['de', 'de'], ['pt', 'pt'], ['en', 'uk'], ['xx', 'it']]) prova(`predefinito ${l} → ${c}`, S.predefinito(l) === c);
+for (const [l, c] of [['it', 'it'], ['es', 'es'], ['fr', 'fr'], ['de', 'de'], ['pt', 'br'], ['en', 'uk'], ['xx', 'it']]) prova(`predefinito ${l} → ${c}`, S.predefinito(l) === c);
 prova('sistema sconosciuto vale l\'Italia', S.sistema('zz') === S.SISTEMI.it && S.sistema(undefined).cod === 'it');
 prova('Germania: migliore basso', S.SISTEMI.de.migliore === 'basso' && Object.values(S.SISTEMI).filter(s => s.migliore === 'basso').length === 1);
 for (const s of Object.values(S.SISTEMI)) {

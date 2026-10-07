@@ -443,3 +443,13 @@ export const ESEMPI = [
   ['para de seguir', 'o Lode deixa de vigiar a pasta e apaga as suas cópias'],
   ['sincroniza entre computadores', 'o mesmo Lode em dois ou três computadores, com a pasta na nuvem que já tens'],
 ];
+
+// as palavrinhas dentro dos cartões (js/comandi/comune.js, detto()): confirmar, cancelar, terminar a prova oral
+export const PAROLE = {
+  si: ['sim', 'ok', 'okay', 'beleza', 'claro', 'confirma', 'confirmo', 'pode', 'pode ser', 'vai', 'manda', 'faz', 'faça', 'faca', 'perfeito', 'exato', 'certo', 'isso', 'combinado', 'fechou', 'bora', 'salva', 'salvar'],
+  siCoda: ['por favor'],
+  no: ['não', 'nao', 'cancela', 'cancelar', 'deixa', 'deixa pra lá', 'deixa pra la', 'espera', 'para', 'nada', 'melhor não', 'melhor nao', 'agora não', 'agora nao'],
+  voto: ['chega', 'nota', 'me dá a nota', 'me da a nota', 'minha nota', 'terminei', 'acabei'],
+  basta: ['sair', 'sai', 'cancela', 'chega', 'deixa pra lá', 'deixa pra la'],
+  esci: ['sair', 'sai', 'fechar', 'fecha', 'fecha a prova oral', 'fim da prova oral', 'encerrar', 'encerra'],
+};

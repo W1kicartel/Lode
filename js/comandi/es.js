@@ -468,3 +468,13 @@ export const ESEMPI = [
   ['deja de seguir', 'Lode deja de vigilar la carpeta y quita sus copias'],
   ['sincroniza entre ordenadores', 'el mismo Lode en dos o tres ordenadores, con la carpeta en la nube que ya tienes'],
 ];
+
+// las palabras pequeñas dentro de las tarjetas (js/comandi/comune.js, detto()): confirmar, cancelar, cerrar el oral
+export const PAROLE = {
+  si: ['si', 'sí', 'vale', 'ok', 'okay', 'claro', 'confirma', 'confirmo', 'dale', 'adelante', 'hazlo', 'perfecto', 'exacto', 'correcto', 'de acuerdo', 'venga', 'guarda', 'guárdalo', 'guardalo', 'guárdalas', 'guardalas', 'guárdalos', 'guardalos'],
+  siCoda: ['porfa', 'por favor'],
+  no: ['no', 'cancela', 'cancelar', 'anula', 'déjalo', 'dejalo', 'espera', 'para', 'nada', 'mejor no', 'olvídalo', 'olvidalo'],
+  voto: ['basta', 'nota', 'dame la nota', 'he terminado', 'ya terminé', 'terminé', 'ya está', 'ya esta'],
+  basta: ['salir', 'sal', 'cancela', 'basta', 'déjalo', 'dejalo'],
+  esci: ['salir', 'sal', 'cierra', 'cierra el oral', 'fin del oral', 'termina el oral'],
+};

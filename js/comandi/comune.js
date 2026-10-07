@@ -76,3 +76,20 @@ export const PAROLE_PROPRIE = {
 const PROPRIE = Object.fromEntries(Object.entries(PAROLE_PROPRIE).map(([c, p]) => [c, new RegExp(` (?:${p.split(' ').join('|')}) `)]));
 // la frase ha parole piccole della lingua cod? (per l'inglese non vale mai)
 export const inLingua = (frase, cod) => !!PROPRIE[cod]?.test(' ' + norm(frase) + ' ');
+
+// Le piccole parole che la barra riconosce dentro le schede: il sì e il no di una conferma, «basta»/«voto» che chiudono
+// l'orale con il giudizio, l'uscita da «spiegamelo» e dall'orale. Ogni riconoscitore esporta PAROLE = { si, siCoda, no,
+// voto, basta, esci }: frasi intere, in minuscolo. Le regole sono quelle delle regex italiane di prima (js/lode.js):
+// - si / no: la frase intera, con dopo spazi, virgole, punti o punti esclamativi; il sì può avere una coda («sì pure»);
+// - voto: la frase comincia così e dopo non c'è una lettera o una cifra (come \b: «basta così» sì, «bastava» no);
+// - basta / esci: la frase intera e basta.
+export function detto(testo, P, quale) {
+  const x = String(testo ?? '').toLowerCase(), lista = P?.[quale] || [];
+  if (quale === 'si' || quale === 'no') {
+    const f = x.replace(/[\s,.!]*$/, '');
+    if (lista.includes(f)) return true;
+    return quale === 'si' && (P.siCoda || []).some(c => f.endsWith(' ' + c) && lista.includes(f.slice(0, -(c.length + 1))));
+  }
+  if (quale === 'voto') return lista.some(w => x.startsWith(w) && !/\w/.test(x.charAt(w.length)));
+  return lista.includes(x);
+}

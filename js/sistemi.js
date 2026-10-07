@@ -31,8 +31,9 @@ export const SISTEMI = {
 export const CODICI = Object.keys(SISTEMI);
 // il sistema dato (codice o oggetto); un codice sconosciuto vale l'Italia, come i dati di prima che non hanno profilo.sistema
 export const sistema = s => (s && typeof s === 'object' ? s : SISTEMI[s] || SISTEMI.it);
-// il sistema predefinito per la lingua della barra: l'inglese va al Regno Unito
-export const predefinito = lingua => ({ it: 'it', es: 'es', fr: 'fr', de: 'de', pt: 'pt', en: 'uk' })[lingua] || 'it';
+// il sistema predefinito per la lingua della barra: l'inglese va al Regno Unito, il portoghese al Brasile (la lingua è il
+// portoghese del Brasile; chi studia in Portogallo sceglie 'pt')
+export const predefinito = lingua => ({ it: 'it', es: 'es', fr: 'fr', de: 'de', pt: 'br', en: 'uk' })[lingua] || 'it';
 
 // le etichette per lo studente (catalogo «sistemi», nella lingua della barra)
 export const nomeSistema = s => t(`sistemi.nome.${sistema(s).cod}`);

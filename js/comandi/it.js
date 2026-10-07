@@ -378,3 +378,13 @@ export const ESEMPI = [
   ['smetti di seguire', 'Lode non guarda più la cartella e toglie le sue copie'],
   ['sincronizza fra i computer', 'lo stesso Lode su due o tre computer, con la cartella cloud che hai già'],
 ];
+
+// le piccole parole dentro le schede (js/comandi/comune.js, detto()): le stesse delle regex di prima in js/lode.js
+export const PAROLE = {
+  si: ['si', 'sì', 'ok', 'okay', 'conferma', 'confermo', 'confermi', 'vai', 'procedi', 'certo', 'perfetto', "d'accordo", 'fallo', 'esatto', 'giusto', 'salva', 'salvale', 'salvali'],
+  siCoda: ['pure'],
+  no: ['no', 'annulla', 'lascia stare', 'lascia perdere', 'aspetta', 'stop', 'niente', 'meglio di no'],
+  voto: ['basta', 'voto', 'dammi il voto', 'ho finito'],
+  basta: ['esci', 'annulla', 'basta', 'lascia stare'],
+  esci: ['esci', 'basta orale', 'chiudi', "chiudi l'orale", 'fine orale'],
+};

@@ -468,3 +468,13 @@ export const ESEMPI = [
   ['arrête de suivre', 'Lode arrête de surveiller le dossier et supprime ses copies'],
   ['synchro entre ordis', "le même Lode sur deux ou trois ordinateurs, avec le dossier cloud que tu as déjà"],
 ];
+
+// les petits mots dans les cartes (js/comandi/comune.js, detto()) : confirmer, annuler, finir l'oral
+export const PAROLE = {
+  si: ['oui', 'ouais', 'ok', 'okay', "d'accord", 'daccord', 'vas-y', 'vas y', 'go', 'confirme', 'je confirme', 'parfait', 'exact', 'exactement', "c'est bon", 'correct', 'enregistre', 'enregistre-les', 'fais-le', 'bien sûr', 'bien sur'],
+  siCoda: ['stp', "s'il te plaît", "s'il te plait"],
+  no: ['non', 'annule', 'annuler', 'laisse tomber', 'attends', 'stop', 'rien', 'plutôt pas', 'plutot pas', 'pas maintenant'],
+  voto: ['stop', 'ça suffit', 'ca suffit', 'note', 'ma note', 'donne-moi la note', 'donne-moi ma note', "j'ai fini", 'jai fini', 'fini'],
+  basta: ['quitter', 'quitte', 'sortir', 'annule', 'stop', 'laisse tomber'],
+  esci: ['quitter', 'quitte', 'sortir', 'ferme', "ferme l'oral", "fin de l'oral", "arrête l'oral", "arrete l'oral"],
+};
