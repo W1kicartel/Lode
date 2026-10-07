@@ -12,4 +12,4 @@ const L = await import(pathToFileURL(join(WEB, 'js', 'lingua.js')).href);
 export const { t, elenco, usa, LINGUE } = L;
 export const lingua = () => L.lingua;
 // la lingua del sistema (app.getLocale(), «it-IT», «pt-BR»…) se Lode la conosce, altrimenti l'inglese (docs/LINGUE.md)
-export function dalSistema(locale) { const c = String(locale || '').slice(0, 2).toLowerCase(); return LINGUE[c] ? c : 'en'; }
+export function dalSistema(locale) { const c = String(locale || '').slice(0, 2).toLowerCase(); return Object.hasOwn(LINGUE, c) ? c : 'en'; }

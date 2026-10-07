@@ -273,7 +273,7 @@ ipcMain.on('dati:salva', (e, d, x) => {
 // la lingua: quella scelta dallo studente (conf.lingua), se no quella del sistema se Lode la conosce, se no l'inglese.
 // La barra la legge in modo sincrono all'avvio (preload: window.lodeDesktop.lingua, prima di js/lingua.js); cambiarla
 // la salva qui, la usa per i testi del main (menu dell'icona, finestre di sistema) e ricarica le finestre
-const linguaScelta = () => LINGUE[conf.lingua] ? conf.lingua : dalSistema(app.getLocale());
+const linguaScelta = () => typeof conf.lingua === 'string' && Object.hasOwn(LINGUE, conf.lingua) ? conf.lingua : dalSistema(app.getLocale());
 ipcMain.on('lingua:leggi', e => { e.returnValue = linguaScelta(); });
 ipcMain.handle('lingua:imposta', async (_, cod) => {
   if (typeof cod !== 'string' || !Object.hasOwn(LINGUE, cod)) return false;
