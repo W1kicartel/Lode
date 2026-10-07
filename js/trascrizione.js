@@ -8,6 +8,7 @@ import { parlatoInFormule } from './formule.js';
 import * as V from './vault.js';
 import * as O from './orecchio.js';
 import * as C from './computer.js';
+import { t } from './lingua.js';
 
 let R = null;
 let sospese = [], scrivendo = null, tRiprova = 0;   // righe trascritte che non sono ancora entrate nella nota
@@ -86,7 +87,7 @@ export async function avvia(lezione, { audioProva, sorgente = 'microfono' } = {}
   R.seg = seg;
   await scrivi();   // prima le righe rimaste indietro dalla volta scorsa
   // se la nota non si scrive nemmeno adesso, meglio dirlo subito, prima che il prof cominci
-  try { await riprova(() => V.annota('trascrizione', `%% Trascrizione automatica di Lode${sorgente === 'computer' ? ' dall\'audio del computer (videolezione)' : ''}, iniziata alle ${ora(new Date())}. Le formule dette a voce sono in LaTeX. %%`, { lezione, grezza: true })); } catch (e) { R = null; if (sorgente === 'computer') C.spegni(); throw e; }
+  try { await riprova(() => V.annota('trascrizione', `%% ${t(sorgente === 'computer' ? 'trascrizione.inizio-computer' : 'trascrizione.inizio', { ora: ora(new Date()) })} %%`, { lezione, grezza: true })); } catch (e) { R = null; if (sorgente === 'computer') C.spegni(); throw e; }
   if (audioProva) {   // prove: l'audio arriva da un file invece che dal microfono, più veloce del tempo reale
     for (let i = 0; i < audioProva.length && R; i += 2048) { seg.aggiungi(audioProva.subarray(i, i + 2048)); if (i % (2048 * 64) === 0) await new Promise(r => setTimeout(r, 0)); }
     avvisa(); return stato();
@@ -105,7 +106,7 @@ export async function ferma() {
   R.spegni?.(); R.seg.fine(); R.inPausa = true;
   while (R.coda.length || R.lavora) await attendi(200);
   const fatto = { ...stato(), minuti: Math.max(1, Math.round((Date.now() - R.inizio - R.pausaTot) / 60000)) };
-  sospese.push({ lezione: R.lezione, riga: `%% Fine della trascrizione alle ${ora(new Date())}: ${fatto.parole} parole. %%` });
+  sospese.push({ lezione: R.lezione, riga: `%% ${t('trascrizione.fine', { ora: ora(new Date()), n: fatto.parole })} %%` });
   await scrivi(); fatto.sospese = sospese.length;   // se restano righe in attesa, si riprova da sole
   R = null; avvisa();
   return fatto;

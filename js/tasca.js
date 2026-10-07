@@ -12,6 +12,7 @@
 // Funzioni pure (scegli, scriviNota, leggiNota, impronta) provate in test/tasca.mjs; aggiorna() prende un vault finto.
 import { D, dataLunga, oggi, piuGiorni, rispondi, salva, id } from './dati.js';
 import * as V from './vault.js';
+import { t } from './lingua.js';
 
 export const FILE = 'In tasca.md';
 export const MASSIMO = 20;
@@ -31,11 +32,11 @@ export function scegli(carte, T, esami = []) {
 // il testo della nota. Il fronte su una riga sola (dentro ** **), la risposta con «> » davanti a ogni riga (le formule
 // $…$ restano come sono: Obsidian le mostra anche nel callout). Marcatori in commenti HTML: in lettura non si vedono
 export function scriviNota(carte, esami, giro, T) {
-  const capo = `# Ripasso in tasca\nCarte per ${dataLunga(piuGiorni(T, 1))}. Apri la risposta con un tocco, poi spunta una casella sola. Quando la nota torna sul computer, Lode segna il ripasso.\n`;
+  const capo = `# Ripasso in tasca\n${t('tasca.nota-capo', { data: dataLunga(piuGiorni(T, 1)) })}\n`;
   const fine = `<!-- lode-tasca giro:${giro} -->\n`;
-  if (!carte.length) return `# Ripasso in tasca\nDomani non hai carte da ripassare. Bravo, o hai poche carte: trascina le slide e scegli «Carte del ripasso».\n\n${fine}`;
+  if (!carte.length) return `# Ripasso in tasca\n${t('tasca.nota-vuota')}\n\n${fine}`;
   const blocchi = carte.map((c, i) => {
-    const corso = (esami || []).find(e => e.id === c.esameId)?.nome || 'Senza corso';
+    const corso = (esami || []).find(e => e.id === c.esameId)?.nome || t('tasca.senza-corso');
     const fronte = String(c.fronte).replace(/\s*\n\s*/g, ' ').trim();
     const retro = String(c.retro || '').replace(/\r\n?/g, '\n').trim().split('\n').map(r => (r.trim() ? '> ' + r.replace(/\s+$/, '') : '>')).join('\n') || '>';
     return `## ${i + 1} · ${corso}\n**${fronte}**\n\n> [!risposta]- Risposta\n${retro}\n\n- [ ] sapevo\n- [ ] non sapevo\n<!-- lode-carta:${c.id} -->\n`;

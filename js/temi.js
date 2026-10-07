@@ -8,6 +8,7 @@
 // Dove sta: dentro l'esame (esami[i].temi), come il programma. piano() non si tocca: gli esercizi si agganciano ai suoi giorni.
 import { salva, id, oggi, piuGiorni, norm, MESI } from './dati.js';
 import { abbina, oggiDi, registraEsito } from './programma.js';
+import { t } from './lingua.js';
 
 /* ---------- dividere il compito in esercizi ---------- */
 // i segni a inizio riga: «Esercizio 1», «ES. 2», «Es 3», «Problema 4», «Quesito 5», «Domanda 6», anche «Esercizio 1 (6 punti)»
@@ -180,7 +181,7 @@ export const temaDiOggi = (e, T = oggi()) => temiDiOggi(e, T)[0] || null;
 // quanti temi per argomento (per la scheda quando oggi non c'è niente)
 export function conta(e) {
   const per = new Map();
-  for (const x of e?.temi || []) { const t = e.programma?.argomenti?.find(a => a.id === x.a)?.t || 'senza argomento'; per.set(t, (per.get(t) || 0) + 1); }
+  for (const x of e?.temi || []) { const nome = e.programma?.argomenti?.find(a => a.id === x.a)?.t || t('temi.senza-argomento'); per.set(nome, (per.get(nome) || 0) + 1); }
   return [...per].sort((a, b) => b[1] - a[1]);
 }
 

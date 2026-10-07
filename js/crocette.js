@@ -7,6 +7,7 @@
 // - con l'AI, dalla dispensa o dal materiale: il modello deve copiare la frase che dimostra la risposta giusta, e la
 //   domanda resta solo se quella frase c'è davvero nel materiale. L'ordine delle risposte lo decide il codice.
 import { norm } from './dati.js';
+import { t } from './lingua.js';
 
 export const mescola = (a, caso = Math.random) => { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(caso() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; };
 const corto = (s, n = 160) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : s; };
@@ -35,8 +36,8 @@ export function daMateriale(mat, { n = 10, caso = Math.random } = {}) {
   const defs = (mat.definizioni || []).map(d => ({ t: d.t, d: String(d.testo || '').replace(/^[^:]+:\s*/, '') })).filter(d => d.t && d.d);
   if (defs.length >= 4) for (const [i, d] of defs.entries()) {
     // a giro: «che cos'è X?» (quattro definizioni) e «a cosa corrisponde questa definizione?» (quattro termini)
-    if (i % 2 === 0) { const sb = distrattori(d.d, defs.filter(x => x !== d).map(x => x.d), caso); if (sb.length === 3) out.push(componi({ domanda: `«${d.t}»: che cos'è?`, giusta: d.d, sbagliate: sb, fonte: 'definizione' }, caso)); }
-    else { const sb = distrattori(d.t, defs.filter(x => x !== d).map(x => x.t), caso); if (sb.length === 3) out.push(componi({ domanda: `A cosa corrisponde questa definizione? «${d.d}»`, giusta: d.t, sbagliate: sb, fonte: 'definizione' }, caso)); }
+    if (i % 2 === 0) { const sb = distrattori(d.d, defs.filter(x => x !== d).map(x => x.d), caso); if (sb.length === 3) out.push(componi({ domanda: t('crocette.che-cos-e', { t: d.t }), giusta: d.d, sbagliate: sb, fonte: 'definizione' }, caso)); }
+    else { const sb = distrattori(d.t, defs.filter(x => x !== d).map(x => x.t), caso); if (sb.length === 3) out.push(componi({ domanda: t('crocette.a-cosa-corrisponde', { d: d.d }), giusta: d.t, sbagliate: sb, fonte: 'definizione' }, caso)); }
   }
   // niente due domande uguali; poi un po' di carte e un po' di definizioni
   const visti = new Set();
@@ -83,5 +84,5 @@ export function pezzi(testo, quanti) {
 export function voto(giuste, tot) {
   if (!tot) return null;
   const v = Math.round(30 * giuste / tot);
-  return { voto: v, superato: v >= 18, testo: v >= 18 ? `${v}/30` : `${v}/30 · non superato` };
+  return { voto: v, superato: v >= 18, testo: v >= 18 ? t('crocette.voto', { v }) : t('crocette.voto-non-superato', { v }) };
 }

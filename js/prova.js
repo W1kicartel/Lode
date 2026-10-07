@@ -8,6 +8,7 @@
 // Il piano (js/programma.js) non si tocca: la prova generale dentro il piano verrà col piano a ore.
 import { salva, id, oggi } from './dati.js';
 import { esito } from './temi.js';
+import { t } from './lingua.js';
 
 /* ---------- i compiti interi ---------- */
 // il compito di un tema: fonte e data; senza data, fonte e lotto (l'incollatura da cui viene, js/temi.js metti), così due
@@ -81,7 +82,7 @@ export function minutiDi(s = S) {
 export const minutiTotali = (s = S) => s ? Math.min(s.durata, Math.max(0, Math.round(((s.consegnata || Date.now()) - s.inizio) / 60e3))) : 0;
 
 /* ---------- la chiusura: gli esiti li sceglie lo studente ---------- */
-export const COME = { giusto: 'Giusto', meta: 'A metà', sbagliato: 'Sbagliato', nonfatto: 'Non fatto' };
+export const COME = { giusto: t('prova.giusto'), meta: t('prova.meta'), sbagliato: t('prova.sbagliato'), nonfatto: t('prova.non-fatto') };
 // esiti: [{ tema, come, min }]. Ogni esercizio fatto va al suo tema (e alla mappa); «Non fatto» non registra niente.
 // La prova finisce in e.prove (le 30 più recenti) e la prova in corso si toglie
 export function chiudi(e, c, esiti, { T = oggi(), min = null, durata = null } = {}) {
@@ -99,17 +100,17 @@ const puntiScritti = v => String(Math.round(v * 100) / 100).replace('.', ',');
 // dato giusti (solo se il compito li scrive per tutti gli esercizi: «A metà» non conta) e dove sono finiti gli esiti
 export function riepilogo(p, c, { mappa = true } = {}) {
   const es = p?.esiti || [], n = es.length, fatti = es.filter(x => x.come !== 'nonfatto').length, frasi = [];
-  frasi.push(`Hai fatto ${fatti} ${fatti === 1 ? 'esercizio' : 'esercizi'} su ${n}.`);
+  frasi.push(t('prova.hai-fatto', { n: fatti, tot: n }));
   const conMin = es.map((x, i) => ({ ...x, i })).filter(x => x.min != null);
   if (conMin.length) {
     const lungo = conMin.reduce((a, b) => b.min > a.min ? b : a), tema = c?.temi?.find(t => t.id === lungo.tema);
     const tot = p.min ?? es.reduce((a, b) => a + (b.min || 0), 0);
-    frasi.push(`Sull'esercizio ${tema?.es ?? lungo.i + 1} sei stato ${lungo.min} ${lungo.min === 1 ? 'minuto' : 'minuti'} su ${tot}.`);
+    frasi.push(t('prova.sei-stato', { es: tema?.es ?? lungo.i + 1, n: lungo.min, tot }));
   }
   if (c?.punti != null && c.temi?.length) {
     const presi = es.filter(x => x.come === 'giusto').reduce((a, x) => a + (num(c.temi.find(t => t.id === x.tema)?.punti) || 0), 0);
-    frasi.push(`Gli esercizi che segni giusti valgono ${puntiScritti(presi)} ${presi === 1 ? 'punto' : 'punti'} su ${puntiScritti(c.punti)}. Lo dici tu: Lode non corregge.`);
+    frasi.push(t('prova.valgono', { n: presi, presi: puntiScritti(presi), tot: puntiScritti(c.punti) }));
   }
-  frasi.push(mappa ? 'Gli esiti sono nella mappa del programma.' : 'Gli esercizi tornano nei temi d\'esame: quelli giusti fra 7 giorni, quelli sbagliati o a metà fra 3.');
+  frasi.push(mappa ? t('prova.esiti-nella-mappa') : t('prova.tornano-nei-temi'));
   return frasi;
 }

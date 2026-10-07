@@ -10,6 +10,7 @@
 import { D, salva, oggi, piuGiorni, giorniTra, prossimi, isoGiorno } from './dati.js';
 import * as PG from './programma.js';
 import * as TE from './temi.js';
+import { t, elenco } from './lingua.js';
 
 /* ---------- ore e minuti ---------- */
 const minDi = hhmm => { const [h, m] = String(hhmm || '0:0').split(':').map(Number); return h * 60 + (m || 0); };
@@ -21,9 +22,9 @@ const giu15 = m => Math.max(0, Math.floor(m / 15) * 15), su15 = m => Math.ceil(m
 // tutti i tempi per lo studente: «circa», in multipli di 15 minuti. ore: «circa 14 ore» invece di «circa 14 h»
 export function circa(min, { ore = false } = {}) {
   const r = Math.max(15, Math.round(min / 15) * 15), h = Math.floor(r / 60), m = r % 60;
-  if (!h) return `circa ${m} min`;
-  if (ore && !m) return `circa ${h} ${h === 1 ? 'ora' : 'ore'}`;
-  return `circa ${h} h${m ? ' ' + m : ''}`;
+  if (!h) return t('ore.circa-min', { m });
+  if (ore && !m) return t('ore.circa-ore', { n: h });
+  return m ? t('ore.circa-h-min', { h, m }) : t('ore.circa-h', { h });
 }
 
 /* ---------- i turni ---------- */
@@ -66,9 +67,9 @@ export function liberi(data, { adesso = Date.now(), tetto } = {}) {
 
 /* ---------- il calendario di tutti gli esami ---------- */
 export const OPZIONI = [
-  { k: 'cuscinetto', testo: 'Uso anche i giorni cuscinetto' },
-  { k: 'unRipasso', testo: 'Un ripasso solo per gli argomenti nuovi, non due' },
-  { k: 'tetto', testo: 'Nei giorni di lavoro studio 3 ore, non 2' },
+  { k: 'cuscinetto', testo: t('ore.opzione-cuscinetto') },
+  { k: 'unRipasso', testo: t('ore.opzione-un-ripasso') },
+  { k: 'tetto', testo: t('ore.opzione-tetto') },
 ];
 export const testoScelta = k => OPZIONI.find(o => o.k === k)?.testo || k;
 const totale = m => Object.values(m).reduce((s, x) => s + x, 0);
@@ -154,13 +155,13 @@ export function calendario({ T = oggi(), adesso = Date.now(), scelte = D.imp.ore
 }
 
 /* ---------- i testi per la barra ---------- */
-const BREVI = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+const BREVI = elenco('ore.giorni-brevi');
 const turnoTesto = t => `${ora(t.inizio)}–${ora(t.fine)}`;
-export const liberiTesto = min => min >= 15 ? `${circa(min)} libere` : 'niente ore libere';
+export const liberiTesto = min => min >= 15 ? t('ore.libere', { circa: circa(min) }) : t('ore.niente-ore-libere');
 // «Lun 13 · circa 1 h 45 libere · lavoro 14–19»
 export function rigaGiorno(g) {
   const d = new Date(g.data + 'T12:00');
-  return [`${BREVI[d.getDay()]} ${d.getDate()}`, liberiTesto(g.liberi), g.lavoro.length ? `lavoro ${g.lavoro.map(turnoTesto).join(', ')}` : ''].filter(Boolean).join(' · ');
+  return [t('ore.giorno', { g: BREVI[d.getDay()], n: d.getDate() }), liberiTesto(g.liberi), g.lavoro.length ? t('ore.lavoro', { turni: g.lavoro.map(turnoTesto).join(', ') }) : ''].filter(Boolean).join(' · ');
 }
 const corto = t => t.length > 34 ? t.slice(0, 33).replace(/\s+\S*$/, '') + '…' : t;
 const titolo = (e, id) => e?.programma?.argomenti?.find(a => a.id === id)?.t || '';
@@ -169,28 +170,29 @@ export function vociGiorno(g, esami) {
   const per = new Map(); for (const v of g.voci) { if (!per.has(v.esameId)) per.set(v.esameId, []); per.get(v.esameId).push(v); }
   return [...per].map(([id, voci]) => {
     const e = esami(id), gen = voci.filter(v => v.tipo === 'generale');
-    const pezzi = voci.filter(v => v.tipo !== 'generale').map(v => v.tipo === 'tema' ? `esercizio d'esame (${circa(v.min)})` : `${v.tipo === 'ripassa' ? '↻ ' : ''}${corto(titolo(e, v.id) || 'argomento')} (${circa(v.min)})`);
-    if (gen.length) pezzi.unshift(`ripasso generale (${circa(gen.reduce((s, v) => s + v.min, 0))})`);
-    return `${e?.nome || 'Esame'}: ${pezzi.join(' · ')}`;
-  }).concat(Object.entries(g.tipo || {}).filter(([id, t]) => t === 'cuscinetto' && !per.has(id)).map(([id]) => `${esami(id)?.nome || 'Esame'}: giorno cuscinetto, per recuperare`));
+    const pezzi = voci.filter(v => v.tipo !== 'generale').map(v => v.tipo === 'tema' ? t('ore.voce-tema', { circa: circa(v.min) }) : `${v.tipo === 'ripassa' ? '↻ ' : ''}${corto(titolo(e, v.id) || t('ore.argomento'))} (${circa(v.min)})`);
+    if (gen.length) pezzi.unshift(t('ore.voce-generale', { circa: circa(gen.reduce((s, v) => s + v.min, 0)) }));
+    return `${e?.nome || t('ore.esame')}: ${pezzi.join(' · ')}`;
+  }).concat(Object.entries(g.tipo || {}).filter(([id, tipo]) => tipo === 'cuscinetto' && !per.has(id)).map(([id]) => t('ore.voce-cuscinetto', { nome: esami(id)?.nome || t('ore.esame') })));
 }
 // «Oggi hai circa 2 h libere (lavoro 14–19): circa 1 h 30 per Analisi 2, circa 30 min per Fisica.»
 export function testoOggi(cal, esami) {
   const g = cal.giorni[0]; if (!g) return '';
-  const lav = g.lavoro.length ? ` (lavoro ${g.lavoro.map(turnoTesto).join(', ')})` : '';
-  if (g.liberi < 15) return `Oggi non hai ore libere per studiare${lav}.`;
+  const lav = g.lavoro.length ? ` (${t('ore.lavoro', { turni: g.lavoro.map(turnoTesto).join(', ') })})` : '';
+  if (g.liberi < 15) return t('ore.oggi-niente', { lav });
   const per = new Map(); for (const v of g.voci) per.set(v.esameId, (per.get(v.esameId) || 0) + v.min);
-  return `Oggi hai ${liberiTesto(g.liberi)}${lav}${per.size ? `: ${[...per].map(([id, m]) => `${circa(m)} per ${esami(id)?.nome || 'un esame'}`).join(', ')}.` : '. Nel piano oggi non c\'è niente.'}`;
+  return per.size ? t('ore.oggi-hai', { liberi: liberiTesto(g.liberi), lav, lista: [...per].map(([id, m]) => t('ore.per-esame', { circa: circa(m), nome: esami(id)?.nome || t('ore.un-esame') })).join(', ') })
+    : t('ore.oggi-hai-vuoto', { liberi: liberiTesto(g.liberi), lav });
 }
 // le frasi di quello che non ci sta, sempre con le opzioni (o con la frase di ripiego): mai il numero da solo
 export function riquadro(cal, esami, solo = null) {
-  const righe = Object.entries(cal.mancano).filter(([id, m]) => m > 0 && (!solo || id === solo)).map(([id, m]) => `Fino all'appello di ${esami(id)?.nome || 'questo esame'} ti mancano ${circa(m, { ore: true })}.`);
+  const righe = Object.entries(cal.mancano).filter(([id, m]) => m > 0 && (!solo || id === solo)).map(([id, m]) => t('ore.mancano', { nome: esami(id)?.nome || t('ore.questo-esame'), circa: circa(m, { ore: true }) }));
   if (!righe.length) return null;
-  return { righe, opzioni: cal.opzioni.map(o => ({ ...o, testo: `${o.testo} · recuperi ${circa(o.risparmio)}` })),
-    ripiego: cal.opzioni.length ? '' : 'Con le ore che hai non ci sta tutto. Puoi scrivermi giorni di studio in più («studio dalle 9 alle 21») o pensare all\'appello dopo: decidi tu.' };
+  return { righe, opzioni: cal.opzioni.map(o => ({ ...o, testo: t('ore.recuperi', { testo: o.testo, circa: circa(o.risparmio) }) })),
+    ripiego: cal.opzioni.length ? '' : t('ore.ripiego') };
 }
 // dopo un clic su un'opzione: quanto manca ancora
-export const dopoScelta = cal => { const t = totale(cal.mancano); return t > 0 ? `Ti mancano ancora ${circa(t, { ore: true })}.` : 'Ora ci sta.'; };
+export const dopoScelta = cal => { const tot = totale(cal.mancano); return tot > 0 ? t('ore.mancano-ancora', { circa: circa(tot, { ore: true }) }) : t('ore.ora-ci-sta'); };
 
 /* ---------- i comandi: salvare turni, eccezioni, tetto, finestra ---------- */
 // «lun, mer, ven 14–19»

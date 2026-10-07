@@ -1,7 +1,8 @@
 // I file lasciati sulla pillola: che cosa sono e che testo contengono. Senza librerie per Word e PowerPoint (sono zip di
 // XML, aperti con DecompressionStream); il testo dei PDF con pdf.js, solo quando serve.
 import { libreria } from './librerie.js';
-export const ACCETTATI = 'PDF e slide (.pptx), foto della lavagna, appunti (.md, .txt, .docx), registrazioni audio, sbobine di Lode, carte di Anki';
+import { t } from './lingua.js';
+export const ACCETTATI = t('file.accettati');
 const est = n => (String(n).match(/\.([a-z0-9]+)$/i) || [, ''])[1].toLowerCase();
 
 // → { tipo: 'pdf'|'slide'|'foto'|'audio'|'word'|'testo'|'sbobina'|'carte'|'altro', nome, mb }
@@ -18,8 +19,8 @@ export async function classifica(f) {
     if (/^(csv|tsv|txt)$/.test(e) && testo.split(/\r?\n/).filter(r => /\t|;| = /.test(r)).length >= 3 && testo.split(/\r?\n/).length < 5000) return { ...base, tipo: 'carte', testo };
     return { ...base, tipo: 'testo', testo };
   }
-  if (['doc', 'ppt', 'key', 'pages', 'odt', 'odp'].includes(e)) return { ...base, tipo: 'altro', motivo: `il formato .${e} non si legge: salvalo come PDF, .docx o .pptx` };
-  return { ...base, tipo: 'altro', motivo: `il formato ${e ? '.' + e : 'di questo file'} non si legge` };
+  if (['doc', 'ppt', 'key', 'pages', 'odt', 'odp'].includes(e)) return { ...base, tipo: 'altro', motivo: t('file.formato-da-salvare', { e }) };
+  return { ...base, tipo: 'altro', motivo: e ? t('file.formato-non-si-legge', { e }) : t('file.formato-di-questo-file') };
 }
 
 /* ---------- il testo dentro i file ---------- */
@@ -36,7 +37,7 @@ export async function testoDi(x) {
   if (x.tipo === 'word') return x.testo = await daWord(x.file);
   if (x.tipo === 'slide') return x.testo = await daSlide(x.file);
   if (x.tipo === 'pdf') return x.testo = await daPdf(x.file);
-  throw new Error('questo file non ha testo da leggere');
+  throw new Error(t('file.senza-testo'));
 }
 let PDFJS = null;
 async function daPdf(f) {
@@ -48,14 +49,14 @@ async function daPdf(f) {
     const t = c.items.map(it => it.str + (it.hasEOL ? '\n' : ' ')).join('').replace(/[ \t]+/g, ' ').trim();
     if (t) out.push(`[Pagina ${i}]\n${t}`);
   }
-  if (!out.length) throw new Error('il PDF non contiene testo (è una scansione): trascinalo come foto, o usa Claude');
+  if (!out.length) throw new Error(t('file.pdf-scansione'));
   return out.join('\n\n');
 }
 async function apriZip(file) {
   const buf = new Uint8Array(await file.arrayBuffer()), dv = new DataView(buf.buffer);
   let fine = -1;
   for (let i = buf.length - 22; i >= Math.max(0, buf.length - 66000); i--) if (dv.getUint32(i, true) === 0x06054b50) { fine = i; break; }
-  if (fine < 0) throw new Error('file danneggiato o non è un documento Office');
+  if (fine < 0) throw new Error(t('file.danneggiato'));
   const n = dv.getUint16(fine + 10, true); let p = dv.getUint32(fine + 16, true);
   const voci = new Map(), dec = new TextDecoder();
   for (let k = 0; k < n && dv.getUint32(p, true) === 0x02014b50; k++) {
@@ -67,7 +68,7 @@ async function apriZip(file) {
     const v = voci.get(nome); if (!v) return null;
     const ini = v.loc + 30 + dv.getUint16(v.loc + 26, true) + dv.getUint16(v.loc + 28, true), dati = buf.subarray(ini, ini + v.dim);
     if (v.metodo === 0) return dec.decode(dati);
-    if (v.metodo !== 8) throw new Error('compressione non supportata');
+    if (v.metodo !== 8) throw new Error(t('file.compressione'));
     return new Response(new Blob([dati]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
   };
   leggi.nomi = [...voci.keys()];
@@ -77,9 +78,9 @@ const xml = s => new DOMParser().parseFromString(s, 'application/xml');
 const tutti = (n, tag) => [...n.getElementsByTagNameNS('*', tag)];
 async function daWord(f) {
   const leggi = await apriZip(f), s = await leggi('word/document.xml');
-  if (!s) throw new Error('documento Word non leggibile');
+  if (!s) throw new Error(t('file.word-illeggibile'));
   const righe = tutti(xml(s), 'p').map(p => tutti(p, 't').map(x => x.textContent).join('')).filter(t => t.trim());
-  if (!righe.length) throw new Error('il documento è vuoto');
+  if (!righe.length) throw new Error(t('file.documento-vuoto'));
   return righe.join('\n');
 }
 // PowerPoint: una sezione per slide, nell'ordine, con il titolo e i punti
@@ -91,7 +92,7 @@ async function daSlide(f) {
     const righe = tutti(xml(await leggi(n)), 'p').map(p => tutti(p, 't').map(x => x.textContent).join('')).filter(t => t.trim());
     if (righe.length) out.push(`[Slide ${i + 1}] ${righe[0]}\n${righe.slice(1).map(r => '- ' + r).join('\n')}`);
   }
-  if (!out.length) throw new Error('le slide non contengono testo');
+  if (!out.length) throw new Error(t('file.slide-senza-testo'));
   return out.join('\n\n');
 }
 
