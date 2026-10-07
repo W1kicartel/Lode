@@ -6,6 +6,7 @@
 // Il diario dice cosa Lode ha visto. Non dice chi ha scritto le righe: non lo sa.
 // Le funzioni sono pure (si provano in Node). aggiornaDiario(V, D) passa i testi a vault:blocco e basta.
 import { pulito, fileCorso, notaCorso } from '../markdown.js';
+import { nomi } from '../nomi.js';
 import { ERRORI } from './modelli.js';
 // «Pronto per la discussione»: solo i conti delle funzioni spiegate (si importano a vicenda: qui servono solo a chiamata)
 import { contiDiario } from './discussione.js';
@@ -133,7 +134,7 @@ export function daProgetto(x, { corso } = {}) {
 }
 
 /* ---------- il diario del progetto ---------- */
-export const fileDiario = (progetto, giorno) => `Progetti/${pulito(progetto)}/${giorno}.md`;
+export const fileDiario = (progetto, giorno) => `${nomi().cartelle.progetti}/${pulito(progetto)}/${giorno}.md`;
 // la nota nuova: proprietà, titolo, il riquadro di Lode vuoto e «Cosa ho capito», scritto una volta sola
 export function notaDiario({ progetto, corso, giorno }) {
   return `---
@@ -147,8 +148,8 @@ tags: [diario-progetto]
 %% lode:diario %%
 %% /lode:diario %%
 
-## Cosa ho capito
-%% Questa parte è tua: Lode non la tocca mai. Cosa hai capito oggi, cosa non ti torna ancora. %%
+## ${nomi().titoli.cosaHoCapito}
+%% ${nomi().commenti.cosaHoCapito} %%
 
 `;
 }
@@ -312,7 +313,7 @@ function linkDiari(codice, corso) {
 // il testo del riquadro «informatica» sulla pagina del corso
 export function cosaSoDavvero(codice, opz = {}) {
   const oggi = opz.oggi || giornoDi(Date.now()), righe = argomenti(codice, { ...opz, oggi });
-  const parti = ['## Cosa so davvero'];
+  const parti = [`## ${nomi().titoli.cosaSoDavvero}`];
   if (righe.length) parti.push(`*${t('diario.tabella-nota')}*
 
 ${t('diario.tabella-testa')}
@@ -355,7 +356,7 @@ export function righeMemoria(codice, opz = {}) {
   return r;
 }
 // la sezione intera, da mettere nel modello di scriviMemoria() prima di «## Note per Lode». Vuota se non c'è niente da dire.
-export const sezioneMemoria = (codice, opz) => { const r = righeMemoria(codice, opz); return r.length ? `## Informatica\n${r.join('\n')}\n\n` : ''; };
+export const sezioneMemoria = (codice, opz) => { const r = righeMemoria(codice, opz); return r.length ? `## ${nomi().titoli.informatica}\n${r.join('\n')}\n\n` : ''; };
 
 /* ---------- lo scrittore ---------- */
 // V.blocco({ file, id, testo, nuovo }) → Promise<boolean>: nella barra è L.invoca('vault:blocco', x).

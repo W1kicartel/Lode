@@ -8,8 +8,9 @@ import { join, dirname, relative, resolve, sep, isAbsolute } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 
-let M = null;   // js/markdown.js, condiviso con la barra
-export async function carica(web) { M = await import(pathToFileURL(join(web, 'js', 'markdown.js')).href); }
+let M = null, NM = null;   // js/markdown.js e js/nomi.js, condivisi con la barra
+export async function carica(web) { M = await import(pathToFileURL(join(web, 'js', 'markdown.js')).href); NM = await import(pathToFileURL(join(web, 'js', 'nomi.js')).href); }
+const N = () => NM.nomi();   // i nomi del vault aperto (impostati da crea)
 
 // scrittura atomica: file temporaneo, poi rename. Su Windows il rename fallisce (EPERM/EACCES/EBUSY) se OneDrive, l'antivirus
 // o Obsidian tengono aperta la nota: si riprova per circa un secondo, poi si scrive sul posto. Il .tmp si cancella sempre.
@@ -46,29 +47,10 @@ export function dentro(vault, rel) {
   return p;
 }
 
-const BENVENUTO = `# Benvenuto nel tuo vault
-
-Questo vault l'ha preparato **Lode**, l'assistente che vive in cima allo schermo. È un normale vault di Obsidian: le note sono tue, in Markdown, e restano su questo computer.
-
-## Come lavorano insieme
-- **In aula** Lode sa quando sei a lezione (dall'[[Orario]]) e tiene pronta la nota della lezione in \`Lezioni/<corso>/\`. Dalla barra segni al volo:
-  - **★ Da esame** (⌃⌥S): cosa il prof ha detto che chiederà;
-  - **Definizione** (⌃⌥D): «termine: definizione»;
-  - **Domanda** (⌃⌥Q): da fare al prof.
-- **Gli appunti** li scrivi qui, in Obsidian, come sempre. Le definizioni che metti nella sezione «Definizioni» (\`- **Termine**: definizione\`) o scritte come \`Termine :: definizione\` Lode le trova da solo.
-- **A casa** la barra ti propone due minuti di gioco sulle definizioni dell'ultima lezione, quando stanno per scappare.
-- **[[Memoria]]** (in \`Lode/\`) è quello che Lode ha imparato di te: definizioni sicure, da rinforzare, come studi. Nella sezione «Note per Lode» puoi dirgli come vuoi essere aiutato.
-
-## Scorciatoie
-| | Mac | Windows |
-|---|---|---|
-| Apri Lode e scrivi | ⌥ Spazio | Ctrl ⇧ Spazio |
-| ★ Da esame | ⌃⌥ S | Ctrl Alt S |
-| Definizione | ⌃⌥ D | Ctrl Alt D |
-| Domanda per il prof | ⌃⌥ Q | Ctrl Alt Q |
-| Gioco di memoria | ⌃⌥ G | Ctrl Alt G |
-`;
-const MODELLO = `---
+// le note che nascono col vault, nella lingua del vault (js/lingue/<codice>/vaultnomi.js). In italiano sono quelle di sempre
+const metti = (s, p) => String(s).replace(/\{(\w+)\}/g, (x, k) => (k in p ? String(p[k]) : x));
+const benvenuto = N => metti(N.testi.benvenuto, { firma: N.testi.benvenutoFirma, orario: N.note.orario, lezioni: N.cartelle.lezioni, stella: N.sezioni.stella, definizioni: N.sezioni.definizione, memoria: N.note.memoria, lode: N.cartelle.lode, notePerLode: N.titoli.notePerLode });
+const modello = N => `---
 corso: "[[]]"
 data: {{date:YYYY-MM-DD}}
 tipo: lezione
@@ -76,20 +58,20 @@ tags: [lezione]
 ---
 # {{title}}
 
-## Appunti
+## ${N.sezioni.appunti}
 
 
-## ★ Da esame
+## ${N.sezioni.stella}
 
 
-## Definizioni
-%% Una per riga: - **Termine**: definizione. Lode ne fa giochi di memoria e carte. %%
+## ${N.sezioni.definizione}
+%% ${N.commenti.definizioni} %%
 
 
-## Domande per il prof
+## ${N.sezioni.domanda}
 
 `;
-const MODELLO_ESAME = `---
+const modelloEsame = N => `---
 tipo: esame
 corso: "[[]]"
 appello: {{date:YYYY-MM-DD}}
@@ -97,49 +79,49 @@ tags: [esame]
 ---
 # {{title}}
 
-## Programma
+## ${N.testi.esameProgramma}
 
 
-## Domande che fanno sempre
-%% Quelle che senti dai colleghi o trovi nei vecchi appelli. Lode le usa per interrogarti. %%
+## ${N.testi.esameDomande}
+%% ${N.testi.esameDomandeCommento} %%
 
 
-## Esercizi tipo
+## ${N.testi.esameEsercizi}
 
 
-## Cosa mi manca
+## ${N.testi.esameManca}
 
 `;
-const MODELLO_RIPASSO = `---
+const modelloRipasso = N => `---
 tipo: ripasso
 corso: "[[]]"
 data: {{date:YYYY-MM-DD}}
 tags: [ripasso]
 ---
-# Ripasso · {{title}}
+# ${N.modelli.ripasso} · {{title}}
 
-## In tre righe
-
-
-## Definizioni
-%% - **Termine**: definizione. Finiscono nei giochi di Lode. %%
+## ${N.testi.ripassoTreRighe}
 
 
-## Collegamenti
-%% Le lezioni e i concetti legati: [[...]] %%
+## ${N.sezioni.definizione}
+%% ${N.testi.ripassoCommentoDefinizioni} %%
+
+
+## ${N.testi.ripassoCollegamenti}
+%% ${N.testi.ripassoCommentoCollegamenti} %%
 `;
-const MEMORIA = `---
+const memoriaNuova = N => `---
 tipo: memoria
 ---
-# Cosa so di te
+# ${N.testi.memoriaTitolo}
 
-%% Questa nota la scrive Lode dopo ogni gioco. La sezione «Note per Lode» resta tua: la leggo ogni volta che uso l'AI. %%
+%% ${metti(N.testi.memoriaCommento, { sezione: N.titoli.notePerLode })} %%
 
-## In breve
-- Ancora niente: segna qualche definizione in aula e gioca una partita.
+## ${N.testi.memoriaInBreve}
+- ${N.testi.memoriaAncoraNiente}
 
-## Note per Lode
-%% Scrivi qui come vuoi essere aiutato: «spiegami con esempi pratici», «frasi brevi», «l'orale di Analisi è molto teorico». %%
+## ${N.titoli.notePerLode}
+%% ${N.testi.memoriaNoteCommento} %%
 `;
 const TEMA = `/* Lode: bianco e nero, come la barra. Attivo da Impostazioni > Aspetto > Snippet CSS. */
 .theme-dark{--interactive-accent:#fff;--interactive-accent-hover:#e4e4e4;--text-on-accent:#000;--text-accent:#fff;--background-primary:#0a0a0a;--background-secondary:#111;--h1-weight:600;--h2-weight:600}
@@ -148,45 +130,65 @@ body{--font-text-theme:"Geist",-apple-system,"Segoe UI",sans-serif;--font-monosp
 .markdown-rendered h2{letter-spacing:-.02em}
 `;
 
-// orario null: Orario.md non si crea (con la sincronizzazione lo scrive il motore, mai «perché manca»: docs/SINCRONIZZAZIONE.md §9, #40)
-export function crea(vault, orario = []) {
-  for (const d of ['Lezioni', 'Corsi', 'Lode', 'Modelli', 'Allegati', 'Inbox', '.lode']) mkdirSync(join(vault, d), { recursive: true });
-  seManca(join(vault, 'Benvenuto.md'), BENVENUTO);
-  if (orario) seManca(join(vault, 'Orario.md'), M.orarioMd(orario));
-  seManca(join(vault, 'Lode', 'Memoria.md'), MEMORIA);
-  seManca(join(vault, 'Modelli', 'Lezione.md'), MODELLO);
-  seManca(join(vault, 'Modelli', 'Esame.md'), MODELLO_ESAME);
-  seManca(join(vault, 'Modelli', 'Ripasso.md'), MODELLO_RIPASSO);
-  for (const [f, t] of [['Home.md', 'Home'], ['Esami.md', 'Esami'], ['Glossario.md', 'Glossario']]) seManca(join(vault, f), `# ${t}\n\n%% lode:pagina %%\n%% /lode:pagina %%\n`);
+/* ---------- i nomi del vault (js/nomi.js): decisi una volta, salvati in .lode/vault.json ---------- */
+// Un vault con vault.json usa i nomi salvati. Un vault di Lode che esiste già senza vault.json (nato prima delle lingue) usa
+// i nomi italiani, e non si rinomina niente. Una cartella vuota, o un vault di Obsidian dove Lode non ha mai scritto, nasce
+// nella lingua di adesso (quella della barra). La decisione si scrive subito in vault.json: dopo, la lingua della barra non conta più
+const VAULT_JSON = vault => join(vault, '.lode', 'vault.json');
+const TRACCE_IT = ['Lezioni', 'Corsi', 'Benvenuto.md', 'Home.md', 'Orario.md', 'Esami.md', 'Glossario.md', join('Lode', 'Memoria.md')];
+export function leggiNomi(vault) {
+  try { const j = JSON.parse(readFileSync(VAULT_JSON(vault), 'utf8')); if (j && typeof j === 'object' && typeof j.lingua === 'string') return NM.completa(j); } catch { }
+  return null;
+}
+export function nomiPer(vault, lingua = 'it') {
+  return leggiNomi(vault) || (TRACCE_IT.some(x => existsSync(join(vault, x))) ? NM.nomiDi('it') : NM.nomiDi(lingua));
+}
+// apre il vault coi suoi nomi (senza scrivere niente): per chi legge un vault senza crearlo
+export function usaNomi(vault, lingua = 'it') { return NM.impostaNomi(nomiPer(vault, lingua)); }
+
+// orario null: Orario.md non si crea (con la sincronizzazione lo scrive il motore, mai «perché manca»: docs/SINCRONIZZAZIONE.md §9, #40).
+// lingua: quella della barra, usata solo se il vault nasce adesso
+export function crea(vault, orario = [], lingua = 'it') {
+  const N = NM.impostaNomi(nomiPer(vault, lingua)), C = N.cartelle;
+  for (const d of [C.lezioni, C.corsi, C.lode, C.modelli, C.allegati, C.inbox, '.lode']) mkdirSync(join(vault, d), { recursive: true });
+  seManca(VAULT_JSON(vault), JSON.stringify(NM.daSalvare(N), null, 2) + '\n');
+  const nota = k => NM.md(N.note[k]);
+  seManca(join(vault, nota('benvenuto')), benvenuto(N));
+  if (orario) seManca(join(vault, nota('orario')), M.orarioMd(orario));
+  seManca(join(vault, C.lode, nota('memoria')), memoriaNuova(N));
+  seManca(join(vault, C.modelli, NM.md(N.modelli.lezione)), modello(N));
+  seManca(join(vault, C.modelli, NM.md(N.modelli.esame)), modelloEsame(N));
+  seManca(join(vault, C.modelli, NM.md(N.modelli.ripasso)), modelloRipasso(N));
+  for (const k of ['home', 'esami', 'glossario']) seManca(join(vault, nota(k)), `# ${N.note[k]}\n\n%% lode:pagina %%\n%% /lode:pagina %%\n`);
   // il vault l'ha creato Lode? allora possiamo preparare anche la disposizione di Obsidian
-  let nostro = false; try { nostro = readFileSync(join(vault, 'Benvenuto.md'), 'utf8').includes("l'ha preparato **Lode**"); } catch { }
+  let nostro = false; try { nostro = readFileSync(join(vault, nota('benvenuto')), 'utf8').includes(N.testi.benvenutoFirma); } catch { }
   // la configurazione di Obsidian solo se il vault è nuovo: in un vault esistente non tocchiamo niente
   const ob = join(vault, '.obsidian');
   if (!existsSync(ob)) {
-    seManca(join(ob, 'app.json'), JSON.stringify({ attachmentFolderPath: 'Allegati', newFileLocation: 'folder', newFileFolderPath: 'Inbox', alwaysUpdateLinks: true, showUnsupportedFiles: false }, null, 2));
+    seManca(join(ob, 'app.json'), JSON.stringify({ attachmentFolderPath: C.allegati, newFileLocation: 'folder', newFileFolderPath: C.inbox, alwaysUpdateLinks: true, showUnsupportedFiles: false }, null, 2));
     seManca(join(ob, 'appearance.json'), JSON.stringify({ theme: 'obsidian', accentColor: '#ffffff', enabledCssSnippets: ['lode'] }, null, 2));
-    seManca(join(ob, 'templates.json'), JSON.stringify({ folder: 'Modelli', dateFormat: 'YYYY-MM-DD', timeFormat: 'HH:mm' }, null, 2));
+    seManca(join(ob, 'templates.json'), JSON.stringify({ folder: C.modelli, dateFormat: 'YYYY-MM-DD', timeFormat: 'HH:mm' }, null, 2));
     seManca(join(ob, 'core-plugins.json'), JSON.stringify({ 'file-explorer': true, 'global-search': true, switcher: true, graph: true, backlink: true, 'outgoing-link': true, 'tag-pane': true, 'page-preview': true, templates: true, 'note-composer': true, 'command-palette': true, outline: true, 'word-count': true, 'file-recovery': true, bookmarks: true, 'daily-notes': false }, null, 2));
     seManca(join(ob, 'snippets', 'lode.css'), TEMA);
   }
   if (nostro) {
     // Obsidian si apre sulla Home, con le cartelle e i segnalibri a sinistra, i collegamenti in entrata e l'indice a destra
-    seManca(join(ob, 'workspace.json'), JSON.stringify(DISPOSIZIONE, null, 2));
+    seManca(join(ob, 'workspace.json'), JSON.stringify(disposizione(nota('home')), null, 2));
     const t = Date.now();
-    seManca(join(ob, 'bookmarks.json'), JSON.stringify({ items: [['Home.md', 'Home'], ['Orario.md', 'Orario'], ['Esami.md', 'Esami'], ['Glossario.md', 'Glossario'], ['Lode/Memoria.md', 'Cosa sa Lode di me']].map(([path, title]) => ({ type: 'file', ctime: t, path, title })) }, null, 2));
+    seManca(join(ob, 'bookmarks.json'), JSON.stringify({ items: [[nota('home'), N.note.home], [nota('orario'), N.note.orario], [nota('esami'), N.note.esami], [nota('glossario'), N.note.glossario], [`${C.lode}/${nota('memoria')}`, N.segnalibri.memoria]].map(([path, title]) => ({ type: 'file', ctime: t, path, title })) }, null, 2));
   }
 }
-const DISPOSIZIONE = {
-  main: { id: 'lode-main', type: 'split', direction: 'vertical', children: [{ id: 'lode-tabs', type: 'tabs', children: [{ id: 'lode-home', type: 'leaf', state: { type: 'markdown', state: { file: 'Home.md', mode: 'preview', source: false } } }] }] },
+const disposizione = home => ({
+  main: { id: 'lode-main', type: 'split', direction: 'vertical', children: [{ id: 'lode-tabs', type: 'tabs', children: [{ id: 'lode-home', type: 'leaf', state: { type: 'markdown', state: { file: home, mode: 'preview', source: false } } }] }] },
   left: { id: 'lode-left', type: 'split', direction: 'horizontal', width: 260, children: [{ id: 'lode-left-tabs', type: 'tabs', children: [
     { id: 'lode-files', type: 'leaf', state: { type: 'file-explorer', state: { sortOrder: 'alphabetical' } } },
     { id: 'lode-bm', type: 'leaf', state: { type: 'bookmarks', state: {} } },
     { id: 'lode-search', type: 'leaf', state: { type: 'search', state: { query: '' } } }] }] },
   right: { id: 'lode-right', type: 'split', direction: 'horizontal', width: 280, children: [{ id: 'lode-right-tabs', type: 'tabs', children: [
-    { id: 'lode-back', type: 'leaf', state: { type: 'backlink', state: { file: 'Home.md', collapseAll: false, extraContext: false, sortOrder: 'alphabetical', showSearch: false, searchQuery: '', backlinkCollapsed: false, unlinkedCollapsed: true } } },
-    { id: 'lode-outline', type: 'leaf', state: { type: 'outline', state: { file: 'Home.md' } } }] }] },
-  active: 'lode-home', lastOpenFiles: ['Home.md'],
-};
+    { id: 'lode-back', type: 'leaf', state: { type: 'backlink', state: { file: home, collapseAll: false, extraContext: false, sortOrder: 'alphabetical', showSearch: false, searchQuery: '', backlinkCollapsed: false, unlinkedCollapsed: true } } },
+    { id: 'lode-outline', type: 'leaf', state: { type: 'outline', state: { file: home } } }] }] },
+  active: 'lode-home', lastOpenFiles: [home],
+});
 
 /* ---------- blocchi di Lode dentro le note: tutto ciò che sta fuori dai segni resta dello studente ---------- */
 const segni = id => [`%% lode:${id} %%`, `%% /lode:${id} %%`];
@@ -204,7 +206,8 @@ export function blocco(vault, { file, id, testo, nuovo, dove = 'fine' }) {
 }
 // tutte le note, per la ricerca rapida dalla barra
 export function note(vault) {
-  return mdSotto(vault).map(f => relative(vault, f).split(sep).join('/')).filter(f => !f.startsWith('Modelli/')).map(f => ({ file: f, titolo: f.split('/').pop().replace(/\.md$/, ''), cartella: f.includes('/') ? f.split('/')[0] : '' }));
+  const modelli = N().cartelle.modelli.normalize('NFC') + '/';
+  return mdSotto(vault).map(f => relative(vault, f).split(sep).join('/')).filter(f => !f.normalize('NFC').startsWith(modelli)).map(f => ({ file: f, titolo: f.split('/').pop().replace(/\.md$/, ''), cartella: f.includes('/') ? f.split('/')[0] : '' }));
 }
 
 /* ---------- Obsidian: è installato? il vault è nella sua lista? ---------- */
@@ -252,13 +255,13 @@ function mdSotto(dir, out = [], radice = true) {
 }
 export function lezioni(vault) {
   const out = [];
-  for (const f of mdSotto(join(vault, 'Lezioni'))) {
+  for (const f of mdSotto(join(vault, N().cartelle.lezioni))) {
     try { const l = M.leggiLezione(readFileSync(f, 'utf8'), relative(vault, f).split(sep).join('/')); if (l.data) out.push(l); } catch { }
   }
   return out;
 }
 export function notePerLode(vault) {
-  try { const t = readFileSync(join(vault, 'Lode', 'Memoria.md'), 'utf8'); const i = t.indexOf('## Note per Lode'); return i < 0 ? '' : t.slice(i + 16).replace(/%%[\s\S]*?%%/g, '').trim(); } catch { return ''; }
+  try { const t = readFileSync(join(vault, NM.fileMemoria()), 'utf8'), titolo = `## ${N().titoli.notePerLode}`, i = t.indexOf(titolo); return i < 0 ? '' : t.slice(i + titolo.length).replace(/%%[\s\S]*?%%/g, '').trim(); } catch { return ''; }
 }
 
 /* ---------- scrivere ---------- */
@@ -271,10 +274,10 @@ export function annota(vault, { file, nuovo, corso, chiave, riga }) {
 }
 // la memoria si riscrive, ma la sezione «Note per Lode» dello studente resta com'è
 export function memoria(vault, testo) {
-  const p = join(vault, 'Lode', 'Memoria.md');
+  const p = join(vault, NM.fileMemoria()), titolo = `## ${N().titoli.notePerLode}`;
   let note = '';
-  try { const v = readFileSync(p, 'utf8'); const i = v.indexOf('## Note per Lode'); if (i >= 0) note = v.slice(i); } catch { }
-  const j = testo.indexOf('## Note per Lode');
+  try { const v = readFileSync(p, 'utf8'); const i = v.indexOf(titolo); if (i >= 0) note = v.slice(i); } catch { }
+  const j = testo.indexOf(titolo);
   scriviSicuro(p, (j >= 0 && note ? testo.slice(0, j) + note : testo).replace(/\s*$/, '\n'));
 }
 
@@ -283,20 +286,36 @@ export function memoria(vault, testo) {
 export function guarda(vault, { lezioniCambiate, orarioCambiato, noteCambiate, syncCambiato = null }) {
   let t1 = 0, t2 = 0, ultimoOrario = null;
   const segnaOrario = testo => { ultimoOrario = testo; };
-  const orario = () => { try { const t = readFileSync(join(vault, 'Orario.md'), 'utf8'); if (t !== ultimoOrario) { ultimoOrario = t; orarioCambiato(M.leggiOrario(t)); } } catch { } };
+  const orario = () => { try { const t = readFileSync(join(vault, NM.fileNota('orario')), 'utf8'); if (t !== ultimoOrario) { ultimoOrario = t; orarioCambiato(M.leggiOrario(t)); } } catch { } };
   let w;
   try {
     w = watch(vault, { recursive: true }, (_, nome) => {
       // Windows: con tanti cambi insieme (OneDrive, git, uno zip) il nome si perde: può essere cambiato tutto, si rilegge tutto
       if (!nome) { clearTimeout(t1); t1 = setTimeout(lezioniCambiate, 300); clearTimeout(t2); t2 = setTimeout(() => { orario(); noteCambiate(); }, 300); syncCambiato?.(); return; }
-      const n = String(nome).split(sep).join('/');
-      if (syncCambiato && (n.startsWith('.lode/sync/') || n === '.lode/dati.json' || /^Orario.*\.md$/.test(n))) syncCambiato();
+      // i nomi del vault (js/nomi.js), con le lettere accentate in una forma sola (FSEvents può darle scomposte)
+      const n = String(nome).split(sep).join('/').normalize('NFC'), Nv = N(), orarioMd = NM.fileNota('orario').normalize('NFC');
+      if (syncCambiato && (n.startsWith('.lode/sync/') || n === '.lode/dati.json' || new RegExp(`^${NM.rx(Nv.note.orario)}.*\\.md$`).test(n))) syncCambiato();
       if (!n.endsWith('.md') || n.includes('.tmp-')) return;
-      if (n.startsWith('Lezioni/')) { clearTimeout(t1); t1 = setTimeout(lezioniCambiate, 300); }
-      else if (n === 'Orario.md') setTimeout(orario, 200);
-      else if (n === 'Lode/Memoria.md') setTimeout(noteCambiate, 200);
+      if (n.startsWith(Nv.cartelle.lezioni.normalize('NFC') + '/')) { clearTimeout(t1); t1 = setTimeout(lezioniCambiate, 300); }
+      else if (n === orarioMd) setTimeout(orario, 200);
+      else if (n === NM.fileMemoria().normalize('NFC')) setTimeout(noteCambiate, 200);
     });
   } catch (e) { console.warn('Lode: non riesco a guardare il vault', e.message); }
   return { chiudi: () => w?.close(), segnaOrario };
 }
 export { scriviSicuro };
+// i nomi del vault aperto, per main.mjs e la barra (vault:info): la tabella intera, il file di una nota alla radice
+// («Orario.md», «Timetable.md»…) e le regex dei percorsi che la barra può chiedere
+export const nomi = () => N();
+export const fileNota = k => NM.fileNota(k);
+export function permessi() {
+  const n = N(), C = n.cartelle, x = s => NM.rx(s), nota = k => x(n.note[k]);
+  return {
+    // le note di una lezione possono stare in sottocartelle (Lezioni/Corso/Esercitazioni/x.md)
+    lezione: new RegExp(`^(${x(C.lezioni)}|${x(C.corsi)})\\/(?:[^/.][^/]*\\/)*[^/.][^/]*\\.md$`),
+    // In tasca.md: js/tasca.js; Lode/<nota>: la memoria (e le note di Lode che hanno un nome semplice, come prima)
+    scrivi: new RegExp(`^(${nota('orario')}|${nota('tasca')}|${x(C.lode)}\\/(?:[\\w ]+|${nota('memoria')}))\\.md$`),
+    blocco: new RegExp(`^(${nota('home')}|${nota('esami')}|${nota('glossario')})\\.md$|^${x(C.corsi)}\\/[^/]+\\.md$|^${x(C.lezioni)}\\/[^/]+\\/[^/]+\\.md$|^${x(C.progetti)}\\/[^/]+\\/[^/]+\\.md$`),
+    salvaFile: new RegExp(`^(${[C.sbobine, C.allegati, C.materiali, C.lezioni, C.anki].map(x).join('|')})\\/`),
+  };
+}

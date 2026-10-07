@@ -5,16 +5,18 @@
 // Restano fuori gli appunti personali e le domande per il prof.
 import { frontmatter, sezioni, SEZIONI, pulito } from './markdown.js';
 import { libreria } from './librerie.js';
+import { nomiDi } from './nomi.js';
 import { t, data as dataLingua, lingua } from './lingua.js';
 
-const SEZ_CONDIVISE = [SEZIONI.riordinati, SEZIONI.stella, SEZIONI.definizione, SEZIONI.trascrizione];
-const norm = s => s.replace(/[^\p{L}]/gu, '').toLowerCase();
+// le sezioni che passano ai compagni, coi nomi del vault aperto (js/nomi.js); nella nota si trovano anche coi nomi italiani
+const SEZ_CONDIVISE = ['riordinati', 'stella', 'definizione', 'trascrizione'], IT = nomiDi('it');
+const norm = s => s.normalize('NFC').replace(/[^\p{L}]/gu, '').toLowerCase();
 const DATA = iso => dataLingua(iso, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
 export function crea(testoNota, { autore = '' } = {}) {
   const { fm, corpo } = frontmatter(testoNota), sez = sezioni(corpo.replace(/%%[\s\S]*?%%/g, ''));
   const corso = (fm.corso || '').replace(/^\[\[|\]\]$/g, ''), data = fm.data;
-  const parti = SEZ_CONDIVISE.map(nome => { const k = Object.keys(sez).find(x => norm(x) === norm(nome)); const testo = k ? sez[k].join('\n').trim() : ''; return testo ? `## ${nome}\n${testo}` : ''; }).filter(Boolean);
+  const parti = SEZ_CONDIVISE.map(c => { const nome = SEZIONI[c], k = Object.keys(sez).find(x => norm(x) === norm(nome)) || Object.keys(sez).find(x => norm(x) === norm(IT.sezioni[c])); const testo = k ? sez[k].join('\n').trim() : ''; return testo ? `## ${nome}\n${testo}` : ''; }).filter(Boolean);
   if (!parti.length) throw new Error(t('sbobina.niente-da-condividere'));
   const md = `---
 tipo: sbobina
