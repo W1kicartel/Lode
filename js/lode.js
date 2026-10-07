@@ -31,6 +31,7 @@ import * as TA from './tasca.js';
 import * as ST from './codice/stampa.js';
 import * as PR from './codice/progetto.js';
 import * as DI from './codice/diario.js';
+import * as DC from './codice/discussione.js';
 import { ERRORI } from './codice/modelli.js';
 import * as ER from './errori.js';
 import * as TS from './sync-testi.js';
@@ -1965,6 +1966,7 @@ async function collegaAgente(a, togli = false, { silenzioso = false } = {}) {
 // a fine turno: se la barra è chiusa la pillola lo propone; se è aperta resta pronto per «cosa ha fatto l'agente»
 function arrivaTurno(t) {
   if (!t?.id) return; turniAgenti.set(t.id, t);
+  DC.registraTurno(D.codice, t); salva();   // per «Pronto per la discussione»: solo id, nome, agente, orari e file relativi
   if (!t.file.length && !t.comandi && !t.avvisi.length) return;   // un turno di sole parole
   if (A?.aperto || A?.proposta) return;
   const chi = NOMI_AGENTI[t.agente] || t.agente || 'L\'agente';
@@ -1979,10 +1981,11 @@ function schedaTurno(t) {
     <p><b>${t.file.length}</b> ${t.file.length === 1 ? 'file toccato' : 'file toccati'}${t.file.length ? ': ' + t.file.slice(0, 8).map(f => `<code>${esc(f)}</code>`).join(', ') + (t.file.length > 8 ? '…' : '') : ''}.</p>
     <p>${t.comandi} ${t.comandi === 1 ? 'comando' : 'comandi'} · ${t.test ? `test lanciati ${t.test} ${t.test === 1 ? 'volta' : 'volte'}, l'ultima <code>${esc(t.ultimoTest.comando)}</code> ${esc(es)}${t.dopoTest ? ', dopo l\'ultima modifica' : ', <b>prima</b> dell\'ultima modifica'}` : 'nessun test lanciato'}.</p>
     ${t.messaggio ? `<blockquote>${esc(t.messaggio.slice(0, 300))}${t.messaggio.length > 300 ? '…' : ''}</blockquote>` : ''}
-    <div class="az"><button type="button" class="btn primary" data-c>Cosa è cambiato</button><button type="button" class="btn" data-p>Prova tu</button></div>
+    <div class="az"><button type="button" class="btn primary" data-c>Cosa è cambiato</button><button type="button" class="btn" data-p>Prova tu</button>${DC.daSpiegare(t) ? '<button type="button" class="btn" data-d>Preparati alla discussione</button>' : ''}</div>
     <p class="ld-nota">Quello che dice l'agente sono parole: le prove le ha lanciate davvero solo se le vedi qui. Le regole sono fisse: se non trovano niente, non è una garanzia.</p>`);
   s.querySelector('[data-c]').addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Cosa è cambiato'); PR.schedaCambia(t.id); });
   s.querySelector('[data-p]').addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Prova il progetto'); PR.prova(t.id); });
+  s.querySelector('[data-d]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Preparati alla discussione'); PR.discussione(t.id); });
   PR.coseNuoveDi(t.id).then(l => PR.mostraCoseNuove(s, l));   // le funzioni di libreria nuove nelle righe aggiunte (glossario.js)
   if (A.turno) A.turno.dataset.sintesi = `${chi}: ${t.file.length} file`;
 }

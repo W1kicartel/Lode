@@ -7,6 +7,8 @@
 // Le funzioni sono pure (si provano in Node). aggiornaDiario(V, D) passa i testi a vault:blocco e basta.
 import { pulito, fileCorso, notaCorso } from '../markdown.js';
 import { ERRORI } from './modelli.js';
+// «Pronto per la discussione»: solo i conti delle funzioni spiegate (si importano a vicenda: qui servono solo a chiamata)
+import { contiDiario } from './discussione.js';
 
 /* ---------- gli eventi: lo schema comune a F1, F2 e F3 ----------
   Ogni evento entra in D.codice.eventi con registra(D.codice, evento). Campi di tutti:
@@ -225,6 +227,12 @@ export function testoDiario(eventi, giorno, progetto) {
   righe.push(`- ${riassuntoGiorno(es, legati)}`);
   return righe.join('\n');
 }
+// nel diario di oggi, solo se hai già spiegato qualcosa: «Spiegate: 7 su 12; da rivedere: `inserisci`, `libera_lista`». Solo nomi
+function rigaSpiegate(codice, progetto) {
+  const c = contiDiario(codice, progetto); if (!c) return '';
+  const r = c.rivedere.slice(0, 6).map(codiceIn);
+  return `\n- Spiegate: ${c.spiegate} su ${c.totale}${r.length ? `; da rivedere: ${r.join(', ')}${c.rivedere.length > r.length ? '…' : ''}` : ''}`;
+}
 const corsoDelProgetto = (codice, nome) => (Object.hasOwn(codice?.diari || {}, nome) ? codice.diari[nome].corso : null)
   || [...(codice?.eventi || [])].reverse().find(e => e?.progetto === nome && e.corso)?.corso || null;
 // le note da scrivere adesso: oggi e ieri (per gli eventi a cavallo della mezzanotte), solo per i progetti col diario acceso.
@@ -240,7 +248,7 @@ export function noteDiario(codice, { adesso = Date.now() } = {}) {
     coppie.set(`${e.progetto}\n${g}`, { progetto: e.progetto, giorno: g });
   }
   return [...coppie.values()].sort((a, b) => a.giorno.localeCompare(b.giorno) || a.progetto.localeCompare(b.progetto)).map(({ progetto, giorno }) => ({
-    progetto, giorno, file: fileDiario(progetto, giorno), testo: testoDiario(eventi, giorno, progetto),
+    progetto, giorno, file: fileDiario(progetto, giorno), testo: testoDiario(eventi, giorno, progetto) + (giorno === giornoDi(adesso) ? rigaSpiegate(codice, progetto) : ''),
     nuovo: notaDiario({ progetto, corso: corsoDelProgetto(codice, progetto), giorno }),
   }));
 }

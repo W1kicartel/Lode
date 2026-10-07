@@ -63,6 +63,8 @@ jobs:
         run: node test/stampa-vero.mjs
       - name: Segui il progetto
         run: node --experimental-vm-modules test/progetto.mjs
+      - name: Pronto per la discussione
+        run: node --experimental-vm-modules test/discussione.mjs
       - name: Errori spiegati in italiano
         run: node test/errori.mjs
       - name: Registro nel vault
