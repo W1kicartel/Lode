@@ -276,7 +276,7 @@ prova('backup: studio storto → rifiutato', !Dm.backupValido(bk({ studio: { da:
   const h2 = riquadroOre(O.calendario({ T, adesso: ADESSO }), null, 'Ti mancano ancora circa 11 ore.');
   prova('barra: senza opzioni la frase di ripiego, e le scelte con ✕', (!/ti mancano/.test(h2) || /decidi tu/.test(h2)) && (h2.match(/class="ld-ore-chip"/g) || []).length === 3 && h2.includes('✕') && h2.includes('Ti mancano ancora'), h2);
   const sw = readFileSync(new URL('../sw.js', import.meta.url), 'utf8'), yml = readFileSync(new URL('../.github/workflows/prove.yml', import.meta.url), 'utf8');
-  prova('sw.js: js/ore.js e cache lode-v11', sw.includes("'js/ore.js'") && sw.includes("CACHE = 'lode-v11'"));
+  prova('sw.js: js/ore.js e cache nuova (lode-v11 o dopo)', sw.includes("'js/ore.js'") && +(sw.match(/CACHE = 'lode-v(\d+)'/) || [])[1] >= 11);
   prova('prove.yml: la prova nuova dopo unita.mjs', /test\/unita\.mjs\n(?:\s+#.*\n)?\s+- name: [^\n]+\n\s+run: node --experimental-vm-modules test\/ore\.mjs/.test(yml));
 }
 
