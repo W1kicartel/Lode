@@ -40,12 +40,13 @@ export function leggiData(testo) {
     const k = n(m[1]); if (k) return { data: piuGiorni(T, k * (m[2].startsWith('week') ? 7 : m[2].startsWith('month') ? 30 : 1)), pezzo: m[0].trim() };
   }
   { const c = dataInCifre(t, testo); if (c) return c; }
-  const mesi = MESI.map(x => x.slice(0, 3)).join('|'), ord = '(?:st|nd|rd|th)?';
-  if ((m = t.match(new RegExp(` (?:the )?(\\d{1,2})${ord} (?:of )?(${mesi})[a-z]* (?:(\\d{4}) )?`)))) {
+  // i mesi interi o abbreviati («jan», «sept»), mai l'inizio di un'altra parola («deck», «marker»)
+  const mesi = '(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)', ord = '(?:st|nd|rd|th)?';
+  if ((m = t.match(new RegExp(` (?:the )?(\\d{1,2})${ord} (?:of )?(${mesi}) (?:(\\d{4}) )?`)))) {
     const me = MESI.findIndex(x => x.startsWith(m[2]));
     return { data: conAnno(+m[1], me, m[3] ? +m[3] : null), pezzo: m[0].trim() };
   }
-  if ((m = t.match(new RegExp(` (${mesi})[a-z]* (?:the )?(\\d{1,2})${ord} (?:(\\d{4}) )?`)))) {
+  if ((m = t.match(new RegExp(` (${mesi}) (?:the )?(\\d{1,2})${ord} (?:(\\d{4}) )?`)))) {
     const me = MESI.findIndex(x => x.startsWith(m[1]));
     return { data: conAnno(+m[2], me, m[3] ? +m[3] : null), pezzo: m[0].trim() };
   }
@@ -55,7 +56,7 @@ export function leggiData(testo) {
   }
   return null;
 }
-const pulisci = s => s.replace(/^\s*(?:of|for|on|in|at|about|to|the|my|exam( of| for| in)?)\s+/i, '').replace(/^\s*(?:the|my)\s+/i, '').replace(/[?.!,;:]+$/, '').replace(/\s+(?:for|of|on|in|at|to|with|from|the)\s*$/i, '').trim();
+const pulisci = s => s.replace(/^\s*(?:of|for|on|in|at|about|to|the|my|exam( of| for| in)?)\s+/i, '').replace(/^\s*(?:the|my)\s+/i, '').replace(/[?.!,;:]+$/, '').replace(/\s+(?:for|of|on|in|at|to|with|from|the)\s*$/i, '').trim().replace(/^(?:of|for|on|in|at|about|to|the|my|with)$/i, '');
 
 // minuti detti a parole: «50», «50 minutes», «an hour», «half an hour», «an hour and a half», «2 hours», «90 min»
 function leggiMinuti(t) {
@@ -160,9 +161,9 @@ export function interpreta(frase) {
   }
 
   // in aula: ★ da esame, definizione, domanda per il prof
-  if ((m = grezzo.match(/^(?:★|\*{1,2}|!|exam\s*:|important\s*:|star\s*:?|(?:mark|flag)(?: this)?(?: as)? (?:for the )?exam\s*:?|this (?:is|will be) (?:on|in) the exam\s*:?)\s*(.+)$/i))) return { tipo: 'stella', testo: m[1].trim() };
+  if ((m = grezzo.match(/^(?:★|\*{1,2}|!|exam\s*:|important\s*:|star\b\s*:?|(?:mark|flag)(?: this)?(?: as)? (?:for the )?exam\s*:?|this (?:is|will be) (?:on|in) the exam\s*:?)\s*(.+)$/i))) return { tipo: 'stella', testo: m[1].trim() };
   if ((m = grezzo.match(/^(?:definition|define|def)\s*:?\s*(.+?)\s*(?:::|:|=|→|—|-{1,2}>|\bequals\b|\bmeans\b|\bis\b)\s*(.+)$/i))) return { tipo: 'definizione', termine: m[1].replace(/\*\*/g, '').trim(), testo: m[2].trim() };
-  if ((m = grezzo.match(/^(?:\?|question\s*:|question for the (?:prof|professor|lecturer|teacher)\s*:?|ask the (?:prof|professor|lecturer|teacher)\s*:?)\s*(.+)$/i))) return { tipo: 'domanda', testo: m[1].trim() };
+  if ((m = grezzo.match(/^(?:\?|question\s*:|question for the (?:prof(?:essor)?|lecturer|teacher)\s*:?|ask the (?:prof(?:essor)?|lecturer|teacher)\s*:?)\s*(.+)$/i))) return { tipo: 'domanda', testo: m[1].trim() };
 
   // l'orario: «lecture calculus 2 monday and wednesday 9-11 room 7»
   if ((m = t.match(/^(?:add |new |i have )?(?:a )?(?:lecture|lectures|class|classes|course)\s+(?:of |in |on |for )?(.+)$/))) {
@@ -204,9 +205,9 @@ export function interpreta(frase) {
   if (/^(?:sync|synchroni[sz]e|synchroni[sz]ation)\b|^(?:turn on|enable|manage|open)(?: the)? sync/.test(t)) return { tipo: 'sincronizza', cosa: null };
   if (/^(?:prepare|configure|install|set ?up)\b/.test(t)) return { tipo: 'prepara', cosa: /obsidian/.test(t) ? 'obsidian' : /model|brain|ollama|gemma|qwen|\bai\b/.test(t) ? 'cervello' : null };
   // il diario del progetto nel vault: aprirlo, spegnerlo, riaccenderlo
-  if ((m = t.match(/^(turn off|don't write|stop writing|turn on|turn back on|write) (?:the )?(?:project )?(?:diary|journal|log)(?: (?:of|for) (?:the )?(?:project)?\s*(.*))?$/))) return { tipo: 'diarioOpz', diario: /on|^write/.test(m[1]), progetto: m[2] ? pulisci(m[2]) : null };
+  if ((m = t.match(/^(turn off|don't write|stop writing|turn on|turn back on|write) (?:the )?(?:project )?(?:diary|journal|log)(?: (?:of|for) (?:the )?(?:project)?\s*(.*))?$/))) return { tipo: 'diarioOpz', diario: /^(?:turn (?:back )?on|write)$/.test(m[1]), progetto: m[2] ? pulisci(m[2]) : null };
   if ((m = t.match(/^(?:open (?:the )?)?(?:project (?:diary|journal|log)|(?:diary|journal|log) (?:of|for) (?:the )?project)(?: (?:of |for )?(.+))?$/))) return { tipo: 'diario', progetto: m[1] ? pulisci(m[1]) : null };
-  if ((m = t.match(/^(?:open|go to|take me to|show me|note|page)\s+(.+)$/)) && !/^(?:the )?(?:focus|timer)/.test(m[1])) return { tipo: 'naviga', q: pulisci(m[1]) };
+  if ((m = t.match(/^(?:open|go to|take me to|show me|page)\s+(.+)$/)) && !/^(?:the )?(?:focus|timer)/.test(m[1])) return { tipo: 'naviga', q: pulisci(m[1]) };
   if (/^(?:all notes|pages|home|index)$/.test(t)) return { tipo: 'naviga', q: t === 'home' ? 'home' : '' };
 
   // carta: fronte = retro
@@ -236,24 +237,25 @@ export function interpreta(frase) {
 
   // «the calculus exam is on 15 January», «I have calculus 2 on 13 October», «calculus 2 moved to the 20th of January»
   const QUANDO = '(on .+|in \\d.+|tomorrow|the day after tomorrow|next .+|this .+|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday).*)';
-  if ((m = t.match(/^(?:the )?(?:exam|test|written exam|written|oral(?: exam)?|final) (?:for |of |in )?(.+?) (?:is|will be|falls) (?:on |in |at )?(.+)$/)) || (m = t.match(/^(?:the )?(.+?) (?:exam|test|oral|written exam|final) (?:is|will be|falls) (?:on |in |at )?(.+)$/)) || (m = t.match(new RegExp(`^i (?:have|got|take|sit) (?:the exam (?:for |of |in )?|the oral (?:for |of |in )?|my )?(.+?) (?:exam )?${QUANDO}$`))) || (m = t.match(/^(?:the )?(?:exam (?:for |of |in )?)?(.+?) (?:exam )?(?:is |was |has been )?(?:moved|postponed|brought forward|rescheduled) (?:to|on|for) (.+)$/))) {
+  if ((m = t.match(/^(?:the )?(?:exam|test|written exam|written|oral(?: exam)?|final) (?:for |of |in )?(.+?) (?:is|will be|falls) (?:on |in |at )?(.+)$/)) || (m = t.match(/^(?:the )?(.+?) (?:exam|test|oral|written exam|final) (?:is|will be|falls) (?:on |in |at )?(.+)$/)) || (m = t.match(new RegExp(`^i (?:have|got|take|sit) (?:(?:the|an|a|my) (?:exam|test|oral|written exam) (?:for |of |in |on )?|my )?(.+?) (?:exam )?${QUANDO}$`))) || (m = t.match(/^(?:the )?(?:exam (?:for |of |in )?)?(.+?) (?:exam )?(?:is |was |has been )?(?:moved|postponed|brought forward|rescheduled) (?:to|on|for) (.+)$/))) {
     const d = leggiData(m[2]), e = trovaEsame(pulisci(m[1]));
     if (d && (e || (/exam|test|written|oral|final/.test(t) && pulisci(m[1]).length >= 3))) return { tipo: 'esame', nome: e?.nome || pulisci(m[1]), cfu: null, data: d.data, esistente: e && !e.fatto ? e : null };
   }
   // nuovo esame: «exam databases on 15 January 9 credits», «add exam physics 2 worth 6 ECTS»
-  if ((m = t.match(/^(?:add |new |mark |put |i have |there's |there is )?(?:an |the |a )?(?:exam|test)\s+(?:for |of |in |on )?(.+)$/)) && !/^(?:me|what|which|when|next|upcoming|dates?|schedule|calendar|session|questions|exercises|papers?|simulation|topics)\b/.test(m[1])) {
+  if ((m = t.match(/^(?:add |new |mark |put |i have |there's |there is )?(?:an |the |a )?(?:exam|test)\s+(?:for |of |in |on )?(.+)$/)) && !/^(?:me|what|which|when|next|upcoming|dates?|schedule|calendar|session|questions|exercises|papers?|simulation|topics)\b/.test(m[1]) && !/^(?:di|del|della|de|du|des|der|die|das|von|da|do|dos)\b/.test(m[1])) {
     let resto = ' ' + m[1] + ' ';
     const c = resto.match(/(?:worth |with |of |for )?(\d{1,2})\s*(?:cfu|credits?|ects|credit hours|cr)\b/); let cfu = null; if (c) { cfu = +c[1]; resto = resto.replace(c[0], ' '); }
     const d = leggiData(resto); if (d) { const r = resto.replace(d.pezzo, ' '); resto = r !== resto ? r : norm(resto).replace(d.pezzo, ' '); }
     const nome = pulisci(String(resto).replace(/\b(on|the|of|for|at|and|worth|with|in)\s*$/g, '').replace(/\s+(on|the|of|for|at)\s*$/, '').replace(/\s+/g, ' ').trim());
-    if (nome) return { tipo: 'esame', nome, cfu, data: d?.data || null, esistente: trovaEsame(nome) };
+    // «test» da solo è una parola di tutte le lingue («test non passano»): vale come esame solo con una data o i crediti
+    if (nome && (/\bexam\b/.test(t) || d || cfu)) return { tipo: 'esame', nome, cfu, data: d?.data || null, esistente: trovaEsame(nome) };
   }
 
   // «what do I need for 110», «what average do I need to get 105»
   if ((m = t.match(/(?:what|how much|which|what average|what grades?) (?:do |would |will )?(?:i )?(?:need|have to get|must get|have to average).*?(\d{2,3})/))) {
     const b = Math.min(110, +m[1]); if (b >= 66) return { tipo: 'serve', base: b };
   }
-  if (/\b(average|gpa|grades|my grades|grade record|degree mark|graduation mark|final mark|credits|ects|cfu|how am i doing)\b/.test(t) && !/\b(explain|what is|what's|whats|what are)\b/.test(t)) return { tipo: 'libretto' };
+  if (/\b(average|gpa|grades|my grades|grade record|degree mark|graduation mark|final mark|credits|ects|how am i doing)\b/.test(t) && !/\b(explain|mean|means|meaning|calculate|compute)\b/.test(t) && (!/\b(what is|what's|whats|what are)\b/.test(t) || /\bmy\b/.test(t))) return { tipo: 'libretto' };
 
   // ripasso
   if ((m = t.match(/^(?:let's |i want to |start |begin )?(?:review\w*|revise|revision|flashcards|my cards|the cards|cards|study cards)\s*(.*)$/))) {
@@ -279,8 +281,8 @@ export function interpreta(frase) {
     const r = pulisci(m[2] || ''); return { tipo: 'crocette', esame: r ? trovaEsame(r) : null, nomeDetto: r, simulazione: /simul/.test(m[1]) };
   }
 
-  if (/^(?:my |the )?(?:exams|upcoming exams|next exams|exam calendar|calendar|exam session|exam dates|when are my exams)/.test(t)) return { tipo: 'esami' };
-  if (/^(?:today|plan|today's plan|my plan|plan for today|what (?:do|should) i study(?: today)?|what to study today|what do i do today)/.test(t)) return { tipo: 'oggi' };
+  if (/^(?:my |the )?(?:exams|upcoming exams|next exams|exam calendar|calendar|exam session|exam dates|when are my exams)\b/.test(t)) return { tipo: 'esami' };
+  if (/^(?:today|plan|today's plan|my plan|plan for today|what (?:do|should) i study(?: today)?|what to study today|what do i do today)\b/.test(t)) return { tipo: 'oggi' };
 
   // ricerca diretta: il nome di un esame da solo apre la sua scheda
   const e = trovaEsame(t);

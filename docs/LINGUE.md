@@ -58,10 +58,14 @@ La lingua si sceglie:
 
 `js/comandi.js` smista: prova le frasi della lingua scelta (`js/comandi/<codice>.js`), poi quelle inglesi se la lingua scelta non è l'inglese. Ogni riconoscitore restituisce gli **stessi oggetti** `{ tipo, … }` del riconoscitore italiano, così il resto della barra non cambia.
 
-- Le parti senza lingua restano in `comandi.js`: orari «14-19», date «12/02», numeri, durate in cifre.
+- **`js/comandi/it.js`** sono le regole italiane di sempre, spostate senza cambiarle (le frasi di `js/codice/progetto.js`, «segui progetto»…, restano lì per l'italiano). **`js/comandi/en.js`** è l'inglese, e fa anche da riserva.
+- **Le parti senza lingua** stanno in `js/comandi/comune.js`: date in cifre «12/02», orari «14-19» (anche «2-7pm»), durate in cifre, gli errori del compilatore incollati, i nomi delle lingue scritti nella loro lingua («español», «deutsch»…).
+- **Ogni riconoscitore** esporta `interpreta(frase)`, `leggiData(testo)` e `ESEMPI = [[frase, spiegazione], …]`: stesso numero e stesso ordine dell'italiano, spiegazioni nella sua lingua. Se ce l'ha, anche `numeri`, `giorniEOre`, `leggiOrario`, `leggiLavoro`; altrimenti `comandi.js` usa quelli inglesi.
 - Ogni lingua ha le sue parole: giorni, mesi, «domani», numeri scritti, verbi dei comandi.
-- **`ESEMPI`** diventa un elenco per lingua, nel catalogo (`comandi.esempi`).
-- **Prove:** `test/comandi-lingue.mjs`. Per ogni lingua, almeno 3 frasi per ogni `tipo` che l'italiano riconosce. Ogni frase deve dare lo stesso `tipo`, con gli stessi campi, della frase italiana corrispondente. Ci sono anche frasi che **non** devono diventare comandi.
+- **Il comando della lingua** c'è in tutte: «lingua inglese», «language italian», «idioma español»… → `{ tipo: 'lingua', codice }`.
+- **I voti** restano quelli detti (28, 30 e lode): come leggerli lo decide il sistema dei voti, non il riconoscitore.
+- **Prove:** `node test/comandi-lingue.mjs`. Ogni lingua ha i suoi casi in `test/comandi/<codice>.mjs` (`CASI = [[frase, risultato atteso], …]`, `NON = [frasi che non sono comandi]`). La tabella di riferimento è `test/comandi/it.mjs`: per ogni lingua almeno 3 frasi per ogni `tipo` che l'italiano riconosce, con gli stessi campi, e almeno 15 frasi che **non** devono diventare comandi. Il banco lancia ogni lingua con `LODE_LINGUA=<codice>`.
+- Un riconoscitore nuovo va anche in `sw.js` (`FILE`, e il numero di `CACHE` sale).
 
 ## Sistemi dei voti
 
