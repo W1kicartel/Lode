@@ -61,6 +61,38 @@ export function linguaDetta(parola, proprie = {}) {
   const p = norm(parola);
   return proprie[p] || NATIVI[p] || null;
 }
+// le lingue che Lode non parla, dette nelle sei lingue (senza accenti, come le dà norm()): «lingua giapponese», «language
+// japanese», «Sprache Japanisch» sono il comando della lingua con codice null, e la barra dice quali lingue conosce invece
+// di passare la frase all'AI. Niente nomi che sono anche esami o parole comuni («latino», «inglese tecnico» non c'entrano)
+const IGNOTE = new Set(`giapponese japanese japones japonais japanisch japones japonesa
+  cinese chinese chino chinois chinesisch chines mandarino mandarin
+  russo russian ruso russe russisch
+  arabo arabic arabe arabisch
+  coreano korean coreen koreanisch
+  olandese dutch neerlandes neerlandais niederlandisch hollandisch holandes
+  polacco polish polaco polonais polnisch polones
+  svedese swedish sueco suedois schwedisch
+  turco turkish turc turkisch
+  hindi
+  ucraino ukrainian ucraniano ukrainien ukrainisch
+  rumeno romanian rumano roumain rumanisch romeno
+  catalano catalan catala
+  danese danish danes danois danisch dinamarques
+  norvegese norwegian noruego norvegien norwegisch noruegues
+  finlandese finnish finlandes finnois finnisch
+  ebraico hebrew hebreo hebreu hebraisch
+  vietnamita vietnamese vietnamien vietnamesisch
+  ungherese hungarian hungaro hongrois ungarisch
+  ceco czech checo tcheque tschechisch tcheco
+  japonaise chinoise coreenne neerlandaise polonaise suedoise turque ukrainienne roumaine catalane danoise norvegienne finnoise
+  hebraique vietnamienne hongroise`.split(/\s+/));
+export const linguaIgnota = parola => IGNOTE.has(norm(parola));
+// «lingua giapponese», «language japanese», «idioma japonés», «langue japonaise», «Sprache Japanisch», «idioma japonês»
+// (anche «língua», «lengua», con i due punti): una lingua che Lode non parla, detta con la parola «lingua» di una delle sei
+export function linguaIgnotaDetta(frase) {
+  const m = norm(frase).replace(/[.!?]+$/, '').trim().match(/^(?:lingua|language|idioma|lengua|langue|sprache):?\s+(\S+)$/);
+  return !!m && linguaIgnota(m[1]);
+}
 
 // Le parole piccole di ogni lingua (articoli, preposizioni, «è», «sono»…), già senza accenti come le dà norm(), e solo quelle
 // che non sono anche parole inglesi («come», «mon», «do», «die», «a» restano fuori). Servono a comandi.js: l'inglese di riserva

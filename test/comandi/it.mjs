@@ -223,6 +223,14 @@ export const CASI = [
   ['analisi 2', { tipo: 'apriEsame', esame: E('Analisi 2') }],
   ['basi di dati', { tipo: 'apriEsame', esame: E('Basi di dati') }],
   ['fisica', { tipo: 'apriEsame', esame: E('Fisica 2') }],
+  // una lingua che Lode non parla, detta in una delle sei lingue: codice null (la barra dice quali conosce)
+  ['lingua giapponese', { tipo: 'lingua', codice: null }],
+  ['language japanese', { tipo: 'lingua', codice: null }],
+  ['idioma japonés', { tipo: 'lingua', codice: null }],
+  ['langue japonaise', { tipo: 'lingua', codice: null }],
+  ['Sprache Japanisch', { tipo: 'lingua', codice: null }],
+  ['idioma japonês', { tipo: 'lingua', codice: null }],
+  ['cambia lingua in giapponese', { tipo: 'lingua', codice: null }],
 ];
 
 // frasi che non sono comandi: restano all'AI

@@ -224,6 +224,14 @@ export const CASI = [
   ['I work saturday 22-2', { tipo: 'lavoro', azione: 'aggiungi', giorni: [6], inizio: '22:00', fine: '24:00' }],
   ['I study from 9 to 5', { tipo: 'lavoro', azione: 'finestra', da: '09:00', a: '17:00' }],
   ['lecture physics 2 tue-thu 10-12 room 4', { tipo: 'orario', corso: 'Physics 2', giorni: [2, 3, 4], inizio: '10:00', fine: '12:00', aula: '4' }],
+  // una lingua che Lode non parla, detta in una delle sei lingue: codice null (la barra dice quali conosce)
+  ['lingua giapponese', { tipo: 'lingua', codice: null }],
+  ['language japanese', { tipo: 'lingua', codice: null }],
+  ['idioma japonés', { tipo: 'lingua', codice: null }],
+  ['langue japonaise', { tipo: 'lingua', codice: null }],
+  ['Sprache Japanisch', { tipo: 'lingua', codice: null }],
+  ['idioma japonês', { tipo: 'lingua', codice: null }],
+  ['switch to Japanese', { tipo: 'lingua', codice: null }],
 ];
 
 // frasi che non sono comandi: restano all'AI

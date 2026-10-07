@@ -268,6 +268,14 @@ export const CASI = [
   ['joue sur analyse 2', { tipo: 'gioco', corso: 'analyse 2' }],
   ['revise analyse 2', { tipo: 'ripasso', esame: E('Analyse 2'), nomeDetto: 'analyse 2' }],
   ["j'ai validé l'anglais B2", { tipo: 'idoneita', esame: E('Anglais B2'), nomeDetto: 'anglais b2' }],
+  // una lingua che Lode non parla, detta in una delle sei lingue: codice null (la barra dice quali conosce)
+  ['lingua giapponese', { tipo: 'lingua', codice: null }],
+  ['language japanese', { tipo: 'lingua', codice: null }],
+  ['idioma japonés', { tipo: 'lingua', codice: null }],
+  ['langue japonaise', { tipo: 'lingua', codice: null }],
+  ['Sprache Japanisch', { tipo: 'lingua', codice: null }],
+  ['idioma japonês', { tipo: 'lingua', codice: null }],
+  ['passe en japonais', { tipo: 'lingua', codice: null }],
 ];
 
 // frasi che non sono comandi: restano all'AI (né il francese né l'inglese di riserva le prendono)

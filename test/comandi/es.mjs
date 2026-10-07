@@ -265,6 +265,14 @@ export const CASI = [
   ['juego de definiciones de calculo 2', { tipo: 'gioco', corso: 'calculo 2' }],
   ['cambiar a ingles', { tipo: 'lingua', codice: 'en' }],
   ['cual es mi media', { tipo: 'libretto' }],
+  // una lingua che Lode non parla, detta in una delle sei lingue: codice null (la barra dice quali conosce)
+  ['lingua giapponese', { tipo: 'lingua', codice: null }],
+  ['language japanese', { tipo: 'lingua', codice: null }],
+  ['idioma japonés', { tipo: 'lingua', codice: null }],
+  ['langue japonaise', { tipo: 'lingua', codice: null }],
+  ['Sprache Japanisch', { tipo: 'lingua', codice: null }],
+  ['idioma japonês', { tipo: 'lingua', codice: null }],
+  ['cambia el idioma a japonés', { tipo: 'lingua', codice: null }],
 ];
 
 // frasi che non sono comandi: restano all'AI (in spagnolo e anche per l'inglese di riserva)

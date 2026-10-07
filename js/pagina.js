@@ -84,8 +84,8 @@ function libretto() {
 function librettoSistema(lista) {
   const q = LB.quadro();
   return `<table><thead><tr><th>${t('pagina.col-esame')}</th><th class="num">${esc(q.crediti)}</th><th class="num">${t('pagina.col-voto')}</th><th class="num">${t('pagina.col-data')}</th><th></th></tr></thead><tbody>
-    ${lista.map(e => `<tr><td>${esc(e.nome)}</td><td class="num">${esc(e.cfu)}</td><td class="num"><span class="voto">${e.idoneita ? `<span class="tenue">${esc(LB.votoEsame(e))}</span>` : esc(LB.votoEsame(e))}</span></td><td class="num tenue">${e.data ? esc(dataBreve(e.data)) : ''}</td><td class="num"><button class="x" data-a="modifica" data-e="${esc(e.id)}" aria-label="${t('pagina.modifica-esame', { nome: esc(e.nome) })}">⋯</button></td></tr>`).join('')}
-  </tbody></table><div class="tbl-piede"><span>${t('libretto.piede-esami', { n: lista.length, cfu: esc(q.cfu), crediti: esc(q.crediti) })}</span><span>${t('libretto.piede-media', { media: q.m.ponderata != null ? esc(q.media) : '—', finale: esc(q.nomeFinale), valore: esc(q.valore) })}</span></div>`;
+    ${lista.map(e => `<tr><td>${esc(e.nome)}</td><td class="num">${esc(LB.numCrediti(e.cfu))}</td><td class="num"><span class="voto">${e.idoneita ? `<span class="tenue">${esc(LB.votoEsame(e))}</span>` : esc(LB.votoEsame(e))}</span></td><td class="num tenue">${e.data ? esc(dataBreve(e.data)) : ''}</td><td class="num"><button class="x" data-a="modifica" data-e="${esc(e.id)}" aria-label="${t('pagina.modifica-esame', { nome: esc(e.nome) })}">⋯</button></td></tr>`).join('')}
+  </tbody></table><div class="tbl-piede"><span>${t('libretto.piede-esami', { n: lista.length, cfu: esc(LB.numCrediti(q.cfu)), crediti: esc(q.crediti) })}</span><span>${t('libretto.piede-media', { media: q.m.ponderata != null ? esc(q.media) : '—', finale: esc(q.nomeFinale), valore: esc(q.valore) })}</span></div>`;
 }
 function mazzi() {
   const gruppi = new Map(); D.carte.forEach(c => { const k = c.esameId || ''; gruppi.set(k, (gruppi.get(k) || 0) + 1); });

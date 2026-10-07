@@ -96,7 +96,7 @@ export function testoServe(ob = obiettivo()) {
   if (!sv) return '';
   const o = formatoNumero(ob, s);
   if (sv.gia) return t('libretto.serve-gia', { obiettivo: o });
-  if (sv.possibile) return t('libretto.serve-media', { obiettivo: o, voto: formatoNumero(sv.voto, s), cfu: numero(sv.cfu, 0), crediti: crediti() });
+  if (sv.possibile) return t('libretto.serve-media', { obiettivo: o, voto: formatoNumero(sv.voto, s), cfu: numCrediti(sv.cfu), crediti: crediti() });
   // non ci arrivi: dove arrivi prendendo il voto migliore in tutto quello che manca
   const meglio = s.migliore === 'basso' ? s.min : s.max, punta = (m.somma + meglio * sv.cfu) / (m.cfuVoto + sv.cfu);
   return t('libretto.serve-impossibile', { obiettivo: o, punta: formatoNumero(s.migliore === 'basso' ? Math.ceil(punta * 10 - 1e-9) / 10 : Math.floor(punta * 10 + 1e-9) / 10, s) });
@@ -109,7 +109,12 @@ export function scala(s = sis()) {
   for (let v = s.sufficienza; v <= s.max + 1e-9; v += p) out.push(Math.round(v * 100) / 100);
   return out;
 }
-const delta = d => `${d >= 0 ? '+' : '−'}${formatoMedia(Math.abs(d))}`;
+// il segno del cambio della media: «+» e «−» dove migliore = più alto; in Germania (migliore = più basso) una freccia che
+// dice da che parte va il voto, ↑ se migliora (la media scende) e ↓ se peggiora, senza un «+» che sembra un passo avanti
+export const segno = (d, s = sis()) => (s.migliore === 'basso' ? (d <= 0 ? '↑' : '↓') : d >= 0 ? '+' : '−');
+const delta = d => `${segno(d)}${formatoMedia(Math.abs(d))}`;
+// i crediti come numero: con un decimale se ce l'hanno (7,5 ECTS), senza se sono interi
+export const numCrediti = x => numero(Number(x) || 0, Number(x) % 1 ? 1 : 0);
 // l'esito della barra «e se…» (HTML)
 export function esitoSimula(esameId, voto) {
   const x = simula(esameId, voto, false); if (!x) return '';

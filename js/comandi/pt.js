@@ -10,7 +10,7 @@
 // I numeri a parole («vinte e oito») diventano cifre solo qui dentro: numeri() non si esporta, perché le formule dettate
 // in portoghese restano come sono (docs/LINGUE.md, «La voce e le formule»).
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta } from './comune.js';
 
 const DIAS = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
 const MESES = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -146,7 +146,9 @@ export function interpreta(frase) {
   let m;
 
   // la lingua della barra: «muda a língua para inglês», «idioma espanhol», «passa para alemão», «língua: français»
-  if ((m = u.match(/^(?:(?:muda|mudar|mude|troca|trocar|troque|altera|alterar|altere|poe|coloca|coloque|define|definir|escolhe|passa|passar|bota)(?: (?:a|o))?(?: (?:lingua|idioma))?(?: da app| do lode)?(?: (?:para|pra|pro|em|ao))?(?: o)?|(?:a )?(?:lingua|idioma):?(?: (?:para|pra))?|(?:fala|fale|responde|responda|escreve)(?:-me| comigo)? em|quero (?:o lode |a app )?em|em) (\S+)$/)) && linguaDetta(m[1], LINGUE_PT)) return { tipo: 'lingua', codice: linguaDetta(m[1], LINGUE_PT) };
+  if ((m = u.match(/^(?:(?:muda|mudar|mude|troca|trocar|troque|altera|alterar|altere|poe|coloca|coloque|define|definir|escolhe|passa|passar|bota)(?: (?:a|o))?(?: (?:lingua|idioma))?(?: da app| do lode)?(?: (?:para|pra|pro|em|ao))?(?: o)?|(?:a )?(?:lingua|idioma):?(?: (?:para|pra))?|(?:fala|fale|responde|responda|escreve)(?:-me| comigo)? em|quero (?:o lode |a app )?em|em) (\S+)$/)) && (linguaDetta(m[1], LINGUE_PT) || linguaIgnota(m[1]))) return { tipo: 'lingua', codice: linguaDetta(m[1], LINGUE_PT) };
+  // una lingua che Lode non parla («lingua giapponese», «language japanese»…): codice null, la barra dice quali conosce
+  if (linguaIgnotaDetta(grezzo)) return { tipo: 'lingua', codice: null };
   if (/^(?:ajuda|ajuda-me|me ajuda|socorro|\?|o que (?:e que )?(?:sabes|consegues|podes|voce sabe|voce consegue|voce pode) fazer|comandos|que comandos (?:ha|existem|tens|tem))$/.test(u)) return { tipo: 'aiuto' };
   if (/^(?:para|pare|parar|stop|acaba|acabar|termina|terminar|chega|basta|fim|cancela|cancelar)(?: (?:o |a )?(?:foco|timer|temporizador|cronometro|pomodoro|sessao|pausa))?$/.test(u)) return { tipo: 'ferma' };
   if (/^(?:pausa|pausar|pausa (?:o )?(?:timer|temporizador)|poe em pausa|espera(?: ai)?|segura ai)$/.test(u)) return { tipo: 'sospendi' };
