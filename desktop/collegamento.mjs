@@ -8,10 +8,12 @@
 // Le funzioni che preparano i file sono pure (test/collegamento.mjs le prova per i tre sistemi su qualsiasi computer).
 import { existsSync, mkdirSync, writeFileSync, chmodSync, rmSync, copyFileSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { t } from './lingua.mjs';
 
 const ID = 'it.lode.sorgente';
-const AUDIO_COMPUTER = 'Lode ascolta l\'audio del computer solo quando trascrivi una videolezione. L\'audio non resta mai sul computer: nella nota va solo il testo.';
-const MICROFONO = 'Lode usa il microfono quando parli con lui, per «Ripeti» in aula e per trascrivere le lezioni che scegli. L\'audio non resta mai sul computer.';
+// funzioni e non costanti: il main sceglie la lingua dopo aver caricato i moduli
+const AUDIO_COMPUTER = () => t('desktop.permesso-audio-computer');
+const MICROFONO = () => t('desktop.permesso-microfono');
 
 // d = { piattaforma, home, appData, scrivania, eseguibile, cartella, argomenti: [] }
 export function percorsi(d) {
@@ -42,8 +44,8 @@ export function fileMac(d) {
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>${xml(d.versione || '0')}</string>
   <key>LSUIElement</key><true/>
-  <key>NSMicrophoneUsageDescription</key><string>${xml(MICROFONO)}</string>
-  <key>NSAudioCaptureUsageDescription</key><string>${xml(AUDIO_COMPUTER)}</string>
+  <key>NSMicrophoneUsageDescription</key><string>${xml(MICROFONO())}</string>
+  <key>NSAudioCaptureUsageDescription</key><string>${xml(AUDIO_COMPUTER())}</string>
 </dict>
 </plist>
 `;
@@ -126,7 +128,7 @@ function scriviIcona(d, f, shell) {
     }
   } else if (d.piattaforma === 'win32') {
     mkdirSync(dirname(f), { recursive: true });
-    if (!shell.writeShortcutLink(f, existsSync(f) ? 'replace' : 'create', collegamentoWin(d))) throw new Error(`non riesco a creare ${f}`);
+    if (!shell.writeShortcutLink(f, existsSync(f) ? 'replace' : 'create', collegamentoWin(d))) throw new Error(t('desktop.icona-non-creata', { file: f }));
   } else scrivi(f, fileLinux(d), 0o755);
 }
 

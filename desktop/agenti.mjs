@@ -12,6 +12,7 @@
 import http from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { t } from './lingua.mjs';
 
 export const MAX_CORPO = 2 * 1048576;
 const MAX_EVENTI = 300;
@@ -77,21 +78,21 @@ const rel = (radice, f, cwd) => { const a = isAbsolute(f) ? f : resolve(cwd || r
 export function turno(eventi, { sessione = null } = {}) {
   const ev = eventi.filter(e => !sessione || !e.sessione || e.sessione === sessione);
   let da = 0; for (let i = ev.length - 2; i >= 0; i--) if (ev[i].tipo === 'prompt' || ev[i].tipo === 'fine') { da = ev[i].tipo === 'prompt' ? i : i + 1; break; }
-  const t = ev.slice(da), fine = t.findLast(e => e.tipo === 'fine');
-  const modifiche = t.filter(e => e.tipo === 'modifica'), comandi = t.filter(e => e.tipo === 'comando'), test = comandi.filter(e => TEST.test(' ' + e.comando));
+  const tu = ev.slice(da), fine = tu.findLast(e => e.tipo === 'fine');
+  const modifiche = tu.filter(e => e.tipo === 'modifica'), comandi = tu.filter(e => e.tipo === 'comando'), test = comandi.filter(e => TEST.test(' ' + e.comando));
   const file = [...new Set(modifiche.flatMap(e => e.rel || []))];
   const ultimaModifica = modifiche.at(-1)?.t || 0, ultimoTest = test.at(-1) || null;
   const avvisi = [];
   // «dice che passano, ma non li ha rilanciati dopo l'ultima modifica»
   if (fine?.messaggio && DICE_PASSANO.test(fine.messaggio) && ultimaModifica && (!ultimoTest || ultimoTest.t < ultimaModifica))
-    avvisi.push({ tipo: 'non-rilanciati', testo: ultimoTest ? 'Dice che i test passano, ma dopo la sua ultima modifica non li ha rilanciati.' : 'Dice che i test passano, ma in questo turno non l\'ho visto lanciarli.' });
+    avvisi.push({ tipo: 'non-rilanciati', testo: ultimoTest ? t('desktop.agenti-test-non-rilanciati') : t('desktop.agenti-test-non-lanciati') });
   // «ha modificato i test mentre fallivano»: una modifica a un file di test dopo un test fallito, prima di un test riuscito
   let fallito = null;
-  for (const e of t) {
+  for (const e of tu) {
     if (e.tipo === 'comando' && TEST.test(' ' + e.comando) && e.codice != null) fallito = e.codice !== 0 ? e : null;
-    if (e.tipo === 'modifica' && fallito && (e.rel || []).some(f => FILE_TEST.test(f))) { avvisi.push({ tipo: 'test-toccati', testo: `Ha modificato i test (${(e.rel || []).filter(f => FILE_TEST.test(f)).slice(0, 2).map(f => '`' + f + '`').join(', ')}) mentre fallivano: controlla che non li abbia resi più facili.` }); break; }
+    if (e.tipo === 'modifica' && fallito && (e.rel || []).some(f => FILE_TEST.test(f))) { avvisi.push({ tipo: 'test-toccati', testo: t('desktop.agenti-test-toccati', { file: (e.rel || []).filter(f => FILE_TEST.test(f)).slice(0, 2).map(f => '`' + f + '`').join(', ') }) }); break; }
   }
-  return { agente: (fine || t.at(-1))?.agente || null, inizio: t[0]?.t || null, fine: fine?.t || null, file, comandi: comandi.length, test: test.length, ultimoTest: ultimoTest ? { comando: ultimoTest.comando.slice(0, 120), codice: ultimoTest.codice, t: ultimoTest.t } : null, dopoTest: !!ultimoTest && ultimoTest.t >= ultimaModifica, avvisi, messaggio: (fine?.messaggio || '').slice(0, 400) };
+  return { agente: (fine || tu.at(-1))?.agente || null, inizio: tu[0]?.t || null, fine: fine?.t || null, file, comandi: comandi.length, test: test.length, ultimoTest: ultimoTest ? { comando: ultimoTest.comando.slice(0, 120), codice: ultimoTest.codice, t: ultimoTest.t } : null, dopoTest: !!ultimoTest && ultimoTest.t >= ultimaModifica, avvisi, messaggio: (fine?.messaggio || '').slice(0, 400) };
 }
 
 /* ---------- il server ---------- */

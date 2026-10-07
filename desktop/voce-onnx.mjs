@@ -21,6 +21,7 @@ import { join, dirname } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
+import { t } from './lingua.mjs';
 
 const QUI = dirname(fileURLToPath(import.meta.url));
 export const MOTORE = join(QUI, 'voce-onnx-motore.mjs');
@@ -53,6 +54,8 @@ const MB = 2 ** 20;
 export const MEMORIA_MINIMA = 5.5 * 2 ** 30;
 // i codici di errore per cui la barra passa a Whisper (gli altri, come la rete che manca, si riprovano la volta dopo)
 export const RIPIEGO = ['addon', 'crash', 'modello', 'impronta', 'spazio'];
+// le frasi degli errori del motore (voce-onnx-motore.mjs, un processo a parte che non sa la lingua): qui, per codice
+const FRASI_MOTORE = { addon: 'desktop.voce-addon', modello: 'desktop.voce-modello-rovinato' };
 // testo: la frase per lo studente, in italiano · dettaglio: il testo tecnico (onnxruntime, percorsi), solo per la console
 const errore = (testo, codice, dettaglio) => Object.assign(new Error(testo), { codice }, dettaglio ? { dettaglio } : {});
 
@@ -124,7 +127,7 @@ export async function scaricaModello({ cartella, avanza = () => { }, rete = fetc
     let giusta = false;
     if (st && st.size === f.byte) {
       try { giusta = await impronta(dest) === f.sha256; }
-      catch (e) { throw errore('Non riesco a leggere il modello della voce: riprova fra poco.', 'lettura', e.message); }
+      catch (e) { throw errore(t('desktop.voce-modello-illeggibile'), 'lettura', e.message); }
     }
     if (giusta && chi(stat(dest) || {}, f) === chi(st, f)) { verificati.set(dest, chi(st, f)); fatto += f.byte; continue; }
     if (st) rmSync(dest, { force: true });
@@ -134,7 +137,7 @@ export async function scaricaModello({ cartella, avanza = () => { }, rete = fetc
   // lo spazio: quello che manca davvero (le parti già scaricate restano) più un margine
   const parte = f => { try { return Math.min(statSync(join(cartella, f.nome + '.parziale')).size, f.byte); } catch { return 0; } };
   const serve = daFare.reduce((s, f) => s + f.byte - parte(f), 0), c = libero(cartella);
-  if (c < serve + margine) throw errore(`Per la voce Parakeet servono circa ${Math.ceil((serve + margine) / MB)} MB liberi sul disco, ce ne sono ${Math.floor(c / MB)}.`, 'spazio');
+  if (c < serve + margine) throw errore(t('desktop.voce-spazio', { serve: Math.ceil((serve + margine) / MB), liberi: Math.floor(c / MB) }), 'spazio');
   let ultimo = 0;
   const segnala = (forza) => { const t = Date.now(); if (forza || t - ultimo > 150) { ultimo = t; avanza(Math.min(1, fatto / totale)); } };
   for (const f of daFare) {
@@ -142,25 +145,25 @@ export async function scaricaModello({ cartella, avanza = () => { }, rete = fetc
     let da = parte(f); if (da >= f.byte) { rmSync(tmp, { force: true }); da = 0; }   // una parte «finita» ma senza impronta giusta: da capo
     let r;
     try { r = await rete(modello.base + f.nome, { redirect: 'follow', headers: { 'User-Agent': 'Lode', ...(da ? { Range: `bytes=${da}-` } : {}) } }); }
-    catch (e) { throw errore('Non riesco a scaricare la voce: controlla la connessione e riprova. (' + e.message + ')', 'rete'); }
+    catch (e) { throw errore(t('desktop.voce-rete', { dettaglio: e.message }), 'rete'); }
     if (r.status === 200) da = 0;   // il server non riprende: si ricomincia il file
     else if (r.status !== 206 || !String(r.headers.get('content-range') || '').startsWith(`bytes ${da}-`)) {
       try { await r.body?.cancel(); } catch { }
-      throw errore(`Non riesco a scaricare la voce (${r.status}): riprova più tardi.`, 'rete');
+      throw errore(t('desktop.voce-rete-stato', { stato: r.status }), 'rete');
     }
     const h = createHash('sha256');
     if (da) for await (const pezzo of createReadStream(tmp, { highWaterMark: 1 << 20 })) h.update(pezzo);
     fatto += da; segnala(true);
     let arrivati = da;
-    const conta = new Transform({ transform(pezzo, _, fine) { arrivati += pezzo.length; if (arrivati > f.byte) return fine(errore('Il file della voce è più grande del previsto.', 'impronta')); h.update(pezzo); fatto += pezzo.length; segnala(); fine(null, pezzo); } });
+    const conta = new Transform({ transform(pezzo, _, fine) { arrivati += pezzo.length; if (arrivati > f.byte) return fine(errore(t('desktop.voce-file-troppo-grande'), 'impronta')); h.update(pezzo); fatto += pezzo.length; segnala(); fine(null, pezzo); } });
     try { await pipeline(Readable.fromWeb(r.body), conta, createWriteStream(tmp, { flags: da ? 'a' : 'w' })); }
     catch (e) {
       if (e.codice === 'impronta') { rmSync(tmp, { force: true }); throw e; }
-      throw errore('Il download della voce si è interrotto: riprende da qui la prossima volta. (' + e.message + ')', 'rete');
+      throw errore(t('desktop.voce-interrotto', { dettaglio: e.message }), 'rete');
     }
     if (arrivati !== f.byte || h.digest('hex') !== f.sha256) {
       rmSync(tmp, { force: true });
-      throw errore(`Il file della voce «${f.nome}» non è quello giusto (impronta SHA256 diversa): l'ho cancellato.`, 'impronta');
+      throw errore(t('desktop.voce-impronta', { file: f.nome }), 'impronta');
     }
     renameSync(tmp, dest);
     verificati.set(dest, chi(statSync(dest), f));
@@ -203,12 +206,12 @@ export function crea({ cartella, avvia: nuovoProcesso, avanza, rete, pacchetto =
     ferma = e => fase?.ko(e); avviando = true;
     p.su('messaggio', m => {
       if (m?.evento === 'addon' || m?.evento === 'pronto') fase?.ok(m);
-      else if (m?.evento === 'errore') fase?.ko(errore(m.errore, m.codice || 'modello', m.dettaglio));
-      else if (m?.id && attese.has(m.id)) chiusa(m.id, m.errore ? errore('Parakeet non è riuscito a trascrivere questo pezzo.', 'modello', m.errore) : null, m.testo || '');
+      else if (m?.evento === 'errore') fase?.ko(errore(FRASI_MOTORE[m.codice] ? t(FRASI_MOTORE[m.codice]) : m.errore, m.codice || 'modello', m.dettaglio));   // la frase nella lingua della barra
+      else if (m?.id && attese.has(m.id)) chiusa(m.id, m.errore ? errore(t('desktop.voce-pezzo-non-trascritto'), 'modello', m.errore) : null, m.testo || '');
     });
     p.su('uscita', c => {
       // chi l'ha chiuso? Se è stato chiudi() (riposo, uscita, ripiego) proc non è più questo: è «chiusa», non un crash
-      const e = proc === p ? errore(`Il motore della voce si è chiuso all'improvviso${c != null ? ` (${c})` : ''}.`, 'crash') : errore('voce chiusa', 'chiusa');
+      const e = proc === p ? errore(c != null ? t('desktop.voce-motore-chiuso-codice', { codice: c }) : t('desktop.voce-motore-chiuso'), 'crash') : errore('voce chiusa', 'chiusa');
       fase?.ko(e);
       if (proc !== p) return;   // chiuso a riposo: ne è già partito un altro
       chiudiTutte(e); proc = null; pronto = null; avviando = false;
@@ -235,7 +238,7 @@ export function crea({ cartella, avvia: nuovoProcesso, avanza, rete, pacchetto =
     return new Promise((ok, ko) => {
       attese.set(id, { ok, ko });
       if (!proc) return chiusa(id, errore('voce chiusa', 'chiusa'));
-      try { proc.manda({ tipo: 'trascrivi', id, audio: f }); } catch (e) { chiusa(id, errore('Il motore della voce non risponde.', 'crash', e.message)); }
+      try { proc.manda({ tipo: 'trascrivi', id, audio: f }); } catch (e) { chiusa(id, errore(t('desktop.voce-motore-non-risponde'), 'crash', e.message)); }
     });
   }
   const chiudi = () => {
