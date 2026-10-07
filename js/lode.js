@@ -1912,6 +1912,7 @@ function schedaTurno(t) {
     <p class="ld-nota">Quello che dice l'agente sono parole: le prove le ha lanciate davvero solo se le vedi qui. Le regole sono fisse: se non trovano niente, non è una garanzia.</p>`);
   s.querySelector('[data-c]').addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Cosa è cambiato'); PR.schedaCambia(t.id); });
   s.querySelector('[data-p]').addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Prova il progetto'); PR.prova(t.id); });
+  PR.coseNuoveDi(t.id).then(l => PR.mostraCoseNuove(s, l));   // le funzioni di libreria nuove nelle righe aggiunte (glossario.js)
   if (A.turno) A.turno.dataset.sintesi = `${chi}: ${t.file.length} file`;
 }
 if (BRIDGE) { BRIDGE.su('agente:turno', arrivaTurno); BRIDGE.invoca('agenti:stato').then(st => st?.agenti?.forEach(a => { NOMI_AGENTI[a.id] = a.nome; })).catch(() => { }); }

@@ -3,6 +3,7 @@
 // Qui niente calcoli che contano: diff, riassunto, impronta e prove li fa il main (desktop/progetto.mjs), senza AI.
 // La barra manda al main solo l'id del progetto: mai percorsi, mai comandi da eseguire. Lode propone, lo studente decide.
 // lode.js passa i suoi strumenti con collega(), perché quelle funzioni sono interne a lode.js (come stampa.js).
+import { coseNuove, linguaDi, segna, dati, cartaDa, esameDi } from './glossario.js';
 
 const L = globalThis.lodeDesktop || null;
 export const attivo = !!L;
@@ -266,6 +267,7 @@ export function schedaFatto(r) {
   bottone(s, '[data-prova]', () => { turno('Prova il progetto'); prova(r.id); });
   bottone(s, '[data-diff]', () => { turno('Vedi le modifiche'); schedaCambia(r.id, { da: r.base, a: r.fine, titolo: `Modifiche · ${ora(r.da)}–${ora(r.a)}` }); });
   bottone(s, '[data-visto]', () => visto(r.id, s));
+  coseNuoveDi(r.id, { da: r.base, a: r.fine }).then(l => mostraCoseNuove(s, l));
   return s;
 }
 // «provato?» scritto nel campo: la risposta è un conto, non un'opinione
@@ -377,4 +379,82 @@ export function schedaEsito(e, dove) {
   bottone(s, '[data-cambia]', () => { turno('Cosa è cambiato'); schedaCambia(e.id); });
   if (e.esito === 'non-compila' || e.casi?.some(c => c.crash || c.scaduto)) T.spiegaErrore?.(e);   // F3: l'errore spiegato, sotto
   return s;
+}
+
+/* ---------- «Cose nuove»: le funzioni di libreria comparse nelle righe aggiunte (glossario.js, senza AI) ---------- */
+// Per i file cambiati serve anche il file intero di adesso (progetto:righe, 400 righe a chiamata, fino a 2000): il diff ha solo
+// 3 righe di contesto e un malloc vecchio a riga 10 non lo vede. Se il file non arriva tutto → null, e vale solo il diff
+async function fileIntero(chiedi, id, rel) {
+  const out = [];
+  for (let da = 1; da <= 2000; da += 400) {
+    const x = await chiedi('progetto:righe', { id, rel, da, a: da + 399 }).catch(() => null);
+    if (!x || x.errore || !Array.isArray(x.righe) || !Number.isFinite(x.totale)) return null;
+    out.push(...x.righe.map(r => r?.s ?? ''));
+    if (out.length >= x.totale) return out;
+    if (!x.righe.length) return null;
+  }
+  return null;
+}
+// Il tratto da/a (come schedaCambia), poi il diff dei soli file C/Java/Python: al massimo 10, non quelli grandi o tagliati.
+// Se qualcosa va storto restituisce [] in silenzio: la scheda di base non si rompe mai. opz.invoca e opz.dati per le prove
+export async function coseNuoveDi(id, opz = {}) {
+  try {
+    const chiedi = opz.invoca || (attivo ? invoca : null); if (!chiedi) return [];
+    const r = await chiedi('progetto:diff', { id, da: opz.da, a: opz.a });
+    const scelti = (r?.file || []).filter(f => f && linguaDi(f.rel) && !f.grande && f.stato !== 'tolto' && (f.piu || f.stato === 'nuovo')).slice(0, 10);
+    if (!scelti.length) return [];
+    const file = [];
+    for (const f of scelti) {
+      const d = await chiedi('progetto:diff', { id, rel: f.rel, da: opz.da, a: opz.a }); if (!d || d.errore || d.grande || d.tagliato) continue;
+      file.push({ ...d, rel: f.rel, attuale: f.stato === 'cambiato' ? await fileIntero(chiedi, id, f.rel) : null });
+    }
+    const { D } = opz.dati || await dati();
+    return coseNuove(file, { visti: D.codice?.glossario?.visti || {}, carte: D.carte || [] }).map(x => ({ ...x, id }));
+  } catch (e) { console.warn('Lode: cose nuove', e); return []; }
+}
+const NOTA_CN = 'Dal dizionario di Lode: solo funzioni della libreria standard. Non vede le idee, solo i nomi.';
+// l'HTML della sezione (puro: si prova in Node). Ogni voce è chiusa: il nome; un clic apre file, riga e la domanda
+export function htmlCoseNuove(lista) {
+  if (!lista?.length) return '';
+  const voce = (x, i) => `<div class="voce" data-i="${i}"><button type="button" class="apri" aria-expanded="false"><code>${esc(x.voce.k)}</code><span class="ld-tenue">${esc(x.rel)}, riga ${esc(x.riga)}</span></button>
+    <div class="corpo" hidden><p class="dove"><b>${esc(x.rel)}, riga ${esc(x.riga)}</b></p><pre class="riga">${esc(x.testo)}</pre>
+    <p class="dom"><span class="ld-tenue">Domanda da orale:</span> ${esc(x.voce.d)}</p>
+    <div class="az"><button type="button" class="btn small" data-risposta>Risposta</button></div></div></div>`;
+  return `<p class="tit">Cose nuove: ${lista.map(x => `<code>${esc(x.voce.k)}</code>`).join(', ')}</p>${lista.map(voce).join('')}<p class="ld-nota">${esc(NOTA_CN)}</p>`;
+}
+// «Mettila nel ripasso»: la carta (domanda davanti, risposta e fonte dietro) nell'esame del corso, e la voce non torna più
+export async function mettiNelRipasso(x, DA) {
+  DA ||= await dati();
+  const carta = DA.aggiungiCarta({ esameId: esameDi(DA.D.esami, P.get(x.id)?.corso || null), ...cartaDa(x) });
+  await segna(x.voce.k, 'carta', DA);   // salva() lo fa segna
+  return carta;
+}
+// la sezione in fondo alla scheda s, prima della sua ultima ld-nota. Lista vuota: la scheda resta com'è
+export function mostraCoseNuove(s, lista) {
+  if (!s || !lista?.length || s.isConnected === false) return null;
+  const sez = document.createElement('div'); sez.className = 'ld-cosenuove'; sez.innerHTML = htmlCoseNuove(lista);
+  const nota = [...s.children].filter(c => c.classList?.contains('ld-nota')).pop();
+  if (nota) nota.before(sez); else s.append(sez);
+  T.entra?.(sez, { dy: 4, blur: 4, ms: 360 });
+  sez.querySelectorAll('.voce').forEach(el => {
+    const x = lista[+el.dataset.i], corpo = el.querySelector('.corpo'), apri = el.querySelector('.apri');
+    apri.addEventListener('click', () => { const su = corpo.hidden; corpo.hidden = !su; apri.setAttribute('aria-expanded', String(su)); if (su) T.entra?.(corpo, { dy: 4, blur: 4, ms: 320 }); });
+    bottone(el, '[data-risposta]', b => {
+      const az = b.parentElement, p = document.createElement('p'); p.className = 'risp'; p.textContent = x.voce.r;
+      az.before(p);
+      az.innerHTML = '<button type="button" class="btn small primary" data-carta>Mettila nel ripasso</button><button type="button" class="btn small ld-piano" data-so>La so già</button>';
+      T.entra?.(p, { dy: 4, blur: 4, ms: 320 });
+      bottone(az, '[data-carta]', async () => {
+        az.querySelectorAll('button').forEach(y => { y.disabled = true; });
+        await mettiNelRipasso(x);
+        if (T.mostraFatto) T.mostraFatto({ testo: 'Nel ripasso.' }, az); else az.innerHTML = '<p class="ld-nota">Nel ripasso.</p>';
+      });
+      bottone(az, '[data-so]', async () => {
+        az.querySelectorAll('button').forEach(y => { y.disabled = true; });
+        await segna(x.voce.k, 'so');
+        corpo.remove(); apri.disabled = true; apri.removeAttribute('aria-expanded'); apri.querySelector('.ld-tenue').textContent = 'la sai già';
+      });
+    });
+  });
+  return sez;
 }
