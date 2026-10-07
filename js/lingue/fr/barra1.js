@@ -146,7 +146,7 @@ export default {
   'barra1.annullato-minuscolo': 'annulé',
   'barra1.confermi': 'Tu confirmes ?',
   'barra1.conferma': 'Confirmer',
-  'barra1.scrivi-si': 'Tu peux aussi écrire « oui ».',
+  'barra1.scrivi-si': 'Tu peux aussi écrire « ok ».',
   'barra1.annullato': 'Annulé.',
   'barra1.niente-cambiato': "Je n'ai rien changé.",
   // Focus
