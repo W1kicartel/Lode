@@ -73,6 +73,9 @@ jobs:
         run: node --experimental-vm-modules test/tasca.mjs
       - name: Lingue (cataloghi)
         run: node test/lingue.mjs
+      # i comandi senza AI in ogni lingua (js/comandi/<codice>.js): stessi oggetti dell'italiano, e le frasi che non sono comandi
+      - name: Lingue (comandi senza AI)
+        run: node test/comandi-lingue.mjs
       # aggiornamenti (desktop/aggiorna.mjs): versioni, installer giusto, latest*.yml, Mac senza firma, finto electron-updater
       - name: Aggiornamenti
         run: node test/aggiorna.mjs
