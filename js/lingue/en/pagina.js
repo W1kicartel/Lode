@@ -20,7 +20,7 @@ export default {
   'pagina.suggerimento': 'Hover over the bar at the top, press <kbd>/</kbd> to type or hold <kbd>{tasti}</kbd> to talk.',
   // the numbers
   'pagina.media-ponderata': 'Weighted average',
-  'pagina.media-dettaglio': { one: 'simple {media} · {n} grade', other: 'simple {media} · {n} grades' },
+  'pagina.media-dettaglio': { one: 'unweighted {media} · {n} grade', other: 'unweighted {media} · {n} grades' },
   'pagina.primo-voto': 'add your first grade from the bar',
   'pagina.base-laurea': 'Starting graduation mark',
   'pagina.base-formula': 'average × 110 / 30',

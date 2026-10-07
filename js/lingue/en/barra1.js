@@ -161,7 +161,7 @@ export default {
   'barra1.sintesi-focus-min': 'focus {min} min',
   // Grades and «what if I get…»
   'barra1.media-ponderata': 'Weighted average',
-  'barra1.aritmetica-esami': 'simple {media} · {n} exams',
+  'barra1.aritmetica-esami': 'unweighted {media} · {n} exams',
   'barra1.nessun-voto': 'no grades yet',
   'barra1.base-di-laurea': 'Starting graduation mark',
   'barra1.serve-gia': 'To start from <b>{obiettivo}</b> you just need to pass the remaining exams.',
