@@ -82,7 +82,7 @@ export default {
   'benvenuto.lode-vale': 'Cum laude zählt als',
   'benvenuto.lode-nota': 'Hängt von der Prüfungsordnung ab: im Zweifel 30',
   // libretto
-  'benvenuto.libretto-titolo': 'Die Prüfungen, die du schon hast',
+  'benvenuto.libretto-titolo': 'Die Prüfungen, die du schon bestanden hast',
   'benvenuto.libretto-sotto': 'Öffne deine Notenübersicht im Uni-Portal (Esse3, Infostud, HISinOne…), markier alles, kopier es und füg es hier ein. Den Rest mache ich. Oder schreib jede Prüfung in eine eigene Zeile: „Analysis 1, 9 ECTS, 28“.',
   'benvenuto.libretto-segnaposto': 'Notenübersicht hier einfügen…',
   'benvenuto.leggi-libretto': 'Notenübersicht lesen',

@@ -588,7 +588,7 @@ export default {
   'errori.esec-divisione-zero.cosa': 'Eine Ganzzahl durch null geteilt (auch mit `%`) hat kein Ergebnis, und das System stoppt das Programm. Der Name „floating point exception“ täuscht: Es passiert gerade mit Ganzzahlen. Prüf die Divisoren, zum Beispiel einen Zähler, der noch 0 ist.',
   'errori.esec-divisione-zero.concetto': 'Division',
   'errori.esec-stack.etichetta': 'Aufrufstapel voll (Stack Overflow)',
-  'errori.esec-stack.frase': 'der Aufrufstapel ist voll: Vielleicht eine endlose Rekursion',
+  'errori.esec-stack.frase': 'der Aufrufstapel ist voll: vielleicht eine endlose Rekursion',
   'errori.esec-stack.cosa': 'Jeder Funktionsaufruf belegt etwas Speicher auf dem Stapel (dem Stack). Eine rekursive Funktion ohne Basisfall, oder mit einem Basisfall, der nie erreicht wird, füllt ihn. Auch ein riesiges lokales Array kann reichen: Nimm in dem Fall `malloc`.',
   'errori.esec-stack.concetto': 'Rekursion',
   'errori.esec-fuori-array.etichetta': 'Schreiben außerhalb eines Arrays',

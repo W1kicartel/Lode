@@ -269,6 +269,6 @@ export default {
   'desktop.agenti-test-toccati': 'Er hat die Tests geändert ({file}), während sie fehlschlugen: Prüf, dass er sie nicht leichter gemacht hat.',
   // collegamento.mjs: Lode avviata dal codice (icona, avvio all'accensione, permessi del Mac)
   'desktop.permesso-audio-computer': 'Lode hört den Ton des Computers nur, wenn du eine Video-Vorlesung transkribierst. Der Ton bleibt nie auf dem Computer: In die Notiz kommt nur der Text.',
-  'desktop.permesso-microfono': 'Lode benutzt das Mikrofon, wenn du mit ihm sprichst, für „Nochmal“ in der Vorlesung und um die Vorlesungen zu transkribieren, die du auswählst. Der Ton bleibt nie auf dem Computer.',
+  'desktop.permesso-microfono': 'Lode benutzt das Mikrofon, wenn du mit Lode sprichst, für „Nochmal“ in der Vorlesung und um die Vorlesungen zu transkribieren, die du auswählst. Der Ton bleibt nie auf dem Computer.',
   'desktop.icona-non-creata': 'ich kann {file} nicht anlegen',
 };
