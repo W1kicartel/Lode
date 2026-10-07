@@ -13,7 +13,7 @@ export default {
   'allenatore.programma-ai': "Today it's “{argomento}”: two questions?",
   'allenatore.programma': 'In today\'s plan: “{argomento}”',
   'allenatore.apri-piano': 'Open the plan',
-  'allenatore.focus-testo': "You're {h} h behind today: a {min} focus?",
+  'allenatore.focus-testo': "You're {h} h behind today: a {min}-minute focus?",
   'allenatore.focus': 'Focus',
   'allenatore.stampa': '{domanda} 1 minute',
   'allenatore.prova': 'Try',

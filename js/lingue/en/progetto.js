@@ -81,7 +81,7 @@ export default {
   'progetto.provato-nota': 'I don\'t know who wrote the lines: I only know whether the current code went through a test.',
   'progetto.comando-manca': 'To test {nome}, {cosa} is missing',
   'progetto.comando-come': 'How do I test {nome}?',
-  'progetto.comando-lancia': 'There are .in/.out tests now: to run the program I need a new yes.',
+  'progetto.comando-lancia': 'There are .in/.out tests now: to run the program I need you to say yes again.',
   'progetto.comando-cambiato': 'The project files have changed: the old command isn\'t enough any more.',
   'progetto.comando-userei': 'To test it I\'d use <code>{comando}</code>',
   'progetto.comando-nota': 'I only run the command you confirm in the system window, never one suggested by an agent. It\'s not a sandbox: the program runs on your computer, just like from the terminal, and it can write files in your folder.',
