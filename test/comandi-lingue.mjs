@@ -46,7 +46,7 @@ const IT = await import('./comandi/it.mjs'), X = cod === 'it' ? IT : await impor
 const RIT = await import('../js/comandi/it.js');
 // il libretto del banco: esami italiani e inglesi, fatti e da fare
 D.sostituisci({ ...D.esempio(), esami: [], sessioni: [], carte: [] });
-for (const [nome, cfu, voto, idoneita] of ESAMI) {
+for (const [nome, cfu, voto, idoneita] of [...ESAMI, ...(X.ESAMI || [])]) {   // X.ESAMI: gli esami della lingua, solo nel suo giro
   const e = D.aggiungiEsame({ nome, cfu, data: voto !== undefined ? D.piuGiorni(D.oggi(), -100) : D.piuGiorni(D.oggi(), 30) });
   if (voto !== undefined) D.registraVoto(e.id, { voto, idoneita: !!idoneita, data: e.data });
 }
