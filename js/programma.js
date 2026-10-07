@@ -8,6 +8,7 @@
 // Dove sta: dentro l'esame (esami[i].programma). Con la sincronizzazione è un campo unico («esami/<id>/programma»): se due
 // computer lo cambiano insieme, vince l'ultimo (domande ed esiti compresi).
 import { D, salva, id, oggi, piuGiorni, giorniTra, norm, lezioni, chiaveDef } from './dati.js';
+import { elenco } from './lingua.js';
 
 /* ---------- parole: le stesse regole di ai.js (dalMateriale), in piccolo ---------- */
 const piana = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -135,7 +136,7 @@ export function registraEsito(e, argomentoId, esito, fonte = 'orale') {
 
 /* ---------- la mappa: quanto hai coperto ogni argomento ---------- */
 // 0 mai toccato · 1 ci sono appunti o carte, ma non l'hai mai provato · 2 in allenamento · 3 sicuro
-export const STATI = ['mai toccato', 'solo appunti', 'in allenamento', 'sicuro'];
+export const STATI = elenco('programma.stati');
 export function materialeDi(e) {
   const corso = norm(e.nome), lez = lezioni().filter(l => norm(l.corso) === corso);
   return {
