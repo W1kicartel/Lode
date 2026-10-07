@@ -9,6 +9,7 @@
 import { salva, id, oggi } from './dati.js';
 import { esito } from './temi.js';
 import { t } from './lingua.js';
+import { numeroCorto } from './parole.js';
 
 /* ---------- i compiti interi ---------- */
 // il compito di un tema: fonte e data; senza data, fonte e lotto (l'incollatura da cui viene, js/temi.js metti), così due
@@ -95,7 +96,8 @@ export function chiudi(e, c, esiti, { T = oggi(), min = null, durata = null } = 
 }
 
 /* ---------- il riepilogo: onesto, senza voti ---------- */
-const puntiScritti = v => String(Math.round(v * 100) / 100).replace('.', ',');
+// i punti con al più due decimali, nella forma della lingua («7,5» in italiano, «7.5» in inglese)
+const puntiScritti = v => numeroCorto(v, 2);
 // le frasi dopo il salvataggio: quanti ne hai fatti, dove sei stato di più (se hai segnato i passaggi), i punti che ti sei
 // dato giusti (solo se il compito li scrive per tutti gli esercizi: «A metà» non conta) e dove sono finiti gli esiti
 export function riepilogo(p, c, { mappa = true } = {}) {

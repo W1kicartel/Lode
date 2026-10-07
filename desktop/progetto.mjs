@@ -39,7 +39,7 @@ import { join, basename, resolve, relative, isAbsolute, parse } from 'node:path'
 import { homedir } from 'node:os';
 import { dentro, scriviSicuro } from './vault.mjs';
 import * as E from './esegui.mjs';
-import { t } from './lingua.mjs';
+import { t, locale } from './lingua.mjs';
 
 export const LIMITE_FILE = 5000, LIMITE_BYTE = 1024 * 1024, MAX_PROGETTI = 3, MAX_TAPPE = 300, GIORNI_TAPPE = 30, MAX_RIGHE = 400;
 export const QUIETE_MS = 60e3, INTERVALLO_FATTO = 10 * 60e3, ATTESA_MS = 400, SONDAGGIO_MS = 3000, SICUREZZA_MS = 30e3;
@@ -202,8 +202,8 @@ export function nuoviInclude(prima, ops, lingua) {
 }
 
 // il riassunto «Fatto. In parole semplici»: frasi fisse, conti esatti. Mai una stima su chi ha scritto cosa
-const due = n => String(n).padStart(2, '0');
-export const ora = t => { const d = new Date(t); return `${due(d.getHours())}:${due(d.getMinutes())}`; };
+// l'ora «14:05» nella forma della lingua scelta (tutte e sei usano le 24 ore: in italiano è quella di prima)
+export const ora = t => new Date(t).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 const codice = s => '`' + s + '`';
 const unisci = l => l.length < 2 ? l.join('') : t('desktop.progetto-elenco', { primi: l.slice(0, -1).join(', '), ultimo: l.at(-1) });
 const elenco = (l, altri = false, max = 4) => l.length <= max ? unisci(l.map(codice)) : t(altri ? 'desktop.progetto-elenco-altri' : 'desktop.progetto-elenco-altre', { primi: l.slice(0, max).map(codice).join(', '), n: l.length - max });

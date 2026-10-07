@@ -12,7 +12,7 @@ import { join, resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { t } from './lingua.mjs';
+import { t, numero } from './lingua.mjs';
 
 const MAC = process.platform === 'darwin', WIN = process.platform === 'win32';
 const esegui = (cmd, args, opz = {}) => new Promise((ok, ko) => execFile(cmd, args, { maxBuffer: 1 << 24, ...opz }, (e, out, err) => e ? ko(new Error((err || e.message).toString().trim())) : ok(out.toString())));
@@ -196,7 +196,7 @@ export async function scaricaModello(nome, avanza) {
       if (!riga.trim()) continue; const x = JSON.parse(riga);
       if (x.error) throw new Error(x.error);
       const adesso = Date.now();
-      if (x.total && x.completed && adesso - ultimo > 200) { ultimo = adesso; avanza({ fase: 'scarico', p: x.completed / x.total, testo: t('desktop.installa-scarico-modello', { nome, fatti: (x.completed / 1e9).toFixed(1), totale: (x.total / 1e9).toFixed(1) }) }); }
+      if (x.total && x.completed && adesso - ultimo > 200) { ultimo = adesso; avanza({ fase: 'scarico', p: x.completed / x.total, testo: t('desktop.installa-scarico-modello', { nome, fatti: numero(x.completed / 1e9, 1), totale: numero(x.total / 1e9, 1) }) }); }
     }
   }
   avanza({ fase: 'fatto', p: 1, testo: t('desktop.installa-modello-pronto', { nome }) });

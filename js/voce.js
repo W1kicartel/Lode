@@ -1,4 +1,4 @@
-// La voce di Lode, in italiano, gratis.
+// La voce di Lode, nella lingua della barra, gratis.
 // • Nell'app desktop il motore lo sceglie il main (voce:stato): Parakeet v3 sul Neural Engine (Mac con chip Apple e
 //   lode-voce), Parakeet v3 ONNX sul processore (Windows, Linux: desktop/voce-onnx.mjs, se c'è l'addon e almeno ~6 GB di
 //   memoria), altrimenti Whisper DENTRO la barra (transformers.js su WebGPU, o sul processore se la scheda non c'è).
@@ -6,9 +6,13 @@
 //   di parlare (o lasci il tasto) la frase finale arriva in mezzo secondo. Il modello si scarica una volta sola.
 //   Se Parakeet ONNX non parte (addon, crash, modello rovinato, spazio) si passa a Whisper senza perdere l'audio in corso.
 // • Nel browser: il riconoscimento vocale di Chrome/Edge/Safari.
-// Le risposte si possono leggere ad alta voce con la voce italiana del sistema.
+// Le risposte si possono leggere ad alta voce con la voce del sistema nella lingua della barra.
+// La lingua: a Whisper si dice quale (WHISPER di parole.js: «italian», «english»…), il riconoscimento del browser e la
+// lettura ad alta voce vogliono il paese («it-IT», «pt-BR»). Parakeet v3 (lode-voce sul Mac, sherpa-onnx altrove) la
+// riconosce da solo: né FluidAudio né il transducer di sherpa-onnx hanno un parametro per la lingua.
 import { libreria } from './librerie.js';
-import { t } from './lingua.js';
+import { t, lingua } from './lingua.js';
+import { WHISPER, PAESE_VOCE } from './parole.js';
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const DESKTOP = !!window.lodeDesktop;
 export const disponibile = DESKTOP ? !!navigator.mediaDevices?.getUserMedia : !!SR;
@@ -92,7 +96,7 @@ async function carica(dev) {
     progress_callback: p => { if (p.status === 'progress' && p.total && !partita) { file[p.file] = [p.loaded, p.total]; const v = Object.values(file); avvisa({ fase: 'scarico', p: v.reduce((s, x) => s + x[0], 0) / v.reduce((s, x) => s + x[1], 0) }); } },
   });
   // un giro a vuoto: la prima trascrizione vera non paga la compilazione degli shader (e se la scheda non regge, si vede qui)
-  await a(new Float32Array(16000), { language: 'italian', task: 'transcribe' });
+  await a(new Float32Array(16000), { language: WHISPER[lingua], task: 'transcribe' });
   return a;
 }
 // una trascrizione alla volta (il modello è uno solo), in fila; «Ripeti» passa davanti ai pezzi della lezione
@@ -139,7 +143,7 @@ setInterval(() => {
 }, 60e3)?.unref?.();
 // Whisper legge 30 secondi alla volta: oltre, l'audio va diviso in finestre sovrapposte (senza, di un minuto di
 // «Ripeti» arrivava solo la prima metà, la più vecchia, e mancava proprio l'ultima frase del prof)
-const trascrivi = async audio => (await asr(audio, { language: 'italian', task: 'transcribe', ...(audio.length > 16000 * 29 ? { chunk_length_s: 30, stride_length_s: 5 } : {}) }))
+const trascrivi = async audio => (await asr(audio, { language: WHISPER[lingua], task: 'transcribe', ...(audio.length > 16000 * 29 ? { chunk_length_s: 30, stride_length_s: 5 } : {}) }))
   .text.trim().replace(/^[\s.…]+|[\s.…]+$/g, '').replace(/\s*\[.*?\]\s*/g, ' ').trim();
 // Il motore: 'mac' (Parakeet sul Neural Engine, lode-voce), 'onnx' (Parakeet sul processore, sherpa-onnx), tutti e due
 // nel main, oppure 'whisper' nella barra. Lo chiede una volta sola al main, all'avvio della barra
@@ -149,8 +153,16 @@ export const motoreNelMain = async () => (await motore()) !== 'whisper';
 if (DESKTOP) motore();
 export const nomeMotore = async () => ({ mac: 'Parakeet v3 (Neural Engine)', onnx: 'Parakeet v3 (ONNX, processore)' })[await motore()] || 'Whisper ' + MODELLO_VOCE.split('-').pop();
 const parakeet = async audio => String(risposta(await window.lodeDesktop.invoca('voce:trascrivi', audio))).replace(/\s+/g, ' ').trim();
-// Whisper sul silenzio a volte «sente» frasi tipiche dei sottotitoli: le scartiamo
-const ALLUCINAZIONI = /^(sottotitoli|grazie (a tutti )?per (la visione|l'attenzione)|grazie\.?|buona visione|amara\.org|iscriviti)/i;
+// Whisper sul silenzio a volte «sente» frasi tipiche dei sottotitoli (le ha imparate dai video): le scartiamo, in tutte le
+// lingue (lo studente può parlare inglese con la barra in italiano). L'italiano è quello di sempre, le altre sono in più
+export const ALLUCINAZIONI = new RegExp('^(?:' + [
+  /sottotitoli|grazie (?:a tutti )?per (?:la visione|l'attenzione)|grazie\.?|buona visione|amara\.org|iscriviti/,
+  /thank you(?: (?:so|very) much)?(?: for watching)?[.!]?$|thanks for watching|(?:please )?subscribe(?: to (?:my|the|our) channel)?|subtitles? by|captions? by|you$|bye[.!]?$/,
+  /subt[ií]tulos (?:realizados )?por|gracias por ver|gracias[.!]?$|suscr[ií]bete/,
+  /sous-titr(?:es|age)(?: r[ée]alis[ée]s)? (?:par|st)|merci d'avoir regard[ée]|merci[.!]?$|abonnez-vous/,
+  /untertitel(?:ung)?(?: im auftrag| des zdf| der amara| von)|vielen dank(?: f[üu]rs zuschauen)?[.!]?$|danke(?: f[üu]rs zuschauen)?[.!]?$|abonniert/,
+  /legendas? (?:pela comunidade|por)|obrigad[oa](?: por assistir)?[.!]?$|inscreva-se/,
+].map(r => r.source).join('|') + ')', 'i');
 
 function ascoltaWhisper({ parziale, fine, errore, auto = true }) {
   const stato = { fermo: false, annullato: false };
@@ -216,7 +228,7 @@ export function erroreMicrofono(e) {
 function ascoltaBrowser({ parziale, fine, errore }) {
   if (!SR) { errore?.(t('voce.browser-senza-voce')); return null; }
   let finale = '';
-  const r = new SR(); r.lang = 'it-IT'; r.interimResults = true; r.continuous = true; r.maxAlternatives = 1;
+  const r = new SR(); r.lang = PAESE_VOCE[lingua]; r.interimResults = true; r.continuous = true; r.maxAlternatives = 1;
   r.onresult = e => {
     let prov = '';
     for (let i = e.resultIndex; i < e.results.length; i++) { const x = e.results[i]; if (x.isFinal) finale += x[0].transcript; else prov += x[0].transcript; }
@@ -240,11 +252,16 @@ export function livelloVoce() { if (!DESKTOP) livello *= .92; return livello; }
 
 /* ---------- lettura ad alta voce ---------- */
 let voce = null;
-function scegli() { const v = speechSynthesis.getVoices().filter(x => x.lang?.startsWith('it')); voce = v.find(x => /premium|enhanced|natural|neural/i.test(x.name)) || v.find(x => /alice|federica|elsa|isabella/i.test(x.name)) || v[0] || null; }
+// la voce del sistema nella lingua della barra: prima quelle buone (premium, naturali), in italiano le voci di sempre,
+// poi quella del paese giusto (pt-BR prima di pt-PT), poi una qualsiasi della lingua
+function scegli() {
+  const v = speechSynthesis.getVoices().filter(x => x.lang?.toLowerCase().startsWith(lingua)), paese = PAESE_VOCE[lingua].toLowerCase();
+  voce = v.find(x => /premium|enhanced|natural|neural/i.test(x.name)) || (lingua === 'it' && v.find(x => /alice|federica|elsa|isabella/i.test(x.name))) || v.find(x => x.lang?.toLowerCase().replace('_', '-') === paese) || v[0] || null;
+}
 if ('speechSynthesis' in window) { scegli(); speechSynthesis.onvoiceschanged = scegli; }
 export function leggi(testo) {
   if (!('speechSynthesis' in window) || !testo) return;
-  const u = new SpeechSynthesisUtterance(String(testo).replace(/\*\*/g, '')); u.lang = 'it-IT'; if (voce) u.voice = voce; u.rate = 1.04;
+  const u = new SpeechSynthesisUtterance(String(testo).replace(/\*\*/g, '')); u.lang = PAESE_VOCE[lingua]; if (voce) u.voice = voce; u.rate = 1.04;
   speechSynthesis.speak(u);
 }
 export function zitto() { if ('speechSynthesis' in window) speechSynthesis.cancel(); }
