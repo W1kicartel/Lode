@@ -41,8 +41,14 @@ export function backupValido(d) {
   const cartaOk = c => ogg(c) && ID.test(c.id) && (!c.esameId || ID.test(c.esameId)) && testo(c.fronte) && testo(c.retro);
   const orarioOk = o => ogg(o) && (o.id == null || ID.test(o.id)) && testo(o.corso) && testo(o.inizio) && testo(o.fine) && testo(o.aula) && Array.isArray(o.giorni) && o.giorni.every(g => Number.isInteger(g) && g >= 0 && g <= 6);
   const sessioneOk = s => ogg(s) && (s.id == null || ID.test(s.id)) && (!s.esameId || ID.test(s.esameId)) && numero(s.min);
+  // il lavoro (js/ore.js): turni coi giorni dell'orario e ore «HH:MM», eccezioni con la data; i backup vecchi non ce l'hanno
+  const ora = x => typeof x === 'string' && /^(?:(?:[01]\d|2[0-3]):[0-5]\d|24:00)$/.test(x), giorni = x => Array.isArray(x) && x.every(g => Number.isInteger(g) && g >= 0 && g <= 6);
+  const turnoOk = t => ogg(t) && giorni(t.giorni) && ora(t.inizio) && ora(t.fine);
+  const eccezioneOk = x => ogg(x) && DATA.test(x.data) && (x.no === true || (ora(x.inizio) && ora(x.fine)));
+  const lavoroOk = l => l == null || (ogg(l) && lista(l.turni, turnoOk) && lista(l.eccezioni, eccezioneOk) && numero(l.tetto));
+  const impOk = i => ogg(i) && lavoroOk(i.lavoro) && (i.studio == null || (ogg(i.studio) && ora(i.studio.da) && ora(i.studio.a))) && lista(i.oreScelte, x => typeof x === 'string');
   return ogg(d) && d.v === 1 && Array.isArray(d.esami) && d.esami.every(esameOk) && lista(d.carte, cartaOk) && lista(d.orario, orarioOk) && lista(d.sessioni, sessioneOk)
-    && (d.profilo == null || (ogg(d.profilo) && testo(d.profilo.nome) && testo(d.profilo.corso) && numero(d.profilo.cfuTotali) && numero(d.profilo.lode))) && (d.imp == null || ogg(d.imp));
+    && (d.profilo == null || (ogg(d.profilo) && testo(d.profilo.nome) && testo(d.profilo.corso) && numero(d.profilo.cfuTotali) && numero(d.profilo.lode))) && (d.imp == null || impOk(d.imp));
 }
 // i dati non si sono potuti leggere (non «non ci sono»: OneDrive offline, file bloccato): Lode lo dice e non li sovrascrive
 export let datiIllegibili = null;
