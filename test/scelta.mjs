@@ -137,14 +137,14 @@ const iUsa2 = es.indexOf('await usa(cod)'), iConf = es.indexOf("t('impostazioni.
 prova('cambiaLingua: prima la conferma nella lingua nuova, poi si salva e si ricarica (nel browser; nell\'app il main)', iUsa2 > 0 && iUsa2 < iConf && iConf < iImp && iImp < iRic, es);
 const bv = leggi('js/benvenuto.js');
 prova('cambiaLingua: il nome della lingua dal suo catalogo', es.includes("t('impostazioni.lingua-nome')") && !es.includes("{ nome: LINGUE[cod].nome }) })"));
-prova('benvenuto: il passo della lingua non scrive i dati (vault non ancora scelto)', /P\('lingua'\)\.salva = \(\) => \{[^}]*predefinito\(linguaOra\);\s*\};/.test(bv) && !/P\('lingua'\)\.salva = \(\) => \{[^}]*salva\(\)/.test(bv));
+prova('benvenuto: il passo della lingua non scrive i dati (vault non ancora scelto)', /P\('lingua'\)\.salva = \(\) => \{[^}]*predefinito\(linguaOra\)\)?;\s*\};/.test(bv) && !/P\('lingua'\)\.salva = \(\) => \{[^}]*salva\(\)/.test(bv));
 prova('benvenuto: la lingua è il primo passo, obbligatorio', /export const PASSI = \[\s*\{ k: 'lingua', obbl: true \}, \{ k: 'ciao', obbl: true \}/.test(bv));
 prova('benvenuto: le sei lingue, ognuna nella sua lingua, quella di adesso già scelta', bv.includes('Object.entries(LINGUE).map(([c, l]) =>') && bv.includes('lang="${c}"') && bv.includes("${c === linguaOra ? ' on' : ''}"));
 prova('benvenuto: un clic cambia subito la lingua (salva e ricarica)', bv.includes("if (imposta(b.dataset.v) && !L) location.reload();"));
-prova('benvenuto: il sistema dei voti accanto al corso, predefinito dalla lingua, salvato nel profilo', bv.includes('id="bv-sistema"') && bv.includes('predefinito(linguaOra)') && /sistema: CODICI\.includes\(v\('bv-sistema'\)\)/.test(bv));
+prova('benvenuto: il sistema dei voti accanto al corso, predefinito dalla lingua, salvato nel profilo', bv.includes('id="bv-sistema"') && bv.includes('predefinito(linguaOra)') && /sistema(?::| =) CODICI\.includes\(v\('bv-sistema'\)\)/.test(bv));
 prova('benvenuto: i passi obbligatori contati dal primo facoltativo (non più 3)', bv.includes("const VELOCE = PASSI.findIndex(p => p.k === 'veloce');") && !/i < 3 \?|k === 3 \?|i >= 3 &&/.test(bv));
 const pg = leggi('js/pagina.js');
-prova('Impostazioni: la lingua e il sistema dei voti', pg.includes('<select name="lingua">') && pg.includes('<select name="sistema">') && pg.includes("sistema: CODICI.includes(f.get('sistema'))") && pg.includes('imposta(nuova); if (!DESKTOP) location.reload();'));
+prova('Impostazioni: la lingua e il sistema dei voti', pg.includes('<select name="lingua">') && pg.includes('<select name="sistema">') && /sistema(?::| =) CODICI\.includes\(f\.get\('sistema'\)\)/.test(pg) && pg.includes('imposta(nuova); if (!DESKTOP) location.reload();'));
 const sw = leggi('sw.js'), ind = leggi('js/lingue/indice.js');
 prova('sw.js e indice.js: l\'area impostazioni e tutti i riconoscitori', ind.includes("'impostazioni'") && Object.keys(L.LINGUE).every(c => sw.includes(`'js/lingue/${c}/impostazioni.js'`) && sw.includes(`'js/comandi/${c}.js'`)));
 

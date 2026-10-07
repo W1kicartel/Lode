@@ -186,7 +186,7 @@ function bloccoTrascrizione() {
 function disegnaHome() {
   const r = righeOggi(), lo = lezioneOra(), st = strumenti();
   home._righe = r;
-  home.innerHTML = `${lo ? bloccoAula(lo) : V.attivo && O.attivo() && !TR.stato() ? `<section class="ld-aula">${bloccoRipeti()}</section>` : ''}${lo && !r.length ? '' : `<section class="ld-oggi"><div class="capo"><span class="ld-lbl">${t('barra1.oggi')}</span><span>${D.esami.length ? (LB.italiano() ? t('barra1.cfu-di', { fatti: esc(cfuFatti()), tot: esc(D.profilo.cfuTotali) }) : t('libretto.crediti-di', { fatti: esc(num(cfuFatti(), 0)), tot: esc(num(D.profilo.cfuTotali, 0)), crediti: esc(LB.crediti()) })) : ''}</span></div>
+  home.innerHTML = `${lo ? bloccoAula(lo) : V.attivo && O.attivo() && !TR.stato() ? `<section class="ld-aula">${bloccoRipeti()}</section>` : ''}${lo && !r.length ? '' : `<section class="ld-oggi"><div class="capo"><span class="ld-lbl">${t('barra1.oggi')}</span><span>${D.esami.length ? (LB.italiano() ? t('barra1.cfu-di', { fatti: esc(cfuFatti()), tot: esc(D.profilo.cfuTotali) }) : t('libretto.crediti-di', { fatti: esc(LB.numCrediti(cfuFatti())), tot: esc(LB.numCrediti(D.profilo.cfuTotali)), crediti: esc(LB.crediti()) })) : ''}</span></div>
     ${r.map((x, i) => `<div class="ld-riga ${x.cls}"><i class="ld-seg"></i><div class="t"><b>${esc(x.t)}</b><span>${esc(x.d)}</span></div><span class="n">${esc(x.n)}</span><button type="button" class="btn small${i === 0 && x.cls === 'urg' ? ' primary' : ''}" data-ld-riga="${i}">${x.b}</button></div>`).join('') ||
     `<div class="ld-riga info vuota"><i class="ld-seg"></i><div class="t"><b>${t('barra1.inizia-da-qui')}</b><span>${t('barra1.inizia-da-qui-dett')}</span></div><span class="n"></span><button type="button" class="btn small primary" data-ld-esempio>${t('barra1.esempio')}</button></div>`}</section>`}
     <div class="ld-strumenti${st.length === 9 ? ' nove' : ''}">${st.map(([k, nome]) => `<button type="button" class="btn" data-ld-strumento="${k}">${ico(k)}<span>${nome}</span></button>`).join('')}</div>`;
@@ -574,7 +574,7 @@ function schedaLibrettoSistema({ base } = {}) {
   const iniz = Math.round((sc.length - 1) * .75);
   const s = scheda('ld-libretto', `<div class="ld-kpi">
       <div><span class="ld-lbl">${t('sistemi.ponderata')}</span><b class="v" data-v="m">${esc(q.media)}</b><span class="d">${m.n ? t('barra1.aritmetica-esami', { media: esc(q.aritmetica), n: esc(m.n) }) : t('barra1.nessun-voto')}</span></div>
-      <div><span class="ld-lbl">${esc(q.nomeFinale)}</span><b class="v" data-v="b">${esc(q.breve.v)}${q.breve.dett ? `<small>${esc(q.breve.dett)}</small>` : ''}</b><span class="d">${t('libretto.crediti-di', { fatti: esc(num(q.cfu, 0)), tot: esc(num(q.tot, 0)), crediti: esc(q.crediti) })}</span></div>
+      <div><span class="ld-lbl">${esc(q.nomeFinale)}</span><b class="v" data-v="b">${esc(q.breve.v)}${q.breve.dett ? `<small>${esc(q.breve.dett)}</small>` : ''}</b><span class="d">${t('libretto.crediti-di', { fatti: esc(LB.numCrediti(q.cfu)), tot: esc(LB.numCrediti(q.tot)), crediti: esc(q.crediti) })}</span></div>
     </div>
     <div class="ld-cfu" aria-hidden="true"><i style="transform:scaleX(0)"></i></div>
     ${testoServe ? `<p class="ld-serve">${testoServe}</p>` : ''}
@@ -981,6 +981,14 @@ async function esportaAnki(corsoDetto) {
 }
 
 /* ---------- i file lasciati sulla pillola ---------- */
+// il nome del file dice cos'è (programma, compiti d'esame, domande uscite), nelle sei lingue: le parole italiane per prime,
+// con le regex di sempre, poi le altre («Lehrplan», «exam 2023», «preguntas de examen», «questões»). L'ordine: programma,
+// compiti (parole italiane), domande, compiti (altre lingue): «preguntas de examen», «exam questions» sono domande, e un
+// nome con sole parole italiane va dove andava prima
+const PROGRAMMA_FILE = /programm|syllabus|scheda.?(?:del.?)?corso|temario|plan.?de.?estudios|gu[ií]a.?docente|lehrplan|modulbeschreibung|(?:^|[^a-z])ementa|plano.?de.?ensino|plan.?de.?cours|course.?outline/i;
+const TEMI_FILE = /compit|(?:^|[^a-z])temi(?:[^a-z]|$)|prova.?scritt|esercitaz/i;
+const TEMI_ALTRE = /(?:^|[^a-z])(?:exam|exams|examen|ex[aá]menes|examens|klausur|klausuren|provas|prova.?(?:de|final|anterior)\w*|past.?papers?|exercises?|ejercicios|exercices|[uü]bungsbl[aä]tter|aufgaben|exerc[ií]cios|lista.?de.?exerc)(?:[^a-z]|$)/i;
+const DOMANDE_FILE = /domande|appell|(?:^|[^a-z])(?:questions|preguntas|[a-zäöü]*fragen|quest[oõ]es|perguntas)(?:[^a-z]|$)/i;
 const ICONA_FILE = { pdf: 'doc', slide: 'doc', word: 'doc', testo: 'doc', sbobina: 'appunti', carte: 'ripasso', foto: 'foto', audio: 'audio', altro: 'doc' };
 const NOME_TIPO = { pdf: t('barra1.tipo-pdf'), slide: t('barra1.tipo-slide'), word: t('barra1.tipo-word'), testo: t('barra1.tipo-testo'), sbobina: t('barra1.tipo-sbobina'), carte: t('barra1.tipo-carte'), foto: t('barra1.tipo-foto'), audio: t('barra1.tipo-audio'), altro: t('barra1.tipo-altro') };
 function corsiPossibili() {
@@ -1016,7 +1024,7 @@ function opzioniPer(x) {
     { k: 'temi', t: t('barra1.op-temi'), d: t('barra1.op-temi-d'), corso: true },
     { k: 'programma', t: t('barra1.op-programma'), d: t('barra1.op-programma-d'), corso: true },
     { k: 'domande', t: t('barra1.op-domande'), d: t('barra1.op-domande-d'), corso: true },
-  ].map(o => /programm|syllabus|scheda.?(?:del.?)?corso/i.test(x.nome) ? { ...o, primo: o.k === 'programma' } : /compit|(?:^|[^a-z])temi(?:[^a-z]|$)|prova.?scritt|esercitaz/i.test(x.nome) ? { ...o, primo: o.k === 'temi' } : /domande|appell/i.test(x.nome) ? { ...o, primo: o.k === 'domande' } : o);
+  ].map(o => PROGRAMMA_FILE.test(x.nome) ? { ...o, primo: o.k === 'programma' } : TEMI_FILE.test(x.nome) ? { ...o, primo: o.k === 'temi' } : DOMANDE_FILE.test(x.nome) ? { ...o, primo: o.k === 'domande' } : TEMI_ALTRE.test(x.nome) ? { ...o, primo: o.k === 'temi' } : o);
   return [];
 }
 function schedaFile(x, { corso: suggerito } = {}) {
@@ -1619,7 +1627,7 @@ async function votoSistema(c) {
   registraVoto(e.id, c.tipo === 'idoneita' ? { idoneita: true } : { voto: c.voto, lode: c.lode });
   const dopo = media(), d = prima.ponderata != null && dopo.ponderata != null ? dopo.ponderata - prima.ponderata : null;
   const v = c.tipo === 'idoneita' ? t('barra2.idoneita') : LB.votoEsame(e);
-  await mostraFatto({ testo: c.tipo === 'idoneita' ? t('barra2.idoneita-registrata', { nome: e.nome }) : t('barra2.voto-in', { voto: v, nome: e.nome }), nota: nuovo ? t('libretto.nuovo-esame', { n: e.cfu, crediti: LB.crediti() }) : (d != null ? t('barra2.media-diff', { media: LB.formatoMedia(dopo.ponderata), segno: d >= 0 ? '+' : '−', diff: LB.formatoMedia(Math.abs(d)) }) : ''), annulla: ann, sintesi: t('barra2.sintesi-voto', { nome: e.nome, voto: v }) });
+  await mostraFatto({ testo: c.tipo === 'idoneita' ? t('barra2.idoneita-registrata', { nome: e.nome }) : t('barra2.voto-in', { voto: v, nome: e.nome }), nota: nuovo ? t('libretto.nuovo-esame', { n: e.cfu, crediti: LB.crediti() }) : (d != null ? t('barra2.media-diff', { media: LB.formatoMedia(dopo.ponderata), segno: LB.segno(d), diff: LB.formatoMedia(Math.abs(d)) }) : ''), annulla: ann, sintesi: t('barra2.sintesi-voto', { nome: e.nome, voto: v }) });
   segnala('fatto'); aggiornaTutto();
   if (c.tipo === 'voto' && LB.ottimo(c.voto)) rispostaFissa(t('barra2.bel-colpo'));
   return schedaLibretto();
@@ -1883,6 +1891,12 @@ async function eseguiStrumento(nome, x) {
   if (nome === 'registra_voto') {
     if (!LB.italiano() && !LB.valido(x.voto)) return { errore: 'voto fuori dal sistema dei voti scelto' };
     const e = trovaEsame(x.esame);
+    // fuori dall'Italia: il voto come si scrive nel sistema («8,5», «A−», «10 MH»), i crediti di un esame tipico del sistema
+    if (!LB.italiano()) {
+      const v = LB.formato(x.voto, { lode: x.lode }), cr = LB.sis().esame;
+      const card = schedaConferma({ titolo: t('barra2.registrare-voto', { voto: v }), righe: [[t('barra2.esame'), e?.nome || t('libretto.esame-nuovo-crediti', { nome: x.esame, n: cr, crediti: LB.crediti() })], [t('barra2.voto'), v]] });
+      return attendiDecisione(card, async () => { const ee = e || aggiungiEsame({ nome: x.esame, cfu: cr }); registraVoto(ee.id, { voto: x.voto, lode: x.lode }); aggiornaTutto(); await mostraFatto({ testo: t('barra2.voto-registrato'), nota: t('barra2.media', { media: LB.formatoMedia(media().ponderata) }) }, card); return { esito: 'registrato', media: media().ponderata }; });
+    }
     const card = schedaConferma({ titolo: x.lode && x.voto === 30 ? t('barra2.registrare-voto-lode', { voto: x.voto }) : t('barra2.registrare-voto', { voto: x.voto }), righe: [[t('barra2.esame'), e?.nome || t('barra2.esame-nuovo-6-cfu', { nome: x.esame })], [t('barra2.voto'), x.lode && x.voto === 30 ? t('barra2.voto-e-lode', { voto: x.voto }) : `${x.voto}`]] });
     return attendiDecisione(card, async () => { const ee = e || aggiungiEsame({ nome: x.esame, cfu: 6 }); registraVoto(ee.id, { voto: x.voto, lode: x.lode }); aggiornaTutto(); await mostraFatto({ testo: t('barra2.voto-registrato'), nota: t('barra2.media', { media: num(media().ponderata, 2) }) }, card); return { esito: 'registrato', media: media().ponderata }; });
   }

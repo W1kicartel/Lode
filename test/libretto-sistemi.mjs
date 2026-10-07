@@ -298,5 +298,58 @@ for (const lin of ['it', 'en', 'es', 'fr', 'de', 'pt']) {
 }
 await L.usa('it');
 
+/* ---------- 4. cambio di sistema, lode detta, crediti del sistema, segno in Germania, l'AI ---------- */
+{
+  await C.carica('it');
+  Dm.sostituisci({ ...Dm.VUOTO(), esami: [E('Analisi 1', 9, 28), E('Fisica', 6, null, false, false), E('Chimica', 6, null, false, false)] });
+  const an = () => D().esami.find(e => e.nome === 'Analisi 1'), fi = () => D().esami.find(e => e.nome === 'Fisica');
+  prova('Italia → Spagna: il sistema cambia', Dm.cambiaSistema('es') === true && Dm.sistemaVoti() === 'es' && D().profilo.cfuTotali === 240 && D().profilo.totaliScelti === true);
+  prova('Italia → Spagna: il 28 resta com\'era, col suo sistema', an().voto === 28 && an().sistema === 'it' && Dm.altroSistema(an()));
+  prova('Spagna: il 28 italiano non conta nella media, i crediti sì', Dm.media().n === 0 && Dm.cfuFatti() === 9, JSON.stringify(Dm.media()));
+  uguale('Spagna: il 28 si mostra nel suo sistema', LB.votoEsame(an()), L.t('libretto.voto-altro-sistema', { voto: '28', sistema: S.nomeSistema('it') }));
+  Dm.registraVoto(fi().id, { voto: 8.5 });
+  prova('Spagna: 8,5 registrato e senza sistema accanto', fi().voto === 8.5 && !('sistema' in fi()) && Dm.media().n === 1);
+  prova('Spagna → Italia: torna il 28, l\'8,5 resta com\'era', Dm.cambiaSistema('it') && !('sistema' in an()) && fi().sistema === 'es' && fi().voto === 8.5 && D().profilo.cfuTotali === 180);
+  Dm.sostituisci(JSON.parse(JSON.stringify(D())));   // riletto dal disco
+  prova('Italia: l\'8,5 della Spagna non diventa null rileggendo i dati', fi().voto === 8.5 && fi().sistema === 'es');
+  prova('Italia: conta solo il 28', Dm.media().n === 1 && Dm.media().ponderata === 28);
+  prova('Italia → Spagna: l\'8,5 conta di nuovo', Dm.cambiaSistema('es') && !('sistema' in fi()) && an().sistema === 'it' && Dm.media().ponderata === 8.5);
+  prova('stesso sistema: niente cambia', Dm.cambiaSistema('es') === false);
+  // la lode detta in un sistema che ce l'ha (la Matrícula de Honor in Spagna)
+  for (const f of ['ho preso 10 e lode in chimica', 'ho preso 10 con lode in chimica', 'I got 10 with honours in chemistry', 'I got 10 cum laude in chemistry'])
+    prova(`Spagna: «${f}» è un 10 con la lode`, cmd(f)?.voto === 10 && cmd(f)?.lode === true, JSON.stringify(cmd(f)));
+  prova('Spagna: «ho preso 9 e lode» non ha la lode', cmd('ho preso 9 e lode in chimica')?.lode === false);
+  Dm.cambiaSistema('fr');
+  prova('Francia: «20 e lode» non ha la lode (il sistema non ce l\'ha)', cmd('ho preso 20 e lode in chimica')?.lode === false);
+  // i crediti di una laurea la prima volta fuori dall'Italia
+  prova('profilo: Regno Unito con i 180 di partenza → 360', Dm.profiloInForma({ sistema: 'uk', cfuTotali: 180 }).cfuTotali === 360);
+  prova('profilo: crediti già scelti restano', Dm.profiloInForma({ sistema: 'uk', cfuTotali: 180, totaliScelti: true }).cfuTotali === 180);
+  prova('profilo: in Italia niente di nuovo', !('totaliScelti' in Dm.profiloInForma({ sistema: 'it', cfuTotali: 180 })));
+  uguale('opzioni dei crediti: Italia come sempre', S.opzioniTotali('it', 180), [180, 120, 300, 360]);
+  prova('opzioni dei crediti: Spagna, Stati Uniti', S.opzioniTotali('es', 240)[0] === 240 && S.opzioniTotali('us', 120)[0] === 120);
+  // Germania: peggiora = freccia giù, senza «+»
+  Dm.cambiaSistema('de');
+  prova('Germania: il segno del cambio', LB.segno(0.3) === '↓' && LB.segno(-0.3) === '↑');
+  Dm.cambiaSistema('es');
+  prova('Spagna: il segno del cambio', LB.segno(0.3) === '+' && LB.segno(-0.3) === '−');
+  prova('crediti con i decimali', LB.numCrediti(7.5) === L.numero(7.5, 1) && LB.numCrediti(6) === '6');
+  // l'AI: i dati dello studente nel sistema scelto, il prompt senza «italiano»
+  const AI = await import('../js/ai.js');
+  const ctx = AI.contesto();
+  prova('AI: i dati dello studente con la scala e i crediti del sistema', ctx.includes('Sistema dei voti: Spagna') && ctx.includes('Crediti (ECTS)') && !ctx.includes('CFU:') && !ctx.includes('base di laurea'), ctx);
+  prova('AI: il 28 italiano nei dati dello studente non conta', ctx.includes('nel sistema Italia, non conta qui'));
+  prova('AI: niente «studente universitario italiano» con il sistema spagnolo', !AI.sistemaDiBase().includes('universitario italiano') && AI.sistemaDiBase().includes('Spagna') && AI.sistemaLocale().includes('«chiudi lezione»'));
+  Dm.sostituisci({ ...Dm.VUOTO(), esami: [E('Ottica', 7.5, 8)], profilo: { ...Dm.VUOTO().profilo, sistema: 'es' } });
+  prova('AI: crediti con i decimali nei dati dello studente', AI.contesto().includes('Ottica (7,5 ECTS,'), AI.contesto());
+  // «quanto mi serve»: i crediti di un esame superato con un altro sistema sono già presi (come cfuFatti), il voto non conta
+  Dm.sostituisci({ ...Dm.VUOTO(), esami: [E('Analisi 1', 12, 28), E('Fisica', 6, null, false, false)] });
+  Dm.cambiaSistema('de');
+  prova('Germania: «quanto mi serve» conta i crediti del 28 italiano', Dm.serve(2.0)?.cfu === D().profilo.cfuTotali - 12 - S.sistema('de').provaFinale && Dm.media().n === 0, JSON.stringify(Dm.serve(2.0)));
+  Dm.registraVoto(D().esami.find(e => e.nome === 'Fisica').id, { voto: 1.7 });
+  Dm.cambiaSistema('it');
+  prova('Italia: «quanto mi serve» conta i crediti dell\'1,7 tedesco, la media solo il 28', Dm.serve(100)?.cfu === 180 - 18 - 6 && Dm.media().ponderata === 28, JSON.stringify(Dm.serve(100)));
+  prova('AI: in italiano con il sistema italiano il prompt di sempre', AI.sistemaDiBase().includes('di uno studente universitario italiano.\nParli italiano, dai del tu'));
+}
+
 console.log(`libretto-sistemi: ${ok} prove passate, ${ko} fallite`);
 process.exit(ko ? 1 : 0);

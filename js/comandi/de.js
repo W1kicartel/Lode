@@ -10,7 +10,7 @@
 // I numeri a parole («achtundzwanzig») diventano cifre solo dentro i comandi: non c'è un export «numeri», così le formule
 // dettate in tedesco restano come sono (docs/LINGUE.md, «La voce e le formule»).
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta } from './comune.js';
 
 // le espressioni si scrivono con le dieresi; chi scrive di fretta le salta o le scioglie: «ü» vale anche «ue» e «u», «ß»
 // anche «ss». \b diventa un confine di parola che conosce le lettere tedesche (quello di JavaScript taglia «über» prima
@@ -170,7 +170,9 @@ export function interpreta(frase) {
   let m;
 
   // la lingua della barra: «Sprache Englisch», «auf Deutsch umstellen», «stell die Sprache auf Spanisch», «Sprache: français»
-  if ((m = t.match(r`^(?:(?:stell|stelle|schalt|schalte|wechsel|wechsle|änder|ändere)(?: die)?(?: app)?(?: sprache)? (?:auf|zu|nach|in)|sprache(?: wechseln| ändern| umstellen)?:?(?: auf| zu| in)?|(?:sprich|rede|antworte|schreib)(?: mit mir)? (?:auf|in)|auf|in|ich will (?:lode |die app |es )?(?:auf|in)) (\S+?)(?: (?:um|umstellen|stellen|ändern|wechseln))?$|^(\S+) als sprache$`)) && linguaDetta(m[1] || m[2], LINGUE_DE)) return { tipo: 'lingua', codice: linguaDetta(m[1] || m[2], LINGUE_DE) };
+  if ((m = t.match(r`^(?:(?:stell|stelle|schalt|schalte|wechsel|wechsle|änder|ändere)(?: die)?(?: app)?(?: sprache)? (?:auf|zu|nach|in)|sprache(?: wechseln| ändern| umstellen)?:?(?: auf| zu| in)?|(?:sprich|rede|antworte|schreib)(?: mit mir)? (?:auf|in)|auf|in|ich will (?:lode |die app |es )?(?:auf|in)) (\S+?)(?: (?:um|umstellen|stellen|ändern|wechseln))?$|^(\S+) als sprache$`)) && (linguaDetta(m[1] || m[2], LINGUE_DE) || linguaIgnota(m[1] || m[2]))) return { tipo: 'lingua', codice: linguaDetta(m[1] || m[2], LINGUE_DE) };
+  // una lingua che Lode non parla («lingua giapponese», «language japanese»…): codice null, la barra dice quali conosce
+  if (linguaIgnotaDetta(grezzo)) return { tipo: 'lingua', codice: null };
   if (r`^(?:hilfe|hilf mir|\?|was kannst du(?: alles)?|was kann ich (?:sagen|schreiben|fragen|eingeben)|befehle|kommandos|welche befehle gibt es)$`.test(t)) return { tipo: 'aiuto' };
   if (r`^(?:stopp?|beenden|beende|aufhören|hör auf|schluss|genug|abbrechen|abbruch|ende)(?: (?:den |die |das |mit dem |mit der )?(?:fokus|timer|pomodoro|session|lernsession))?$|^(?:den |die |das )?(?:fokus|timer|pomodoro|session|lernsession) (?:beenden|stoppen|abbrechen|aus)$`.test(t)) return { tipo: 'ferma' };
   if (r`^(?:pause|pausieren|pausier|pausiere|(?:den )?timer (?:pausieren|anhalten)|pausier den timer|halt den timer an|warte|warte kurz|moment|kurz warten|(?:ich )?mach(?:e)? (?:eine |ne |kurz )?pause)$`.test(t)) return { tipo: 'sospendi' };

@@ -6,7 +6,7 @@
 // riconoscitore della lingua scelta non capisce. Se la frase non è un comando ritorna null e (se c'è la chiave) ci pensa l'AI.
 // I voti restano quelli detti (28, 30 cum laude): come leggerli lo decide il sistema dei voti (js/sistemi.js), non qui.
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, hh, linguaDetta } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, hh, linguaDetta, linguaIgnota, linguaIgnotaDetta } from './comune.js';
 
 const GIORNI = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const MESI = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
@@ -120,7 +120,9 @@ export function interpreta(frase) {
   let m;
 
   // la lingua della barra: «language italian», «switch to German», «change language to Spanish», «language: español»
-  if ((m = t.match(/^(?:(?:change|switch|set)(?: the)?(?: app)?(?: language)?(?: to| into)?|language:?(?: to)?|(?:speak|talk|answer|reply) in|use|i want (?:lode |the app |it )?in|in) (\S+)$/)) && linguaDetta(m[1], LINGUE_EN)) return { tipo: 'lingua', codice: linguaDetta(m[1], LINGUE_EN) };
+  if ((m = t.match(/^(?:(?:change|switch|set)(?: the)?(?: app)?(?: language)?(?: to| into)?|language:?(?: to)?|(?:speak|talk|answer|reply) in|use|i want (?:lode |the app |it )?in|in) (\S+)$/)) && (linguaDetta(m[1], LINGUE_EN) || linguaIgnota(m[1]))) return { tipo: 'lingua', codice: linguaDetta(m[1], LINGUE_EN) };
+  // una lingua che Lode non parla («lingua giapponese», «language japanese»…): codice null, la barra dice quali conosce
+  if (linguaIgnotaDetta(grezzo)) return { tipo: 'lingua', codice: null };
   if (/^(help|help me|\?|what can you do|what can i (?:say|type|ask)|commands)$/.test(t)) return { tipo: 'aiuto' };
   if (/^(stop|end|finish|quit|enough|cancel)(?: (?:the |my )?(?:focus|timer|pomodoro|session|break))?$/.test(t)) return { tipo: 'ferma' };
   if (/^(pause|pause (?:the )?timer|hold on)$/.test(t)) return { tipo: 'sospendi' };

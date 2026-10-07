@@ -3,7 +3,10 @@
 // Claude (con gli strumenti: propone carte, esami, voti), oppure un servizio in formato OpenAI (ChatGPT, Gemini, Mistral,
 // Groq, OpenRouter, DeepSeek). La chiave resta su questo computer, mai nel vault. Lode non vede né incassa niente.
 // Non scrive mai da sola: ogni modifica ai dati arriva come proposta con «Conferma / Annulla».
-import { D, cfuFatti, dataLunga, fatti, media, num, oggi, prossimi, daRipassare, lezioni, lezioneOra } from './dati.js';
+import { D, cfuFatti, dataLunga, fatti, media, num, oggi, prossimi, daRipassare, lezioni, lezioneOra, sistemaVoti, votoFinale } from './dati.js';
+import * as S from './sistemi.js';
+import { ESEMPI, PAROLE } from './comandi.js';
+import { ESEMPI as ESEMPI_IT } from './comandi/it.js';
 import { FORNITORI } from './fornitori.js';
 import { t, lingua } from './lingua.js';
 import { NOME_INGLESE } from './parole.js';
@@ -98,11 +101,12 @@ async function flussoMessaggio(corpo, { suTesto, segnale } = {}) {
 
 export function contesto() {
   const m = media(), p = prossimi();
+  if (sistemaVoti() !== 'it') return contestoSistema(m, p);
   const righe = [
     `Oggi è ${dataLunga(oggi())} (${oggi()}).`,
     D.profilo.nome ? `Lo studente si chiama ${D.profilo.nome}${D.profilo.corso ? ` e studia ${D.profilo.corso}` : ''}.` : '',
     `CFU: ${cfuFatti()} su ${D.profilo.cfuTotali}. Media ponderata: ${m.ponderata ? num(m.ponderata, 2) : 'nessun voto'}${m.base ? `, base di laurea ${num(m.base, 1)}/110` : ''}. La lode vale ${D.profilo.lode}.`,
-    `Esami sostenuti: ${fatti().map(e => `${e.nome} (${e.cfu} CFU, ${e.idoneita ? 'idoneità' : e.voto + (e.lode ? ' e lode' : '')})`).join('; ') || 'nessuno'}.`,
+    `Esami sostenuti: ${fatti().map(e => `${e.nome} (${e.cfu} CFU, ${e.idoneita ? 'idoneità' : altroSistema(e) ? votoAltroSistema(e) : e.voto + (e.lode ? ' e lode' : '')})`).join('; ') || 'nessuno'}.`,
     `Prossimi appelli: ${p.map(e => `${e.nome} (${e.cfu} CFU) il ${e.data}`).join('; ') || 'nessuno segnato'}.`,
     `Esami ancora da dare senza data: ${D.esami.filter(e => !e.fatto && !e.data).map(e => e.nome).join('; ') || 'nessuno'}.`,
     `Carte del ripasso: ${D.carte.length}, da ripassare oggi ${daRipassare().length}.`,
@@ -112,7 +116,47 @@ export function contesto() {
   return righe.filter(Boolean).join('\n');
 }
 
-const SISTEMA = `Sei Lode, l'assistente di studio che vive in una piccola barra in cima allo schermo di uno studente universitario italiano.
+// un voto scritto con un altro sistema dei voti (prima di cambiarlo, js/dati.js cambiaSistema): resta com'era e non conta
+const altroSistema = e => !!e.sistema && e.voto != null && !e.idoneita && e.sistema !== sistemaVoti();
+const votoAltroSistema = e => `${S.formato(e.voto, e.sistema, { lode: e.lode })} nel sistema ${PAESE[S.sistema(e.sistema).cod]}, non conta qui`;
+// il paese del sistema dei voti, per i prompt (che restano in italiano: la lingua della risposta la dà inLingua())
+const PAESE = { it: 'Italia', es: 'Spagna', fr: 'Francia', de: 'Germania', pt: 'Portogallo', br: 'Brasile', uk: 'Regno Unito', us: 'Stati Uniti' };
+// la scala del sistema in parole, per i prompt e per le descrizioni degli strumenti: «da 0 a 10 (un decimale), sufficienza 5»
+function scala(s = S.sistema(sistemaVoti())) {
+  if (s.cod === 'us') return 'lettere da A a F, salvate come punti GPA (A 4.0, A− 3.7, B+ 3.3, B 3.0, B− 2.7, C+ 2.3, C 2.0, C− 1.7, D+ 1.3, D 1.0, D− 0.7, F 0); la F conta nella media';
+  if (s.cod === 'de') return 'da 1,0 (il migliore) a 5,0: 1,0 1,3 1,7 2,0 2,3 2,7 3,0 3,3 3,7 4,0 superano, 5,0 non supera; più basso è meglio';
+  if (s.cod === 'uk') return 'percentuale da 0 a 100, sufficienza 40; classi: 70 First, 60 2:1, 50 2:2, 40 Third';
+  const dec = s.passo < 1 ? ` (fino a ${s.decimali} decimali)` : '';
+  return `da ${s.min} a ${s.max}${dec}, sufficienza ${s.sufficienza}${s.cod === 'es' ? '; la Matrícula de Honor è un 10 con lode' : ''}`;
+}
+// i dati dello studente fuori dal sistema italiano: crediti, media e voto finale con le etichette e la scala del sistema
+function contestoSistema(m, p) {
+  const s = S.sistema(sistemaVoti()), cr = S.nomeCrediti(s), f = votoFinale(m);
+  const nc = x => num(Number(x) || 0, Number(x) % 1 ? 1 : 0);   // i crediti con un decimale se ce l'hanno (7,5 ECTS)
+  const voto = e => e.idoneita ? 'idoneità (superato senza voto)' : altroSistema(e) ? votoAltroSistema(e) : S.formato(e.voto, s, { lode: e.lode });
+  const righe = [
+    `Oggi è ${dataLunga(oggi())} (${oggi()}).`,
+    D.profilo.nome ? `Lo studente si chiama ${D.profilo.nome}${D.profilo.corso ? ` e studia ${D.profilo.corso}` : ''}.` : '',
+    `Sistema dei voti: ${PAESE[s.cod]}, ${scala(s)}.`,
+    `Crediti (${cr}): ${nc(cfuFatti())} su ${D.profilo.cfuTotali}. Media ponderata: ${m.ponderata != null ? num(m.ponderata, 2) : 'nessun voto'}${f ? `, ${S.etichettaFinale(s)} ${S.formatoFinale(f, s)}` : ''}.`,
+    `Esami sostenuti: ${fatti().map(e => `${e.nome} (${nc(e.cfu)} ${cr}, ${voto(e)})`).join('; ') || 'nessuno'}.`,
+    `Prossimi appelli: ${p.map(e => `${e.nome} (${nc(e.cfu)} ${cr}) il ${e.data}`).join('; ') || 'nessuno segnato'}.`,
+    `Esami ancora da dare senza data: ${D.esami.filter(e => !e.fatto && !e.data).map(e => e.nome).join('; ') || 'nessuno'}.`,
+    `Carte del ripasso: ${D.carte.length}, da ripassare oggi ${daRipassare().length}.`,
+    `Orario: ${D.orario.map(o => `${o.corso} (${o.giorni.join(',')} ${o.inizio}-${o.fine})`).join('; ') || 'non impostato'}.${lezioneOra() ? ` Adesso è a lezione di ${lezioneOra().corso}.` : ''}`,
+    ...lezioni().slice(0, 3).map(l => `Lezione di ${l.corso} del ${l.data}: ★ da esame: ${(l.stelle || []).join(' | ') || '—'}. Definizioni: ${(l.definizioni || []).map(d => d.t + ' = ' + d.d).join(' | ') || '—'}.${l.appunti ? ` Appunti: ${l.appunti.slice(0, 1500)}` : ''}`),
+  ];
+  return righe.filter(Boolean).join('\n');
+}
+// in italiano con il sistema italiano: lo studente universitario italiano di sempre. Altrimenti uno studente universitario,
+// con il paese del suo sistema dei voti; nelle altre lingue «parli la lingua dello studente» (la riga di inLingua() dice quale)
+const italiano = () => lingua === 'it' && sistemaVoti() === 'it';
+const chi = () => italiano() ? 'uno studente universitario italiano' : `uno studente universitario (sistema dei voti: ${PAESE[sistemaVoti()]})`;
+const parla = () => lingua === 'it' ? 'Parli italiano' : 'Parli la lingua dello studente';
+// un comando della barra citato nei prompt, nella lingua scelta: l'esempio allo stesso posto di quello italiano
+const comando = it => { const i = ESEMPI_IT.findIndex(x => x[0] === it); return (lingua !== 'it' && ESEMPI?.[i]?.[0]) || it; };
+export const sistemaDiBase = () => italiano() ? SISTEMA_IT : SISTEMA_IT.replace('di uno studente universitario italiano.', `di ${chi()}.`).replace('Parli italiano,', `${parla()},`);
+const SISTEMA_IT = `Sei Lode, l'assistente di studio che vive in una piccola barra in cima allo schermo di uno studente universitario italiano.
 Parli italiano, dai del tu, sei caldo ma asciutto: niente entusiasmi finti, niente emoji.
 Le risposte compaiono in un pannello stretto: di solito 1-3 frasi. Quando spieghi un argomento sii un tutor eccellente: intuizione prima, poi la definizione precisa, poi un esempio piccolo; al massimo 150 parole se non ti chiedono di più.
 Formattazione: solo **grassetto** e a capo; per gli elenchi usa righe che iniziano con «– ». Formule in testo semplice leggibile (x², ∫, ∂, →), mai LaTeX.
@@ -135,10 +179,31 @@ const STRUMENTI = [
   { name: 'mostra', description: 'Mostra una scheda di Lode nel pannello: libretto (media, base di laurea), esami (prossimi appelli e ore da fare), ripasso (carte di oggi).',
     input_schema: { type: 'object', additionalProperties: false, required: ['scheda'], properties: { scheda: { type: 'string', enum: ['libretto', 'esami', 'ripasso'] }, esame: { type: 'string' } } } },
 ].map(s => ({ ...s, eager_input_streaming: true }));
+// gli strumenti nel sistema dei voti scelto: in Italia quelli di sempre; altrove il voto si scrive come nel sistema
+// («8,5», «16/20», «2,3», «A-», «65») e lo legge leggiVoto() di js/sistemi.js, i crediti possono avere i decimali
+function strumentiDelSistema() {
+  const s = S.sistema(sistemaVoti());
+  if (s.cod === 'it') return STRUMENTI;
+  const cr = S.nomeCrediti(s);
+  return STRUMENTI.map(x => {
+    if (x.name === 'registra_voto') return { ...x, description: `Propone di registrare il voto di un esame superato, nel sistema dei voti dello studente (${PAESE[s.cod]}: ${scala(s)}).${s.lode ? ' lode true solo con la Matrícula de Honor (10).' : ''}`,
+      input_schema: { type: 'object', additionalProperties: false, required: ['esame', 'voto'], properties: { esame: { type: 'string' }, voto: { type: 'string', description: `Il voto come si scrive nel sistema, per esempio «${S.formato({ es: 8.5, fr: 14, de: 1.7, pt: 16, br: 8.5, uk: 68, us: 3.7 }[s.cod], s)}».` }, ...(s.lode ? { lode: { type: 'boolean' } } : {}) } } };
+    if (x.name === 'aggiungi_esame') return { ...x, input_schema: { ...x.input_schema, properties: { ...x.input_schema.properties, cfu: { type: 'number', minimum: 0.5, maximum: 60, description: `Crediti (${cr})` } } } };
+    if (x.name === 'mostra') return { ...x, description: `Mostra una scheda di Lode nel pannello: libretto (media, ${S.etichettaFinale(s)}), esami (prossimi appelli e ore da fare), ripasso (carte di oggi).` };
+    return x;
+  });
+}
+// il voto dello strumento fuori dall'Italia: il testo («8,5», «A-», «10 MH») diventa il numero del sistema (A− → 3.7)
+function inSistema(nome, x) {
+  if (nome !== 'registra_voto' || !x || sistemaVoti() === 'it') return x;
+  const r = S.leggiVoto(String(x.voto ?? ''), sistemaVoti());
+  return r && !r.idoneita ? { ...x, voto: r.voto, lode: !!(r.lode || x.lode) && S.sistema(sistemaVoti()).lode && r.voto === S.sistema(sistemaVoti()).max } : { ...x, voto: null };
+}
 
 // controllo minimo degli input (con lo streaming dei parametri il modello può consegnarli incompleti)
 function valido(nome, x) {
   if (!x || typeof x !== 'object') return false;
+  if (nome === 'registra_voto' && sistemaVoti() !== 'it') return typeof x.esame === 'string' && S.valido(x.voto, sistemaVoti());
   if (nome === 'crea_carte') return Array.isArray(x.carte) && x.carte.length > 0 && x.carte.every(c => typeof c?.fronte === 'string' && typeof c?.retro === 'string' && c.fronte.trim() && c.retro.trim());
   if (nome === 'aggiungi_esame') return typeof x.nome === 'string' && !!x.nome.trim();
   if (nome === 'registra_voto') return typeof x.esame === 'string' && Number.isInteger(x.voto) && x.voto >= 18 && x.voto <= 30;
@@ -147,20 +212,21 @@ function valido(nome, x) {
 }
 
 // un giro di conversazione con strumenti: testo in streaming, strumenti eseguiti da chi chiama (con le sue conferme)
-export async function conversa({ storia, sistema = SISTEMA, strumenti = true, suTesto, esegui, segnale }) {
+export async function conversa({ storia, sistema = sistemaDiBase(), strumenti = true, suTesto, esegui, segnale }) {
   for (let giro = 0; giro < 6; giro++) {
     const parametri = {
       model: MODELLO, max_tokens: 32000, system: sistema + '\n\nDati dello studente adesso:\n' + contesto() + inLingua(),
       messages: storia, output_config: { effort: 'low' },
       betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default',
     };
-    if (strumenti) parametri.tools = STRUMENTI;
+    if (strumenti) parametri.tools = strumentiDelSistema();
     const msg = await flussoMessaggio(parametri, { suTesto, segnale });
     storia.push({ role: 'assistant', content: msg.content });
     if (msg.stop_reason === 'refusal') { suTesto?.('\n\n' + t('ai.rifiuto')); return storia; }
     if (msg.stop_reason !== 'tool_use') return storia;
     const risultati = [];
-    for (const b of msg.content.filter(b => b.type === 'tool_use')) {
+    for (const b0 of msg.content.filter(b => b.type === 'tool_use')) {
+      const b = { ...b0, input: inSistema(b0.name, b0.input) };
       if (!valido(b.name, b.input)) { risultati.push({ type: 'tool_result', tool_use_id: b.id, is_error: true, content: 'Parametri incompleti o non validi: riprova con tutti i campi richiesti.' }); continue; }
       let r; try { r = await esegui(b.name, b.input); } catch (e) { r = { errore: e.message }; }
       risultati.push({ type: 'tool_result', tool_use_id: b.id, content: JSON.stringify(r ?? { ok: true }), ...(r?.errore ? { is_error: true } : {}) });
@@ -171,11 +237,11 @@ export async function conversa({ storia, sistema = SISTEMA, strumenti = true, su
 }
 
 // l'interrogazione: un professore d'orale, una domanda alla volta, poi un voto onesto
-export const SISTEMA_ORALE = nome => `Sei un docente universitario italiano che fa l'esame orale di «${nome}». Lo studente si sta esercitando con Lode.
+export const SISTEMA_ORALE = nome => `Sei un docente universitario${italiano() ? ' italiano' : ''} che fa l'esame orale di «${nome}». Lo studente si sta esercitando con Lode.
 Regole: una domanda alla volta, come all'orale vero, partendo da una domanda di apertura ampia («mi parli di…») e poi approfondendo su ciò che lo studente dice.
 Dopo ogni risposta: una riga di valutazione franca (cosa era giusto, cosa mancava o era impreciso, in una frase), poi la domanda successiva.
 Breve: massimo 70 parole per turno. Solo **grassetto** come formattazione, niente LaTeX.
-Se ti dà materiale (carte o appunti), basa le domande su quello. Dopo 5 domande, o se lo studente dice «basta» o «voto», chiudi con: **Voto: NN/30** e due righe su cosa ripassare prima dell'appello. Sii realistico, non generoso.`;
+Se ti dà materiale (carte o appunti), basa le domande su quello. Dopo 5 domande, o se lo studente dice ${lingua === 'it' ? '«basta» o «voto»' : `«${PAROLE.voto[0]}» o «${PAROLE.voto[1]}»`}, chiudi con: **Voto: NN/30** e due righe su cosa ripassare prima dell'appello. Sii realistico, non generoso.`;
 
 // i file trascinati diventano blocchi per Claude: PDF e immagini così come sono, il testo come testo
 export async function bloccoFile(file) {
@@ -211,12 +277,12 @@ function perOllama(storia) {
     return { role: m.role, content: testi.join('\n\n'), ...(foto.length ? { images: foto } : {}) };
   });
 }
-const SISTEMA_LOCALE = SISTEMA.split('\nStrumenti:')[0] + `
-Non puoi modificare i dati di Lode: se lo studente vuole salvare carte o definizioni, digli di usare «chiudi lezione» o i comandi della barra.
+export const sistemaLocale = () => sistemaDiBase().split('\nStrumenti:')[0] + `
+Non puoi modificare i dati di Lode: se lo studente vuole salvare carte o definizioni, digli di usare «${comando('chiudi lezione')}» o i comandi della barra.
 Non inventare: se non sei sicuro di una definizione o di una formula, dillo.`;
 // conversazione senza strumenti: col modello locale o con un servizio in formato OpenAI
 export async function conversaLocale({ storia, sistema, suTesto, segnale }) {
-  const sis = (sistema || SISTEMA_LOCALE) + '\n\nDati dello studente adesso:\n' + contesto() + inLingua();
+  const sis = (sistema || sistemaLocale()) + '\n\nDati dello studente adesso:\n' + contesto() + inLingua();
   const testo = motore('chat') === 'cloud'
     ? await chatCloud([{ role: 'system', content: sis }, ...perOpenAI(storia)], { pezzo: suTesto, segnale })
     : await chatLocale([{ role: 'system', content: sis }, ...perOllama(storia)], { pezzo: suTesto, segnale });
@@ -341,7 +407,7 @@ async function strutturato(istruzioni, contenuto, schema, compito = 'testo') {
 }
 // «chiudi lezione»: dagli appunti grezzi alle definizioni e alle cose da esame, solo ciò che c'è davvero negli appunti
 export async function estraiLezione({ corso, appunti, gia = [] }) {
-  const r = await strutturato(`Sei l'assistente di uno studente universitario italiano. Qui sopra ci sono i suoi appunti della lezione di «${corso}».
+  const r = await strutturato(`Sei l'assistente di ${chi()}. Qui sopra ci sono i suoi appunti della lezione di «${corso}».
 Estrai:
 - definizioni: i concetti definiti o spiegati negli appunti, con una definizione corta (massimo 25 parole), fedele agli appunti, in italiano. Termini brevi. Niente concetti che negli appunti non ci sono.${gia.length ? ` Salta questi, li ha già: ${gia.join(', ')}.` : ''}
 - da_esame: SOLO le frasi in cui gli appunti dicono esplicitamente che il prof la chiederà all'esame o che è importante (parole come «esame», «importante», «ricordatevi», «attenzione»). Riformulate in breve. Se gli appunti non lo dicono, lista vuota.` + inLinguaJSON(), `Appunti di ${corso}:\n\n${appunti}`, SCHEMA_LEZIONE);
@@ -399,15 +465,30 @@ export async function riassumi({ corso, testo, nome, avanza }) {
 // setup veloce: il libretto incollato dal portale dell'ateneo e l'orario incollato dal sito
 const SCHEMA_LIBRETTO = { type: 'object', additionalProperties: false, required: ['esami'], properties: { esami: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['nome', 'cfu', 'voto', 'lode', 'idoneita', 'data'], properties: {
   nome: { type: 'string' }, cfu: { type: 'integer' }, voto: { type: ['integer', 'null'] }, lode: { type: 'boolean' }, idoneita: { type: 'boolean' }, data: { type: ['string', 'null'], description: 'YYYY-MM-DD' } } } } } };
-export async function leggiLibretto(testo) {
-  const r = await strutturato('Qui sopra c\'è il libretto universitario di uno studente italiano, copiato da un portale (Esse3 o simili), con tanto testo inutile. Estrai SOLO gli esami superati: nome dell\'insegnamento (senza codici), CFU, voto da 18 a 30 (lode true se «30 e lode» o «30L»), idoneita true se è un\'idoneità senza voto, data in formato YYYY-MM-DD. Ignora gli esami non ancora sostenuti o senza esito.' + comeScritti(), `Libretto:\n${String(testo).slice(0, 30000)}`, SCHEMA_LIBRETTO);
+// fuori dall'Italia: il voto come è scritto (testo), letto poi con leggiVoto() nel sistema scelto; crediti anche con i decimali
+const SCHEMA_LIBRETTO_SISTEMA = { type: 'object', additionalProperties: false, required: ['esami'], properties: { esami: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['nome', 'cfu', 'voto', 'idoneita', 'data'], properties: {
+  nome: { type: 'string' }, cfu: { type: ['number', 'null'] }, voto: { type: ['string', 'null'] }, idoneita: { type: 'boolean' }, data: { type: ['string', 'null'], description: 'YYYY-MM-DD' } } } } } };
+// il libretto letto dall'AI nel sistema dei voti scelto. Fuori dall'Italia il prompt dice la scala del sistema, il voto arriva
+// come è scritto e lo legge leggiVoto() (solo quelli superati: nel GPA anche la F, che conta)
+const PROMPT_LIBRETTO_SISTEMA = s => `Qui sopra c'è il libretto universitario (transcript) di uno studente, copiato da un portale, con tanto testo inutile. Il sistema dei voti è quello di ${PAESE[s.cod]}: ${scala(s)}. Estrai SOLO gli esami superati: nome dell'insegnamento (senza codici), crediti (${S.nomeCrediti(s)}, null se non ci sono), il voto copiato come è scritto (per esempio «8,5», «16/20», «2,3», «A-», «68», «Matrícula de Honor»), idoneita true se è superato senza voto, data in formato YYYY-MM-DD. Ignora gli esami non ancora sostenuti o senza esito.`;
+const esamiDelSistema = (r, s) => (r.esami || []).flatMap(e => {
+  if (typeof e.nome !== 'string' || !e.nome.trim()) return [];
+  const v = e.idoneita ? { voto: null, lode: false, idoneita: true } : S.leggiVoto(String(e.voto ?? ''), s);
+  if (!v || (!v.idoneita && !s.bocciatiInMedia && !S.superato(v.voto, s))) return [];
+  const cfu = Number(e.cfu);
+  return [{ nome: e.nome.trim(), cfu: Number.isFinite(cfu) && cfu > 0 ? cfu : s.esame, voto: v.idoneita ? null : v.voto, lode: !!v.lode, idoneita: !!v.idoneita, data: /^\d{4}-\d\d-\d\d$/.test(e.data || '') ? e.data : null }];
+});
+export async function leggiLibretto(testo, sistema = sistemaVoti()) {
+  const s = S.sistema(sistema), it = s.cod === 'it';
+  const r = await strutturato((it ? 'Qui sopra c\'è il libretto universitario di uno studente italiano, copiato da un portale (Esse3 o simili), con tanto testo inutile. Estrai SOLO gli esami superati: nome dell\'insegnamento (senza codici), CFU, voto da 18 a 30 (lode true se «30 e lode» o «30L»), idoneita true se è un\'idoneità senza voto, data in formato YYYY-MM-DD. Ignora gli esami non ancora sostenuti o senza esito.' : PROMPT_LIBRETTO_SISTEMA(s)) + comeScritti(), `Libretto:\n${String(testo).slice(0, 30000)}`, it ? SCHEMA_LIBRETTO : SCHEMA_LIBRETTO_SISTEMA);
+  if (!it) return esamiDelSistema(r, s);
   // cfu e voto diventano numeri: il modello può rispondere con una stringa, e i valori finiscono nelle pagine
   return (r.esami || []).filter(e => typeof e.nome === 'string' && e.nome.trim() && (e.idoneita || (+e.voto >= 18 && +e.voto <= 30))).map(e => ({ ...e, nome: e.nome.trim(), cfu: Number(e.cfu) || 6, voto: e.idoneita ? null : Math.round(+e.voto), lode: !!e.lode, idoneita: !!e.idoneita, data: /^\d{4}-\d\d-\d\d$/.test(e.data || '') ? e.data : null }));
 }
 const SCHEMA_ORARIO = { type: 'object', additionalProperties: false, required: ['lezioni'], properties: { lezioni: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['corso', 'giorni', 'inizio', 'fine', 'aula'], properties: {
   corso: { type: 'string' }, giorni: { type: 'array', items: { type: 'integer', minimum: 0, maximum: 6 }, description: '0 domenica, 1 lunedì … 6 sabato' }, inizio: { type: 'string', description: 'HH:MM' }, fine: { type: 'string', description: 'HH:MM' }, aula: { type: 'string' } } } } } };
 export async function leggiOrario(testo) {
-  const r = await strutturato('Qui sopra c\'è l\'orario settimanale delle lezioni di uno studente universitario italiano, copiato da un sito. Estrai ogni insegnamento con i giorni della settimana (0 domenica, 1 lunedì … 6 sabato), ora di inizio e fine in formato HH:MM e aula (stringa vuota se non c\'è). Un insegnamento che si ripete negli stessi orari in più giorni va in una sola voce con più giorni.' + comeScritti(), `Orario:\n${String(testo).slice(0, 20000)}`, SCHEMA_ORARIO);
+  const r = await strutturato(`Qui sopra c'è l'orario settimanale delle lezioni di ${chi()}, copiato da un sito. Estrai ogni insegnamento con i giorni della settimana (0 domenica, 1 lunedì … 6 sabato), ora di inizio e fine in formato HH:MM e aula (stringa vuota se non c'è). Un insegnamento che si ripete negli stessi orari in più giorni va in una sola voce con più giorni.` + comeScritti(), `Orario:\n${String(testo).slice(0, 20000)}`, SCHEMA_ORARIO);
   const ora = x => /^\d{1,2}[:.]\d\d$/.test(x || '') ? x.replace('.', ':').padStart(5, '0') : null;
   return (r.lezioni || []).map(l => ({ corso: l.corso?.trim(), giorni: [...new Set(l.giorni || [])].filter(g => g >= 0 && g <= 6), inizio: ora(l.inizio), fine: ora(l.fine), aula: (l.aula || '').trim() })).filter(l => l.corso && l.giorni.length && l.inizio && l.fine);
 }
@@ -453,12 +534,12 @@ Domande su punti diversi del materiale.${fatte.length ? ` Non ripetere queste, g
   return r.domande || [];
 }
 export async function domandaOrale({ nome, materiale, fatte = [], argomento = '' }) {
-  const r = await strutturato(`Sei un docente universitario italiano all'esame orale di «${nome}». Fai UNA sola domanda d'orale, come la farebbe un prof: chiara, su un concetto importante del materiale qui sopra, a cui si risponde a voce in 3-4 frasi.${argomento ? ` La domanda deve essere sull'argomento del programma «${argomento}». Se qui sopra ci sono domande uscite agli appelli, fanne una come quelle, con parole tue.` : ''}${fatte.length ? ` Non ripetere ${argomento ? 'domande già fatte' : 'questi argomenti, già chiesti'}: ${fatte.join('; ')}.` : argomento ? '' : ' È la prima domanda: un argomento centrale del corso.'}
+  const r = await strutturato(`Sei un docente universitario${italiano() ? ' italiano' : ''} all'esame orale di «${nome}». Fai UNA sola domanda d'orale, come la farebbe un prof: chiara, su un concetto importante del materiale qui sopra, a cui si risponde a voce in 3-4 frasi.${argomento ? ` La domanda deve essere sull'argomento del programma «${argomento}». Se qui sopra ci sono domande uscite agli appelli, fanne una come quelle, con parole tue.` : ''}${fatte.length ? ` Non ripetere ${argomento ? 'domande già fatte' : 'questi argomenti, già chiesti'}: ${fatte.join('; ')}.` : argomento ? '' : ' È la prima domanda: un argomento centrale del corso.'}
 Rispondi solo con la domanda (massimo 30 parole, dai del tu) e l'argomento in 2-4 parole. Niente saluti, niente giudizi.` + inLinguaJSON(), materialeOrale(materiale), SCHEMA_DOMANDA, 'chat');
   return { domanda: String(r.domanda || '').trim(), argomento: String(r.argomento || '').trim() };
 }
 export async function giudicaRisposta({ nome, domanda, argomento = '', risposta, materiale }) {
-  const r = await strutturato(`Sei un docente universitario italiano all'esame orale di «${nome}», severo ma giusto.
+  const r = await strutturato(`Sei un docente universitario${italiano() ? ' italiano' : ''} all'esame orale di «${nome}», severo ma giusto.
 Domanda che hai fatto: «${domanda}»
 Risposta dello studente: «${risposta}»
 Giudica SOLO questa risposta a QUESTA domanda:
@@ -496,10 +577,21 @@ Controlla solo questo: lo studente l'ha già detto, anche con parole diverse? Se
 // piene e TUTTE le parole che cambiano il senso (prime/seconde, numeri, sempre/mai/non, positiva/negativa, miste…), al loro posto.
 // Prima bastavano le parole sparse in tutto il materiale: «la condizione di continuità delle derivate seconde nell'intorno»
 // per Green (falso: bastano le derivate prime) passava con le parole della carta di Schwarz
-const GENERICHE = new Set('teorema teoremi definizione enunciato dimostrazione dimostrare proprieta formula formule concetto regola metodo criterio esempio'.split(' '));
-const NUMERI = /^(?:zero|due|tre|quattro|cinque|dieci|cento|\d+)$/;
-const DISTINTIVE = [/^prim[oaie]$/, /^second[oaie]$/, /^terz[oaie]$/, /^quart[oaie]$/, /^ogni$/, /^tutt[oaie]$/, /^nessun[oa]?$/, /^almeno$/,
-  /^esattamente$/, /^unic(?:[oa]|i|he)$/, /^sempre$/, /^mai$/, /^(?:solo|soltanto|unicamente|esclusivamente)$/, /^non$/, /^positiv/, /^negativ/, /^maggior[ei]$/, /^minor[ei]$/, /^mist[oaie]$/];
+// le parole delle sei lingue (senza accenti, come le dà piana()): prima le italiane di sempre, poi le altre, mai parole
+// italiane piene, così in italiano i controlli restano quelli di prima
+const GENERICHE = new Set(('teorema teoremi definizione enunciato dimostrazione dimostrare proprieta formula formule concetto regola metodo criterio esempio'
+  + ' theorem theorems definition definitions statement proof property properties concept rule method criterion example'
+  + ' teoremas definicion demostracion demostrar propiedad propiedades concepto regla ejemplo'
+  + ' theoreme theoremes enonce demonstration demontrer propriete proprietes regle methode exemple'
+  + ' satz satze definitionen aussage beweis beweisen eigenschaft eigenschaften begriff regel methode kriterium beispiel'
+  + ' definicao demonstracao demonstrar propriedade propriedades conceito regra exemplo').split(' '));
+const NUMERI = /^(?:zero|due|tre|quattro|cinque|dieci|cento|\d+|two|three|four|five|ten|hundred|dos|tres|cuatro|cinco|diez|cien|deux|trois|quatre|cinq|dix|zwei|drei|vier|funf|zehn|hundert|dois|duas|quatro|dez|cem)$/;
+const DISTINTIVE = [/^(?:prim[oaie]|first|primer[oa]?s?|premiere?s?|erste[nmrs]?|primeir[oa]s?)$/, /^(?:second[oaie]|seconds?|segund[oa]s?|secondes?|zweite[nmrs]?)$/,
+  /^(?:terz[oaie]|third|tercer[oa]?s?|troisiemes?|dritte[nmrs]?|terceir[oa]s?)$/, /^(?:quart[oaie]|fourth|cuart[oa]s?|quatriemes?|vierte[nmrs]?|quart[oa]s)$/,
+  /^(?:ogni|every|each|cada|chaque|jede[nmrs]?)$/, /^(?:tutt[oaie]|todos|todas|tous|toutes|allen|aller|alles)$/, /^(?:nessun[oa]?|none|ningun[oa]?|aucune?|keine[nmrs]?|nenhuma?)$/, /^(?:almeno|least|mindestens)$/,
+  /^(?:esattamente|exactly|exactamente|exactement|genau|exatamente)$/, /^(?:unic(?:[oa]|i|he)|unique|unicos?|unicas?|einzige[nmrs]?)$/, /^(?:sempre|always|siempre|toujours|immer)$/, /^(?:mai|never|nunca|jamais|niemals|nie)$/,
+  /^(?:solo|soltanto|unicamente|esclusivamente|only|seulement|uniquement|nur|apenas|somente)$/, /^(?:non|not|nicht|nao)$/, /^positi[vf]/, /^negati[vf]/,
+  /^(?:maggior[ei]|greater|larger|mayor(?:es)?|superieure?s?|grosser|maior(?:es)?)$/, /^(?:minor[ei]|smaller|lesser|menor(?:es)?|inferieure?s?|kleiner)$/, /^(?:mist[oaie]|mixed|mixt[oa]s?|mixtes?|gemischte?[nmrs]?)$/];
 // i numeri devono essere proprio quelli; le altre basta che siano della stessa famiglia (seconde ~ secondo, positiva ~ positivamente)
 const segno = w => NUMERI.test(w) ? w : DISTINTIVE.findIndex(r => r.test(w));
 const fila = s => parolePiane(s).filter(w => (w.length >= 4 && !VUOTE.has(w)) || segno(w) !== -1);
@@ -533,7 +625,12 @@ export function dalMateriale(cosa, materiale, tema = []) {
 // 1. una mancanza che lo studente ha detto davvero (le sue parole sono nella risposta) si toglie dal giudizio e dal «mancava»;
 //    se era l'unico motivo del «parziale», la risposta è giusta;
 // 2. l'esito non può contraddire il giudizio scritto: un errore non è «parziale», una mancanza vera non è «giusta».
-const VUOTE = new Set('della delle dello degli nella nelle nello negli sulla sulle sullo dalla dalle alla alle allo agli questo questa questi queste quello quella quelli anche come quando perche molto sempre tutto tutti tutte ogni caso casi cosa cose ruolo fatto modo parte solo loro sono essere dire detto nell dell sull dall quell niente nulla importante proprio bene specificare precisare menzionare citare indicare spiegare'.split(' '));
+const VUOTE = new Set(('della delle dello degli nella nelle nello negli sulla sulle sullo dalla dalle alla alle allo agli questo questa questi queste quello quella quelli anche come quando perche molto sempre tutto tutti tutte ogni caso casi cosa cose ruolo fatto modo parte solo loro sono essere dire detto nell dell sull dall quell niente nulla importante proprio bene specificare precisare menzionare citare indicare spiegare'
+  + ' that this these those with from have about also very into what when which their there they them been were will would should could must cases thing things role part only nothing important mention explain specify'
+  + ' esto esta estos estas ese esos esas aquel tambien muy cuando porque todo todos todas cada cosas papel hecho solo nada importante mencionar explicar especificar'
+  + ' cette ceux celles dans pour avec aussi tres quand parce tout tous toutes chaque chose choses role fait seul rien important mentionner expliquer preciser'
+  + ' diese dieser dieses diesen auch sehr wenn weil alle jede jeder fall falle sache rolle teil nicht nichts wichtig nennen erklaren angeben einer einem einen eine sind wird werden haben'
+  + ' isso isto esses essas aquele tambem muito porque cada coisa coisas papel feito nada importante mencionar explicar especificar pela pelos pelas').split(' '));
 const piana = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const radice = w => w.length <= 5 ? w : w.slice(0, Math.max(5, Math.ceil(w.length * .6)));
 // la cosa che «manca» è già nella risposta? (almeno 3 parole piene su 4 ci sono, con la radice: semidefiniti ~ semidefinita)

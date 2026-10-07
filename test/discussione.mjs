@@ -112,6 +112,15 @@ prova('punti: al massimo 5', M.punti(ti, C, 'c').length <= 5 && M.punti(null, C,
 /* ---------- (3) controlla ---------- */
 const cc = M.controlla(pi, 'Riceve la testa della lista e un valore; ritorna 1. Usa malloc e scorre la lista finché non arriva in fondo, e si richiama.');
 prova('controlla: sinonimi presi (riceve, ritorna, scorre, si richiama)', cc.saltati.length === 0 && cc.presi.length === 5, JSON.stringify(cc.saltati));
+// le spiegazioni nelle altre lingue: le stesse cose dette in inglese, spagnolo, francese, tedesco e portoghese
+for (const [lin, frase] of [['en', 'It takes the head of the list and a value; it returns 1. It uses malloc, loops over the list until the end, and calls itself.'],
+  ['es', 'Recibe la cabeza de la lista y un valor; devuelve 1. Usa malloc, recorre la lista con un bucle hasta el final y es recursiva.'],
+  ['fr', 'Elle reçoit la tête de la liste et une valeur ; elle renvoie 1. Elle utilise malloc, parcourt la liste avec une boucle et elle est récursive.'],
+  ['de', 'Sie bekommt den Kopf der Liste und einen Wert; sie liefert 1. Sie nutzt malloc, durchläuft die Liste in einer Schleife und ist rekursiv.'],
+  ['pt', 'Recebe a cabeça da lista e um valor; retorna 1. Usa malloc, percorre a lista num laço até o fim e é recursiva.']]) {
+  const x = M.controlla(pi, frase);
+  prova(`controlla (${lin}): la spiegazione prende tutti i punti`, x.saltati.length === 0, JSON.stringify(x.saltati.map(p => p.tipo)));
+}
 prova('controlla: una spiegazione vuota salta tutto', M.controlla(pi, '   ').presi.length === 0 && M.controlla(pi, '').saltati.length === pi.length);
 const c2 = M.controlla(pi, 'Prende testa, v. Dà 1 se va bene.');
 prova('controlla: «dà» conta, la ricorsione saltata', c2.presi.map(p => p.tipo).join() === 'parametri,restituisce' && c2.saltati.map(p => p.tipo).join() === 'chiama,ciclo,ricorsione', JSON.stringify(c2.presi.map(p => p.tipo)));

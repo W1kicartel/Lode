@@ -4,7 +4,8 @@
 // controlli italiani non cambiano di una virgola. Testi nel catalogo «libretto» (e «sistemi» per nomi, crediti e finale).
 import { t, numero } from './lingua.js';
 import * as S from './sistemi.js';
-import { D, sistemaVoti, media, serve, simula, cfuFatti, votoFinale } from './dati.js';
+import { D, sistemaVoti, media, serve, simula, cfuFatti, votoFinale, altroSistema } from './dati.js';
+export { altroSistema };
 
 export const italiano = () => sistemaVoti() === 'it';
 export const sis = () => S.sistema(sistemaVoti());
@@ -49,7 +50,17 @@ export const obiettivoValido = (v, s = sis()) => Number.isFinite(v) && (s.miglio
 // la frase come la capisce la barra, con il voto letto nel sistema scelto. interpreta: quello di js/comandi.js
 // Il comando del voto può avere fuoriScala: true (il voto detto non esiste nel sistema: lode.js lo dice); quello di
 // «quanto mi serve» ha base = l'obiettivo nella scala del voto finale, o fuoriScala: true
+// la lode detta in una delle sei lingue accanto al voto massimo, in un sistema che ce l'ha (la Matrícula de Honor in Spagna):
+// «10 e lode», «10 con lode», «10 with honours», «10 cum laude», «10 com louvor», «10 mit Auszeichnung»
+const LODE_DETTA = /\s*(?:\b(?:e|con|with|y|avec|mit|com)\s+(?:la\s+|les\s+)?(?:lode|matr[ií]cula(?:\s+de\s+honor)?|hono(?:u)?rs|louvor|auszeichnung|f[ée]licitations)(?![\p{L}])|\bcum\s+laude\b)/giu;
 export function interpretaVoti(testo, interpreta) {
+  if (!italiano() && sis().lode && new RegExp(LODE_DETTA.source, 'iu').test(testo)) {
+    const r = votiNelSistema(String(testo).replace(LODE_DETTA, ' ').replace(/\s+/g, ' ').trim(), interpreta);
+    if (r && (r.tipo === 'voto' || r.tipo === 'simula') && r.voto === sis().max) return { ...r, lode: true };
+  }
+  return votiNelSistema(testo, interpreta);
+}
+function votiNelSistema(testo, interpreta) {
   const c = interpreta(testo);
   if (italiano()) return c;
   const s = sis();
@@ -96,7 +107,7 @@ export function testoServe(ob = obiettivo()) {
   if (!sv) return '';
   const o = formatoNumero(ob, s);
   if (sv.gia) return t('libretto.serve-gia', { obiettivo: o });
-  if (sv.possibile) return t('libretto.serve-media', { obiettivo: o, voto: formatoNumero(sv.voto, s), cfu: numero(sv.cfu, 0), crediti: crediti() });
+  if (sv.possibile) return t('libretto.serve-media', { obiettivo: o, voto: formatoNumero(sv.voto, s), cfu: numCrediti(sv.cfu), crediti: crediti() });
   // non ci arrivi: dove arrivi prendendo il voto migliore in tutto quello che manca
   const meglio = s.migliore === 'basso' ? s.min : s.max, punta = (m.somma + meglio * sv.cfu) / (m.cfuVoto + sv.cfu);
   return t('libretto.serve-impossibile', { obiettivo: o, punta: formatoNumero(s.migliore === 'basso' ? Math.ceil(punta * 10 - 1e-9) / 10 : Math.floor(punta * 10 + 1e-9) / 10, s) });
@@ -109,7 +120,12 @@ export function scala(s = sis()) {
   for (let v = s.sufficienza; v <= s.max + 1e-9; v += p) out.push(Math.round(v * 100) / 100);
   return out;
 }
-const delta = d => `${d >= 0 ? '+' : '−'}${formatoMedia(Math.abs(d))}`;
+// il segno del cambio della media: «+» e «−» dove migliore = più alto; in Germania (migliore = più basso) una freccia che
+// dice da che parte va il voto, ↑ se migliora (la media scende) e ↓ se peggiora, senza un «+» che sembra un passo avanti
+export const segno = (d, s = sis()) => (s.migliore === 'basso' ? (d <= 0 ? '↑' : '↓') : d >= 0 ? '+' : '−');
+const delta = d => `${segno(d)}${formatoMedia(Math.abs(d))}`;
+// i crediti come numero: con un decimale se ce l'hanno (7,5 ECTS), senza se sono interi
+export const numCrediti = x => numero(Number(x) || 0, Number(x) % 1 ? 1 : 0);
 // l'esito della barra «e se…» (HTML)
 export function esitoSimula(esameId, voto) {
   const x = simula(esameId, voto, false); if (!x) return '';
@@ -129,8 +145,11 @@ export function quadro() {
   const m = media(), f = votoFinale(m);
   return { m, finale: f, media: formatoMedia(m.ponderata), aritmetica: formatoMedia(m.aritmetica), valore: formatoFinale(f), breve: finaleBreve(f), nomeFinale: nomeFinale(), crediti: crediti(), cfu: cfuFatti(), tot: D.profilo.cfuTotali || sis().totali };
 }
-// un voto registrato, come si mostra nel libretto: «8,5», «10 MH», «A−», «idoneo»
-export const votoEsame = e => (e.idoneita ? S.formato(null, sis(), { idoneita: true }) : formato(e.voto, { lode: e.lode }));
+// un voto registrato, come si mostra nel libretto: «8,5», «10 MH», «A−», «idoneo». Un voto scritto con un altro sistema
+// (prima di cambiarlo: js/dati.js, cambiaSistema) si mostra nel suo sistema, con accanto che qui non conta
+export const votoEsame = e => (e.idoneita ? S.formato(null, sis(), { idoneita: true }) : altroSistema(e) ? votoAltro(e) : formato(e.voto, { lode: e.lode }));
+export const votoScritto = e => S.formato(e.voto, e.sistema, { lode: e.lode });
+export const votoAltro = e => t('libretto.voto-altro-sistema', { voto: votoScritto(e), sistema: S.nomeSistema(e.sistema) });
 // un esempio di riga del libretto nel sistema, per i suggerimenti: «Analisi 1, 6 ECTS, 8,5»
 const ESEMPIO = { es: 8.5, fr: 14, de: 1.7, pt: 16, br: 8.5, uk: 68, us: 3.7, it: 28 };
 export const rigaEsempio = (s = sis()) => t('libretto.riga-esempio', { nome: t('libretto.esame-esempio'), n: s.esame, crediti: S.nomeCrediti(s), voto: S.formato(ESEMPIO[s.cod], s) });
@@ -156,7 +175,7 @@ export function testoObiettivoFuori(s = sis()) {
 }
 // i crediti di una laurea fra cui scegliere nelle impostazioni: quelli del sistema per primi (240 in Spagna e in Brasile,
 // 360 nel Regno Unito, 120 negli Stati Uniti), più quelli che hai già
-export const opzioniTotali = (s = sis()) => [...new Set([s.totali, 180, 240, 120, 300, 360, Number(D.profilo.cfuTotali) || s.totali])];
+export const opzioniTotali = (s = sis()) => S.opzioniTotali(s, D.profilo.cfuTotali);
 // il voto finale in due pezzi, per i riquadri grandi della scheda e della pagina: il numero e, accanto in piccolo, la
 // mention (Francia) o la classe (Regno Unito): { v: '13,45', dett: '/20 · Assez bien' }
 export function finaleBreve(f = votoFinale()) {

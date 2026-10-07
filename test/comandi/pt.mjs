@@ -61,6 +61,8 @@ export const CASI = [
   ['desliga a revisão de bolso', { tipo: 'tasca', sera: false }],
   ['cartões no telemóvel só quando eu pedir', { tipo: 'tasca', sera: false }],
   ['cartões no celular', { tipo: 'tasca' }],
+  ['revisão de bolso no celular', { tipo: 'tasca' }],
+  ['faz a revisão de bolso no telemóvel todas as noites', { tipo: 'tasca', sera: true }],
   // programma, spiego, domande uscite, temi, prova generale
   ['programa de cálculo 2', { tipo: 'programma', esame: E('Cálculo 2'), nomeDetto: 'cálculo 2', testo: '' }],
   ['programa', { tipo: 'programma', esame: null, nomeDetto: '', testo: '' }],
@@ -71,6 +73,7 @@ export const CASI = [
   ['perguntas de exame de cálculo 2: Teorema de Green?', { tipo: 'domande', esame: E('Cálculo 2'), nomeDetto: 'cálculo 2', testo: 'Teorema de Green?' }],
   ['perguntas que saíram em mecânica\nGreen?', { tipo: 'domande', esame: E('Mecânica'), nomeDetto: 'mecânica', testo: 'Green?' }],
   ['perguntas dos exames anteriores', { tipo: 'domande', esame: null, nomeDetto: '', testo: '' }],
+  ['perguntas de prova de cálculo 2: Teorema de Green?', { tipo: 'domande', esame: E('Cálculo 2'), nomeDetto: 'cálculo 2', testo: 'Teorema de Green?' }],
   ['exames antigos de cálculo 2: Exercício 1. Calcula o limite', { tipo: 'temi', esame: E('Cálculo 2'), nomeDetto: 'cálculo 2', testo: 'Exercício 1. Calcula o limite' }],
   ['provas antigas de mecânica', { tipo: 'temi', esame: E('Mecânica'), nomeDetto: 'mecânica', testo: '' }],
   ['dá-me um exercício', { tipo: 'temi', esame: null, nomeDetto: '', testo: '' }],
@@ -266,6 +269,14 @@ export const CASI = [
   ['cálculo 2', { tipo: 'apriEsame', esame: E('Cálculo 2') }],
   ['bases de dados', { tipo: 'apriEsame', esame: E('Bases de dados') }],
   ['mecanica', { tipo: 'apriEsame', esame: E('Mecânica') }],
+  // una lingua che Lode non parla, detta in una delle sei lingue: codice null (la barra dice quali conosce)
+  ['lingua giapponese', { tipo: 'lingua', codice: null }],
+  ['language japanese', { tipo: 'lingua', codice: null }],
+  ['idioma japonés', { tipo: 'lingua', codice: null }],
+  ['langue japonaise', { tipo: 'lingua', codice: null }],
+  ['Sprache Japanisch', { tipo: 'lingua', codice: null }],
+  ['idioma japonês', { tipo: 'lingua', codice: null }],
+  ['muda a língua para japonês', { tipo: 'lingua', codice: null }],
 ];
 
 // frasi che non sono comandi: restano all'AI

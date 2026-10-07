@@ -278,6 +278,14 @@ export const CASI = [
   ['focus 50 on Physik 2', { tipo: 'focus', min: 50, esame: E('Physik 2'), nomeDetto: 'physik 2' }],
   ['ich erklär dir jetzt Integrale', { tipo: 'spiego', q: 'integrale' }],
   ['Videovorlesung transkribieren', { tipo: 'trascrivi', sorgente: 'computer', corso: null }],
+  // una lingua che Lode non parla, detta in una delle sei lingue: codice null (la barra dice quali conosce)
+  ['lingua giapponese', { tipo: 'lingua', codice: null }],
+  ['language japanese', { tipo: 'lingua', codice: null }],
+  ['idioma japonés', { tipo: 'lingua', codice: null }],
+  ['langue japonaise', { tipo: 'lingua', codice: null }],
+  ['Sprache Japanisch', { tipo: 'lingua', codice: null }],
+  ['idioma japonês', { tipo: 'lingua', codice: null }],
+  ['stell die Sprache auf Japanisch', { tipo: 'lingua', codice: null }],
 ];
 
 // frasi che non sono comandi: restano all'AI

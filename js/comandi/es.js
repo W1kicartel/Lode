@@ -10,7 +10,7 @@
 // spagnola 0-10, con i decimali). Come leggerli lo decide il sistema dei voti (js/sistemi.js), non qui.
 // «Notas» in spagnolo sono i voti (il libretto), non gli appunti: gli appunti sono «apuntes».
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta } from './comune.js';
 
 const GIORNI = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
 const MESI = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -159,7 +159,9 @@ export function interpreta(frase) {
   let m;
 
   // la lingua della barra: «idioma inglés», «cambia el idioma a italiano», «pásate al alemán», «ponlo en francés»
-  if ((m = s.match(/^(?:(?:cambia|cambiar|pon|poner|configura)(?: el)? (?:idioma|lengua)(?: (?:a|al|en))?|(?:idioma|lengua):?(?: (?:a|al|en))?|(?:hablame|habla|respondeme|responde|contestame|escribeme) en|(?:pasa|pasate|pasalo|pasala|cambia|cambiar|cambialo|ponlo|ponla|ponme|pon la app|pon lode) (?:a|al|en)|(?:la )?app en|en) (\S+)$/)) && linguaDetta(m[1], LINGUE_ES)) return { tipo: 'lingua', codice: linguaDetta(m[1], LINGUE_ES) };
+  if ((m = s.match(/^(?:(?:cambia|cambiar|pon|poner|configura)(?: el)? (?:idioma|lengua)(?: (?:a|al|en))?|(?:idioma|lengua):?(?: (?:a|al|en))?|(?:hablame|habla|respondeme|responde|contestame|escribeme) en|(?:pasa|pasate|pasalo|pasala|cambia|cambiar|cambialo|ponlo|ponla|ponme|pon la app|pon lode) (?:a|al|en)|(?:la )?app en|en) (\S+)$/)) && (linguaDetta(m[1], LINGUE_ES) || linguaIgnota(m[1]))) return { tipo: 'lingua', codice: linguaDetta(m[1], LINGUE_ES) };
+  // una lingua che Lode non parla («lingua giapponese», «language japanese»…): codice null, la barra dice quali conosce
+  if (linguaIgnotaDetta(grezzo)) return { tipo: 'lingua', codice: null };
   if (/^(?:ayuda|ayudame|\?|que (?:puedes|sabes) hacer|que (?:puedo|se puede) (?:decir|escribir|pedir|hacer)|comandos|lista de comandos)$/.test(s)) return { tipo: 'aiuto' };
   if (/^(?:stop|para|parar|detente|basta|termina|terminar|fin|acaba|corta|cancela)(?: (?:el |la |mi )?(?:focus|timer|temporizador|cronometro|pomodoro|sesion|descanso|pausa))?$/.test(s)) return { tipo: 'ferma' };
   if (/^(?:pausa|pausar|pon(?:lo)? en pausa|pausa (?:el )?(?:timer|temporizador|cronometro)|espera|espera un momento)$/.test(s)) return { tipo: 'sospendi' };

@@ -7,7 +7,7 @@
 // barra è in un'altra lingua: le frasi italiane si capiscono sempre.
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
 import { interpreta as interpretaProgetto } from '../codice/progetto.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, linguaDetta } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, linguaDetta, linguaIgnota, linguaIgnotaDetta } from './comune.js';
 import COMUNE from '../lingue/it/comune.js';
 
 const GIORNI = COMUNE['comune.giorni'], MESI = COMUNE['comune.mesi'];
@@ -82,7 +82,9 @@ export function interpreta(frase) {
   let m;
 
   // la lingua della barra: «lingua inglese», «cambia lingua in spagnolo», «passa al tedesco», «lingua: español»
-  if ((m = t.match(/^(?:(?:cambia|imposta|metti|scegli)(?: la)? lingua(?: (?:in|a|con))?|lingua:?|(?:parla(?:mi)?|rispondi(?:mi)?) in|passa (?:all'|al |a )|(?:la )?barra in) ?(\S+)$/)) && linguaDetta(m[1], LINGUE_IT)) return { tipo: 'lingua', codice: linguaDetta(m[1], LINGUE_IT) };
+  if ((m = t.match(/^(?:(?:cambia|imposta|metti|scegli)(?: la)? lingua(?: (?:in|a|con))?|lingua:?|(?:parla(?:mi)?|rispondi(?:mi)?) in|passa (?:all'|al |a )|(?:la )?barra in) ?(\S+)$/)) && (linguaDetta(m[1], LINGUE_IT) || linguaIgnota(m[1]))) return { tipo: 'lingua', codice: linguaDetta(m[1], LINGUE_IT) };
+  // una lingua che Lode non parla («lingua giapponese», «language japanese»…): codice null, la barra dice quali conosce
+  if (linguaIgnotaDetta(grezzo)) return { tipo: 'lingua', codice: null };
   if (/^(aiuto|help|\?|cosa sai fare|che cosa sai fare|comandi)$/.test(t)) return { tipo: 'aiuto' };
   if (/^(stop|ferma|fermati|basta|interrompi|fine|termina)(?: (?:il |la )?(?:focus|timer|pomodoro|sessione|pausa))?$/.test(t)) return { tipo: 'ferma' };
   if (/^(sospendi|metti in pausa|pausa timer)$/.test(t)) return { tipo: 'sospendi' };
