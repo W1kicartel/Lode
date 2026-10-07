@@ -310,3 +310,6 @@ export const NON = [
   'media y varianza de la binomial',
   'la media de una normal',
 ];
+// gli esami spagnoli del libretto del banco, solo nel giro dello spagnolo (con «Inglés B2» nel libretto comune, «inglês» in
+// portoghese troverebbe l'esame spagnolo)
+export const ESAMI = [['Cálculo 1', 9, 27], ['Cálculo 2', 9], ['Bases de datos', 9], ['Derecho privado', 9], ['Inglés B2', 3, null, true]];
