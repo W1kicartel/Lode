@@ -87,7 +87,7 @@ export default {
   'desktop.sync-non-sposto-dati': 'Não consigo mover os dados do Lode para essa pasta. O vault de antes está intacto.',
   'desktop.sync-riprova-tra-poco': 'Agora não dá: tente de novo daqui a pouco.',
   'desktop.sync-password-corta': 'A senha precisa ter pelo menos 8 caracteres.',
-  'desktop.sync-diario-illeggibile-riprova': 'Não dá para ler o diário do Lode neste computador: antes, «Tentar de novo».',
+  'desktop.sync-diario-illeggibile-riprova': 'Não dá para ler o diário do Lode neste computador: primeiro clique em «Tentar de novo».',
   'desktop.sync-non-accesa': 'Neste computador a sincronização não está ligada.',
   'desktop.sync-vault-spostato-scegli': 'O vault não está mais onde o Lode procurava: se você moveu, use «Encontrar o vault» e escolha a pasta nova.',
   'desktop.sync-dove-fuori-cloud': 'Onde guardar o vault, fora da pasta da nuvem',

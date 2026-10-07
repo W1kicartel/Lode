@@ -56,8 +56,8 @@ export default {
   'benvenuto.scarico-cervello': 'o cérebro local',
   'benvenuto.scarico-voce': 'a voz',
   'benvenuto.scarico-pct': '{cosa} {p}%',
-  'benvenuto.scarico-continua-voce': 'Ainda estou baixando: {cosa}. Continua sozinho, mesmo com a janela fechada; a voz volta na barra assim que você abrir o Lode.',
-  'benvenuto.scarico-continua': 'Ainda estou baixando: {cosa}. Continua sozinho, mesmo com a janela fechada.',
+  'benvenuto.scarico-continua-voce': 'Ainda estou baixando: {cosa}. Eu continuo sozinho, mesmo com a janela fechada; a voz volta na barra assim que você abrir o Lode.',
+  'benvenuto.scarico-continua': 'Ainda estou baixando: {cosa}. Eu continuo sozinho, mesmo com a janela fechada.',
   'benvenuto.scarico-solo-voce': 'Ainda estou baixando: {cosa}. A voz volta na barra assim que você abrir o Lode.',
   // configuração rápida
   'benvenuto.veloce-titolo': '{nome}, quer a configuração rápida?',

@@ -44,7 +44,7 @@ export default {
   'vault.corsi-vuoto': 'Adicione o horário pela barra: «aula cálculo 2 segunda 9-11 sala 7».',
   'vault.titolo-ultime-lezioni': 'Últimas aulas',
   'vault.definizioni-n': '{n} definições',
-  'vault.titolo-carriera': 'Curso',
+  'vault.titolo-carriera': 'Vida acadêmica',
   'vault.carriera': 'Média **{media}** · base de formatura **{base}**/110 · {cfu} de {tot} créditos → {esami}',
   // Esami
   'vault.titolo-prossimi-appelli': 'Próximas provas',

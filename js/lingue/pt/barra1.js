@@ -32,7 +32,7 @@ export default {
   'barra1.lascia-file-cosa': 'PDF, slides, anotações, foto do quadro: o Lode transforma em cartões de revisão',
   'barra1.dopo': 'Depois',
   // «Hoje»: as linhas da home
-  'barra1.di-stamattina': 'de hoje de manhã',
+  'barra1.di-stamattina': 'desta manhã',
   'barra1.di-oggi': 'de hoje',
   'barra1.di-ieri': 'de ontem',
   'barra1.di-giorno': 'de {giorno}',
@@ -197,7 +197,7 @@ export default {
   'barra1.data-appello': 'Data da prova',
   'barra1.aggiungi': 'Adicionar',
   'barra1.programma-di': 'Ementa de {nome}',
-  'barra1.esame-aggiunto': '{nome} adicionada.',
+  'barra1.esame-aggiunto': 'Prova de {nome} adicionada.',
   'barra1.senza-data-nota': 'sem data',
   'barra1.sintesi-appello': '{nome} {quando}',
   'barra1.sintesi-nessun-appello': 'nenhuma prova',
