@@ -1,0 +1,20 @@
+// Textos del entrenador (español): las propuestas que la píldora hace en momentos al azar del día.
+export default {
+  'allenatore.titolo': '{esame} · {quando}',
+  'allenatore.ultima-lezione': '{corso} · última clase',
+  'allenatore.gioco': '¿2 minutos con {n} definiciones?',
+  'allenatore.gioca': 'Jugar',
+  'allenatore.ripasso': '{n} tarjetas para repasar, unos {min} minutos',
+  'allenatore.ripassa': 'Repasar',
+  'allenatore.stelle': 'Vuelve a leer las {n} cosas que el profe dijo que entran en el examen',
+  'allenatore.rileggi': 'Releer',
+  'allenatore.orale': '¿Tres preguntas rápidas, como en el oral?',
+  'allenatore.interrogami': 'Pregúntame',
+  'allenatore.programma-ai': 'Hoy toca «{argomento}»: ¿dos preguntas?',
+  'allenatore.programma': 'Hoy en el plan: «{argomento}»',
+  'allenatore.apri-piano': 'Abrir el plan',
+  'allenatore.focus-testo': 'Hoy te faltan {h} h para ir al día: ¿un focus de {min}?',
+  'allenatore.focus': 'Focus',
+  'allenatore.stampa': '{domanda} 1 minuto',
+  'allenatore.prova': 'Probar',
+};
