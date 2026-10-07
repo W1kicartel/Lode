@@ -1,0 +1,20 @@
+// Textes du coach (français) : les suggestions que fait la pastille à des moments au hasard de la journée.
+export default {
+  'allenatore.titolo': '{esame} · {quando}',
+  'allenatore.ultima-lezione': '{corso} · dernier cours',
+  'allenatore.gioco': '2 minutes sur {n} définitions ?',
+  'allenatore.gioca': 'Jouer',
+  'allenatore.ripasso': '{n} cartes à réviser, environ {min} minutes',
+  'allenatore.ripassa': 'Réviser',
+  'allenatore.stelle': "Relis les {n} choses que le prof a dites « pour l'exam »",
+  'allenatore.rileggi': 'Relire',
+  'allenatore.orale': "Trois questions éclair, comme à l'oral ?",
+  'allenatore.interrogami': 'Interroge-moi',
+  'allenatore.programma-ai': "Aujourd'hui, c'est « {argomento} » : deux questions ?",
+  'allenatore.programma': "Aujourd'hui dans le plan : « {argomento} »",
+  'allenatore.apri-piano': 'Ouvrir le plan',
+  'allenatore.focus-testo': "Il te manque {h} h aujourd'hui pour rester à jour : un focus de {min} ?",
+  'allenatore.focus': 'Focus',
+  'allenatore.stampa': '{domanda} 1 minute',
+  'allenatore.prova': 'Essayer',
+};
