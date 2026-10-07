@@ -2651,7 +2651,7 @@ function esitoSulProgramma(o, x) {
 /* ---------- inviare ---------- */
 export async function invia(testo) {
   testo = String(testo || '').trim();
-  if (!testo && A.allegati.length) testo = 'Crea le carte del ripasso da questo file.';
+  if (!testo && A.allegati.length) testo = t('barra3.crea-carte-da-file');
   if (!testo) return;
   Voce.zitto();
   const inp = campo.querySelector('input'); inp.value = '';
@@ -2663,16 +2663,16 @@ export async function invia(testo) {
   }
   if (A.attesa && !A.attesa.inCorso && !A.attesa.card.dataset.soloClic) { if (SI.test(testo)) return conferma(); if (NO.test(testo)) return annulla(); }
   if (A.spiega) {
-    const t = h('article', 'ld-turno'); filo.append(t); A.turno = t; detto(t, testo); requestAnimationFrame(() => { corpo.scrollTop = corpo.scrollHeight; });
-    if (/^(esci|annulla|basta|lascia stare)$/i.test(testo)) { A.spiega = null; return mostraFatto({ testo: 'Va bene, niente spiegazione.' }); }
+    const tu = h('article', 'ld-turno'); filo.append(tu); A.turno = tu; detto(tu, testo); requestAnimationFrame(() => { corpo.scrollTop = corpo.scrollHeight; });
+    if (/^(esci|annulla|basta|lascia stare)$/i.test(testo)) { A.spiega = null; return mostraFatto({ testo: t('barra3.niente-spiegazione') }); }
     return valutaSpiego(testo);
   }
   if (A.orale) {
     if (/^(esci|basta orale|chiudi( l'orale)?|fine orale)$/i.test(testo)) { nuovoTurno(); detto(A.turno, testo); return esciOrale(); }
-    const t = h('article', 'ld-turno'); filo.append(t); A.turno = t; detto(t, testo); requestAnimationFrame(() => { corpo.scrollTop = corpo.scrollHeight; });
+    const tu = h('article', 'ld-turno'); filo.append(tu); A.turno = tu; detto(tu, testo); requestAnimationFrame(() => { corpo.scrollTop = corpo.scrollHeight; });
     return rispostaOrale(testo);
   }
-  const t = nuovoTurno(); detto(t, testo);
+  const tu = nuovoTurno(); detto(tu, testo);
   if (A.allegati.length) {
     if (AI.attiva()) return chiediAI(testo);
     return importaSenzaAI();
@@ -2680,15 +2680,15 @@ export async function invia(testo) {
   const c = interpreta(testo);
   if (c) { await attendi(120); return esegui(c); }
   if (AI.attiva()) return chiediAI(testo);
-  rispostaFissa('Questo non lo so ancora fare senza AI. Ecco cosa capisco:');
+  rispostaFissa(t('barra3.non-so-senza-ai'));
   schedaAiuto();
 }
 
 /* ---------- file ---------- */
 function chipFile(file, togli = true) {
-  const tipo = /pdf$/i.test(file.name) ? 'PDF' : file.type.startsWith('image/') ? 'foto' : (file.name.split('.').pop() || 'file').toUpperCase();
+  const tipo = /pdf$/i.test(file.name) ? 'PDF' : file.type.startsWith('image/') ? t('barra3.foto') : (file.name.split('.').pop() || 'file').toUpperCase();
   const c = h('span', 'ld-file', `${ico('doc')}<span>${esc(file.name)}</span><small>${esc(tipo)}</small>`);
-  if (togli) { const b = h('button', '', IC.chiudi); b.type = 'button'; b.setAttribute('aria-label', 'Togli ' + file.name); b.addEventListener('click', () => { A.allegati = A.allegati.filter(x => x.file !== file); c.remove(); }); c.append(b); }
+  if (togli) { const b = h('button', '', IC.chiudi); b.type = 'button'; b.setAttribute('aria-label', t('barra3.togli-file', { nome: file.name })); b.addEventListener('click', () => { A.allegati = A.allegati.filter(x => x.file !== file); c.remove(); }); c.append(b); }
   return c;
 }
 function allega(files) {
@@ -2696,7 +2696,7 @@ function allega(files) {
   if (!ok.length) return;
   apri({ fisso: true });
   for (const f of ok) { A.allegati.push({ file: f }); const c = chipFile(f); allegatiBox.append(c); entra(c, { dy: 4, blur: 4, ms: 360 }); }
-  const inp = campo.querySelector('input'); inp.placeholder = AI.attiva() ? 'Invio: ne faccio carte. Oppure chiedi altro…' : 'Invio: importo le carte (CSV, TSV, testo)';
+  const inp = campo.querySelector('input'); inp.placeholder = AI.attiva() ? t('barra3.allegati-con-ai') : t('barra3.allegati-senza-ai');
   inp.focus();
 }
 function scegliFile() {
@@ -2713,11 +2713,11 @@ async function importaSenzaAI() {
       const p = riga.split(/\t| = | → |;(?=[^;]*$)/); if (p.length >= 2 && p[0].trim() && p[1].trim()) carte.push({ fronte: p[0].trim().replace(/^"|"$/g, ''), retro: p.slice(1).join(' ').trim().replace(/^"|"$/g, '') });
     }
   }
-  A.allegati = []; allegatiBox.innerHTML = ''; campo.querySelector('input').placeholder = 'Chiedi o scrivi un comando…';
-  if (!carte.length) return rispostaFissa('Senza AI leggo solo file di testo con una carta per riga (domanda, poi Tab o «;» o « = », poi risposta), come l\'export di Anki. Per PDF e foto serve il cervello locale o la tua AI (scrivi «AI»).');
+  A.allegati = []; allegatiBox.innerHTML = ''; campo.querySelector('input').placeholder = t('barra3.chiedi-o-scrivi');
+  if (!carte.length) return rispostaFissa(t('barra3.importa-solo-testo'));
   const e = prossimi()[0];
-  const card = schedaConferma({ titolo: `Importare ${carte.length} carte?`, extra: `<ol class="ld-proposte">${carte.slice(0, 8).map(c => `<li><b>${esc(c.fronte)}</b><span>${esc(c.retro)}</span></li>`).join('')}${carte.length > 8 ? `<li class="altre">e altre ${esc(carte.length - 8)}</li>` : ''}</ol>`, nota: e ? `Le metto in ${e.nome}: lo cambi dalla pagina.` : '' });
-  await attendiDecisione(card, async () => { carte.forEach(c => aggiungiCarta({ ...c, esameId: e?.id || null })); salva(); aggiornaTutto(); await mostraFatto({ testo: `${carte.length} carte importate.`, azione: ['Ripassa ora', () => { nuovoTurno(); schedaRipasso(e?.id); }] }, card); return {}; });
+  const card = schedaConferma({ titolo: t('barra3.importa-carte', { n: carte.length }), extra: `<ol class="ld-proposte">${carte.slice(0, 8).map(c => `<li><b>${esc(c.fronte)}</b><span>${esc(c.retro)}</span></li>`).join('')}${carte.length > 8 ? `<li class="altre">${t('barra3.e-altre', { n: esc(carte.length - 8) })}</li>` : ''}</ol>`, nota: e ? t('barra3.importa-in', { nome: e.nome }) : '' });
+  await attendiDecisione(card, async () => { carte.forEach(c => aggiungiCarta({ ...c, esameId: e?.id || null })); salva(); aggiornaTutto(); await mostraFatto({ testo: t('barra3.carte-importate', { n: carte.length }), azione: [t('barra3.ripassa-ora'), () => { nuovoTurno(); schedaRipasso(e?.id); }] }, card); return {}; });
 }
 
 /* ---------- voce ---------- */
@@ -2725,10 +2725,10 @@ let pttAttivo = false, testoVoce = '';
 function iniziaAscolto() {
   if (Voce.attivo()) return;
   apri({ fisso: true });
-  campo.querySelector('.stato.ascolto .lbl').textContent = DESKTOP && !Voce.pronta() ? 'Ti ascolto · preparo la voce…' : 'Ti ascolto';
+  campo.querySelector('.stato.ascolto .lbl').textContent = DESKTOP && !Voce.pronta() ? t('barra3.ti-ascolto-preparo') : t('barra3.ti-ascolto');
   Voce.zitto(); testoVoce = '';
-  const t = A.orale ? (() => { const x = h('article', 'ld-turno'); filo.append(x); A.turno = x; return x; })() : null;
-  let turno = t;
+  const tu = A.orale ? (() => { const x = h('article', 'ld-turno'); filo.append(x); A.turno = x; return x; })() : null;
+  let turno = tu;
   modo('ascolto'); segnala('ascolto', { ms: 99999 });
   Voce.ascolta({
     parziale: s => { testoVoce = s; if (!turno) { turno = nuovoTurno(); } detto(turno, s); },
@@ -2753,7 +2753,7 @@ function collega() {
   });
   testa.querySelector('.ld-indietro').addEventListener('click', () => indietro());
   shell.querySelector('.ld-proposta [data-p=si]').addEventListener('click', e => { e.stopPropagation(); accettaProposta(); });
-  shell.querySelector('.ld-proposta [data-p=dopo]').addEventListener('click', e => { e.stopPropagation(); nascondiProposta('rimandata'); mostraAvviso('Va bene, più tardi'); });
+  shell.querySelector('.ld-proposta [data-p=dopo]').addEventListener('click', e => { e.stopPropagation(); nascondiProposta('rimandata'); mostraAvviso(t('barra3.piu-tardi')); });
   // l'allenatore guarda ogni minuto (con un po' di caso dentro): niente proposte se la barra è aperta
   setTimeout(() => setInterval(() => { if (!A.aperto && !A.zona && !A.proposta) provaAllenatore().catch(() => { }); }, 60e3), Math.random() * 30e3);
   pill.addEventListener('click', () => { apri({ fisso: true }).then(() => campo.querySelector('input').focus({ preventScroll: true })); });
@@ -2783,9 +2783,9 @@ function collega() {
     if (e.target.closest('[data-ld-esempio]')) dispatchEvent(new CustomEvent('lode:esempio'));
     const c = e.target.closest('[data-ld-cattura]'); if (c) { premi(c); cattura(c.dataset.ldCattura); return; }
     if (e.target.closest('[data-ld-appunti]')) apriAppunti();
-    if (e.target.closest('[data-ld-trascrivi]')) { nuovoTurno(); detto(A.turno, 'Trascrivi la lezione'); avviaTrascrizione(); }
-    const rp = e.target.closest('[data-ld-ripeti]'); if (rp) { const k = rp.dataset.ldRipeti; nuovoTurno(); detto(A.turno, k === 'si' ? 'Ripeti' : k === 'spegni' ? 'Spegni Ripeti' : 'Accendi Ripeti'); k === 'si' ? ripeti(60, { gesto: true }) : k === 'spegni' ? spegniRipeti() : accendiRipeti(); return; }
-    const tr = e.target.closest('[data-ld-tr]'); if (tr) { const k = tr.dataset.ldTr; if (k === 'fine') { nuovoTurno(); detto(A.turno, 'Fine trascrizione'); fermaTrascrizione(); } else { k === 'pausa' ? TR.pausa() : TR.riprendi(); disegnaHome(); } }
+    if (e.target.closest('[data-ld-trascrivi]')) { nuovoTurno(); detto(A.turno, t('barra3.trascrivi-lezione')); avviaTrascrizione(); }
+    const rp = e.target.closest('[data-ld-ripeti]'); if (rp) { const k = rp.dataset.ldRipeti; nuovoTurno(); detto(A.turno, k === 'si' ? t('barra3.ripeti') : k === 'spegni' ? t('barra3.spegni-ripeti') : t('barra3.accendi-ripeti')); k === 'si' ? ripeti(60, { gesto: true }) : k === 'spegni' ? spegniRipeti() : accendiRipeti(); return; }
+    const tr = e.target.closest('[data-ld-tr]'); if (tr) { const k = tr.dataset.ldTr; if (k === 'fine') { nuovoTurno(); detto(A.turno, t('barra3.fine-trascrizione')); fermaTrascrizione(); } else { k === 'pausa' ? TR.pausa() : TR.riprendi(); disegnaHome(); } }
   });
   addEventListener('keydown', e => {
     // AltGr su Windows arriva come Ctrl+Alt (la «[» della tastiera italiana è AltGr+è): mai una scorciatoia. Sul Mac ⌥ non conta
@@ -2829,10 +2829,10 @@ function collega() {
   // il timer aggiorna la pillola; la fine del focus festeggia
   addEventListener('lode:focus', e => {
     const ev = e.detail.evento;
-    if (ev === 'tic') { if (!A.avviso) aggiornaPillola(); document.title = F.stato() ? `${F.mmss(F.restante())} · ${F.stato().fase === 'pausa' ? 'Pausa' : F.etichetta()}` : 'Lode'; return; }
+    if (ev === 'tic') { if (!A.avviso) aggiornaPillola(); document.title = F.stato() ? `${F.mmss(F.restante())} · ${F.stato().fase === 'pausa' ? t('barra3.pausa') : F.etichetta()}` : 'Lode'; return; }
     if (ev === 'avvio' && e.detail.fase === 'focus') segnala('focus');
     if (ev === 'avvio' && e.detail.fase === 'pausa') segnala('quiete');
-    if (ev === 'fine') { segnala('fatto'); mostraAvviso(e.detail.fase === 'focus' ? `${e.detail.min} minuti fatti · pausa` : e.detail.fase === 'prova' ? 'Tempo scaduto · consegna' : 'Pausa finita · si riparte?'); if (e.detail.fase !== 'focus') document.title = 'Lode'; }
+    if (ev === 'fine') { segnala('fatto'); mostraAvviso(e.detail.fase === 'focus' ? t('barra3.focus-fatto', { n: e.detail.min }) : e.detail.fase === 'prova' ? t('barra3.tempo-scaduto-consegna') : t('barra3.pausa-finita')); if (e.detail.fase !== 'focus') document.title = 'Lode'; }
     if (ev === 'fine' && e.detail.fase === 'prova') provaScaduta();
     if (ev === 'fermo') { document.title = 'Lode'; segnala('quiete'); }
     if (!A.aperto && forma.w.t !== larghezza()) { forma.w.t = larghezza(); molla(); }
@@ -2854,7 +2854,7 @@ function collega() {
       if (auto && inLezione) ripetiManuale = 0;   // a lezione decide l'orario: finita la lezione si spegne come sempre
       const r = O.regolaAula({ acceso: O.attivo(), inLezione, auto, trascrive: TR.attiva(), manualeDa: ripetiManuale });
       if (r === 'accendi') O.accendi().then(aggiornaTutto).catch(() => { });
-      else if (r === 'spegni') { const aMano = auto && ripetiManuale; ripetiManuale = 0; O.spegni(); aggiornaTutto(); if (aMano) mostraAvviso('Ripeti spento dopo 3 ore'); }
+      else if (r === 'spegni') { const aMano = auto && ripetiManuale; ripetiManuale = 0; O.spegni(); aggiornaTutto(); if (aMano) mostraAvviso(t('barra3.ripeti-spento')); }
     }
     // dieci minuti dopo la fine della lezione la trascrizione si chiude da sola
     const tr = TR.stato(); if (tr?.lezione.fine && !lezioneOra()) { const [hh, mm] = tr.lezione.fine.split(':').map(Number), d = new Date(); if (d.getHours() * 60 + d.getMinutes() >= hh * 60 + mm + 10) fermaTrascrizione(); } if (!A.avviso && !F.stato()) aggiornaPillola(); if (A.aperto && A.home && !shell.contains(document.activeElement)) { disegnaHome(); aggiornaTesta(); } }, 5000);
@@ -2878,9 +2878,9 @@ function collegaDesktop() {
     if (nome === 'apri') { const t = Date.now(), ripetuto = pttAttivo && t - ultimoApri < 1100; ultimoApri = t; if (ripetuto || Voce.attivo()) return; pttAttivo = true; apri({ fisso: true }).then(() => campo.querySelector('input').focus({ preventScroll: true })); iniziaAscolto(); }
     else if (nome === 'scrivi') { apri({ fisso: true }).then(() => campo.querySelector('input').focus()); }
     else if (CATTURE[nome]) cattura(nome);
-    else if (nome === 'ripeti') { apri({ fisso: true }); nuovoTurno(); detto(A.turno, 'Ripeti'); ripeti(60, { gesto: true }); }
-    else if (nome === 'trascrivi') { apri({ fisso: true }); nuovoTurno(); if (TR.attiva()) { detto(A.turno, 'Fine trascrizione'); fermaTrascrizione(); } else { detto(A.turno, 'Trascrivi la lezione'); avviaTrascrizione(); } }
-    else if (nome === 'gioco') { apri({ fisso: true }); nuovoTurno(); detto(A.turno, 'Gioca'); schedaGioco(); }
+    else if (nome === 'ripeti') { apri({ fisso: true }); nuovoTurno(); detto(A.turno, t('barra3.ripeti')); ripeti(60, { gesto: true }); }
+    else if (nome === 'trascrivi') { apri({ fisso: true }); nuovoTurno(); if (TR.attiva()) { detto(A.turno, t('barra3.fine-trascrizione')); fermaTrascrizione(); } else { detto(A.turno, t('barra3.trascrivi-lezione')); avviaTrascrizione(); } }
+    else if (nome === 'gioco') { apri({ fisso: true }); nuovoTurno(); detto(A.turno, t('barra3.gioca')); schedaGioco(); }
   });
 }
 
@@ -2897,10 +2897,10 @@ export function avvia() {
   PR.collega({ scheda, segnala, entra, dopo, premi, rispostaFissa, mostraFatto, nuovoTurno, detto: t => detto(A.turno, t), corsiPossibili,
     aggiornaPillola: () => { if (!A.avviso && !F.stato()) aggiornaPillola(); },
     evento: eventoProgetto, spiegaErrore: e => { spiegaEsito(e).catch(x => console.error('Lode: errore non spiegato', x)); } });
-  addEventListener('lode:voce', e => { const x = e.detail; document.querySelectorAll('.ld-prepara').forEach(s => mostraAvanzamento(s, 'voce', x.fase === 'pronta' ? { fase: 'fatto', p: 1, testo: Voce.NOME_VOCE + ' in locale · tieni premuto ' + TASTI + ' e parla' } : x.fase === 'errore' || x.fase === 'ripiego' ? { fase: x.fase === 'errore' ? 'errore' : undefined, p: 0, testo: x.testo } : { p: x.p, testo: `Scarico ${Voce.NOME_VOCE} · ${Math.round((x.p || 0) * 100)}%` })); if (A.modo === 'ascolto' && x.fase === 'scarico') campo.querySelector('.stato.ascolto .lbl').textContent = `Ti ascolto · preparo la voce ${Math.round((x.p || 0) * 100)}%`; if (x.fase === 'pronta' && A.modo === 'ascolto') campo.querySelector('.stato.ascolto .lbl').textContent = 'Ti ascolto';
+  addEventListener('lode:voce', e => { const x = e.detail; document.querySelectorAll('.ld-prepara').forEach(s => mostraAvanzamento(s, 'voce', x.fase === 'pronta' ? { fase: 'fatto', p: 1, testo: t('barra3.voce-pronta', { voce: Voce.NOME_VOCE, tasti: TASTI }) } : x.fase === 'errore' || x.fase === 'ripiego' ? { fase: x.fase === 'errore' ? 'errore' : undefined, p: 0, testo: x.testo } : { p: x.p, testo: t('barra3.scarico-voce', { voce: Voce.NOME_VOCE, p: Math.round((x.p || 0) * 100) }) })); if (A.modo === 'ascolto' && x.fase === 'scarico') campo.querySelector('.stato.ascolto .lbl').textContent = t('barra3.ti-ascolto-preparo-p', { p: Math.round((x.p || 0) * 100) }); if (x.fase === 'pronta' && A.modo === 'ascolto') campo.querySelector('.stato.ascolto .lbl').textContent = t('barra3.ti-ascolto');
     if (x.fase === 'ripiego') voceRipiegata = true;
     if (A.modo === 'pensa' && attesaVoce) {   // Ripeti o la trascrizione che aspettano la voce: si vede a che punto è
-      const lbl = campo.querySelector('.stato.pensa .lbl'), cosa = voceRipiegata ? 'Parakeet non parte: preparo Whisper' : 'Preparo la voce';
+      const lbl = campo.querySelector('.stato.pensa .lbl'), cosa = voceRipiegata ? t('barra3.voce-ripiego') : t('barra3.preparo-voce');
       if (x.fase === 'ripiego') lbl.textContent = cosa + '…';
       else if (x.fase === 'scarico') lbl.textContent = `${cosa} · ${Math.round((x.p || 0) * 100)}%`;
       else if (x.fase === 'pronta') lbl.textContent = attesaVoce;
@@ -2916,17 +2916,17 @@ export function avvia() {
       document.querySelectorAll('.ld-prepara').forEach(mostraAggiornamenti);
       if (prima === s.fase && erroreDiPrima === (s.errore ?? null)) return;
       if (A.aperto && A.home && !shell.contains(document.activeElement)) disegnaHome();
-      if (prima !== s.fase && !A.aperto && (s.fase === 'pronta' || s.fase === 'da_scaricare')) mostraAvviso(s.fase === 'pronta' ? `Lode ${s.nuova.versione} è pronta` : `È uscita Lode ${s.nuova.versione}`, true);
+      if (prima !== s.fase && !A.aperto && (s.fase === 'pronta' || s.fase === 'da_scaricare')) mostraAvviso(s.fase === 'pronta' ? t('barra3.lode-pronta', { versione: s.nuova.versione }) : t('barra3.lode-uscita', { versione: s.nuova.versione }), true);
     });
     aggiornaSync().then(() => { if (A.aperto && A.home) disegnaHome(); });
     // lo stato arriva dal main a ogni giro: la riga in home e nel «Prepara Lode», e un avviso se serve la password
     BRIDGE.su('sync:stato', x => {
       const prima = syncBloccata(), primo = SYNC?.stato; SYNC = x; piedeSync();
       document.querySelectorAll('.ld-prepara .ld-prep[data-k="sync"] .d').forEach(d => { d.textContent = TS.rigaStato(x); });
-      if (prima !== syncBloccata() || primo !== x.stato) { if (A.aperto && A.home && !shell.contains(document.activeElement)) disegnaHome(); if (!prima && syncBloccata() && !A.aperto) mostraAvviso('Sincronizzazione in pausa · scrivi la password', true); }
+      if (prima !== syncBloccata() || primo !== x.stato) { if (A.aperto && A.home && !shell.contains(document.activeElement)) disegnaHome(); if (!prima && syncBloccata() && !A.aperto) mostraAvviso(t('barra3.sync-in-pausa'), true); }
     });
     BRIDGE.su('sync:progresso', x => document.querySelectorAll('.ld-sync-avanza').forEach(p => { p.textContent = x.testo || ''; }));
-    V.suProgresso(x => { avanzamenti[x.cosa] = x; if (x.fase === 'fatto' || x.fase === 'errore') { delete avanzamenti[x.cosa]; aggiornaStato(); } document.querySelectorAll('.ld-prepara').forEach(s => mostraAvanzamento(s, x.cosa, x)); if (!A.aperto && x.fase !== 'fatto' && x.fase !== 'errore' && x.p != null) mostraAvviso(`${x.cosa === 'obsidian' ? 'Obsidian' : 'Cervello locale'} · ${Math.round(x.p * 100)}%`, true); });
+    V.suProgresso(x => { avanzamenti[x.cosa] = x; if (x.fase === 'fatto' || x.fase === 'errore') { delete avanzamenti[x.cosa]; aggiornaStato(); } document.querySelectorAll('.ld-prepara').forEach(s => mostraAvanzamento(s, x.cosa, x)); if (!A.aperto && x.fase !== 'fatto' && x.fase !== 'errore' && x.p != null) mostraAvviso(`${x.cosa === 'obsidian' ? 'Obsidian' : t('barra3.cervello-locale')} · ${Math.round(x.p * 100)}%`, true); });
   }
   if (F.stato()?.fase === 'focus' && !F.stato().fermo) setTimeout(() => segnala('focus'), 600);
 }
@@ -2935,10 +2935,10 @@ export function avvia() {
 window.__lode = { D: () => D, SYNC: () => SYNC, aggiornaSync, schedaSincronizza, AI, invia, provaAllenatore, AL, riceviFile, O, ripeti, condividiLezione, indietro, TR, Voce, avviaTrascrizione, fermaTrascrizione, riordinaLezione, stato: () => A, ST, PR, ER, DI };
 export const azioni = {
   focus: esameId => avviaFocus({ esameId }),
-  ripassa: esameId => { apri({ fisso: true }); nuovoTurno(); detto(A.turno, esameId ? 'Ripassa ' + esame(esameId)?.nome : 'Ripasso'); schedaRipasso(esameId); },
-  interroga: esameId => { apri({ fisso: true }); nuovoTurno(); detto(A.turno, 'Interrogami su ' + esame(esameId)?.nome); avviaOrale(esame(esameId)); },
-  libretto: () => { apri({ fisso: true }); nuovoTurno(); detto(A.turno, 'Libretto'); schedaLibretto(); },
-  programma: esameId => { apri({ fisso: true }); nuovoTurno(); detto(A.turno, 'Programma di ' + esame(esameId)?.nome); schedaProgramma({ esame: esame(esameId) }); },
+  ripassa: esameId => { apri({ fisso: true }); nuovoTurno(); detto(A.turno, esameId ? t('barra3.ripassa-esame', { nome: esame(esameId)?.nome }) : t('barra3.ripasso')); schedaRipasso(esameId); },
+  interroga: esameId => { apri({ fisso: true }); nuovoTurno(); detto(A.turno, t('barra3.interrogami-su', { x: esame(esameId)?.nome })); avviaOrale(esame(esameId)); },
+  libretto: () => { apri({ fisso: true }); nuovoTurno(); detto(A.turno, t('barra3.libretto')); schedaLibretto(); },
+  programma: esameId => { apri({ fisso: true }); nuovoTurno(); detto(A.turno, t('barra3.programma-di', { nome: esame(esameId)?.nome })); schedaProgramma({ esame: esame(esameId) }); },
   scrivi: testo => { apri({ fisso: true }).then(() => { const i = campo.querySelector('input'); i.value = testo; i.focus(); }); },
   invia: testo => { apri({ fisso: true }); invia(testo); },
   file: () => scegliFile(),
