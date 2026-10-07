@@ -85,7 +85,7 @@ const FUNZIONI_EN = [['arc\\s?tangent', '\\arctan'], ['arctan', '\\arctan'], ['a
   ['cotangent', '\\cot'], ['cot', '\\cot'], ['tangent', '\\tan'], ['tan', '\\tan'], ['natural\\s+log(?:arithm)?', '\\ln'], ['ln', '\\ln'], ['logarithm', '\\log'], ['log', '\\log']];
 const NUMERI_EN = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 };
 const DECINE_EN = { twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
-const ORDINALI_EN = { second: 2, third: 3, fourth: 4, fifth: 5, nth: 'n', 'n-th': 'n', enth: 'n' };
+const ORDINALI_EN = { second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, seventh: 7, eighth: 8, ninth: 9, tenth: 10, nth: 'n', 'n-th': 'n', enth: 'n' };
 // le parole che, dopo «a» o «I», dicono che è una lettera della formula e non l'articolo o il pronome («a squared», «a to the n»)
 const DOPO_LETTERA_EN = 'plus|minus|times|over|divided|squared|cubed|to|raised|equals|equal|is|sub|subscript|prime|double|and|or|comma|less|greater|not|naught|nought|of|in|d';
 const UNITA_EN = Object.keys(NUMERI_EN).slice(1, 10).join('|');
@@ -95,13 +95,14 @@ function numeriEn(s) {
   s = s.replace(new RegExp(String.raw`\b(${Object.keys(DECINE_EN).join('|')})(?:[\s-]+(${UNITA_EN}))?\b`, 'gi'), (_, d, u) => String(DECINE_EN[d.toLowerCase()] + (u ? NUMERI_EN[u.toLowerCase()] : 0)));
   s = s.replace(/\b(?:a|one)\s+hundred\b/gi, '100');
   s = s.replace(new RegExp(String.raw`\b(${Object.keys(NUMERI_EN).join('|')})\b`, 'gi'), (m, w, i, tutto) => {
-    if (/^one$/i.test(w) && (/\b(?:this|that|the|each|every|no|any|which|another|some|only|a|last|next|right|wrong|new|old|little|big|such|someone|anyone)\s+$/i.test(tutto.slice(0, i)) || /^\s+(?:of\s+(?:the|these|those|them|us|you|my|our|your|his|her|its|their|which|many|several|an?)\b|another|day|thing|way|by\s+one)\b/i.test(tutto.slice(i + m.length)))) return m;
+    if (/^one$/i.test(w) && (/\b(?:this|that|the|each|every|no|any|which|another|some|only|a|at|last|next|right|wrong|new|old|little|big|such|someone|anyone)\s+$/i.test(tutto.slice(0, i)) || /^\s+(?:of\s+(?:the|these|those|them|us|you|my|our|your|his|her|its|their|which|many|several|an?)\b|another|day|thing|way|more|by\s+one|point(?!\s+(?:\d|zero|one|two|three|four|five|six|seven|eight|nine)\b))\b/i.test(tutto.slice(i + m.length)))) return m;
     return String(NUMERI_EN[w.toLowerCase()]);
   });
   return s.replace(/\b(\d+)\s+point((?:\s+\d)+)\b/gi, (_, a, b) => a + '.' + b.replace(/\s+/g, ''));
 }
 // come scrive Whisper in inglese: «x²», «2x», «dx», «dy/dx», «x^n», «π»
-const whisperEn = s => s.replace(/²/g, ' squared').replace(/³/g, ' cubed').replace(/π/g, ' pi ').replace(/\b(\d+)([a-zA-Z])\b/g, '$1 $2')
+const whisperEn = s => s.replace(/²/g, ' squared').replace(/³/g, ' cubed').replace(/π/g, ' pi ').replace(/\b(\d+)([a-z])\b/g, '$1 $2')
+  .replace(/\b(sinh|cosh|sin|cos|tan|cot|arcsin|arccos|arctan|ln|log|exp|sqrt|[fghuvy])\(\s*([a-z]|\d+)\s*\)/gi, '$1 of $2').replace(/(\w)([+=])(?=\w)/g, '$1 $2 ')
   .replace(/\bd([a-z])\s*\/\s*d([a-z])\b/g, 'd $1 over d $2').replace(/\bd([xyztuv])\b/g, 'd $1').replace(/\^\s*(-?)\s*(\d+|[a-z])\b/gi, (_, m, e) => ` to the ${m ? 'minus ' : ''}${e}`)
   // «a» articolo e «I» pronome non sono lettere della formula: si segnano con «__» (tolto alla fine)
   .replace(new RegExp(String.raw`\b([aAI])(?=\s+(?!(?:${DOPO_LETTERA_EN})\b)[a-z']{2,})`, 'g'), '$1__');
@@ -129,13 +130,13 @@ function inglese(t, { P, X, A, g }) {
   for (let k = 0; k < 2; k++) {
     t = t.replace(g(String.raw`(${A})\s+squared\b`), (_, a) => P(`${X(a)}^{2}`));
     t = t.replace(g(String.raw`(${A})\s+cubed\b`), (_, a) => P(`${X(a)}^{3}`));
-    t = t.replace(g(String.raw`(${A})\s+${esponente}(minus\s+|negative\s+)?(?:(second|third|fourth|fifth|nth|n-th|enth)\b|(${A}))(?:\s+power\b)?`), (_, a, m, o, b) => P(`${X(a)}^{${m ? '-' : ''}${o ? ORDINALI_EN[o.toLowerCase()] : X(b)}}`));
+    t = t.replace(g(String.raw`(${A})\s+${esponente}(minus\s+|negative\s+)?(?:(second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|nth|n-th|enth)\b|(\d+)(?:st|nd|rd|th)\b|(${A}))(?:\s+power\b)?`), (_, a, m, o, n, b) => P(`${X(a)}^{${m ? '-' : ''}${o ? ORDINALI_EN[o.toLowerCase()] : n || X(b)}}`));
     t = t.replace(g(String.raw`\b([a-zA-Z])\s+(?:with\s+)?(?:sub|subscript|index)\s+(${A})`), (_, a, b) => P(`${a}_{${X(b)}}`));
     t = t.replace(g(String.raw`\b([a-zA-Z])\s+(?:naught|nought)\b`), (_, a) => P(`${a}_{0}`));
   }
   t = t.replace(g(String.raw`(${A})\s+factorial\b`), (_, a) => P(`${X(a)}!`));
   // 5. radici, valore assoluto, norma, gradiente, vettori
-  t = t.replace(g(String.raw`\b(?:the\s+)?square\s+root\s+of\s+(${A})`), (_, a) => P(`\\sqrt{${X(a)}}`));
+  t = t.replace(g(String.raw`\b(?:the\s+)?(?:square\s+root|sqrt)\s+of\s+(${A})`), (_, a) => P(`\\sqrt{${X(a)}}`));
   t = t.replace(g(String.raw`\b(?:the\s+)?cube\s+root\s+of\s+(${A})`), (_, a) => P(`\\sqrt[3]{${X(a)}}`));
   t = t.replace(g(String.raw`\b(?:the\s+)?(n|\d+)(?:-?th|st|nd|rd)\s+root\s+of\s+(${A})`), (_, n, a) => P(`\\sqrt[${n}]{${X(a)}}`));
   t = t.replace(g(String.raw`\b(?:the\s+)?root\s+of\s+(${A})`), (_, a) => P(`\\sqrt{${X(a)}}`));
@@ -159,20 +160,21 @@ function inglese(t, { P, X, A, g }) {
   // «line integral», «surface integral», «Riemann integral», «the integral of the …» restano parole
   t = t.replace(g(String.raw`(?<!\b(?:line|surface|contour|path|flux|riemann|lebesgue|cauchy|double|triple)\s)\bintegral\s+of\s+(?!(?:the|an?_*|this|that|motion|line|surface)\b)`), () => 'integral ' + P('\\int'));
   t = t.replace(/\bd\s+([a-z])\b(?=\s|$|[.,;])/g, (_, x) => P(`\\, d${x}`));
-  t = t.replace(g(String.raw`\blimit\s+(?:as|for|when)\s+([a-z])\s+(?:approaches|tends\s+to|goes\s+to|to)\s+(${A})(?:\s+of)?`), (_, x, a) => 'limit ' + P(`\\lim_{${x} \\to ${X(a)}}`));
+  t = t.replace(g(String.raw`\b(?:limit|lim)\s+(?:as|for|when)\s+([a-z])\s+(?:approaches|tends\s+to|goes\s+to|to)\s+(${A})(?:\s+of)?`), (m, x, a) => (/^lim\s/i.test(m) ? '' : 'limit ') + P(`\\lim_{${x} \\to ${X(a)}}`));
   t = t.replace(g(String.raw`\blimit\s+of\s+(${A})\s+(?:as|for|when)\s+([a-z])\s+(?:approaches|tends\s+to|goes\s+to)\s+(${A})`), (_, f, x, a) => 'limit ' + P(`\\lim_{${x} \\to ${X(a)}} ${X(f)}`));
   t = t.replace(g(String.raw`\b(sum|summation|product)\s+(?:(?:for|over)\s+([a-z])\s+(?:going\s+|that\s+goes\s+)?from|from\s+([a-z])\s+(?:equals|equal\s+to|is)|(?:for|over)\s+([a-z])\s+(?:equals|equal\s+to))\s+(${A})\s+(?:up\s+)?to\s+(${A})(?:\s+of)?`),
     (_, s, n1, n2, n3, a, b) => s + ' ' + P(`${/prod/i.test(s) ? '\\prod' : '\\sum'}_{${n1 || n2 || n3}=${X(a)}}^{${X(b)}}`));
-  // 9. relazioni e logica: solo se dopo c'è un pezzo di formula («x is less than one», non «two approaches to the problem»)
+  // 9. relazioni e logica: solo se dopo c'è un pezzo di formula («x is less than one», non «two approaches to the problem»);
+  // confronti, «in» e «tends to» anche solo se PRIMA c'è un pezzo di formula («x goes to zero», non «the function goes to zero»)
   const R = [[String.raw`(?:is\s+)?less\s+than\s+or\s+equal\s+to`, '\\le'], [String.raw`(?:is\s+)?greater\s+than\s+or\s+equal\s+to`, '\\ge'],
     [String.raw`(?:is\s+)?(?:less|smaller)\s+than`, '<'], [String.raw`(?:is\s+)?(?:greater|bigger|larger)\s+than`, '>'],
     [String.raw`(?:is\s+not\s+equal\s+to|not\s+equal\s+to|does\s+not\s+equal|doesn't\s+equal|is\s+different\s+from)`, '\\neq'], [String.raw`(?:is\s+)?approximately\s+(?:equal\s+to|equals)`, '\\approx'],
-    [String.raw`(?:if\s+and\s+only\s+if|iff)`, '\\iff'], [String.raw`(?:(?:is\s+)?not\s+(?:an\s+)?element\s+of|is\s+not\s+in|does\s+not\s+belong\s+to|doesn't\s+belong\s+to)`, '\\notin'],
-    [String.raw`(?:(?:is\s+)?(?:an\s+)?element\s+of|belongs\s+to)`, '\\in'], [String.raw`for\s+(?:all|every|each)`, '\\forall'], [String.raw`there\s+exists?`, '\\exists'],
-    [String.raw`plus\s+or\s+minus`, '\\pm'], [String.raw`(?:tends\s+to|approaches|goes\s+to)`, '\\to'], [String.raw`implies`, '\\Rightarrow'],
+    [String.raw`(?:if\s+and\s+only\s+if|iff)`, '\\iff', A, false], [String.raw`(?:(?:is\s+)?not\s+(?:an\s+)?element\s+of|is\s+not\s+in|does\s+not\s+belong\s+to|doesn't\s+belong\s+to)`, '\\notin'],
+    [String.raw`(?:(?:is\s+)?(?:an\s+)?element\s+of|belongs\s+to)`, '\\in'], [String.raw`for\s+(?:all|every|each)`, '\\forall', A, false], [String.raw`there\s+exists?`, '\\exists', A, false],
+    [String.raw`plus\s+or\s+minus`, '\\pm', A, false], [String.raw`(?:tends\s+to|approaches|goes\s+to)`, '\\to'], [String.raw`implies`, '\\Rightarrow', A, false],
     // «x in R» sì, «in 1905» e «in the» no: dopo «in» serve una lettera o un pezzo di formula, non un numero
     [String.raw`(?:is\s+)?in`, '\\in', String.raw`(?:\u0001\d+\u0002|\b[a-zA-Z]\b)`]];
-  for (const [r, l, dopo = A] of R) t = t.replace(g(String.raw`(?<=\s)${r}(?=\s+${dopo})`), () => P(l));
+  for (const [r, l, dopo = A, prima = true] of R) t = t.replace(g(String.raw`(?<=${prima ? A + String.raw`\s+` : String.raw`\s`})${r}(?=\s+${dopo})`), () => P(l));
   return t;
 }
 
