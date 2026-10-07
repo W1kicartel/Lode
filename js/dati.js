@@ -29,13 +29,13 @@ const chiaveLocale = () => { try { return localStorage.getItem('lode:chiave') ||
 // cambiato sistema: i voti di prima non si buttano, restano nel libretto da correggere e non contano nella media, vedi
 // validi()); in Italia il controllo è quello di sempre
 const ID = /^[\w-]{1,40}$/, DATA = /^\d{4}-\d{2}-\d{2}$/;
-const votoInForma = (v, sis) => v !== null && v !== '' && (!sis || sis === 'it' ? Number.isInteger(+v) && +v >= 18 && +v <= 30 : Number.isFinite(+v) && +v >= 0 && +v <= 100) ? +v : null;
+const votoInForma = (v, sis) => v !== null && v !== '' && (S.sistema(sis).cod === 'it' ? Number.isInteger(+v) && +v >= 18 && +v <= 30 : Number.isFinite(+v) && +v >= 0 && +v <= 100) ? +v : null;
 const inForma = (e, sis) => e && typeof e === 'object' ? { ...e, cfu: Number(e.cfu) || 6, voto: votoInForma(e.voto, sis),
   ...(e.oreObiettivo != null ? { oreObiettivo: Number(e.oreObiettivo) || null } : {}) } : e;
 // i dati di Lode letti dal disco: .lode/dati.json nel vault (che si sincronizza o si condivide: chi può scriverci può
 // metterci di tutto) o localStorage nel browser. Non passano da backupValido(), che rifiuterebbe tutto per un solo esame
 // storto: qui l'esame con un id strano (virgolette, HTML: finirebbe in un data-e="…") si scarta, gli altri restano
-function unisci(d) { return d && d.v === 1 ? { ...VUOTO(), ...d, esami: Array.isArray(d.esami) ? d.esami.filter(e => e && typeof e === 'object' && ID.test(e.id)).map(e => inForma(e, d.profilo?.sistema)) : [], profilo: { ...VUOTO().profilo, ...d.profilo }, imp: { ...VUOTO().imp, ...d.imp }, codice: { ...VUOTO().codice, ...d.codice } } : null; }
+function unisci(d) { return d && d.v === 1 ? { ...VUOTO(), ...d, esami: Array.isArray(d.esami) ? d.esami.filter(e => e && typeof e === 'object' && ID.test(e.id)).map(e => inForma(e, { ...VUOTO().profilo, ...d.profilo }.sistema)) : [], profilo: { ...VUOTO().profilo, ...d.profilo }, imp: { ...VUOTO().imp, ...d.imp }, codice: { ...VUOTO().codice, ...d.codice } } : null; }
 // Un backup da importare (magari passato da un compagno) si controlla tutto e, se qualcosa non torna, si rifiuta: non si
 // «aggiusta», perché rigenerare gli id romperebbe i legami fra carte ed esami. Numeri come numeri (o cifre), id semplici,
 // date AAAA-MM-GG, giorni dell'orario 0-6. Poi passa da sostituisci(), che rimette in forma cfu e voti
@@ -124,7 +124,7 @@ export function inverti(p, q, cur) {
   }
 }
 
-export function sostituisci(nuovi) { D = { ...VUOTO(), ...nuovi, esami: (nuovi.esami || []).map(e => inForma(e, nuovi.profilo?.sistema)), profilo: { ...VUOTO().profilo, ...nuovi.profilo }, imp: { ...VUOTO().imp, ...nuovi.imp, chiave: D.imp.chiave }, codice: { ...VUOTO().codice, ...nuovi.codice } }; salva(); }
+export function sostituisci(nuovi) { D = { ...VUOTO(), ...nuovi, esami: (nuovi.esami || []).map(e => inForma(e, { ...VUOTO().profilo, ...nuovi.profilo }.sistema)), profilo: { ...VUOTO().profilo, ...nuovi.profilo }, imp: { ...VUOTO().imp, ...nuovi.imp, chiave: D.imp.chiave }, codice: { ...VUOTO().codice, ...nuovi.codice } }; salva(); }
 // la chiave AI non esce mai in un'esportazione
 export function esporta() { const c = structuredClone(D); c.imp.chiave = ''; return c; }
 // in ascolto da altre schede dello stesso browser
@@ -185,7 +185,8 @@ export function registraVoto(esameId, { voto, lode = false, idoneita = false, da
 // I conti passano da js/sistemi.js, con il sistema dei voti scelto (profilo.sistema, l'Italia se non c'è): in Italia sono
 // gli stessi di sempre (test/sistemi.mjs li confronta). media(), serve() e simula() restituiscono gli oggetti di prima;
 // il voto finale del sistema (base, mention, Gesamtnote, classe, GPA) lo dà votoFinale()
-export const sistemaVoti = () => D.profilo?.sistema || 'it';
+// un codice che non è dei sistemi (dati scritti a mano, una versione più nuova) vale l'Italia, come in sistemi.js
+export const sistemaVoti = () => S.sistema(D.profilo?.sistema).cod;
 const opzVoti = () => ({ sistema: sistemaVoti(), lode: D.profilo.lode, totali: D.profilo.cfuTotali });
 const senzaFinale = m => { const { finale, ...r } = m; return r; };
 // fuori dall'Italia un voto che il sistema non ha (un 28 rimasto da prima del cambio di sistema) non entra nei conti

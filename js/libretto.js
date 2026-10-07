@@ -33,6 +33,8 @@ const SEGNO = 27, SEGNO_SERVE = 100;
 const PEZZI = /(?<![\p{L}\d,.])(\d{1,3}(?:[.,]\d{1,2})?(?:\s*\/\s*\d{1,3})?(?:\s*%)?|[A-F][+\-−–]?|[a-f][+\-−–])(?![\p{L}\d])/gu;
 const pezzi = testo => [...String(testo || '').matchAll(PEZZI)].map(m => ({ x: m[1], i: m.index }));
 const metti = (testo, p, con) => testo.slice(0, p.i) + con + testo.slice(p.i + p.x.length);
+// il voto detto che il sistema non ha, com'è stato detto («28», «27,5»): non «28,0» del formato di un altro sistema
+const detto = v => numero(v, Math.min(2, (String(v).split('.')[1] || '').length));
 const conSegno = (r, segno) => r && String(r.nomeDetto || '').includes(String(segno));
 // un obiettivo detto («1,5», «14», «3.5», «60 %»): un numero nella scala del voto finale, o null
 export function leggiObiettivo(x, s = sis()) {
@@ -58,7 +60,7 @@ export function interpretaVoti(testo, interpreta) {
       const r = interpreta(metti(testo, p, String(SEGNO)));
       if (r && (r.tipo === 'voto' || r.tipo === 'simula') && r.voto === SEGNO && !conSegno(r, SEGNO)) return { ...r, voto: v.voto, lode: v.lode || (!!r.lode && s.lode && v.voto === s.max) };
     }
-    if (c) return { ...c, fuoriScala: true, detto: formato(c.voto) };
+    if (c) return { ...c, fuoriScala: true, detto: detto(c.voto) };
     // un voto che il sistema non ha («65» in Spagna, «8» negli Stati Uniti): il comando c'è, il voto no (lode.js lo dice)
     for (const p of pezzi(testo)) {
       const r = interpreta(metti(testo, p, String(SEGNO)));

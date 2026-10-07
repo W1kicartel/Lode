@@ -242,6 +242,18 @@ const votiIt = Dm.fatti().map(e => e.voto);
 D().profilo.sistema = 'es'; Dm.sostituisci(structuredClone(D()));
 uguale('it → es: i voti restano', Dm.fatti().map(e => e.voto), votiIt);
 prova('it → es: non contano nella media spagnola', Dm.media().n === 0 && Dm.votoFinale() === null);
+// un sistema che non c'è (dati scritti a mano, una versione più nuova) vale l'Italia in tutto: conti, schede e voti dal disco
+for (const cod of ['xx', '', null, 42]) {
+  Dm.sostituisci({ ...Dm.VUOTO(), profilo: { ...Dm.VUOTO().profilo, sistema: cod }, esami: [E('Analisi', 9, 28), E('Fisica', 6, 8.5)] });
+  prova(`sistema ${JSON.stringify(cod)}: vale l'Italia`, Dm.sistemaVoti() === 'it' && LB.italiano() && !('meglio' in Dm.simula(Dm.fatti()[0].id, 30)));
+  uguale(`sistema ${JSON.stringify(cod)}: i voti dal disco come in Italia`, Dm.fatti().map(e => e.voto), [28, null]);
+}
+// un voto detto che il sistema non ha si ridice com'è stato detto («28», non «28,0» del formato tedesco)
+Dm.sostituisci({ ...Dm.VUOTO(), profilo: { ...Dm.VUOTO().profilo, sistema: 'de' }, esami: [E('Fisica', 5, null, false, false)] });
+for (const [f, d] of [['ho preso 28 in fisica', '28'], ['ho preso 30 e lode in fisica', '30']]) {
+  const c = cmd(f);
+  prova(`de: «${f}» fuori scala, detto ${d}`, c?.tipo === 'voto' && c.fuoriScala && c.detto === d, JSON.stringify(c));
+}
 
 // ogni LB.<funzione> usata da lode.js, pagina.js e benvenuto.js c'è in js/libretto.js (le schede non girano in node)
 {
