@@ -326,7 +326,7 @@ export default {
   'barra3.spiego-errore': "I can't assess it right now: {errore}",
   'barra3.spiego-segnato': 'Recorded: you reviewed {x}.',
   'barra3.spiego-controllo-vero': 'For a real check you need notes on this topic, or AI.',
-  'barra3.punti-su': '{x} points out of {n}',
+  'barra3.punti-su': { one: '{x} point out of {tot}', other: '{x} points out of {tot}' },
   'barra3.spiego-parole-chiave': 'I check the keywords, not the reasoning: if you said a point in different words, it still counts.',
   'barra3.spiego-sicuro': 'Topic marked as solid.',
   'barra3.spiego-cerchio-vuoto': 'The ones with an empty circle: reread them and try again in a couple of days.',

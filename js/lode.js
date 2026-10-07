@@ -2694,7 +2694,8 @@ async function valutaSpiego(testo) {
   const c = PG.controllaSpiegazione(e, a, testo);
   if (!c) { PG.registraEsito(e, a.id, 'parziale', 'spiega'); aggiornaTutto(); return mostraFatto({ testo: t('barra3.spiego-segnato', { x: a.t }), nota: t('barra3.spiego-controllo-vero') }); }
   PG.registraEsito(e, a.id, c.esito, 'spiega'); segnala(c.esito === 'giusta' ? 'fatto' : 'quiete');
-  scheda('ld-spiego-esito', `<span class="ld-lbl">${esc(a.t)} · ${t('barra3.punti-su', { x: c.punti.filter(p => p.detto).length, n: c.punti.length })}</span>
+  const detti = c.punti.filter(p => p.detto).length;   // n sceglie il plurale: «1 punto su 4»
+  scheda('ld-spiego-esito', `<span class="ld-lbl">${esc(a.t)} · ${t('barra3.punti-su', { x: detti, n: detti, tot: c.punti.length })}</span>
     <ul class="ld-punti">${c.punti.map(p => `<li class="${p.detto ? 'si' : 'no'}"><b>${p.detto ? '✓' : '○'}</b><span>${esc(p.t)}${!p.detto && p.d ? `<small>${esc(p.d.replace(/^[^:]+:\s*/, ''))}</small>` : ''}</span></li>`).join('')}</ul>
     <p class="ld-nota">${t('barra3.spiego-parole-chiave')} ${c.esito === 'giusta' ? t('barra3.spiego-sicuro') : t('barra3.spiego-cerchio-vuoto')}</p>`);
   aggiornaTutto();

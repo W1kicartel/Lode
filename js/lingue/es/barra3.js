@@ -326,7 +326,7 @@ export default {
   'barra3.spiego-errore': 'Ahora no puedo valorarla: {errore}',
   'barra3.spiego-segnato': 'Apuntado: has repasado {x}.',
   'barra3.spiego-controllo-vero': 'Para una comprobación de verdad hacen falta apuntes de este tema, o la IA.',
-  'barra3.punti-su': '{x} puntos de {n}',
+  'barra3.punti-su': { one: '{x} punto de {tot}', other: '{x} puntos de {tot}' },
   'barra3.spiego-parole-chiave': 'Compruebo las palabras clave, no el razonamiento: si un punto lo has dicho con otras palabras, vale igual.',
   'barra3.spiego-sicuro': 'Tema marcado como dominado.',
   'barra3.spiego-cerchio-vuoto': 'Los del círculo vacío: reléelos y vuelve a intentarlo en un par de días.',

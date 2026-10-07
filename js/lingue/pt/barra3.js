@@ -326,7 +326,7 @@ export default {
   'barra3.spiego-errore': 'Não consigo avaliar agora: {errore}',
   'barra3.spiego-segnato': 'Registrado: você revisou {x}.',
   'barra3.spiego-controllo-vero': 'Para uma verificação de verdade, precisa de anotações sobre este tópico, ou da IA.',
-  'barra3.punti-su': '{x} de {n} pontos',
+  'barra3.punti-su': { one: '{x} de {tot} pontos', other: '{x} de {tot} pontos' },
   'barra3.spiego-parole-chiave': 'Eu confiro as palavras-chave, não o raciocínio: se você disse um ponto com outras palavras, vale do mesmo jeito.',
   'barra3.spiego-sicuro': 'Tópico marcado como seguro.',
   'barra3.spiego-cerchio-vuoto': 'Os com o círculo vazio: releia e tente de novo daqui a uns dois dias.',

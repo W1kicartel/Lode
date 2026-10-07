@@ -326,7 +326,7 @@ export default {
   'barra3.spiego-errore': 'Non riesco a valutarla adesso: {errore}',
   'barra3.spiego-segnato': 'Segnato: hai ripassato {x}.',
   'barra3.spiego-controllo-vero': 'Per un controllo vero servono appunti su questo argomento, o l\'AI.',
-  'barra3.punti-su': '{x} punti su {n}',
+  'barra3.punti-su': { one: '{x} punto su {tot}', other: '{x} punti su {tot}' },
   'barra3.spiego-parole-chiave': 'Controllo le parole chiave, non il ragionamento: se un punto l\'hai detto con parole diverse, vale lo stesso.',
   'barra3.spiego-sicuro': 'Argomento segnato come sicuro.',
   'barra3.spiego-cerchio-vuoto': 'Quelli col cerchio vuoto: rileggili e riprova tra un paio di giorni.',

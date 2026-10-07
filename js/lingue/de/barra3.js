@@ -326,7 +326,7 @@ export default {
   'barra3.spiego-errore': 'Ich kann sie gerade nicht bewerten: {errore}',
   'barra3.spiego-segnato': 'Eingetragen: Du hast {x} wiederholt.',
   'barra3.spiego-controllo-vero': 'Für eine echte Prüfung brauche ich Notizen zu diesem Thema oder KI.',
-  'barra3.punti-su': '{x} von {n} Punkten',
+  'barra3.punti-su': { one: '{x} von {tot} Punkten', other: '{x} von {tot} Punkten' },
   'barra3.spiego-parole-chiave': 'Ich prüfe die Schlüsselwörter, nicht die Argumentation: Wenn du einen Punkt mit anderen Worten gesagt hast, zählt er trotzdem.',
   'barra3.spiego-sicuro': 'Thema als sicher markiert.',
   'barra3.spiego-cerchio-vuoto': 'Die mit dem leeren Kreis: Lies sie nochmal und versuch es in ein paar Tagen wieder.',

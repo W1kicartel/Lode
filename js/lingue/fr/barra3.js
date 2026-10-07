@@ -326,7 +326,7 @@ export default {
   'barra3.spiego-errore': "Je n'arrive pas à l'évaluer maintenant : {errore}",
   'barra3.spiego-segnato': 'Noté : tu as révisé {x}.',
   'barra3.spiego-controllo-vero': "Pour une vraie vérification, il faut des notes sur ce chapitre, ou l'IA.",
-  'barra3.punti-su': '{x} points sur {n}',
+  'barra3.punti-su': { one: '{x} point sur {tot}', other: '{x} points sur {tot}' },
   'barra3.spiego-parole-chiave': "Je vérifie les mots-clés, pas le raisonnement : si tu as dit un point avec d'autres mots, ça compte quand même.",
   'barra3.spiego-sicuro': 'Chapitre marqué comme maîtrisé.',
   'barra3.spiego-cerchio-vuoto': "Ceux avec le cercle vide : relis-les et réessaie dans quelques jours.",
