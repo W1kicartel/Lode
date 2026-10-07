@@ -5,6 +5,7 @@
 // Non scrive mai da sola: ogni modifica ai dati arriva come proposta con «Conferma / Annulla».
 import { D, cfuFatti, dataLunga, fatti, media, num, oggi, prossimi, daRipassare, lezioni, lezioneOra } from './dati.js';
 import { FORNITORI } from './fornitori.js';
+import { t } from './lingua.js';
 
 const MODELLO = 'claude-opus-5-5';
 const PONTE = typeof window !== 'undefined' ? window.lodeDesktop : null;
@@ -24,7 +25,7 @@ export function motore(compito = 'chat') {
   return loc;
 }
 export const attiva = () => !!motore();
-export const nomeMotore = (compito = 'chat') => { const m = motore(compito); return m === 'locale' ? 'il modello locale' : m ? FORNITORI[fornitore()].nome : 'nessuno'; };
+export const nomeMotore = (compito = 'chat') => { const m = motore(compito); return m === 'locale' ? t('ai.modello-locale') : m ? FORNITORI[fornitore()].nome : t('ai.nessuno'); };
 
 /* ---------- Claude: l'API dei messaggi con fetch, senza SDK ---------- */
 // Prima l'SDK arrivava da un CDN all'ultima versione: codice di altri, nella finestra con la chiave e il ponte verso il vault.
@@ -32,7 +33,7 @@ export const nomeMotore = (compito = 'chat') => { const m = motore(compito); ret
 // «direct browser access»). Come l'SDK, riprova due volte quando il servizio è occupato (408, 409, 429, 5xx, 529).
 const API_CLAUDE = 'https://api.anthropic.com/v1';
 async function claude(percorso, { chiave = D.imp.chiave, corpo, segnale } = {}) {
-  if (!chiave) throw new Error('Manca la chiave: aggiungila scrivendo «AI» nella barra.');
+  if (!chiave) throw new Error(t('ai.manca-chiave'));
   const { betas, ...resto } = corpo || {};   // i «betas» vanno nell'intestazione anthropic-beta, non nel corpo
   const headers = { 'x-api-key': chiave, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true', ...(corpo ? { 'content-type': 'application/json' } : {}), ...(betas?.length ? { 'anthropic-beta': betas.join(',') } : {}) };
   for (let n = 0; ; n++) {
@@ -75,7 +76,7 @@ async function flussoMessaggio(corpo, { suTesto, segnale } = {}) {
       else if (x.type === 'message_delta') { Object.assign(msg, x.delta || {}); if (x.usage) msg.usage = { ...msg.usage, ...x.usage }; }
     }
   }
-  if (!msg) throw new Error('Claude non ha risposto: riprova.');
+  if (!msg) throw new Error(t('ai.claude-muto'));
   msg.content = msg.content.filter(Boolean);
   return msg;
 }
@@ -141,7 +142,7 @@ export async function conversa({ storia, sistema = SISTEMA, strumenti = true, su
     if (strumenti) parametri.tools = STRUMENTI;
     const msg = await flussoMessaggio(parametri, { suTesto, segnale });
     storia.push({ role: 'assistant', content: msg.content });
-    if (msg.stop_reason === 'refusal') { suTesto?.('\n\nSu questo non posso aiutarti.'); return storia; }
+    if (msg.stop_reason === 'refusal') { suTesto?.('\n\n' + t('ai.rifiuto')); return storia; }
     if (msg.stop_reason !== 'tool_use') return storia;
     const risultati = [];
     for (const b of msg.content.filter(b => b.type === 'tool_use')) {
@@ -214,11 +215,11 @@ const ascoltaCloud = new Map();
 if (PONTE) PONTE.su('ai:pezzo', ({ id, t }) => ascoltaCloud.get(id)?.(t));
 const erroreHttp = (testo, stato) => {
   let m = String(testo || ''); try { const j = JSON.parse(m); m = j.error?.message || j.message || j[0]?.error?.message || m; } catch { }
-  const e = new Error(m.slice(0, 240) || 'errore ' + stato); e.status = stato; return e;
+  const e = new Error(m.slice(0, 240) || t('ai.errore-stato', { stato })); e.status = stato; return e;
 };
 async function chiamaCloud(corpo, { pezzo, segnale } = {}) {
   const f = FORNITORI[fornitore()], chiave = D.imp.chiave;
-  if (!f?.base) throw new Error('Servizio sconosciuto: ricollega la tua AI.');
+  if (!f?.base) throw new Error(t('ai.servizio-sconosciuto'));
   if (PONTE) {
     const id = Math.random().toString(36).slice(2);
     if (pezzo) ascoltaCloud.set(id, pezzo);
@@ -268,7 +269,7 @@ async function chatCloud(messaggi, { formato, pezzo, segnale } = {}) {
   ];
   let ultimo;
   for (const corpo of tentativi) {
-    try { const t = testoDi(await chiamaCloud(corpo, { segnale })); if (t.trim()) return t; ultimo = new Error('il servizio ha risposto vuoto'); }   // vuoto: si prova il formato successivo
+    try { const testo = testoDi(await chiamaCloud(corpo, { segnale })); if (testo.trim()) return testo; ultimo = new Error(t('ai.risposta-vuota')); }   // vuoto: si prova il formato successivo
     catch (e) { ultimo = e; if (e.status !== 400 && e.status !== 422) throw e; }   // formato non supportato: si prova il successivo
   }
   throw ultimo;
@@ -316,12 +317,12 @@ async function strutturato(istruzioni, contenuto, schema, compito = 'testo') {
   const m = motore(compito), parti = [...(Array.isArray(contenuto) ? contenuto : [{ type: 'text', text: contenuto }]), { type: 'text', text: istruzioni }];
   if (m === 'claude') {
     const r = await creaMessaggio({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low', format: { type: 'json_schema', schema } }, messages: [{ role: 'user', content: parti }] });
-    if (r.stop_reason === 'refusal') throw new Error('Claude ha declinato la richiesta.');
+    if (r.stop_reason === 'refusal') throw new Error(t('ai.claude-declina'));
     return JSON.parse(r.content.find(b => b.type === 'text')?.text || '{}');
   }
   if (m === 'cloud') return leggiJSON(await chatCloud(perOpenAI([{ role: 'user', content: parti }]), { formato: schema }));
   if (m === 'locale') return JSON.parse(await chatLocale(perOllama([{ role: 'user', content: parti }]), { formato: schema }));
-  throw new Error('Serve il cervello locale o la tua AI.');
+  throw new Error(t('ai.serve-ai'));
 }
 // «chiudi lezione»: dagli appunti grezzi alle definizioni e alle cose da esame, solo ciò che c'è davvero negli appunti
 export async function estraiLezione({ corso, appunti, gia = [] }) {
@@ -360,7 +361,7 @@ Rispondi solo con gli appunti, senza introduzioni.`;
       out.push(r.content.filter(b => b.type === 'text').map(b => b.text).join('').trim());
     } else if (M === 'cloud') out.push((await chatCloud([{ role: 'user', content: dom }])).trim());
     else if (M === 'locale') out.push((await chatLocale(perOllama([{ role: 'user', content: dom }]))).trim());
-    else throw new Error('Serve il cervello locale o la tua AI.');
+    else throw new Error(t('ai.serve-ai'));
   }
   avanza?.(1);
   return out.join('\n\n').replace(/^#{1,2}\s/gm, '### ');
@@ -373,7 +374,7 @@ export async function trascriviFoto({ blocco, corso }) {
   if (M === 'claude') { const r = await creaMessaggio({ model: MODELLO, max_tokens: 16000, output_config: { effort: 'low' }, messages: msg }); return r.content.filter(b => b.type === 'text').map(b => b.text).join('').trim(); }
   if (M === 'cloud') return (await chatCloud(perOpenAI(msg))).trim();
   if (M === 'locale') return (await chatLocale(perOllama(msg))).trim();
-  throw new Error('Serve il cervello locale o la tua AI.');
+  throw new Error(t('ai.serve-ai'));
 }
 // un documento (slide, dispense, PDF) diventa un riassunto da studiare, a pezzi come la trascrizione
 export async function riassumi({ corso, testo, nome, avanza }) {
@@ -557,7 +558,7 @@ export function correggiGiudizio({ esito, giudizio, mancava, risposta, smentite 
   if (esito === 'parziale' && /\b(hai sbagliato|sbagliat\w*|errat\w*|è falso|non è corrett\w*)\b/.test(gl)) esito = 'sbagliata';
   else if (esito === 'giusta' && NEGATIVO.test(gl)) esito = 'parziale';
   else if (esito === 'parziale' && tolte && !m && !NEGATIVO.test(gl)) esito = 'giusta';
-  if (!g) g = esito === 'giusta' ? 'Risposta completa e corretta.' : '';
+  if (!g) g = esito === 'giusta' ? t('ai.risposta-completa') : '';
   return { esito, giudizio: g, mancava: m };
 }
 // cosa ripassare lo decide il codice dagli esiti (prima le risposte peggiori) con le parole del giudizio: niente consigli
@@ -571,9 +572,9 @@ export function ripassoOrale({ storico }) {
 export function votoOrale(storico) {
   if (!storico.length) return null;
   const punti = storico.reduce((s, x) => s + (x.esito === 'giusta' ? 3 : x.esito === 'parziale' ? 2 : 0), 0) / (3 * storico.length);
-  if (punti < .5) return { voto: null, testo: 'Non ancora sufficiente', punti };
+  if (punti < .5) return { voto: null, testo: t('ai.non-sufficiente'), punti };
   const v = Math.round(18 + 12 * (punti - .5) / .5);
-  return { voto: v, lode: punti === 1 && storico.length >= 4, testo: punti === 1 && storico.length >= 4 ? '30 e lode' : `${v}/30`, punti };
+  return { voto: v, lode: punti === 1 && storico.length >= 4, testo: punti === 1 && storico.length >= 4 ? t('ai.trenta-e-lode') : t('ai.voto', { v }), punti };
 }
 
 export async function provaChiave(chiave) {
