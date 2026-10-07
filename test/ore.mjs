@@ -7,7 +7,7 @@ import vm from 'node:vm';
 globalThis.window = {};   // allenatore.js importa voce.js, che guarda window.SpeechRecognition
 globalThis.localStorage = { getItem: () => null, setItem() { }, removeItem() { } };
 globalThis.addEventListener = () => { }; globalThis.removeEventListener = () => { }; globalThis.dispatchEvent = () => { }; globalThis.CustomEvent = class { constructor(t, o) { this.detail = o?.detail; } };
-const Dm = await import('../js/dati.js'), C = await import('../js/comandi.js'), PG = await import('../js/programma.js'), O = await import('../js/ore.js');
+const Lt = await import('../js/lingua.js'), Dm = await import('../js/dati.js'), C = await import('../js/comandi.js'), PG = await import('../js/programma.js'), O = await import('../js/ore.js');
 
 let ok = 0, ko = 0;
 const prova = (nome, cond, dett = '') => { if (cond) ok++; else { ko++; console.log('✗', nome, dett); } };
@@ -261,12 +261,12 @@ prova('backup: studio storto → rifiutato', !Dm.backupValido(bk({ studio: { da:
   prova('barra: case lavoro e ore subito dopo vediOrario', /case 'vediOrario': return schedaOrario\(\);\n\s*case 'lavoro': return comandoLavoro\(c\);\n\s*case 'ore': return schedaOre\(\);/.test(src));
   prova('barra: «piano» apre la settimana solo se il calendario è attivo', src.includes("case 'oggi': return ORE.calendario().attivo ? schedaOre() : schedaEsami();"));
   prova('barra: proposte mai al lavoro', src.includes("'Mai a lezione, al lavoro, in focus o nelle ore di silenzio.'"));
-  prova('barra: «La tua settimana»', /scheda\('ld-ore'/.test(src) && src.includes('La tua settimana'));
+  prova('barra: «La tua settimana»', /scheda\('ld-ore'/.test(src) && src.includes("t('barra1.la-tua-settimana')") && Lt.t('barra1.la-tua-settimana') === 'La tua settimana');
   const dp = src.slice(src.indexOf('function disegnaProgramma'), src.indexOf('function aggiungiDomandeUscite'));
   prova('barra: il programma cambia solo col calendario attivo', /if \(cal\?\.attivo\) p = /.test(dp) && /oreH = cal\?\.attivo \?/.test(dp) && /if \(cal\?\.attivo\) legaOre/.test(dp));
   // il riquadro, preso dal sorgente e fatto girare con i conti veri: mai il numero da solo
   const f = src.slice(src.indexOf('function riquadroOre'), src.indexOf('// i bottoni del riquadro'));
-  const riquadroOre = (...a) => new Function('ORE', 'D', 'esame', 'esc', `${f}; return riquadroOre;`)(O, D(), Dm.esame, Dm.esc)(...a);   // D di adesso
+  const riquadroOre = (...a) => new Function('ORE', 'D', 'esame', 'esc', 't', `${f}; return riquadroOre;`)(O, D(), Dm.esame, Dm.esc, Lt.t)(...a);   // D di adesso; t: i testi della barra (js/lingua.js)
   pulito();
   esameCon('Chimica generale', 12, Array(12).fill(0)); esameCon('Diritto privato', 13, Array(12).fill(0));
   D().imp.lavoro = { turni: [{ giorni: [1, 2, 3, 4, 5], inizio: '12:00', fine: '19:00' }], eccezioni: [], tetto: 120 };
