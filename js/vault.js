@@ -187,6 +187,8 @@ export const suProgresso = fn => L?.su('installa:progresso', fn);
 if (L) { addEventListener('lode:lezioni', aggiornaPagine); addEventListener('lode:dati', aggiornaPagine); aggiornaPagine(); }
 
 export const leggiNota = file => L.invoca('vault:leggi', { file });
+// «Ripasso in tasca» (js/tasca.js): In tasca.md alla radice del vault, l'unica nota che scrive (il main non ne permette altre)
+export const scriviTasca = testo => L.invoca('vault:scrivi', { file: 'In tasca.md', testo });
 export const salvaFile = (file, { testo, dati, sostituisci } = {}) => L.invoca('vault:salvaFile', { file, testo, dati, sostituisci });
 export const condividi = files => L.invoca('condividi', { files });
 // mostra un file del vault nella sua cartella (Finder, Esplora risorse): per esempio il file per Anki

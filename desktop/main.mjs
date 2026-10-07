@@ -293,7 +293,7 @@ ipcMain.handle('vault:annota', (_, x) => {
 });
 ipcMain.handle('vault:scrivi', (_, { file, testo }) => {
   file = V.relativo(file);
-  if (!/^(Orario|Lode\/[\w ]+)\.md$/.test(file)) throw new Error('file non permesso');
+  if (!/^(Orario|In tasca|Lode\/[\w ]+)\.md$/.test(file)) throw new Error('file non permesso');   // In tasca.md: js/tasca.js
   if (file === 'Orario.md' && sync.acceso()) return true;   // con la sincronizzazione Orario.md lo scrive il motore, col marcatore
   if (file === 'Orario.md') guardiano?.segnaOrario(testo);
   V.scriviSicuro(V.dentro(vault(), file), testo); return true;

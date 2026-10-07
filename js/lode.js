@@ -23,6 +23,7 @@ import * as CO from './computer.js';
 import { parlatoInFormule } from './formule.js';
 import { pulito } from './markdown.js';
 import { preparaAnki, testoAnki, nomeFileAnki, mazzo } from './anki.js';
+import * as TA from './tasca.js';
 // informatica (docs/PROGETTO-INFORMATICA.md): «Cosa stampa?», «Segui il progetto», gli errori spiegati, il registro nel vault
 import * as ST from './codice/stampa.js';
 import * as PR from './codice/progetto.js';
@@ -1600,6 +1601,7 @@ async function esegui(c) {
     case 'spegniRipeti': return spegniRipeti();
     case 'condividi': return condividiLezione(c.corso);
     case 'anki': return esportaAnki(c.corso);
+    case 'tasca': return schedaTasca(c);
     case 'fineTrascrizione': return fermaTrascrizione();
     case 'pausaTrascrizione': TR.pausa(); return mostraFatto({ testo: 'Trascrizione in pausa.', nota: 'Scrivi «riprendi trascrizione» quando ricomincia.' });
     case 'riprendiTrascrizione': TR.riprendi(); return mostraFatto({ testo: 'Riprendo a trascrivere.' });
@@ -1915,6 +1917,43 @@ function schedaTurno(t) {
   if (A.turno) A.turno.dataset.sintesi = `${chi}: ${t.file.length} file`;
 }
 if (BRIDGE) { BRIDGE.su('agente:turno', arrivaTurno); BRIDGE.invoca('agenti:stato').then(st => st?.agenti?.forEach(a => { NOMI_AGENTI[a.id] = a.nome; })).catch(() => { }); }
+
+/* ---------- Ripasso in tasca (js/tasca.js) ---------- */
+// le carte di domani in In tasca.md, da fare sul telefono con Obsidian: quando la nota torna, le spunte diventano ripasso.
+// Il comando fa sempre un giro (segna le spunte e riscrive); «… ogni sera» lo fa da solo dopo le 19. Una copia vecchia della
+// nota (sync in ritardo) non segna niente: si riscrive solo se lo studente lo chiede, e le spunte di quella copia si perdono
+const N_CARTE = n => `${n} ${n === 1 ? 'carta' : 'carte'}`;
+async function schedaTasca(c = {}, { riscrivi = false } = {}) {
+  if (!V.attivo) return rispostaFissa('Il ripasso in tasca va nell\'app: serve il vault di Obsidian.');
+  if (c.sera === false) { TA.sera(false); return mostraFatto({ testo: 'Ripasso in tasca solo quando lo chiedi.', nota: 'La nota In tasca.md resta nel vault: scrivi «ripasso in tasca» per aggiornarla.', sintesi: 'ripasso in tasca spento' }); }
+  if (c.sera === true) TA.sera(true);
+  modo('pensa', 'Preparo la nota…');
+  let r; try { r = await TA.aggiorna({ forza: true, riscrivi }); } catch (e) { r = { saltata: 'errore', errore: e.message }; }
+  modo('riposo');
+  if (r.segnate) aggiornaTutto();
+  if (r.saltata === 'errore') return rispostaFissa('Non riesco a leggere o scrivere la nota In tasca.md: ' + r.errore, { errore: true });
+  if (r.saltata === 'estranea') return rispostaFissa('Nel vault c\'è già una nota **In tasca.md** che non ha scritto Lode: non la tocco. Rinominala e riprova.');
+  const segnate = !r.segnate ? '' : r.segnate === 1 ? `Ho segnato la carta che hai fatto sul telefono: ${r.sapevo ? 'la sapevi' : 'non la sapevi'}.` : `Ho segnato ${r.segnate} carte che hai fatto sul telefono: ${r.sapevo} sapevi, ${r.segnate - r.sapevo} no.`;
+  const vecchia = r.saltata === 'vecchia', cambia = r.saltata === 'cambiata';
+  const dentro = vecchia ? 'La nota sul telefono è di un giro vecchio: non segno niente.' : cambia ? 'La nota sta ancora cambiando: Obsidian la sta sincronizzando. Non la riscrivo adesso, riprova tra un minuto.'
+    : r.scritte ? `Nella nota In tasca.md ${r.scritte === 1 ? 'c\'è' : 'ci sono'} ${N_CARTE(r.scritte)} per domani.` : 'Domani non hai carte da ripassare: la nota In tasca.md lo dice.';
+  const sera = () => TA.stato().sera;
+  const s = scheda('ld-tasca', `<span class="ld-lbl">Ripasso in tasca</span>
+    ${segnate ? `<p>${esc(segnate)}</p>` : ''}<p>${esc(dentro)}</p>
+    ${vecchia ? '<p class="ld-nota">Aspetta che il telefono finisca di sincronizzare e riprova. Se la nota giusta non arriva, riscrivila: le spunte di quella copia non le segno.</p>' : ''}
+    <div class="az"><button type="button" class="btn primary" data-t="apri">Apri la nota</button>${vecchia ? '<button type="button" class="btn" data-t="riscrivi">Riscrivi la nota</button>' : ''}<button type="button" class="btn" data-t="sera">${sera() ? 'Solo quando lo chiedo' : 'Ogni sera'}</button></div>
+    <p class="ld-nota" data-sera>${sera() ? 'Ogni sera dopo le 19 la riscrivo da sola, se Lode è aperto.' : ''}</p>
+    <p class="ld-nota">Funziona se il vault arriva sul telefono (iCloud, Obsidian Sync, Syncthing). Lode non usa la rete: la nota la porta il servizio che usi già.</p>`);
+  s.querySelector('[data-t=apri]').addEventListener('click', () => TA.apri()?.catch(e => rispostaFissa('Non riesco ad aprire la nota: ' + e.message, { errore: true })));
+  s.querySelector('[data-t=riscrivi]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Riscrivi la nota In tasca.md'); schedaTasca({}, { riscrivi: true }); });
+  s.querySelector('[data-t=sera]').addEventListener('click', e => {
+    TA.sera(!sera()); e.target.textContent = sera() ? 'Solo quando lo chiedo' : 'Ogni sera';
+    s.querySelector('[data-sera]').textContent = sera() ? 'Ogni sera dopo le 19 la riscrivo da sola, se Lode è aperto.' : 'La riscrivo solo quando me lo chiedi.';
+  });
+  if (A.turno) A.turno.dataset.sintesi = 'ripasso in tasca';
+}
+// all'avvio, col vault pronto: il giro solo se la nota c'è o la sera è accesa; poi il timer della sera (js/tasca.js)
+if (V.attivo) TA.avvia(r => { if (r?.segnate) aggiornaTutto(); });
 
 /* ---------- Moodle in sola lettura (desktop/moodle.mjs): corsi, file nuovi, scadenze ---------- */
 const nomeMoodle = st => st?.nome || st?.sito || 'Moodle';
