@@ -210,6 +210,7 @@ export const CASI = [
   ["j'ai l'exam d'analyse 2 le 15 janvier", { tipo: 'esame', nome: 'Analyse 2', cfu: null, data: prossimo(15, 0), esistente: E('Analyse 2') }],
   ['analyse 2 reporté au 20 janvier', { tipo: 'esame', nome: 'Analyse 2', cfu: null, data: prossimo(20, 0), esistente: E('Analyse 2') }],
   ["le partiel de physique 2 c'est le 1er février", { tipo: 'esame', nome: 'Physique 2', cfu: null, data: prossimo(1, 1), esistente: E('Physique 2') }],
+  ["l'intra de physique 2 est le 20 octobre", { tipo: 'esame', nome: 'Physique 2', cfu: null, data: prossimo(20, 9), esistente: E('Physique 2') }],
   ["l'exam de droit privé est demain", { tipo: 'esame', nome: 'Droit privé', cfu: null, data: giorno(1), esistente: E('Droit privé') }],
   ["j'ai le partiel d'analyse 2 lundi", { tipo: 'esame', nome: 'Analyse 2', cfu: null, data: prossimoGiorno(1), esistente: E('Analyse 2') }],
   ["ajoute l'examen histoire contemporaine", { tipo: 'esame', nome: 'histoire contemporaine', cfu: null, data: null, esistente: null }],
@@ -238,6 +239,7 @@ export const CASI = [
   ['connecte moodle', { tipo: 'moodle', cosa: null }],
   ['quoi de neuf sur moodle', { tipo: 'moodle', cosa: 'novita' }],
   ['échéances', { tipo: 'moodle', cosa: 'scadenze' }],
+  ['mes remises sur moodle', { tipo: 'moodle', cosa: 'scadenze' }],
   ["qu'est-ce que j'ai à rendre", { tipo: 'moodle', cosa: 'scadenze' }],
   ['déconnecte moodle', { tipo: 'moodle', cosa: 'scollega' }],
   ['cours sur moodle', { tipo: 'moodle', cosa: 'corsi' }],
@@ -283,4 +285,23 @@ export const NON = [
   "c'est quoi la moyenne pondérée",
   'soutenance de mémoire',
   "j'ai pas compris",
+  // frasi francesi che cominciano con una parola inglese, o scritte senza accenti come una inglese: l'inglese di riserva non le
+  // deve prendere (vanno all'AI)
+  'prepare-moi un expose sur la revolution',
+  'plan de dissertation sur la liberte',
+  "today c'est la galère",
+  'open la page de physique',
+  'review du code de lab3',
+  'play avec moi',
+];
+
+// l'inglese di riserva con la barra in francese: le frasi inglesi restano comandi, anche con il nome francese di un esame del
+// libretto
+export const RISERVA = [
+  ['review bases de données', { tipo: 'ripasso', esame: E('Bases de données'), nomeDetto: 'bases de données' }],
+  ['review databases', { tipo: 'ripasso', esame: E('Databases'), nomeDetto: 'databases' }],
+  ['today', { tipo: 'oggi' }],
+  ['quiz me', { tipo: 'orale', esame: null, nomeDetto: '' }],
+  ['language english', { tipo: 'lingua', codice: 'en' }],
+  ['flashcard: théorème de Green = la circulation est le flux du rotationnel', { tipo: 'carta', esame: null, fronte: 'théorème de Green', retro: 'la circulation est le flux du rotationnel' }],
 ];
