@@ -11,18 +11,20 @@ Grazie. Poche regole, per tenere Lode semplice:
 5. **Movimento morbido e rispettoso**: tutto passa da `js/motore.js` e si spegne con `prefers-reduced-motion`.
 6. **L'AI propone, lo studente decide**: ogni scrittura dell'AI passa da una scheda «Conferma / Annulla».
 
-Per provare nel browser: `python3 -m http.server 5173 --bind 127.0.0.1` e apri http://localhost:5173 (con `--bind 127.0.0.1` la cartella, `.git` compreso, la vede solo questo computer e non tutta la rete). Nuove frasi da capire? Aggiungile nel riconoscitore della loro lingua (`js/comandi/<codice>.js`; le parti senza lingua, come orari e date in cifre, stanno in `js/comandi.js`) e mettile negli esempi (`comandi.esempi` nel catalogo).
+Per provare nel browser: `python3 -m http.server 5173 --bind 127.0.0.1` e apri http://localhost:5173 (con `--bind 127.0.0.1` la cartella, `.git` compreso, la vede solo questo computer e non tutta la rete). Nuove frasi da capire? Aggiungile nel riconoscitore della loro lingua (`js/comandi/<codice>.js`; le parti senza lingua, come orari e date in cifre, stanno in `js/comandi/comune.js`), con i loro casi in `test/comandi/<codice>.mjs`, e se serve negli esempi (`ESEMPI` dello stesso riconoscitore).
 
 ## Le traduzioni
 
 Lode parla italiano, inglese, spagnolo, francese, tedesco e portoghese. **Le traduzioni nuove sono benvenute**, e anche le correzioni a quelle che ci sono: chi parla la lingua da sempre si accorge di cose che nessuna prova vede. Per aggiungere una lingua:
 
-1. **Un file per area** in `js/lingue/<codice>/` (le aree sono in `js/lingue/indice.js`), con le stesse chiavi dell'italiano (`js/lingue/it/`): stessi parametri `{nome}`, stessi tag, stessi elenchi, i plurali con le forme della lingua. Una chiave che manca si vede in italiano.
+1. **Un file per area** in `js/lingue/<codice>/` (le aree sono in `js/lingue/indice.js`), con le stesse chiavi dell'italiano (`js/lingue/it/`): stessi parametri `{nome}`, stessi tag, stessi elenchi, i plurali con le forme della lingua, le virgolette della lingua. Una chiave che manca si vede in italiano.
 2. **Una riga in `LINGUE`** di `js/lingua.js`: il nome della lingua scritto nella lingua e il locale, per esempio `nl: { nome: 'Nederlands', locale: 'nl-NL' }`.
 3. **Il riconoscitore** `js/comandi/<codice>.js`: le frasi che scriverebbe davvero uno studente in quella lingua, con gli stessi oggetti `{ tipo, … }` del riconoscitore italiano. Le prove vanno in `test/comandi-lingue.mjs`.
 4. **Ogni file nuovo in `sw.js`** (`FILE`), e il numero di `CACHE` sale.
 
-`node test/lingue.mjs` controlla che i cataloghi abbiano le stesse chiavi, gli stessi parametri e gli stessi tag dell'italiano, e che siano tutti nella cache. Come si scrive un testo, come si sceglie la lingua e cosa non cambia con la lingua: [docs/LINGUE.md](docs/LINGUE.md).
+Ci sono anche i nomi del vault, i dati di esempio, il sistema dei voti, la voce e i lettori dei testi incollati: l'elenco completo, passo per passo, è in [docs/LINGUE.md](docs/LINGUE.md) («Aggiungere una lingua, passo per passo»). **Un testo nuovo** si scrive con una chiave nuova in tutte e sei le lingue, nello stesso commit.
+
+`node test/lingue.mjs` controlla che i cataloghi abbiano le stesse chiavi, gli stessi parametri e gli stessi tag dell'italiano, che ogni chiave sia usata, che ogni lingua usi le sue virgolette e che i cataloghi siano tutti nella cache; `node test/comandi-lingue.mjs` che i comandi citati nei testi la barra li capisca davvero. Come si scrive un testo, come si sceglie la lingua e cosa non cambia con la lingua: [docs/LINGUE.md](docs/LINGUE.md).
 
 ## Provare senza rischi
 
@@ -49,16 +51,18 @@ Thank you. A few rules, to keep Lode simple:
 5. **Soft, respectful motion**: everything goes through `js/motore.js` and turns off with `prefers-reduced-motion`.
 6. **The AI suggests, the student decides**: every write by the AI goes through a “Confirm / Cancel” card.
 
-To try it in the browser: `python3 -m http.server 5173 --bind 127.0.0.1` and open http://localhost:5173 (with `--bind 127.0.0.1` only this computer sees the folder, `.git` included, not the whole network). New sentences to understand? Add them to the recognizer for their language (`js/comandi/<code>.js`; the parts with no language, such as times and dates in digits, are in `js/comandi.js`) and put them in the examples (`comandi.esempi` in the catalog).
+To try it in the browser: `python3 -m http.server 5173 --bind 127.0.0.1` and open http://localhost:5173 (with `--bind 127.0.0.1` only this computer sees the folder, `.git` included, not the whole network). New sentences to understand? Add them to the recognizer for their language (`js/comandi/<code>.js`; the parts with no language, such as times and dates in digits, are in `js/comandi/comune.js`), with their cases in `test/comandi/<code>.mjs`, and if needed in the examples (`ESEMPI` in the same recognizer).
 
 **Translations.** Lode speaks Italian, English, Spanish, French, German and Portuguese. **New translations are welcome**, and so are fixes to the existing ones: native speakers notice things no test can see. To add a language:
 
-1. **One file per area** in `js/lingue/<code>/` (the areas are listed in `js/lingue/indice.js`), with the same keys as Italian (`js/lingue/it/`): same `{name}` parameters, same tags, same lists, plurals with the forms of the language. A missing key shows up in Italian.
+1. **One file per area** in `js/lingue/<code>/` (the areas are listed in `js/lingue/indice.js`), with the same keys as Italian (`js/lingue/it/`): same `{name}` parameters, same tags, same lists, plurals with the forms of the language, the language's own quotation marks. A missing key shows up in Italian.
 2. **One line in `LINGUE`** in `js/lingua.js`: the language's name written in that language and its locale, for example `nl: { nome: 'Nederlands', locale: 'nl-NL' }`.
 3. **The recognizer** `js/comandi/<code>.js`: the sentences a student would really type in that language, returning the same `{ tipo, … }` objects as the Italian recognizer. Its tests go in `test/comandi-lingue.mjs`.
 4. **Every new file in `sw.js`** (`FILE`), and the `CACHE` number goes up.
 
-`node test/lingue.mjs` checks that the catalogs have the same keys, parameters and tags as Italian, and that they are all in the cache. How to write a text, how the language is chosen and what doesn't change with the language: [docs/LINGUE.md](docs/LINGUE.md) (in Italian).
+There are also the vault names, the sample data, the grading system, the voice and the readers for pasted text: the full step-by-step list is in [docs/LINGUE.md](docs/LINGUE.md) («Aggiungere una lingua, passo per passo»). **A new text** gets a new key in all six languages, in the same commit.
+
+`node test/lingue.mjs` checks that the catalogs have the same keys, parameters and tags as Italian, that every key is used, that each language uses its own quotation marks and that the catalogs are all in the cache; `node test/comandi-lingue.mjs` checks that the bar really understands the commands quoted in the texts. How to write a text, how the language is chosen and what doesn't change with the language: [docs/LINGUE.md](docs/LINGUE.md) (in Italian).
 
 **Trying changes safely** — yours, and even more so other people's (a pull request, a downloaded branch). The commands are in [For developers](README.md#for-developers) in the README.
 

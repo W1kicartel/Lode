@@ -1,6 +1,6 @@
 # Le lingue di Lode
 
-Lode parla italiano, inglese, spagnolo, francese, tedesco e portoghese.
+Lode parla italiano, inglese, spagnolo, francese, tedesco e portoghese (del Brasile, vedi sotto).
 
 L'**italiano resta la lingua di partenza**: ogni testo nasce in italiano, ogni chiave c'è sempre in italiano, e se una traduzione manca la barra mostra l'italiano.
 
@@ -28,17 +28,24 @@ h('div', 'riga', `<b>${esc(e.nome)}</b> ${t('barra.traGiorni', { n })}`);   // e
 - **I cataloghi** sono in `js/lingue/<codice>/<area>.js`. Ognuno ha `export default { 'area.chiave': 'testo', … }`.
 - **Le chiavi** iniziano con il nome dell'area, seguito da un nome breve in italiano che dice cosa c'è: `barra.salvato`, `errori.manca-punto-e-virgola.titolo`.
 - **Le aree** sono elencate in `js/lingue/indice.js` (`AREE`). Ogni file di catalogo va anche in `sw.js` (`FILE`). Quando si aggiunge un file, il numero di `CACHE` sale.
+- **In che area va un testo nuovo:** in quella del file che lo mostra. `js/lode.js` è diviso in tre: `barra1` (pillola, pannello, home, strumenti, ripasso, orario, trascrizione, file), `barra2` (allenatore, AI, «Prepara Lode», aggiornamenti, sincronizzazione, note, chiusura della lezione, giochi, comandi locali, errori, orale, agenti) e `barra3` (tasca, Moodle, crocette, temi, prova generale, programma, «te lo spiego io», voce, scorciatoie); il processo principale (`desktop/*.mjs`) usa `desktop`; i testi che servono a più file stanno in `comune`; gli altri moduli hanno l'area con il loro nome (`pagina`, `benvenuto`, `vault`, `libretto`…). Un modulo nuovo con molti testi può avere un'area nuova: va in `AREE`, nei sei cataloghi e in `sw.js`. Una chiave nuova si scrive **in tutte e sei le lingue** nello stesso commit, con il registro di ogni lingua (tu, du, tú, tu, você).
+- **Le chiavi composte con una variabile** (``t(`sistemi.nome.${cod}`)``, `'desktop.progetto-esito-' + tipo`, i nomi del vault letti da `js/nomi.js`) vanno in `COMPOSTE` di `test/lingue.mjs`: la prova segnala ogni chiave del catalogo italiano che nessun file usa, e una chiave che non serve più si toglie da tutte le lingue.
 - **Parametri:** si scrivono `{nome}`. `t()` non fa l'escape: i dati dello studente, come il nome dell'esame o un pezzo di nota, si mettono nell'HTML con `esc()` esattamente come prima.
-- **Plurali:** `{ one: '{n} carta', other: '{n} carte' }` con il parametro `n`. Dove la lingua li ha, si usano anche `few` e `many`, scelti con `Intl.PluralRules`. Se il numero cambia la frase, il valore italiano è un plurale, non una stringa.
+- **Plurali:** `{ one: '{n} carta', other: '{n} carte' }` con il parametro `n`. Dove la lingua li ha, si usano anche `few` e `many`, scelti con `Intl.PluralRules`. Se il numero può valere 1 e cambia la frase **in almeno una lingua**, il valore italiano è un plurale anche quando le due forme italiane sono uguali (`{ one: '{n} file', other: '{n} file' }`: in inglese è «1 file» / «2 files»). Il codice passa sempre `n`. Attenzione: in francese e in portoghese anche lo 0 è `one` («0 fichier»), quindi la forma `one` tiene `{n}` se il numero può valere 0.
 - **Elenchi** (come i nomi dei mesi): un array, letto con `elenco('area.chiave')`.
 - **Tag ammessi** nei testi: `b i em strong code br span kbd`. Nella traduzione restano gli stessi tag e gli stessi parametri dell'italiano.
+- **Virgolette:** ogni lingua usa le sue, sempre quelle: «…» in italiano, spagnolo e portoghese; « … » in francese, con lo spazio fine indivisibile (U+202F) dentro; „…“ in tedesco; “…” in inglese. Le virgolette dritte ("…") solo dove le ha anche l'italiano (stringhe di un programma). Fra `` `…` `` il testo resta com'è: lì si parla dei caratteri stessi.
+- **Comandi citati:** un testo che cita fra virgolette una frase da scrivere nella barra («segui il progetto», «sì», «esci») cita, in ogni lingua, una frase che il riconoscitore di quella lingua capisce davvero (`interpreta()`, o le parole delle schede in `PAROLE`). Se cita un bottone o una voce di menu, cita l'etichetta della lingua (lo stesso testo della chiave del bottone).
 - **Frasi intere, non pezzi.** Mai `t('a') + nome + t('b')`: in un'altra lingua l'ordine delle parole cambia. Si scrive una frase sola con il parametro: `t('x', { nome })`.
 - **Date e numeri:** `dataLunga`, `dataBreve`, `traQuanto`, `ore`, `num` di `js/dati.js` (che usano il catalogo `comune`), oppure `numero()` e `data()` di `js/lingua.js`. Mai `'it-IT'` scritto a mano.
 - **In italiano, ogni testo resta identico a prima, carattere per carattere:** le prove esistenti controllano proprio le frasi italiane.
-- **`node test/lingue.mjs`** controlla tre cose:
-  - stesse chiavi, parametri, tag e lunghezze degli elenchi in tutte le lingue;
+- **`node test/lingue.mjs`** controlla:
+  - stesse chiavi, parametri, tag e lunghezze degli elenchi in tutte le lingue, plurali con `other`;
   - ogni `t('…')` scritto nel codice ha la sua chiave in italiano;
+  - ogni chiave italiana è usata da qualche file (le composte stanno in `COMPOSTE`);
+  - le virgolette di ogni lingua;
   - ogni catalogo è nella cache del service worker.
+- **`node test/comandi-lingue.mjs`** controlla anche i comandi citati nei testi (sopra) e le parole delle schede con l'apostrofo tipografico.
 
 ## Come si sceglie la lingua
 
@@ -49,6 +56,8 @@ h('div', 'riga', `<b>${esc(e.nome)}</b> ${t('barra.traGiorni', { n })}`);   // e
 4. altrimenti l'inglese.
 
 Nel browser lo fa `iniziale()` di `js/lingua.js`. Nell'app lo fa il processo principale (`desktop/lingua.mjs`: `linguaDiPartenza`, `daFissare`), che la dà alla barra con `lingua:leggi` (sincrono, nel preload) e la usa anche per i suoi testi: menu dell'icona, finestre di sistema.
+
+**Nell'app** la lingua scelta sta in `conf.lingua` (la configurazione del processo principale, accanto a `conf.benvenuto`). `desktop/lingua.mjs` carica **gli stessi cataloghi** della barra, presi dalla cartella dell'interfaccia (`desktop/web` nel pacchetto, la radice del progetto in sviluppo), e ne esporta `t`, `elenco`, `numero`, `locale()`. All'avvio `main.mjs` salva `it` se serve (`daFissare`), poi chiama `usa(linguaScelta())` prima di creare le finestre. Fino ad allora vale l'italiano: nei moduli del processo principale niente `t()` in cima al file, i testi si chiedono quando servono.
 
 Nelle prove in node la lingua è l'italiano, salvo `LODE_LINGUA=<codice>`; nell'app `LODE_LINGUA` vale come `conf.lingua` (test/prova-app.mjs la mette a `it`, così gira in italiano anche sulle macchine in inglese). Per cambiare lingua si chiama `imposta(cod)`, che salva la scelta. Nell'app la passa al processo principale con `lingua:imposta`, che ricarica tutte le finestre (barra, quadro, benvenuto), ma solo se la lingua cambia davvero. Nel browser la pagina si ricarica da sola (`location.reload()`).
 
@@ -70,7 +79,7 @@ La lingua si sceglie:
 - Ogni lingua ha le sue parole: giorni, mesi, «domani», numeri scritti, verbi dei comandi.
 - **Il comando della lingua** c'è in tutte: «lingua inglese», «language italian», «idioma español»… → `{ tipo: 'lingua', codice }`.
 - **I voti** restano quelli detti (28, 30 e lode): come leggerli lo decide il sistema dei voti, non il riconoscitore.
-- **Le piccole parole dentro le schede** (il sì e il no di una conferma, «basta»/«voto» che chiudono l'orale, l'uscita da «spiegamelo» e dall'orale): ogni riconoscitore esporta `PAROLE = { si, siCoda, no, voto, basta, esci }`, frasi intere in minuscolo. `comandi.js` dà `dice(testo, 'si')` nella lingua scelta; le regole sono in `detto()` di `js/comandi/comune.js`, e in italiano danno esattamente le risposte delle regex di prima (`test/scelta.mjs`).
+- **Le piccole parole dentro le schede** (il sì e il no di una conferma, «basta»/«voto» che chiudono l'orale, l'uscita da «spiegamelo» e dall'orale): ogni riconoscitore esporta `PAROLE = { si, siCoda, no, voto, basta, esci }`, frasi intere in minuscolo. `comandi.js` dà `dice(testo, 'si')` nella lingua scelta; le regole sono in `detto()` di `js/comandi/comune.js`, e in italiano danno esattamente le risposte delle regex di prima (`test/scelta.mjs`), con una differenza voluta: l'apostrofo tipografico vale come quello dritto («d’accordo», «d’accord», «c’est bon», come li scrivono i telefoni). I testi che citano queste parole («Puoi anche scrivere «sì».», «Scrivi «esci» per lasciar stare.») citano in ogni lingua una parola della sua `PAROLE`: la prova dei comandi citati lo controlla.
 - **Prove:** `node test/comandi-lingue.mjs`. Ogni lingua ha i suoi casi in `test/comandi/<codice>.mjs` (`CASI = [[frase, risultato atteso], …]`, `NON = [frasi che non sono comandi]`). La tabella di riferimento è `test/comandi/it.mjs`: per ogni lingua almeno 3 frasi per ogni `tipo` che l'italiano riconosce, con gli stessi campi, e almeno 15 frasi che **non** devono diventare comandi. Il banco lancia ogni lingua con `LODE_LINGUA=<codice>`.
 - Un riconoscitore nuovo va anche in `sw.js` (`FILE`, e il numero di `CACHE` sale).
 
@@ -154,6 +163,25 @@ Un programma o un compito incollato non è per forza nella lingua della barra: u
 - **Voce:** Parakeet v3 e Whisper capiscono tutte e sei le lingue. A Whisper si passa la lingua della barra (`WHISPER` di `js/parole.js`: «italian», «english»…). Il riconoscimento del browser e la lettura ad alta voce usano il paese (`PAESE_VOCE`: «it-IT», «pt-BR»…). Parakeet v3 riconosce la lingua da solo: né FluidAudio (`lode-voce` sul Mac) né il transducer di sherpa-onnx hanno un parametro per la lingua. Le frasi che Whisper inventa nel silenzio (`ALLUCINAZIONI` in `js/voce.js`: «Thank you for watching», «Sous-titres réalisés par…», «Untertitel im Auftrag des ZDF», «Legendas pela comunidade…») si scartano in tutte le lingue.
 - **Formule dettate** (`js/formule.js`): italiano e inglese. Nelle altre lingue il testo resta com'è, senza conversione in formule.
   `parlatoInFormule(testo, lingua)` usa la lingua della barra se non gliela passi. In inglese capisce, per esempio, «x squared plus two x», «the integral from zero to one of x squared d x», «d y over d x», «partial f partial x», «the limit as x approaches zero of …», «the sum from n equals one to infinity of …», «f prime of x», «x to the minus one», «x sub n», «square root of», «less than or equal to», «for every epsilon … there exists delta», e anche quello che Whisper scrive già in simboli («f(x) = x^2 + 1», «sin(x)», «sqrt(2)»). I confronti, «in» e «goes to» diventano simboli solo se prima e dopo c'è un pezzo di formula: «x goes to zero» sì, «the function goes to zero» resta frase. Le prove sono in `test/formule.mjs`, con i casi italiani fissati come erano prima delle lingue.
+
+## Il portoghese del Brasile
+
+Il portoghese di Lode è quello del Brasile: locale `pt-BR` (`LINGUE` di `js/lingua.js`), voce `pt-BR` (`PAESE_VOCE`), «Brazilian Portuguese» per l'AI (`NOME_INGLESE` di `js/parole.js`), sistema dei voti predefinito `br` (0–10, `predefinito()` di `js/sistemi.js`), lo studente di esempio Júlia. Il registro è *você*, con le parole del Brasile (arquivo, tela, celular, aula, prova). Chi studia in Portogallo tiene la lingua `pt` e sceglie il sistema `pt` (0–20): la lingua non è il paese. Le parole del Portogallo restano capite dove non danno fastidio (il riconoscitore e i lettori dei testi incollati), ma i testi mostrati sono in brasiliano. Il codice della lingua resta `pt`: cartelle, chiavi e `conf.lingua` già salvate non cambiano.
+
+## Aggiungere una lingua, passo per passo
+
+Con l'olandese (`nl`) come esempio. Ogni passo ha la sua prova: alla fine `node test/lingue.mjs` e `node test/comandi-lingue.mjs` devono dare 0 errori.
+
+1. **La lingua:** una riga in `LINGUE` di `js/lingua.js` (`nl: { nome: 'Nederlands', locale: 'nl-NL' }`: il nome scritto nella lingua).
+2. **I cataloghi:** `js/lingue/nl/<area>.js` per ogni area di `AREE`, con tutte le chiavi dell'italiano: stessi parametri, stessi tag, stessi elenchi; i plurali con le forme della lingua (`Intl.PluralRules('nl')`), le virgolette della lingua (aggiungile a `VIRGOLETTE` di `test/lingue.mjs`). Un glossario delle parole scelte va in `docs/lingue/glossario-nl.md`. Nel catalogo `impostazioni` ci sono anche il nome della lingua (`impostazioni.lingua-nome`) e l'esempio del comando «lingua …» (`impostazioni.comando-esempio`).
+3. **Il vault:** `js/lingue/nl/vaultnomi.js` (cartelle, note, sezioni, giorni dell'orario, testi delle note che nascono col vault) e la riga in `CAT` di `js/nomi.js`. Le parole diventano nomi di file: niente `/ \ : * ? " < > |` e niente punto in fondo, perché il vault deve aprirsi su Windows, macOS e Linux (`node --experimental-vm-modules test/vault-nomi.mjs`).
+4. **I dati di esempio:** `js/lingue/nl/esempio.js` (stessa forma dell'italiano) e il paese in `PAESI_ESEMPIO` di `js/dati.js` (`node test/esempio-lingue.mjs`).
+5. **Il riconoscitore:** `js/comandi/nl.js` con `interpreta`, `leggiData`, `ESEMPI` (quanti l'italiano), `PAROLE` e, se servono, `numeri`, `giorniEOre`, `leggiOrario`, `leggiLavoro`, `nonInglese`. In `js/comandi/comune.js`: la riga `nl` in `PAROLE_PROPRIE` (mai parole che sono anche inglesi) e il nome della lingua scritto nella lingua in `NATIVI` («nederlands»). In ogni riconoscitore, il nome della lingua nuova per il comando «lingua olandese», «language dutch»… I casi in `test/comandi/nl.mjs`: almeno 3 frasi per ogni tipo dell'italiano e 15 che non sono comandi.
+6. **I voti:** il sistema predefinito della lingua in `predefinito()` di `js/sistemi.js`; se il paese ha un sistema nuovo, va in `SISTEMI` con i suoi testi nel catalogo `sistemi` (`node test/sistemi.mjs`, `node test/libretto-sistemi.mjs`).
+7. **L'AI e la voce:** il nome inglese della lingua in `NOME_INGLESE`, la lingua di Whisper in `WHISPER` e il paese della voce in `PAESE_VOCE` (`js/parole.js`). Le frasi che Whisper inventa nel silenzio in quella lingua vanno in `ALLUCINAZIONI` di `js/voce.js`.
+8. **I testi incollati:** le parole della lingua nei lettori (`js/programma.js`, `js/temi.js`, `js/crocette.js`, `js/giochi.js`, `js/parole.js`: mesi, numeri in fondo al nome di un esame), con un programma e un compito di prova in `test/contenuti-lingue.mjs`. Nessuna parola che in italiano è una parola piena.
+9. **La cache:** ogni file nuovo (cataloghi, riconoscitore) in `FILE` di `sw.js`, e il numero di `CACHE` sale (`node test/unione-lingue.mjs`).
+10. **I README:** il link alla lingua in cima a `README.md` e `README.it.md`, se c'è un README tradotto.
 
 ## README
 
