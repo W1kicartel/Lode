@@ -20,7 +20,10 @@ const CHIAVE = 'lode:lingua';
 
 // la lingua scelta: quella salvata (nell'app la passa il processo principale), poi quella del sistema, poi l'italiano
 export function scelta() {
-  if (typeof window === 'undefined') return (typeof process !== 'undefined' && LINGUE[process.env?.LODE_LINGUA] && process.env.LODE_LINGUA) || 'it';   // prove in node: italiano, salvo LODE_LINGUA
+  // prove in node: italiano, salvo LODE_LINGUA. Anche quando la prova finge una finestra (globalThis.window = globalThis):
+  // node ha navigator.language (en-US sulle macchine di GitHub) e senza questo controllo la prova girerebbe in inglese
+  const node = typeof process !== 'undefined' && !!process.versions?.node && !process.versions?.electron;
+  if (typeof window === 'undefined' || node) return (typeof process !== 'undefined' && LINGUE[process.env?.LODE_LINGUA] && process.env.LODE_LINGUA) || 'it';
   let s = null;
   try { s = (typeof window !== 'undefined' && window.lodeDesktop?.lingua) || localStorage.getItem(CHIAVE); } catch { }
   if (s && LINGUE[s]) return s;
