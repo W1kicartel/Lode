@@ -1438,10 +1438,10 @@ function correggiUguale(d, x) {
 function correggiReturn(d, x) {
   const f = funzioneDi(d, x), linea = d.riga ? x.riga(d.riga) : null;
   const testo = f ? t('errori.correggi-return', { nome: cod(f.nome) }) : t('errori.correggi-return-senza-nome');
-  if (linea == null || !/^\s*\}/.test(linea)) return { testo, righe: [{ n: null, testo: '    return ‹valore›;', segno: '+' }, { n: null, testo: '}', segno: ' ' }] };
+  if (linea == null || !/^\s*\}/.test(linea)) return { testo, righe: [{ n: null, testo: `    return ${t('errori.segnaposto-valore')};`, segno: '+' }, { n: null, testo: '}', segno: ' ' }] };
   const rientro = linea.match(/^\s*/)[0] + (/^\t/.test(x.riga(d.riga - 1) || '') ? '\t' : '    ');
   const sopra = x.riga(d.riga - 1);
-  return { testo, righe: [...(sopra != null ? [{ n: d.riga - 1, testo: sopra, segno: ' ' }] : []), { n: d.riga, testo: `${rientro}return ‹valore›;`, segno: '+' }, { n: d.riga + 1, testo: linea, segno: ' ' }] };
+  return { testo, righe: [...(sopra != null ? [{ n: d.riga - 1, testo: sopra, segno: ' ' }] : []), { n: d.riga, testo: `${rientro}return ${t('errori.segnaposto-valore')};`, segno: '+' }, { n: d.riga + 1, testo: linea, segno: ' ' }] };
 }
 
 // ---------- spiega ----------

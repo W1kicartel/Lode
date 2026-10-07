@@ -692,6 +692,7 @@ export default {
   'errori.tipo-avviso': 'Avviso',
   'errori.tipo-linker': 'Errore del linker',
   'errori.tipo-esecuzione': 'Si è fermato',
+  'errori.segnaposto-valore': '‹valore›',
   'errori.correzione-vista': 'correzione vista',
   'errori.messaggio-originale': 'Messaggio originale',
 };
