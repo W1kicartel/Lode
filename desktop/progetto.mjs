@@ -227,11 +227,12 @@ export function fraseFile(f) {
   if (inc.length && f.stato !== 'tolto') s += ' ' + t('desktop.progetto-include-nuovi', { n: inc.length, elenco: elenco(inc, true) });
   return s;
 }
-const TIPI = { c: ['compila', 'non-compila'], java: ['compila', 'non-compila'], python: ['sintassi-a-posto', 'errore-di-sintassi'], make: ['make-riuscito', 'make-non-riuscito'] };   // chiavi del catalogo: desktop.progetto-esito-…
+const K = 'desktop.progetto-esito-';   // le chiavi del catalogo: compila, non-compila, sintassi-a-posto…
+const TIPI = { c: [K + 'compila', K + 'non-compila'], java: [K + 'compila', K + 'non-compila'], python: [K + 'sintassi-a-posto', K + 'errore-di-sintassi'], make: [K + 'make-riuscito', K + 'make-non-riuscito'] };
 // l'esito in breve, per la pillola e per «Provato?»: «✓ compila · 6/6», «✗ 2 prove su 6», «✗ non compila · lista.c:42»
 export function esitoBreve(p) {
   if (!p) return '';
-  const [si, no] = (TIPI[p.tipo] || TIPI.c).map(k => t('desktop.progetto-esito-' + k));
+  const [si, no] = (TIPI[p.tipo] || TIPI.c).map(k => t(k));
   if (p.esito === 'ok') return `✓ ${si}${p.tot ? ` · ${p.ok}/${p.tot}` : ''}`;
   if (p.esito === 'prove') { const k = p.tot - p.ok; return '✗ ' + t('desktop.progetto-prove-su', { n: k, tot: p.tot }); }
   if (p.esito === 'non-compila') return `✗ ${no}${p.primo?.file ? ` · ${p.primo.file.split(/[\\/]/).pop()}${p.primo.riga ? ':' + p.primo.riga : ''}` : ''}`;
