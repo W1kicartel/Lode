@@ -163,7 +163,7 @@ export function interpreta(frase) {
     if (!domanda && !programma) return { tipo: 'anki', corso: r && !/^(?:tudo|todos|todas|todas as cadeiras|todas as disciplinas|todos os cursos)$/.test(semAcentos(r)) ? r : null };
   }
   // «revisão de bolso» (Ripasso in tasca, js/tasca.js): le carte di domani in una nota, da fare sul telefono con Obsidian
-  const TASCA = '(?:a |os |as |o )?(?:minha |meus |minhas |meu )?(?:revisao|revisoes|cartoes|cartas) (?:de bolso|no (?:telemovel|celular|telefone|bolso))';
+  const TASCA = '(?:a |os |as |o )?(?:minha |meus |minhas |meu )?(?:revisao|revisoes|cartoes|cartas) (?:de bolso(?: no (?:celular|telemovel|telefone))?|no (?:telemovel|celular|telefone|bolso))';
   if (u.match(new RegExp(`^(?:nao (?:facas|faca|faz|ponhas|ponha|mandes|mande)|desliga|desligar|desativa|tira|chega de|sem mais) ${TASCA}(?: todas as noites| toda noite| toda a noite| a noite)?$`))) return { tipo: 'tasca', sera: false };
   if ((m = u.match(new RegExp(`^(?:(?:faz(?:-me)?|me faz|faca|prepara(?:-me)?|me prepara|manda(?:-me)?|me manda|poe|coloca|escreve|atualiza|cria|liga) )?${TASCA}( todas as noites| toda noite| toda a noite| (?:so|apenas) quando (?:eu )?(?:pedir|peco))?$`)))) return m[1] ? { tipo: 'tasca', sera: !/pedir|peco/.test(m[1]) } : { tipo: 'tasca' };
 

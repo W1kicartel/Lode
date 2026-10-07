@@ -61,6 +61,8 @@ export const CASI = [
   ['desliga a revisão de bolso', { tipo: 'tasca', sera: false }],
   ['cartões no telemóvel só quando eu pedir', { tipo: 'tasca', sera: false }],
   ['cartões no celular', { tipo: 'tasca' }],
+  ['revisão de bolso no celular', { tipo: 'tasca' }],
+  ['faz a revisão de bolso no telemóvel todas as noites', { tipo: 'tasca', sera: true }],
   // programma, spiego, domande uscite, temi, prova generale
   ['programa de cálculo 2', { tipo: 'programma', esame: E('Cálculo 2'), nomeDetto: 'cálculo 2', testo: '' }],
   ['programa', { tipo: 'programma', esame: null, nomeDetto: '', testo: '' }],

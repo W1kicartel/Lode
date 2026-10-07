@@ -218,7 +218,7 @@ export function cambiaSistema(cod) {
     if (e.sistema === nuovo) delete e.sistema;
   }
   Object.assign(D.profilo, { sistema: nuovo, cfuTotali: S.sistema(nuovo).totali });
-  if (nuovo !== 'it') D.profilo.totaliScelti = true;
+  if (nuovo !== 'it') D.profilo.totaliScelti = true; else delete D.profilo.totaliScelti;   // in Italia non si scrive mai
   return true;
 }
 // il voto dell'esame è stato scritto con un altro sistema dei voti (prima di cambiarlo)? Allora non conta nei conti
