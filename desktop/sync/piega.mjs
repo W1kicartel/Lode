@@ -4,7 +4,10 @@
 // scorre: registri (vince l'ultimo, prev dice se era contemporaneo), cancellazioni morbide, contatori, importa secondari.
 import { createHash } from 'node:crypto';
 import { LISTE, RIPASSO, VUOTO, campoDiRecord, tipoPercorso, chiaveLezione } from './schema.mjs';
-import { applica, ricordaStato } from '../../js/sm2.js';
+import { daWeb } from '../web.mjs';
+
+// js/sm2.js dalla cartella dell'interfaccia (desktop/web.mjs): nel pacchetto «../../js» non c'è
+const { applica, ricordaStato } = await daWeb('js/sm2.js');
 
 // JSON con le chiavi in ordine: stesso contenuto, stesso testo (la forma canonica)
 export function canonico(x) {

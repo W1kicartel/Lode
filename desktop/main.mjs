@@ -20,9 +20,9 @@ import * as AGGIORNA from './aggiorna.mjs';
 import { creaSincronizzazione } from './sincronizza.mjs';
 import * as ICONA from './collegamento.mjs';
 import { t, usa, LINGUE, linguaDiPartenza, daFissare } from './lingua.mjs';
+import { WEB } from './web.mjs';   // desktop/web nel pacchetto (e in sviluppo dopo prepara.mjs), se no la radice del progetto
 
 const QUI = dirname(fileURLToPath(import.meta.url));
-const WEB = existsSync(join(QUI, 'web', 'index.html')) ? join(QUI, 'web') : join(QUI, '..');
 const MAC = process.platform === 'darwin', WIN = process.platform === 'win32';
 // installata dal codice (npm start), fuori dalle prove: l'icona per riaprirla e l'avvio all'accensione (collegamento.mjs)
 // (non per chi sviluppa con vault e dati di prova: LODE_DATI, LODE_VAULT)

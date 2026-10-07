@@ -2,13 +2,9 @@
 // come fa main.mjs con WEB (desktop/web nel pacchetto, la radice del progetto in sviluppo). La lingua la sceglie main.mjs
 // all'avvio con usa(): conf.lingua, se no quella del sistema. Fino ad allora vale l'italiano, quindi nei moduli del main
 // niente t() in cima al file: i testi si chiedono quando servono
-import { existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { daWeb } from './web.mjs';
 
-const QUI = dirname(fileURLToPath(import.meta.url));
-const WEB = existsSync(join(QUI, 'web', 'index.html')) ? join(QUI, 'web') : join(QUI, '..');
-const L = await import(pathToFileURL(join(WEB, 'js', 'lingua.js')).href);
+const L = await daWeb('js/lingua.js');
 export const { t, elenco, usa, LINGUE, numero } = L;
 // la forma dei numeri e delle ore della lingua scelta (it-IT, en-GB…): L.locale() legge la lingua di adesso
 export const locale = () => L.locale();

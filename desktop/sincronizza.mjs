@@ -15,7 +15,10 @@ import { creaMotore, MINIMO, scrittoDaVecchia } from './sync/motore.mjs';
 import { LISTE } from './sync/schema.mjs';
 import { differenze, normalizza } from './sync/differenze.mjs';
 import { t } from './lingua.mjs';
-import { nomi as nomiVault } from '../js/nomi.js';
+import { daWeb } from './web.mjs';
+
+// js/nomi.js dalla cartella dell'interfaccia (desktop/web.mjs): nel pacchetto «../js» non c'è
+const { nomi: nomiVault } = await daWeb('js/nomi.js');
 
 const MAC = process.platform === 'darwin', WIN = process.platform === 'win32';
 // p sta dentro cartella? Si confrontano i percorsi veri (realpath): un vault raggiunto da un collegamento a una cartella

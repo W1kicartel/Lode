@@ -71,6 +71,7 @@
       "sync/**",
       "collegamento.mjs",
       "lingua.mjs",
+      "web.mjs",
       "web/**",
       "package.json",
       "build/tray*.png",

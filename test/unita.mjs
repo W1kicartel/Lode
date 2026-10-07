@@ -356,6 +356,25 @@ D di (∂Q/∂x − ∂P/∂y).`;
       }
     }
     prova('pacchetto: tutti i moduli importati dal main sono negli installer (build.files)', !mancano.length && visti.has('sincronizza.mjs') && visti.has('sync/motore.mjs') && visti.has('collegamento.mjs'), 'mancano: ' + mancano.join(', ') + ' · visti: ' + [...visti].join(', '));
+    // ogni import relativo di desktop/*.mjs e desktop/sync/*.mjs (anche «../») deve restare dentro desktop/ e finire nei
+    // files del pacchetto: «../js/nomi.js» funziona in sviluppo ma nell'asar non c'è. I moduli di js/ si prendono da
+    // desktop/web.mjs (daWeb('js/…'): la copia in desktop/web fatta da prepara.mjs, cioè web/** nel pacchetto)
+    const { posix } = await import('node:path');
+    const sorgenti = [...readdirSync(new URL('../desktop/', import.meta.url)).filter(f => f.endsWith('.mjs')), ...readdirSync(new URL('../desktop/sync/', import.meta.url)).filter(f => f.endsWith('.mjs')).map(f => 'sync/' + f)];
+    const fuori = [], fuoriPacchetto = [], webMancanti = [], usaWeb = [];
+    for (const f of sorgenti) {
+      const testo = leggi('desktop/' + f), dir = posix.dirname(f);
+      for (const m of testo.matchAll(/(?:^|\n)\s*(?:import|export)\s[^'"]*?from\s+['"](\.{1,2}\/[^'"]+)['"]|\bimport\(\s*['"](\.{1,2}\/[^'"]+)['"]\s*\)/g)) {
+        const dove = posix.normalize(posix.join(dir, m[1] || m[2]));
+        if (dove.startsWith('../')) fuori.push(`${f} → ${m[1] || m[2]}`);
+        // i moduli del main (visti sopra) importano solo file del pacchetto; vendor.mjs serve solo in sviluppo
+        else if (visti.has(f) && dove !== 'vendor.mjs' && !nelPacchetto(dove)) fuoriPacchetto.push(`${f} → ${dove}`);
+      }
+      for (const m of testo.matchAll(/\bdaWeb\(\s*['"]([^'"]+)['"]\s*\)/g)) { usaWeb.push(m[1]); try { leggi(m[1]); } catch { webMancanti.push(`${f} → ${m[1]}`); } }
+    }
+    prova('pacchetto: nessun import di desktop/*.mjs e desktop/sync/*.mjs esce da desktop/ (nel pacchetto c\'è solo desktop/)', !fuori.length, fuori.join(', '));
+    prova('pacchetto: gli import relativi dei moduli del main finiscono nei files del pacchetto', !fuoriPacchetto.length, fuoriPacchetto.join(', '));
+    prova('pacchetto: i moduli di js/ del main passano da desktop/web.mjs (web/** nel pacchetto) e ci sono', B.files.includes('web.mjs') && B.files.includes('web/**') && visti.has('web.mjs') && !webMancanti.length && ['js/nomi.js', 'js/markdown.js', 'js/sm2.js', 'js/lingua.js'].every(x => usaWeb.includes(x)), webMancanti.join(', ') + ' · ' + usaWeb.join(', '));
   }
   prova('voce: modello da un commit preciso (mai main o latest), impronte SHA256 complete', /\/resolve\/[0-9a-f]{40}\/$/.test(VO.MODELLO.base) && !/\/(main|latest)\//.test(VO.MODELLO.base) && VO.MODELLO.file.length === 4 && VO.MODELLO.file.every(f => /^[0-9a-f]{64}$/.test(f.sha256) && f.byte > 0));
   prova('voce: il peso detto all\'interfaccia è quello dei file', Math.abs(VO.MODELLO.file.reduce((s, f) => s + f.byte, 0) / 2 ** 20 - VO.PESO_MB) < 10);
