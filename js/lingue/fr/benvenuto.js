@@ -32,7 +32,7 @@ export default {
   'benvenuto.nome-segnaposto': 'Ton prénom',
   'benvenuto.togli-esempio': "Enlève les données d'exemple de « Giulia » (faux examens, notes, cartes et heures de révision). Ce que tu as ajouté toi-même reste.",
   // installations
-  'benvenuto.web-titolo': "Lode au complet vit dans l'appli.",
+  'benvenuto.web-titolo': "La version complète de Lode est dans l'appli.",
   'benvenuto.web-sotto': "Dans le navigateur, tu as le relevé de notes, le minuteur, les révisions et les jeux. Obsidian, l'IA sur l'ordinateur, la voix et la transcription des cours sont dans l'appli de bureau.",
   'benvenuto.installa-titolo': 'On prépare ton ordinateur.',
   'benvenuto.installa-sotto': "Trois installations, une seule fois. Ensuite, Lode marche même sans internet, et rien de ce qui est à toi ne sort de l'ordinateur.",
@@ -109,7 +109,7 @@ export default {
   'benvenuto.orario-riga-aula': '{giorni} · {inizio}–{fine} · salle {aula}',
   'benvenuto.nessuna-lezione': 'Pas encore de cours.',
   'benvenuto.orario-titolo': "L'emploi du temps",
-  'benvenuto.orario-sotto': "Comme ça, Lode sait quand tu es en cours : la barre se prépare pour le cours, « Répète » et la transcription sont à une touche, et chez toi elle t'entraîne sur ce que tu viens d'entendre.",
+  'benvenuto.orario-sotto': "Comme ça, Lode sait quand tu es en cours : la barre se prépare pour le cours, « Répète » et la transcription sont à une touche, et chez toi, il t'entraîne sur ce que tu viens d'entendre.",
   'benvenuto.scrivila': 'Écris-le comme tu le dirais',
   'benvenuto.frase-segnaposto': 'analyse 2 lundi et mercredi 9h-11h salle 7',
   'benvenuto.aggiungi': 'Ajouter',

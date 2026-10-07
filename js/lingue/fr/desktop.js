@@ -22,7 +22,7 @@ export default {
   'desktop.agente-togliere': 'Retirer Lode de la configuration de {agente} ?',
   'desktop.agente-collegare': 'Connecter {agente} à Lode ?',
   'desktop.agente-toglie-righe': 'Lode retire seulement ses lignes dans :\n{file}',
-  'desktop.agente-aggiunge-righe': 'Lode ajoute seulement ses lignes, le reste ne change pas, dans :\n{file}',
+  'desktop.agente-aggiunge-righe': 'Lode ajoute seulement ses lignes, sans toucher au reste, dans :\n{file}',
   'desktop.agente-manda-eventi': "{agente} enverra à Lode, sur cet ordinateur, les événements des sessions (fichiers touchés, commandes, fin du tour). Lode ne répond pas et ne décide rien. ",
   'desktop.agente-file-com-era': "Le fichier tel qu'il était reste dans {file}.",
   'desktop.togli': 'Retirer',
