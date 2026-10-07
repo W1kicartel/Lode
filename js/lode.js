@@ -573,7 +573,7 @@ function schedaLibrettoSistema({ base } = {}) {
   const iniz = Math.round((sc.length - 1) * .75);
   const s = scheda('ld-libretto', `<div class="ld-kpi">
       <div><span class="ld-lbl">${t('sistemi.ponderata')}</span><b class="v" data-v="m">${esc(q.media)}</b><span class="d">${m.n ? t('barra1.aritmetica-esami', { media: esc(q.aritmetica), n: esc(m.n) }) : t('barra1.nessun-voto')}</span></div>
-      <div><span class="ld-lbl">${esc(q.nomeFinale)}</span><b class="v" data-v="b">${esc(q.valore)}</b><span class="d">${t('libretto.crediti-di', { fatti: esc(num(q.cfu, 0)), tot: esc(num(q.tot, 0)), crediti: esc(q.crediti) })}</span></div>
+      <div><span class="ld-lbl">${esc(q.nomeFinale)}</span><b class="v" data-v="b">${esc(q.breve.v)}${q.breve.dett ? `<small>${esc(q.breve.dett)}</small>` : ''}</b><span class="d">${t('libretto.crediti-di', { fatti: esc(num(q.cfu, 0)), tot: esc(num(q.tot, 0)), crediti: esc(q.crediti) })}</span></div>
     </div>
     <div class="ld-cfu" aria-hidden="true"><i style="transform:scaleX(0)"></i></div>
     ${testoServe ? `<p class="ld-serve">${testoServe}</p>` : ''}

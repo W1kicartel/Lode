@@ -192,6 +192,7 @@ for (const [cod, K] of Object.entries(CASI)) {
   // la scheda: i numeri della scheda e della pagina
   const q = LB.quadro();
   prova(`${cod}: quadro`, q.crediti === S.nomeCrediti(s) && q.nomeFinale === S.etichettaFinale(s) && q.cfu === Dm.cfuFatti() && q.tot === K.totali && q.valore === LB.formatoFinale(), JSON.stringify(q));
+  prova(`${cod}: il voto finale nel riquadro`, q.breve.v === L.numero(q.finale.valore, cod === 'de' || cod === 'uk' ? 1 : 2) && (cod === 'fr' ? q.breve.dett.includes(L.t(`sistemi.mention.${q.finale.mention}`)) : cod === 'uk' ? q.breve.dett === L.t(`sistemi.classe.${q.finale.classe}`) : q.breve.dett === ''), JSON.stringify(q.breve));
   prova(`${cod}: un voto nel libretto si scrive come nel sistema`, Dm.fatti().every(e => LB.votoEsame(e) === S.formato(e.voto, s, { lode: e.lode, idoneita: e.idoneita })));
   // la finestra della pagina: il voto scritto come sul libretto, e l'esempio si rilegge
   prova(`${cod}: l'esempio della pagina si rilegge`, LB.leggiVoto(LB.votoEsempio())?.voto != null && LB.rigaEsempio().includes(LB.votoEsempio()));

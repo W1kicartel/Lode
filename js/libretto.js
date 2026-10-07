@@ -125,7 +125,7 @@ export function testoSimula(e, voto, lode = false) {
 // i numeri della scheda e della pagina: media, aritmetica, voto finale, crediti
 export function quadro() {
   const m = media(), f = votoFinale(m);
-  return { m, finale: f, media: formatoMedia(m.ponderata), aritmetica: formatoMedia(m.aritmetica), valore: formatoFinale(f), nomeFinale: nomeFinale(), crediti: crediti(), cfu: cfuFatti(), tot: D.profilo.cfuTotali || sis().totali };
+  return { m, finale: f, media: formatoMedia(m.ponderata), aritmetica: formatoMedia(m.aritmetica), valore: formatoFinale(f), breve: finaleBreve(f), nomeFinale: nomeFinale(), crediti: crediti(), cfu: cfuFatti(), tot: D.profilo.cfuTotali || sis().totali };
 }
 // un voto registrato, come si mostra nel libretto: «8,5», «10 MH», «A−», «idoneo»
 export const votoEsame = e => (e.idoneita ? S.formato(null, sis(), { idoneita: true }) : formato(e.voto, { lode: e.lode }));
@@ -155,3 +155,13 @@ export function testoObiettivoFuori(s = sis()) {
 // i crediti di una laurea fra cui scegliere nelle impostazioni: quelli del sistema per primi (240 in Spagna e in Brasile,
 // 360 nel Regno Unito, 120 negli Stati Uniti), più quelli che hai già
 export const opzioniTotali = (s = sis()) => [...new Set([s.totali, 180, 240, 120, 300, 360, Number(D.profilo.cfuTotali) || s.totali])];
+// il voto finale in due pezzi, per i riquadri grandi della scheda e della pagina: il numero e, accanto in piccolo, la
+// mention (Francia) o la classe (Regno Unito): { v: '13,45', dett: '/20 · Assez bien' }
+export function finaleBreve(f = votoFinale()) {
+  const s = sis();
+  if (!f) return { v: '—', dett: '' };
+  const v = numero(f.valore, s.cod === 'de' || s.cod === 'uk' ? 1 : 2);
+  if (s.cod === 'fr') return { v, dett: `/20 · ${t(`sistemi.mention.${f.mention || 'nessuna'}`)}` };
+  if (s.cod === 'uk') return { v, dett: t(`sistemi.classe.${f.classe}`) };
+  return { v, dett: '' };
+}
