@@ -49,7 +49,7 @@ export function dentro(vault, rel) {
 
 // le note che nascono col vault, nella lingua del vault (js/lingue/<codice>/vaultnomi.js). In italiano sono quelle di sempre
 const metti = (s, p) => String(s).replace(/\{(\w+)\}/g, (x, k) => (k in p ? String(p[k]) : x));
-const benvenuto = N => metti(N.testi.benvenuto, { firma: N.testi.benvenutoFirma, orario: N.note.orario, lezioni: N.cartelle.lezioni, stella: N.sezioni.stella, definizioni: N.sezioni.definizione, memoria: N.note.memoria, lode: N.cartelle.lode, notePerLode: N.titoli.notePerLode });
+const benvenuto = N => metti(N.testi.benvenuto, { firma: N.testi.benvenutoFirma, corso: N.testi.corso, orario: N.note.orario, lezioni: N.cartelle.lezioni, stella: N.sezioni.stella, definizioni: N.sezioni.definizione, memoria: N.note.memoria, lode: N.cartelle.lode, notePerLode: N.titoli.notePerLode });
 const modello = N => `---
 corso: "[[]]"
 data: {{date:YYYY-MM-DD}}

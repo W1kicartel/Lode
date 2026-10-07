@@ -35,7 +35,7 @@ export function nomiDi(cod) {
     testi: { esameProgramma: v('esame-programma'), esameDomande: v('esame-domande'), esameDomandeCommento: v('esame-domande-commento'), esameEsercizi: v('esame-esercizi'), esameManca: v('esame-manca'),
       ripassoTreRighe: v('ripasso-tre-righe'), ripassoCommentoDefinizioni: v('ripasso-commento-definizioni'), ripassoCollegamenti: v('ripasso-collegamenti'), ripassoCommentoCollegamenti: v('ripasso-commento-collegamenti'),
       memoriaTitolo: v('memoria-titolo'), memoriaCommento: v('memoria-commento'), memoriaInBreve: v('memoria-in-breve'), memoriaAncoraNiente: v('memoria-ancora-niente'), memoriaNoteCommento: v('memoria-note-commento'),
-      benvenutoFirma: v('benvenuto-firma'), benvenuto: v('benvenuto-testo') },
+      benvenutoFirma: v('benvenuto-firma'), benvenuto: v('benvenuto-testo'), corso: v('parola-corso') },
   };
 }
 

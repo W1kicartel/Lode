@@ -13,8 +13,11 @@
 import { D, dataLunga, oggi, piuGiorni, rispondi, salva, id } from './dati.js';
 import * as V from './vault.js';
 import { t } from './lingua.js';
+import { nomi, nomiDi, fileNota, rx } from './nomi.js';
 
+// il nome della nota nei vault italiani (e in quelli nati prima delle lingue); il vault aperto usa il suo (js/nomi.js)
 export const FILE = 'In tasca.md';
+const file = () => fileNota('tasca');
 export const MASSIMO = 20;
 // lo stato vive in D (dati.json nel vault): D può essere sostituito (sync, altra finestra), quindi si prende ogni volta
 export const stato = () => { const t = D.tasca ||= { giro: null, impronta: null, scritta: null, sera: false }; t.fatte ||= []; t.carte ||= {}; return t; };
@@ -31,15 +34,17 @@ export function scegli(carte, T, esami = []) {
 
 // il testo della nota. Il fronte su una riga sola (dentro ** **), la risposta con «> » davanti a ogni riga (le formule
 // $…$ restano come sono: Obsidian le mostra anche nel callout). Marcatori in commenti HTML: in lettura non si vedono
+// Il titolo, il callout e le caselle hanno le parole del vault (js/nomi.js): «sapevo»/«non sapevo» in un vault italiano
 export function scriviNota(carte, esami, giro, T) {
-  const capo = `# Ripasso in tasca\n${t('tasca.nota-capo', { data: dataLunga(piuGiorni(T, 1)) })}\n`;
+  const N = nomi(), P = N.parole, callout = P.risposta.toLowerCase();
+  const capo = `# ${N.titoli.ripassoInTasca}\n${t('tasca.nota-capo', { data: dataLunga(piuGiorni(T, 1)) })}\n`;
   const fine = `<!-- lode-tasca giro:${giro} -->\n`;
-  if (!carte.length) return `# Ripasso in tasca\n${t('tasca.nota-vuota')}\n\n${fine}`;
+  if (!carte.length) return `# ${N.titoli.ripassoInTasca}\n${t('tasca.nota-vuota')}\n\n${fine}`;
   const blocchi = carte.map((c, i) => {
     const corso = (esami || []).find(e => e.id === c.esameId)?.nome || t('tasca.senza-corso');
     const fronte = String(c.fronte).replace(/\s*\n\s*/g, ' ').trim();
     const retro = String(c.retro || '').replace(/\r\n?/g, '\n').trim().split('\n').map(r => (r.trim() ? '> ' + r.replace(/\s+$/, '') : '>')).join('\n') || '>';
-    return `## ${i + 1} · ${corso}\n**${fronte}**\n\n> [!risposta]- Risposta\n${retro}\n\n- [ ] sapevo\n- [ ] non sapevo\n<!-- lode-carta:${c.id} -->\n`;
+    return `## ${i + 1} · ${corso}\n**${fronte}**\n\n> [!${callout}]- ${P.risposta}\n${retro}\n\n- [ ] ${P.sapevo}\n- [ ] ${P.nonSapevo}\n<!-- lode-carta:${c.id} -->\n`;
   });
   return `${capo}\n${blocchi.join('\n')}\n${fine}`;
 }
@@ -47,19 +52,25 @@ export function scriviNota(carte, esami, giro, T) {
 // le spunte: { giro, esiti: [{ id, sapevo }] }. Contano solo le righe che cominciano con «- [ ]» (le righe della risposta
 // hanno «> » davanti) e una carta conta solo con una casella spuntata, [x] o [X]: zero o due, ignorata. Le caselle valgono
 // fino al marcatore della loro carta; un titolo «## » ricomincia da capo. Con carte, gli id che non ci sono più si ignorano
-const CASELLA = /^\s*[-*] \[(.)\] *(non sapevo|sapevo)\s*$/i, CARTA = /^<!-- lode-carta:([\w-]{1,40}) -->\s*$/, GIRO = /^<!-- lode-tasca giro:([\w-]{1,40}) -->\s*$/m;
+// le caselle si leggono con le parole del vault e con quelle italiane (una nota scritta prima delle lingue); il «non» prima
+const IT = nomiDi('it').parole;
+const caselle = () => {
+  const P = nomi().parole, no = [...new Set([P.nonSapevo, IT.nonSapevo])], si = [...new Set([P.sapevo, IT.sapevo])];
+  return { re: new RegExp(`^\\s*[-*] \\[(.)\\] *(${[...no, ...si].sort((a, b) => b.length - a.length).map(rx).join('|')})\\s*$`, 'i'), no: no.map(x => x.normalize('NFC').toLowerCase()) };
+};
+const CARTA = /^<!-- lode-carta:([\w-]{1,40}) -->\s*$/, GIRO = /^<!-- lode-tasca giro:([\w-]{1,40}) -->\s*$/m;
 export function leggiNota(testo, carte = null) {
   const righe = String(testo || '').replace(/\r\n?/g, '\n').split('\n'), esiti = [], visti = new Set();
-  const esistono = carte ? new Set(carte.map(c => c.id)) : null;
-  let caselle = [];
+  const esistono = carte ? new Set(carte.map(c => c.id)) : null, CASELLA = caselle();
+  let viste = [];
   for (const r of righe) {
     let m;
-    if (/^#{1,6} /.test(r)) caselle = [];
-    else if ((m = r.match(CASELLA))) caselle.push({ spunta: /^[xX]$/.test(m[1]), sapevo: !/^non/i.test(m[2]) });
+    if (/^#{1,6} /.test(r)) viste = [];
+    else if ((m = r.normalize('NFC').match(CASELLA.re))) viste.push({ spunta: /^[xX]$/.test(m[1]), sapevo: !CASELLA.no.includes(m[2].toLowerCase()) });
     else if ((m = r.match(CARTA))) {
-      const sp = caselle.filter(c => c.spunta);
+      const sp = viste.filter(c => c.spunta);
       if (sp.length === 1 && !visti.has(m[1]) && (!esistono || esistono.has(m[1]))) { visti.add(m[1]); esiti.push({ id: m[1], sapevo: sp[0].sapevo }); }
-      caselle = [];
+      viste = [];
     }
   }
   return { giro: String(testo || '').match(GIRO)?.[1] || null, esiti };
@@ -79,7 +90,7 @@ export function impronta(testo) {
 // riscrivere una nota che non si è riusciti a leggere (iCloud che la sta scaricando, file bloccato)
 const NON_CE = /ENOENT|no such file|non c.è/i;
 export const vaultVero = {
-  async leggi() { try { return await V.leggiNota(FILE); } catch (e) { if (NON_CE.test(e?.message || '')) return null; throw e; } },
+  async leggi() { try { await V.nomiPronti(); return await V.leggiNota(file()); } catch (e) { if (NON_CE.test(e?.message || '')) return null; throw e; } },
   scrivi: testo => V.scriviTasca(testo),
 };
 // i giri uno alla volta: l'avvio e il comando insieme non devono leggere tutti e due la stessa nota e segnare due volte
@@ -142,4 +153,4 @@ export function avvia(fatto = () => { }) {
   addEventListener('lode:vault', su);
 }
 export const sera = acceso => { stato().sera = !!acceso; salva(); };
-export const apri = () => V.apriDiario({ file: FILE });
+export const apri = () => V.apriDiario({ file: file() });

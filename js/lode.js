@@ -27,6 +27,7 @@ import * as PV from './prova.js';
 import * as CO from './computer.js';
 import { parlatoInFormule } from './formule.js';
 import { pulito } from './markdown.js';
+import { nomi as NV } from './nomi.js';   // i nomi del vault aperto (cartelle, note): quelli con cui il vault è nato
 import { preparaAnki, testoAnki, nomeFileAnki, mazzo } from './anki.js';
 import * as TA from './tasca.js';
 // informatica (docs/PROGETTO-INFORMATICA.md): «Cosa stampa?», «Segui il progetto», gli errori spiegati, il registro nel vault
@@ -668,7 +669,7 @@ function schedaOrario() {
     <form class="ld-or-form"><input name="corso" list="ld-corsi" placeholder="${t('barra1.corso')}" aria-label="${t('barra1.corso')}" required><datalist id="ld-corsi">${corsi.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
       <div class="ld-giorni" role="group" aria-label="${t('barra1.giorni')}">${[1, 2, 3, 4, 5, 6].map(g => `<label><input type="checkbox" name="g" value="${g}"><span>${GIORNI_BREVI[g].slice(0, 2)}</span></label>`).join('')}</div>
       <input name="inizio" type="time" value="09:00" aria-label="${t('barra1.inizio')}" required><input name="fine" type="time" value="11:00" aria-label="${t('barra1.fine')}" required><input name="aula" placeholder="${t('barra1.aula')}" aria-label="${t('barra1.aula')}"><button class="btn" type="submit">${t('barra1.aggiungi')}</button></form>
-    <p class="ld-nota">${V.attivo ? t('barra1.orario-nel-vault') : t('barra1.orario-oppure-scrivi')}</p>`);
+    <p class="ld-nota">${V.attivo ? t('vaultnomi.frase-orario-nel-vault', { nota: `${NV().note.orario}.md` }) : t('barra1.orario-oppure-scrivi')}</p>`);
   s.querySelectorAll('[data-via]').forEach(b => b.addEventListener('click', () => { D.orario = D.orario.filter(o => o.id !== b.dataset.via); salva(); V.scriviOrario(); comprimi(b.closest('.ld-or'), 300); aggiornaTutto(); }));
   s.querySelector('form').addEventListener('submit', ev => {
     ev.preventDefault(); const f = new FormData(ev.target), giorni = f.getAll('g').map(Number);
@@ -751,7 +752,7 @@ function fineCattura() { A.cattura = null; delete campo.dataset.cattura; campo.q
 async function salvaCattura(tipo, testo, { termine, corso } = {}) {
   if (tipo === 'definizione' && !termine) { const m = testo.match(/^(.+?)\s*(?:::|:|=|→|—)\s*(.+)$/); if (!m) { rispostaFissa(t('barra1.scrivila-cosi')); return false; } termine = m[1]; testo = m[2]; }
   let l; try { l = await V.annota(tipo, testo, { termine, corso }); } catch (e) { rispostaFissa(t('barra1.errore-vault', { errore: e.message }), { errore: true }); return false; }
-  const dove = l.corso === 'Appunti sparsi' ? t('barra1.dove-sparsi') : t('barra1.dove-in', { corso: l.corso });
+  const dove = V.sparsi(l.corso) ? t('barra1.dove-sparsi') : t('barra1.dove-in', { corso: l.corso });
   const testoFatto = tipo === 'stella' ? t('barra1.segnato-dove', { dove }) : tipo === 'definizione' ? t('barra1.definizione-dove', { termine: termine.trim().replace(/^./, c => c.toUpperCase()), dove }) : t('barra1.domanda-dove', { dove });
   aggiornaTutto();
   return { testo: testoFatto, l };
@@ -770,7 +771,7 @@ function schedaComputer(corsoDetto) {
     ${D.imp.computerOk ? '' : `<p class="ld-nota">${t('barra1.computer-patto')}</p>`}
     <p class="ld-nota">${window.lodeDesktop?.piattaforma === 'darwin' ? t('barra1.computer-mac') : window.lodeDesktop?.piattaforma === 'win32' ? t('barra1.computer-windows') : t('barra1.computer-linux')}</p>`);
   s.querySelector('[data-via]').addEventListener('click', () => {
-    const corso = (s.querySelector('select')?.value || s.querySelector('input')?.value || '').trim() || 'Videolezioni';
+    const corso = (s.querySelector('select')?.value || s.querySelector('input')?.value || '').trim() || NV().corsi.videolezioni;
     D.imp.computerOk = true; salva(); s.querySelector('[data-via]').disabled = true;
     nuovoTurno(); detto(A.turno, t('barra1.detto-trascrivi-videolezione', { corso }));
     avviaTrascrizione({ sorgente: 'computer', lezione: lezionePer(corso, oggi()) });
@@ -816,7 +817,7 @@ async function avviaTrascrizione(opz = {}) {
       dopo(2500, () => { if (A.aperto && !A.attesa) chiudi(t('barra1.avviso-videolezione')); });
       return;
     }
-    await mostraFatto({ testo: l.corso === 'Appunti sparsi' ? t('barra1.trascrivo-sparsi') : t('barra1.trascrivo-lezione-di', { corso: l.corso }), nota: t('barra1.righe-ogni'), azione: [t('barra1.apri-in-obsidian'), () => apriAppunti(l)], sintesi: t('barra1.sintesi-trascrizione-avviata') });
+    await mostraFatto({ testo: V.sparsi(l.corso) ? t('barra1.trascrivo-sparsi') : t('barra1.trascrivo-lezione-di', { corso: l.corso }), nota: t('barra1.righe-ogni'), azione: [t('barra1.apri-in-obsidian'), () => apriAppunti(l)], sintesi: t('barra1.sintesi-trascrizione-avviata') });
     segnala('focus'); aggiornaTutto();
     if (!opz.audioProva) dopo(1200, () => { if (A.aperto && !A.attesa) chiudi(t('barra1.avviso-trascrivo')); });
   } catch (e) { modo('riposo'); rispostaFissa(opz.sorgente === 'computer' ? erroreComputer(e) : t('barra1.errore-trascrivere', { errore: /Permission|NotAllowed|NotFound|NotReadable/i.test(e.name + e.message) ? Voce.erroreMicrofono(e) : e.message }), { errore: true }); }
@@ -841,7 +842,7 @@ async function riordinaLezione(corso, lez) {
   catch (e) { modo('riposo'); return rispostaFissa(t('barra1.errore-riordinare', { errore: e.message }), { errore: true }); }
   modo('riposo');
   const card = schedaConferma({ titolo: t('barra1.salvare-riordinati', { corso: l.corso }), extra: `<div class="ld-anteprima">${mdHtml(md.slice(0, 1400))}${md.length > 1400 ? '<span class="ld-tenue"> …</span>' : ''}</div>`,
-    nota: t('barra1.riordinati-nota', { motore: AI.nomeMotore('testo') }) });
+    nota: t('vaultnomi.frase-riordinati-nota', { sezione: V.SEZIONI.riordinati, motore: AI.nomeMotore('testo') }) });
   await attendiDecisione(card, async () => {
     await V.annota('riordinati', md, { lezione: l, grezza: true });
     await mostraFatto({ testo: t('barra1.appunti-salvati'), azione: [t('barra1.condividi'), () => { nuovoTurno(); detto(A.turno, t('barra1.detto-condividi')); condividiLezione(l.corso); }], sintesi: t('barra1.sintesi-lezione-riordinata') }, card);
@@ -918,9 +919,10 @@ async function condividiLezione(corso) {
   modo('pensa', t('barra1.preparo-sbobina'));
   try {
     const sb = SB.crea(await V.leggiNota(l.file), { autore: D.profilo.nome }), pagina = await SB.html(sb);
-    const a = await V.salvaFile(`Sbobine/${sb.nome}.md`, { testo: sb.md, sostituisci: true }), b = await V.salvaFile(`Sbobine/${sb.nome}.html`, { testo: pagina, sostituisci: true });
+    const cartella = NV().cartelle.sbobine;
+    const a = await V.salvaFile(`${cartella}/${sb.nome}.md`, { testo: sb.md, sostituisci: true }), b = await V.salvaFile(`${cartella}/${sb.nome}.html`, { testo: pagina, sostituisci: true });
     modo('riposo'); const r = await V.condividi([b.file, a.file]);
-    return mostraFatto({ testo: t('barra1.sbobina-pronta', { corso: l.corso }), nota: r.esito === 'menu' ? t('barra1.scegli-dove') : t('barra1.nella-cartella-sbobine'), azione: [t('barra1.mostra'), () => V.condividi([b.file, a.file])], sintesi: t('barra1.sintesi-sbobina-condivisa') });
+    return mostraFatto({ testo: t('barra1.sbobina-pronta', { corso: l.corso }), nota: r.esito === 'menu' ? t('barra1.scegli-dove') : t('vaultnomi.frase-nella-cartella', { cartella }), azione: [t('barra1.mostra'), () => V.condividi([b.file, a.file])], sintesi: t('barra1.sintesi-sbobina-condivisa') });
   } catch (e) { modo('riposo'); return rispostaFissa(t('barra1.errore-sbobina', { errore: e.message }), { errore: true }); }
 }
 
@@ -935,14 +937,14 @@ function scaricaTesto(nome, testo) {
 async function esportaAnki(corsoDetto) {
   // il corso detto vale col suo nome e con quello dell'esame che gli somiglia («analisi 2» → «Analisi 2»), niente di più largo
   const e = corsoDetto ? trovaEsame(corsoDetto) : null, nomi = new Set([norm(corsoDetto), norm(e?.nome)].filter(Boolean));
-  const carte = D.carte.map(c => ({ id: c.id, fronte: c.fronte, retro: c.retro, corso: esame(c.esameId)?.nome || 'Varie' }));
+  const carte = D.carte.map(c => ({ id: c.id, fronte: c.fronte, retro: c.retro, corso: esame(c.esameId)?.nome || NV().corsi.varie }));
   const p = preparaAnki({ carte, definizioni: definizioni({ giorni: 3650 }), corso: corsoDetto ? n => nomi.has(norm(n)) : null });
   if (!p.totale) return rispostaFissa(corsoDetto ? t('barra1.anki-non-trovo-di', { corso: e?.nome || corsoDetto }) : t('barra1.anki-non-trovo'));
   const nome = nomeFileAnki(corsoDetto ? p.mazzi[0].corso : null, oggi()), testo = testoAnki(p.mazzi);
   const quante = (p.mazzi.length > 1 ? t('barra1.anki-carte-mazzi', { n: p.totale, mazzi: p.mazzi.length }) : t('barra1.anki-carte-mazzo', { n: p.totale, mazzo: mazzo(p.mazzi[0].corso) })) + (p.doppioni ? t('barra1.anki-doppioni', { n: p.doppioni }) : '');
   if (!V.attivo) { scaricaTesto(nome, testo); return mostraFatto({ testo: quante, nota: t('barra1.anki-importa-download', { file: nome }), azione: [t('barra1.scarica'), () => scaricaTesto(nome, testo)], sintesi: t('barra1.sintesi-anki') }); }
   try {
-    const r = await V.salvaFile(`Anki/${nome}`, { testo, sostituisci: true });
+    const r = await V.salvaFile(`${NV().cartelle.anki}/${nome}`, { testo, sostituisci: true });
     return mostraFatto({ testo: quante, nota: t('barra1.anki-importa-vault', { file: r.file }), azione: [t('barra1.mostra'), () => V.mostra(r.file).catch(x => rispostaFissa(t('barra1.errore-mostrare', { errore: x.message }), { errore: true }))], sintesi: t('barra1.sintesi-anki') });
   } catch (x) { return rispostaFissa(t('barra1.errore-anki', { errore: x.message }), { errore: true }); }
 }
@@ -951,7 +953,7 @@ async function esportaAnki(corsoDetto) {
 const ICONA_FILE = { pdf: 'doc', slide: 'doc', word: 'doc', testo: 'doc', sbobina: 'appunti', carte: 'ripasso', foto: 'foto', audio: 'audio', altro: 'doc' };
 const NOME_TIPO = { pdf: t('barra1.tipo-pdf'), slide: t('barra1.tipo-slide'), word: t('barra1.tipo-word'), testo: t('barra1.tipo-testo'), sbobina: t('barra1.tipo-sbobina'), carte: t('barra1.tipo-carte'), foto: t('barra1.tipo-foto'), audio: t('barra1.tipo-audio'), altro: t('barra1.tipo-altro') };
 function corsiPossibili() {
-  const c = new Map(); const metti = n => { if (n && n !== 'Appunti sparsi' && !c.has(norm(n))) c.set(norm(n), n); };
+  const c = new Map(); const metti = n => { if (n && !V.sparsi(n) && !c.has(norm(n))) c.set(norm(n), n); };
   const lo = lezioneOra(); metti(lo?.corso); metti(V.lezioneDaAnnotare().corso); metti(prossimi()[0]?.nome);
   D.orario.forEach(o => metti(o.corso)); lezioni().forEach(l => metti(l.corso)); daFare().forEach(e => metti(e.nome));
   return [...c.values()];
@@ -1007,10 +1009,10 @@ const lezionePer = (corso, data) => {
   const v = lezioni().find(l => l.file && norm(l.corso) === norm(corso) && l.data === d);
   if (v) return v;
   const o = D.orario.find(y => norm(y.corso) === norm(corso));
-  return { corso: corso || 'Appunti sparsi', data: d, inizio: o?.inizio, fine: o?.fine, aula: o?.aula };
+  return { corso: corso || NV().corsi.sparsi, data: d, inizio: o?.inizio, fine: o?.fine, aula: o?.aula };
 };
 async function allegaFile(x, corso) {
-  const r = await V.salvaFile(`Allegati/${x.nome}`, { dati: new Uint8Array(await x.file.arrayBuffer()) });
+  const r = await V.salvaFile(`${NV().cartelle.allegati}/${x.nome}`, { dati: new Uint8Array(await x.file.arrayBuffer()) });
   const nome = r.file.split('/').pop(), l = lezionePer(corso);
   await V.annota('appunti', `- ![[${nome}]]`, { lezione: l, grezza: true });
   return { l, nome };
@@ -1019,7 +1021,7 @@ async function usaFile(x, op, { corso, data }) {
   if (op === 'allega') { const r = await allegaFile(x, corso); return mostraFatto({ testo: t('barra2.allegato-lezione', { corso: r.l.corso }), azione: [t('barra2.apri'), () => apriAppunti(r.l)] }); }
   if (op === 'sbobina') {
     const sb = SB.leggi(x.testo), corsoN = trovaEsame(sb.corso)?.nome || sb.corso;
-    const r = await V.salvaFile(`Lezioni/${pulito(corsoN)}/${sb.data} ${pulito(corsoN)} · sbobina${sb.da ? ' di ' + pulito(sb.da) : ''}.md`, { testo: sb.nota });
+    const r = await V.salvaFile(`${NV().cartelle.lezioni}/${pulito(corsoN)}/${sb.data} ${pulito(corsoN)} · sbobina${sb.da ? ' di ' + pulito(sb.da) : ''}.md`, { testo: sb.nota });
     aggiornaTutto(); segnala('fatto');
     return mostraFatto({ testo: t('barra2.sbobina-nel-vault', { corso: corsoN }), nota: sb.da ? t('barra2.sbobina-nota-da', { data: dataBreve(sb.data), da: sb.da }) : dataBreve(sb.data), azione: [t('barra2.apri'), () => apriAppunti({ file: r.file, corso: corsoN })], sintesi: t('barra2.sbobina-ricevuta') });
   }
@@ -1070,10 +1072,10 @@ async function usaFile(x, op, { corso, data }) {
   if (op === 'orale') { modo('riposo'); return avviaOrale(trovaEsame(corso || '') || { id: null, nome: corso || x.nome }, null, (testo || '').slice(0, 30000)); }
   if (op === 'riassunto') {
     const md = await AI.riassumi({ corso, testo, nome: x.nome, avanza: p => modo('pensa', t('barra2.riassumo', { nome: x.nome, p: Math.round(p * 100) })) }); modo('riposo');
-    const card = schedaConferma({ titolo: t('barra2.riassunto-titolo'), extra: `<div class="ld-anteprima">${mdHtml(md.slice(0, 1400))}${md.length > 1400 ? '<span class="ld-tenue"> …</span>' : ''}</div>`, nota: t('barra2.riassunto-nota', { cartella: `Materiali/${pulito(corso || 'Varie')}` }) });
+    const card = schedaConferma({ titolo: t('barra2.riassunto-titolo'), extra: `<div class="ld-anteprima">${mdHtml(md.slice(0, 1400))}${md.length > 1400 ? '<span class="ld-tenue"> …</span>' : ''}</div>`, nota: t('barra2.riassunto-nota', { cartella: `${NV().cartelle.materiali}/${pulito(corso || NV().corsi.varie)}` }) });
     return attendiDecisione(card, async () => {
-      const al = await V.salvaFile(`Allegati/${x.nome}`, { dati: new Uint8Array(await x.file.arrayBuffer()) });
-      const n = await V.salvaFile(`Materiali/${pulito(corso || 'Varie')}/${x.nome.replace(/\.[^.]+$/, '')}.md`, { testo: `---\ntipo: materiale\ncorso: "[[${pulito(corso || '')}]]"\nfonte: "[[${al.file.split('/').pop()}]]"\ntags: [materiale]\n---\n# ${x.nome.replace(/\.[^.]+$/, '')}\n\n[[${pulito(corso || 'Home')}]] · file originale: ![[${al.file.split('/').pop()}]]\n\n${md}\n` });
+      const al = await V.salvaFile(`${NV().cartelle.allegati}/${x.nome}`, { dati: new Uint8Array(await x.file.arrayBuffer()) });
+      const n = await V.salvaFile(`${NV().cartelle.materiali}/${pulito(corso || NV().corsi.varie)}/${x.nome.replace(/\.[^.]+$/, '')}.md`, { testo: `---\ntipo: materiale\ncorso: "[[${pulito(corso || '')}]]"\nfonte: "[[${al.file.split('/').pop()}]]"\ntags: [materiale]\n---\n# ${x.nome.replace(/\.[^.]+$/, '')}\n\n[[${pulito(corso || NV().note.home)}]] · file originale: ![[${al.file.split('/').pop()}]]\n\n${md}\n` });
       await mostraFatto({ testo: t('barra2.riassunto-salvato'), azione: [t('barra2.apri'), () => apriAppunti({ file: n.file, corso: x.nome })] }, card); return {};
     });
   }
@@ -1237,7 +1239,7 @@ function schedaPrepara(cosa) {
   s.querySelector('[data-sync]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, t('barra2.detto-sincronizza')); schedaSincronizza(syncBloccata() ? 'sblocca' : null); });
   s.querySelector('[data-collega]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, t('barra2.uso-gia-altrove')); schedaSincronizza('collega'); });
   mostraAggiornamenti(s);
-  s.querySelectorAll('[data-apri]').forEach(b => b.addEventListener('click', () => apriAppunti({ file: 'Home.md', corso: 'Home' })));
+  s.querySelectorAll('[data-apri]').forEach(b => b.addEventListener('click', () => apriAppunti({ file: `${NV().note.home}.md`, corso: NV().note.home })));
   s.querySelectorAll('[data-installa]').forEach(b => b.addEventListener('click', () => chiediInstalla(b.dataset.installa, s)));
   s.querySelector('[data-voce]')?.addEventListener('click', () => { mostraAvanzamento(s, 'voce', { testo: t('barra2.scarico-voce', { voce: Voce.NOME_VOCE }), p: 0 }); Voce.prepara().then(() => { try { localStorage.setItem('lode:voce', '1'); } catch { } }).catch(() => { }); });
   if (cosa && !(cosa === 'obsidian' ? st?.obsidian.installato : st?.modello)) chiediInstalla(cosa, s);
@@ -1442,7 +1444,8 @@ async function chiediSmetti() {
 async function schedaNote(q = '') {
   if (!V.attivo) return apriAppunti();
   const tutte = await V.note(), lo = V.lezioneDaAnnotare(), ultima = lezioni().find(l => l.file);
-  const rapide = [['Home', 'Home.md'], [lo.corso === 'Appunti sparsi' ? (ultima ? t('barra2.ultima-lezione') : null) : t('barra2.lezione-di', { corso: lo.corso }), lo.corso === 'Appunti sparsi' ? ultima?.file : null], ['Orario', 'Orario.md'], ['Esami', 'Esami.md'], ['Glossario', 'Glossario.md'], [t('barra2.cosa-sa-lode'), 'Lode/Memoria.md']].filter(x => x[0]);
+  const Nn = NV().note, nf = k => [Nn[k], `${Nn[k]}.md`], sp = V.sparsi(lo.corso);
+  const rapide = [nf('home'), [sp ? (ultima ? t('barra2.ultima-lezione') : null) : t('barra2.lezione-di', { corso: lo.corso }), sp ? ultima?.file : null], nf('orario'), nf('esami'), nf('glossario'), [t('barra2.cosa-sa-lode'), `${NV().cartelle.lode}/${Nn.memoria}.md`]].filter(x => x[0]);
   const s = scheda('ld-note', `<span class="ld-lbl">${t('barra2.vai-a-note', { n: esc(tutte.length) })}</span>
     <div class="ld-rapide">${rapide.map(([t, f], i) => `<button type="button" class="ld-chip larga" data-r="${i}"><b>${esc(t)}</b><span>${esc(f ? f.replace(/\.md$/, '').split('/').slice(0, -1).join('/') || tn('barra2.radice-vault') : tn('barra2.oggi'))}</span></button>`).join('')}</div>
     <input class="ld-cerca-note" placeholder="${t('barra2.cerca-nota-segnaposto')}" aria-label="${t('barra2.cerca-nota')}" value="${esc(q)}"><div class="ld-risultati"></div>`);
@@ -1451,7 +1454,7 @@ async function schedaNote(q = '') {
   const inp = s.querySelector('input'), box = s.querySelector('.ld-risultati');
   const filtra = () => {
     const w = norm(inp.value).split(' ').filter(Boolean);
-    const ris = (w.length ? tutte.filter(n => w.every(x => norm(n.file).includes(x))) : tutte.filter(n => n.cartella === 'Lezioni').sort((a, b) => b.titolo.localeCompare(a.titolo))).slice(0, 7);
+    const ris = (w.length ? tutte.filter(n => w.every(x => norm(n.file).includes(x))) : tutte.filter(n => n.cartella === NV().cartelle.lezioni).sort((a, b) => b.titolo.localeCompare(a.titolo))).slice(0, 7);
     box.innerHTML = ris.map((n, i) => `<button type="button" class="ld-nota-r${i === 0 ? ' su' : ''}" data-f="${esc(n.file)}"><b>${esc(n.titolo)}</b><span>${esc(n.file.split('/').slice(0, -1).join(' / ') || t('barra2.radice-vault'))}</span></button>`).join('') || `<p class="ld-nota">${t('barra2.nessuna-nota')}</p>`;
     box.querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => apriAppunti({ file: b.dataset.f, corso: b.querySelector('b').textContent })));
   };
@@ -1496,7 +1499,7 @@ async function chiudiLezione(corso, { lezione, testo } = {}) {
 async function apriAppunti(l) {
   if (V.attivo) {
     l ||= V.lezioneDaAnnotare(); if (!A.turno || A.home) nuovoTurno();
-    const r = await V.apri(l), nome = l.corso === 'Appunti sparsi' ? t('barra2.appunti-sparsi-oggi') : t('barra2.la-nota-di', { corso: l.corso });
+    const r = await V.apri(l), nome = V.sparsi(l.corso) ? t('barra2.appunti-sparsi-oggi') : t('barra2.la-nota-di', { corso: l.corso });
     if (r.esito === 'ok') return mostraFatto({ testo: t('barra2.apro-in-obsidian', { nome }) });
     if (r.esito === 'da_aprire') return rispostaFissa(t('barra2.apro-se-non-trova', { nome, percorso: r.percorso }));
     if (r.esito === 'manca') return rispostaFissa(t('barra2.aperto-editor', { nome, percorso: r.percorso }));
