@@ -19,6 +19,7 @@ import * as SB from './sbobina.js';
 import * as AL from './allenatore.js';
 import * as PG from './programma.js';
 import * as QC from './crocette.js';
+import * as TE from './temi.js';
 import * as CO from './computer.js';
 import { parlatoInFormule } from './formule.js';
 import { pulito } from './markdown.js';
@@ -917,9 +918,10 @@ function opzioniPer(x) {
     { k: 'orale', t: 'Interrogami su questo', d: 'Un prof d\'orale con domande su questo materiale', no: serveAI },
     { k: 'allega', t: 'Allega alla lezione', d: 'Salvo il file con il link nella nota', no: serveApp, corso: true },
     { k: 'crocette', t: 'Quiz a crocette', d: 'Domande con 4 risposte, come allo scritto: allenamento o simulazione d\'esame', no: serveAI, corso: true },
+    { k: 'temi', t: 'Temi d\'esame', d: 'Gli esercizi di un compito vecchio, divisi per argomento, uno al giorno nel piano', corso: true },
     { k: 'programma', t: 'È il programma d\'esame', d: 'Lo divido in argomenti e ti preparo il piano fino all\'appello', corso: true },
     { k: 'domande', t: 'Domande uscite agli appelli', d: 'Le metto sotto i loro argomenti: quelli che escono di più salgono nel piano', corso: true },
-  ].map(o => /programm|syllabus|scheda.?(?:del.?)?corso/i.test(x.nome) ? { ...o, primo: o.k === 'programma' } : /domande|appell/i.test(x.nome) ? { ...o, primo: o.k === 'domande' } : o);
+  ].map(o => /programm|syllabus|scheda.?(?:del.?)?corso/i.test(x.nome) ? { ...o, primo: o.k === 'programma' } : /compit|(?:^|[^a-z])temi(?:[^a-z]|$)|prova.?scritt|esercitaz/i.test(x.nome) ? { ...o, primo: o.k === 'temi' } : /domande|appell/i.test(x.nome) ? { ...o, primo: o.k === 'domande' } : o);
   return [];
 }
 function schedaFile(x, { corso: suggerito } = {}) {
@@ -978,6 +980,8 @@ async function usaFile(x, op, { corso, data }) {
     formuleIn(card.querySelector('.ld-anteprima'), md.slice(0, 1400));   // le formule disegnate, come in Obsidian
     return attendiDecisione(card, async () => { const r = await allegaFile(x, corso); await V.annota('appunti', md, { lezione: r.l, grezza: true }); await mostraFatto({ testo: 'Lavagna negli appunti.', azione: ['Apri', () => apriAppunti(r.l)] }, card); return {}; });
   }
+  // i temi d'esame leggono il testo da soli: un PDF scansionato non è un errore, si dice di incollare il testo (niente AI né OCR)
+  if (op === 'temi') return temiDaFile(x, corso);
   // da qui serve il testo del file
   modo('pensa', `Leggo ${x.nome}…`); segnala('pensa');
   let testo = null, blocchi;
@@ -1559,6 +1563,7 @@ async function esegui(c) {
     }
     case 'programma': return schedaProgramma(c);
     case 'crocette': return schedaCrocette(c);
+    case 'temi': return schedaTemi(c);
     case 'moodle': return schedaMoodle(c.cosa);
     case 'agenti': return schedaAgenti(c);
     case 'turnoAgente': return schedaTurno([...turniAgenti.values()].sort((a, b) => (b.fine || 0) - (a.fine || 0))[0]);
@@ -2180,6 +2185,112 @@ function giocaQuiz({ e, nome, domande, simulazione, minuti, scartate = 0 }) {
   mostra();
 }
 
+/* ---------- Temi d'esame (js/temi.js) ---------- */
+// gli esercizi dei compiti vecchi: la scheda di controllo (divisi, con l'argomento), l'esercizio di oggi e l'esito, che
+// sceglie lo studente. Lode non corregge: il voto se lo dà chi l'ha fatto su carta. La soluzione del prof solo dopo
+const minuscola = t => t.charAt(0).toLowerCase() + t.slice(1);
+const argDi = (e, x) => x?.a ? e.programma?.argomenti?.find(a => a.id === x.a) || null : null;
+// «es. 3 del 12/02/2024 · integrali doppi · circa 25 min su carta»
+function rigaTema(e, x) {
+  const da = x.data ? ` del ${TE.dataScritta(x.data)}` : x.fonte && x.fonte !== 'incollato' ? ` di «${x.fonte}»` : '';
+  return [x.es ? `es. ${x.es}${da}` : da.trim(), argDi(e, x) && minuscola(argDi(e, x).t), `circa ${TE.minuti(x.t)} min su carta`].filter(Boolean).join(' · ');
+}
+async function temiDaFile(x, corso) {
+  modo('pensa', `Leggo ${x.nome}…`); segnala('pensa');
+  let testo = ''; try { testo = await FILE.testoDi(x); } catch { }   // un PDF senza testo: niente errore, lo diciamo sotto
+  modo('riposo');
+  // il comando da suggerire col corso giusto; senza corso e senza esami, la forma generica (mai un corso inventato)
+  const nome = corso || prossimi()[0]?.nome, cmd = nome ? `«temi d'esame di ${minuscola(nome)}:»` : '«temi d\'esame:»';
+  const pagine = Math.max(1, ...[...testo.matchAll(/\[Pagina (\d+)\]/g)].map(m => +m[1]));
+  if (x.tipo === 'pdf' && TE.scansione(testo, pagine)) return rispostaFissa(`Questo PDF sembra una scansione: senza AI non leggo le immagini. Incolla il testo degli esercizi con ${cmd} e il testo sotto.`);
+  if (!testo.trim()) return rispostaFissa(`Da questo file non riesco a leggere il testo. Incollalo con ${cmd} e il testo sotto.`);
+  const e = trovaEsame(corso || '') || (corso ? aggiungiEsame({ nome: corso }) : prossimi()[0]);
+  if (!e) return rispostaFissa('Aggiungi prima l\'esame, per esempio: «esame analisi 2 il 15 gennaio 9 cfu».');
+  return controllaTemi(e, testo, { fonte: x.nome });
+}
+async function schedaTemi(c = {}) {
+  let e = c.esame;
+  if (!e && c.nomeDetto) return rispostaFissa(`Non trovo l'esame **${c.nomeDetto}**. Aggiungilo prima, per esempio: «esame ${c.nomeDetto} il 15 gennaio 9 cfu».`);
+  // senza esame detto: quello con un esercizio in scadenza oggi, poi il più vicino
+  e ||= daFare().find(x => TE.temaDiOggi(x)) || prossimi().find(x => x.temi?.length) || prossimi()[0] || daFare()[0];
+  if (!e) return rispostaFissa('Aggiungi prima un esame, per esempio: «esame analisi 2 il 15 gennaio 9 cfu». Poi incolla un compito vecchio.');
+  if (c.testo) return controllaTemi(e, c.testo, { fonte: 'incollato' });
+  const x = TE.temaDiOggi(e);
+  return x ? schedaTema(e, x) : temiVuoti(e);
+}
+// nessun esercizio da fare oggi: quanti ce ne sono per argomento, e il campo per incollare un compito
+function temiVuoti(e) {
+  const per = TE.conta(e), prossimo = (e.temi || []).map(x => x.scad).sort()[0];
+  const s = scheda('ld-temi', `<span class="ld-lbl">Temi d'esame · ${esc(e.nome)}</span>
+    ${per.length ? `<p>Nessun esercizio in scadenza oggi.${prossimo ? ` Il prossimo torna ${esc(dataLunga(prossimo))}.` : ''}</p><ul class="ld-temi-conta">${per.map(([t, n]) => `<li><span>${esc(t)}</span><b>${esc(n)}</b></li>`).join('')}</ul>`
+      : '<p class="ld-vuoto">Incolla il testo di un compito vecchio (quelli che girano nel gruppo del corso o sul sito del prof), oppure trascina il PDF. Lo divido in esercizi, li metto sotto i loro argomenti e ogni giorno te ne propongo uno.</p>'}
+    <form class="ld-prog-form"><textarea name="t" rows="5" placeholder="Esercizio 1. Calcolare…&#10;Esercizio 2. Studiare…" aria-label="Testo del compito" required></textarea><button class="btn${per.length ? '' : ' primary'}" type="submit">Dividi in esercizi</button></form>`);
+  s.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const t = String(new FormData(ev.target).get('t') || ''); if (t.trim()) { nuovoTurno(); detto(A.turno, `Temi d'esame di ${e.nome}`); controllaTemi(e, t, { fonte: 'incollato' }); } });
+  if (A.turno) A.turno.dataset.sintesi = `temi d'esame di ${e.nome}`;
+}
+// la scheda di controllo: i pezzi con le prime due righe e l'argomento; si possono unire o togliere prima di salvarli
+function controllaTemi(e, testo, { fonte = 'incollato' } = {}) {
+  const d = TE.dividi(testo), argomenti = e.programma?.argomenti || [];
+  let pezzi = d.pezzi.map(p => ({ ...p, a: PG.abbina(p.t, argomenti)?.id || null }));
+  if (!pezzi.length) return rispostaFissa('Non ho trovato esercizi in questo testo.');
+  const s = scheda('ld-temi', `<span class="ld-lbl">Temi d'esame · ${esc(e.nome)}${d.data ? ` · compito ${esc(TE.dataScritta(d.data))}` : ''}</span>
+    ${pezzi.length === 1 ? '<p class="ld-nota">Non ho trovato «Esercizio 1», «Esercizio 2»… Se il compito ha più esercizi, scrivili con quei segni e incollalo di nuovo.</p>' : ''}
+    ${argomenti.length ? '' : `<p class="ld-nota">Per ${esc(e.nome)} non c'è ancora il programma: li salvo senza argomento.</p>`}
+    <ol class="ld-temi-l"></ol>
+    <div class="az"><button type="button" class="btn primary" data-metti>Mettili nel piano</button></div>`);
+  const ol = s.querySelector('ol');
+  const leggi = () => ol.querySelectorAll('select').forEach((x, i) => { pezzi[i].a = x.value || null; });
+  const disegna = () => {
+    ol.innerHTML = pezzi.map((p, i) => `<li><span class="t"><b>Es. ${esc(p.n)}</b>${esc(p.t.split('\n').filter(r => r.trim()).slice(0, 2).join(' ').slice(0, 220))}${p.sol ? '<small>con la soluzione del prof</small>' : ''}</span>
+      <span class="az">${argomenti.length ? `<select aria-label="Argomento dell'esercizio ${esc(p.n)}"><option value="">Che argomento è?</option>${argomenti.map(a => `<option value="${esc(a.id)}"${a.id === p.a ? ' selected' : ''}>${esc(corto(a.t))}</option>`).join('')}</select>` : ''}
+      ${i ? '<button type="button" class="btn small ld-piano" data-unisci>Unisci al precedente</button>' : ''}<button type="button" class="btn small ld-piano" data-togli>Togli</button></span></li>`).join('');
+    ol.querySelectorAll('li').forEach((li, i) => {
+      li.querySelector('[data-unisci]')?.addEventListener('click', () => { leggi(); pezzi = TE.unisci(pezzi, i); disegna(); });
+      li.querySelector('[data-togli]').addEventListener('click', () => { leggi(); pezzi.splice(i, 1); disegna(); });
+    });
+    s.querySelector('[data-metti]').disabled = !pezzi.length;
+  };
+  disegna();
+  s.querySelector('[data-metti]').addEventListener('click', ev => {
+    leggi(); ev.target.disabled = true; s.querySelectorAll('button,select').forEach(x => { x.disabled = true; });
+    const ann = istantanea(), r = TE.metti(e, pezzi, { fonte, data: d.data }), n = r.messi;
+    const conArg = argomenti.length ? `: ${n - r.senza} con il loro argomento, ${r.senza} senza` : '';
+    mostraFatto(n ? { testo: `${n} ${n === 1 ? 'esercizio' : 'esercizi'} nel piano${conArg}.`, annulla: ann, sintesi: `temi d'esame di ${e.nome}`,
+      nota: !argomenti.length ? `Senza programma non so dove metterli: incolla il programma di ${minuscola(e.nome)} e li sistemo.` : r.doppi ? `${r.doppi} c'erano già.` : 'Ogni giorno uno sugli argomenti del piano.',
+      azione: !argomenti.length ? ['Programma', () => { nuovoTurno(); programmaVuoto(e); }] : TE.temaDiOggi(e) ? ['Fanne uno', () => { nuovoTurno(); detto(A.turno, `Esercizio di ${e.nome}`); schedaTema(e, TE.temaDiOggi(e)); }] : null }
+      : { testo: 'Questi esercizi c\'erano già.', no: true });
+    aggiornaTutto();
+  });
+  if (A.turno) A.turno.dataset.sintesi = `temi d'esame di ${e.nome}: ${pezzi.length} esercizi`;
+}
+// l'esercizio: il testo con le formule, poi l'esito scelto dallo studente. La soluzione del prof solo dopo l'esito
+function schedaTema(e, x) {
+  const a = argDi(e, x);
+  const s = scheda('ld-tema', `<span class="ld-lbl">Esercizio · ${esc(e.nome)}</span>
+    <p class="ld-tema-meta">${esc(rigaTema(e, x))}</p>
+    <div class="ld-tema-testo">${mdHtml(x.t)}</div>
+    <p>Fallo su carta, senza guardare gli appunti. Quando hai finito:</p>
+    <div class="az ld-tema-esiti"><button type="button" class="btn" data-come="giusto">Giusto</button><button type="button" class="btn" data-come="sbagliato">Sbagliato</button><button type="button" class="btn" data-come="nonso">Non sapevo da dove partire</button></div>
+    <p class="ld-nota">Il voto te lo dai tu: Lode non corregge l'esercizio.</p>`);
+  formuleIn(s.querySelector('.ld-tema-testo'), x.t);
+  s.querySelectorAll('[data-come]').forEach(b => b.addEventListener('click', () => {
+    const come = b.dataset.come, r = TE.esito(e, x.id, come); if (!r) return;
+    s.querySelectorAll('[data-come]').forEach(y => { y.disabled = true; y.classList.toggle('scelta', y === b); });
+    const dopoG = `Torna tra ${r.giorni} giorni.`;
+    const testo = come === 'giusto' ? dopoG : come === 'sbagliato' ? `${dopoG} ${x.sol ? 'Guarda la soluzione e rifallo da capo, non rileggerla e basta.' : 'Rileggi l\'argomento e rifallo da capo, senza guardare.'}`
+      : `${dopoG} Prima rileggi l'argomento${a ? `: ${minuscola(a.t)}` : ''}.`;
+    const altro = TE.temaDiOggi(e);
+    const f = h('div', 'ld-tema-dopo', `<p>${esc(testo)}</p><div class="az">${x.sol ? '<button type="button" class="btn primary" data-sol>Vedi la soluzione del prof</button>' : ''}${altro ? '<button type="button" class="btn" data-altro>Un altro esercizio</button>' : ''}</div><div class="ld-tema-sol" hidden></div>`);
+    s.querySelector('.ld-tema-esiti').after(f); entra(f, { dy: 4, blur: 4, ms: 360 });
+    f.querySelector('[data-sol]')?.addEventListener('click', ev => { const box = f.querySelector('.ld-tema-sol'); box.innerHTML = mdHtml(x.sol); box.hidden = false; formuleIn(box, x.sol); ev.target.remove(); entra(box, { dy: 4, blur: 4, ms: 360 }); });
+    f.querySelector('[data-altro]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, `Esercizio di ${e.nome}`); schedaTema(e, altro); });
+    segnala(come === 'giusto' ? 'fatto' : 'quiete'); aggiornaTutto();
+    if (A.turno) A.turno.dataset.sintesi = `esercizio di ${e.nome}: ${b.textContent.toLowerCase()}`;
+  }));
+  if (A.turno) A.turno.dataset.sintesi = `esercizio di ${e.nome}`;
+  return s;
+}
+
 /* ---------- il programma d'esame: la mappa degli argomenti e il piano fino all'appello (js/programma.js) ---------- */
 const nomiArg = (e, lista) => lista.map(c => c.a?.t || c.t).filter(Boolean);
 const corto = t => t.length > 34 ? t.slice(0, 33).replace(/\s+\S*$/, '') + '…' : t;
@@ -2221,13 +2332,13 @@ async function proponiProgramma(e, testo, { fonte = '' } = {}) {
     extra: `<ol class="ld-arg-anteprima">${arg.map(a => `<li><b>${esc(a.t)}</b>${a.sotto?.length ? `<span>${esc(a.sotto.join(' · '))}</span>` : ''}</li>`).join('')}</ol>`,
     nota: `${daAI ? `Li ha letti ${AI.nomeMotore('testo')}: controlla che ci siano tutti. ` : ''}Se qualcosa non torna, incolla di nuovo il programma corretto.${PG.programmaDi(e) ? ' Gli argomenti con lo stesso nome tengono domande ed esiti.' : ''}`, fuoco: true });
   return attendiDecisione(card, async () => {
-    PG.impostaProgramma(e, arg, { fonte }); segnala('fatto');
+    PG.impostaProgramma(e, arg, { fonte }); TE.risistema(e); segnala('fatto');
     card.replaceWith(h('div')); disegnaProgramma(e); aggiornaTutto(); return {};
   });
 }
 function disegnaProgramma(e, { domande = false } = {}) {
   const cop = PG.copertura(e), p = PG.piano(e, cop), per = new Map(cop.map(c => [c.a.id, c])), g = p.oggi, pr = PG.pronto(cop);
-  const giorniA = e.data ? giorniTra(oggi(), e.data) : null, senza = e.programma.senza || [];
+  const giorniA = e.data ? giorniTra(oggi(), e.data) : null, senza = e.programma.senza || [], tema = TE.temaDiOggi(e);
   const cosa = x => x.map(i => per.get(i)).filter(Boolean);
   const oggiH = !g ? '' : g.tipo === 'cuscinetto' ? '<p class="ld-nota">Oggi è il giorno cuscinetto: recupera quello che è rimasto indietro, oppure riposati.</p>'
     : g.tipo === 'generale' ? `<p>Ultimo giorno: ripasso generale. Le domande uscite e i punti deboli: ${esc(nomiArg(e, cosa(g.ripassa)).map(corto).join(', ') || 'tutto il programma')}.</p>`
@@ -2235,7 +2346,7 @@ function disegnaProgramma(e, { domande = false } = {}) {
   const prossimi7 = p.giorni.slice(1, 8).map(x => `<li><span>${esc(dataBreve(x.data))}</span>${x.tipo === 'cuscinetto' ? '<i>cuscinetto</i>' : x.tipo === 'generale' ? '<i>ripasso generale</i>' : esc([...cosa(x.studia).map(c => corto(c.a.t)), ...cosa(x.ripassa).map(c => '↻ ' + corto(c.a.t))].join(' · ') || '—')}</li>`).join('');
   const s = scheda('ld-programma', `<div class="capo"><span class="ld-lbl">Programma · ${esc(e.nome)}</span><span>${giorniA != null && giorniA >= 0 ? `${giorniA === 0 ? 'oggi' : giorniA === 1 ? 'domani' : `tra ${giorniA} giorni`} · ` : ''}${Math.round(pr * 100)}% pronto</span></div>
     <i class="ld-cop">${cop.map(c => `<i class="s${c.stato}${c.debole ? ' debole' : ''}" title="${esc(c.a.t)}: ${esc(PG.STATI[c.stato])}"></i>`).join('')}</i>
-    ${g ? `<div class="ld-prog-oggi"><span class="ld-lbl">Oggi</span>${oggiH}<div class="az">${AI.attiva() && (g.studia.length || g.ripassa.length) ? '<button type="button" class="btn primary" data-o>Interrogami su questi</button>' : ''}<button type="button" class="btn" data-f>Focus</button></div></div>` : ''}
+    ${g ? `<div class="ld-prog-oggi"><span class="ld-lbl">Oggi</span>${oggiH}${tema ? `<p class="ld-tema-oggi"><em>Esercizio di oggi</em> ${esc(rigaTema(e, tema))} <button type="button" class="btn small" data-tema>Fallo adesso</button></p>` : ''}<div class="az">${AI.attiva() && (g.studia.length || g.ripassa.length) ? '<button type="button" class="btn primary" data-o>Interrogami su questi</button>' : ''}<button type="button" class="btn" data-f>Focus</button></div></div>` : ''}
     <ul class="ld-argomenti">${cop.map(c => `<li data-a="${esc(c.a.id)}"><i class="s${c.stato}${c.debole ? ' debole' : ''}"></i><span class="t"><b>${esc(c.a.t)}</b><small>${esc(c.debole ? 'da rivedere' : PG.STATI[c.stato])}${c.domande ? ` · uscita ${c.domande} ${c.domande === 1 ? 'volta' : 'volte'}` : ''}${c.stelle ? ' · ★' : ''}${c.oggi ? ' · fatto oggi' : ''}</small></span><span class="az"><button type="button" class="btn small ld-piano" data-spiego>Lo spiego io</button>${AI.attiva() ? '<button type="button" class="btn small" data-uno>Interrogami</button>' : ''}</span></li>`).join('')}</ul>
     ${prossimi7 ? `<details class="ld-prossimi"><summary>I prossimi giorni${p.conData ? '' : ' (senza data dell\'appello: piano su due settimane)'}</summary><ul>${prossimi7}</ul></details>` : ''}
     <details class="ld-domande-uscite"${domande ? ' open' : ''}><summary>Domande uscite agli appelli${senza.length ? ` · ${senza.length} senza argomento` : ''}</summary>
@@ -2245,6 +2356,7 @@ function disegnaProgramma(e, { domande = false } = {}) {
   s.querySelectorAll('.ld-argomenti li').forEach((x, i) => entra(x, { ritardo: 60 + Math.min(i, 12) * 35, dy: 4, blur: 4, ms: 380 }));
   s.querySelector('[data-o]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Interrogami sugli argomenti di oggi'); avviaOraleProgramma(e, [...cosa(g.studia), ...cosa(g.ripassa)].map(c => c.a)); });
   s.querySelector('[data-f]')?.addEventListener('click', () => avviaFocus({ esameId: e.id }));
+  s.querySelector('[data-tema]')?.addEventListener('click', () => { nuovoTurno(); detto(A.turno, `Esercizio di ${e.nome}`); schedaTema(e, tema); });
   s.querySelectorAll('[data-uno]').forEach(b => b.addEventListener('click', () => { const a = e.programma.argomenti.find(x => x.id === b.closest('li').dataset.a); nuovoTurno(); detto(A.turno, `Interrogami su ${a.t}`); avviaOraleProgramma(e, [a], { max: 2 }); }));
   s.querySelectorAll('[data-spiego]').forEach(b => b.addEventListener('click', () => { const a = e.programma.argomenti.find(x => x.id === b.closest('li').dataset.a); nuovoTurno(); detto(A.turno, `Te lo spiego io: ${a.t}`); avviaSpiego(e, a); }));
   s.querySelector('.ld-domande-uscite form').addEventListener('submit', ev => { ev.preventDefault(); const t = String(new FormData(ev.target).get('t') || ''); nuovoTurno(); detto(A.turno, 'Domande uscite'); aggiungiDomandeUscite(e, t); });
