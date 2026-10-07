@@ -1934,12 +1934,13 @@ async function schedaTasca(c = {}, { riscrivi = false } = {}) {
   if (r.saltata === 'errore') return rispostaFissa('Non riesco a leggere o scrivere la nota In tasca.md: ' + r.errore, { errore: true });
   if (r.saltata === 'estranea') return rispostaFissa('Nel vault c\'è già una nota **In tasca.md** che non ha scritto Lode: non la tocco. Rinominala e riprova.');
   const segnate = !r.segnate ? '' : r.segnate === 1 ? `Ho segnato la carta che hai fatto sul telefono: ${r.sapevo ? 'la sapevi' : 'non la sapevi'}.` : `Ho segnato ${r.segnate} carte che hai fatto sul telefono: ${r.sapevo} sapevi, ${r.segnate - r.sapevo} no.`;
+  const gia = !r.gia ? '' : r.gia === 1 ? 'Una carta l\'avevi già ripassata sul computer: non la segno due volte.' : `${r.gia} carte le avevi già ripassate sul computer: non le segno due volte.`;
   const vecchia = r.saltata === 'vecchia', cambia = r.saltata === 'cambiata';
   const dentro = vecchia ? 'La nota sul telefono è di un giro vecchio: non segno niente.' : cambia ? 'La nota sta ancora cambiando: Obsidian la sta sincronizzando. Non la riscrivo adesso, riprova tra un minuto.'
     : r.scritte ? `Nella nota In tasca.md ${r.scritte === 1 ? 'c\'è' : 'ci sono'} ${N_CARTE(r.scritte)} per domani.` : 'Domani non hai carte da ripassare: la nota In tasca.md lo dice.';
   const sera = () => TA.stato().sera;
   const s = scheda('ld-tasca', `<span class="ld-lbl">Ripasso in tasca</span>
-    ${segnate ? `<p>${esc(segnate)}</p>` : ''}<p>${esc(dentro)}</p>
+    ${segnate ? `<p>${esc(segnate)}</p>` : ''}${gia ? `<p>${esc(gia)}</p>` : ''}<p>${esc(dentro)}</p>
     ${vecchia ? '<p class="ld-nota">Aspetta che il telefono finisca di sincronizzare e riprova. Se la nota giusta non arriva, riscrivila: le spunte di quella copia non le segno.</p>' : ''}
     <div class="az"><button type="button" class="btn primary" data-t="apri">Apri la nota</button>${vecchia ? '<button type="button" class="btn" data-t="riscrivi">Riscrivi la nota</button>' : ''}<button type="button" class="btn" data-t="sera">${sera() ? 'Solo quando lo chiedo' : 'Ogni sera'}</button></div>
     <p class="ld-nota" data-sera>${sera() ? 'Ogni sera dopo le 19 la riscrivo da sola, se Lode è aperto.' : ''}</p>

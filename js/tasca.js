@@ -5,7 +5,10 @@
 // la nota con le carte nuove e un giro nuovo. Il giro (un id scritto in fondo alla nota e in D.tasca) è la difesa contro le
 // copie vecchie: una nota con un giro che non è l'ultimo scritto arriva da un sync in ritardo e le sue spunte non si segnano.
 // Una spunta non si segna mai due volte: D.tasca.fatte tiene le carte già segnate in questo giro (se la riscrittura salta
-// perché Obsidian sta ancora sincronizzando, il giro dopo segna solo le spunte nuove).
+// perché Obsidian sta ancora sincronizzando, il giro dopo segna solo le spunte nuove). E una carta già ripassata sul computer
+// dopo la scrittura della nota (le carte di oggi sono anche nel ripasso di Lode) non si segna di nuovo: D.tasca.carte tiene
+// il segno di ogni carta scritta (scad, rip, int, ease) e una carta col segno cambiato si salta (r.gia). Senza, «sapevo»
+// sul telefono dopo «sapevo» sul computer gonfierebbe l'intervallo SM-2 (6 giorni → 15).
 // Funzioni pure (scegli, scriviNota, leggiNota, impronta) provate in test/tasca.mjs; aggiorna() prende un vault finto.
 import { D, dataLunga, oggi, piuGiorni, rispondi, salva, id } from './dati.js';
 import * as V from './vault.js';
@@ -13,7 +16,9 @@ import * as V from './vault.js';
 export const FILE = 'In tasca.md';
 export const MASSIMO = 20;
 // lo stato vive in D (dati.json nel vault): D può essere sostituito (sync, altra finestra), quindi si prende ogni volta
-export const stato = () => { const t = D.tasca ||= { giro: null, impronta: null, scritta: null, sera: false }; t.fatte ||= []; return t; };
+export const stato = () => { const t = D.tasca ||= { giro: null, impronta: null, scritta: null, sera: false }; t.fatte ||= []; t.carte ||= {}; return t; };
+// lo stato SM-2 di una carta in una stringa: se cambia fra la scrittura della nota e la spunta, la carta l'ha fatta il computer
+export const segno = c => [c.scad, c.rip, c.int, c.ease].join('|');
 
 // le carte che scadono entro domani: prima le più in ritardo, poi per corso (a parità, l'ordine di D.carte); al massimo 20
 export function scegli(carte, T, esami = []) {
@@ -82,9 +87,9 @@ export function aggiorna(opz = {}) { const p = coda.then(() => giro(opz)); coda 
 
 // forza: anche se la nota è uguale all'ultima scritta (il comando, la sera). riscrivi: anche se la nota è di un giro
 // vecchio (lo studente l'ha chiesto: la copia giusta non arriva più); le spunte di quella copia non si segnano.
-// Risultato: { segnate, sapevo, scritte (carte nella nota nuova), saltata: null | 'uguale' | 'manca' | 'estranea' | 'vecchia' | 'cambiata' | 'errore' }
+// Risultato: { segnate, sapevo, gia (spuntate ma già ripassate sul computer), scritte (carte nella nota nuova), saltata: null | 'uguale' | 'manca' | 'estranea' | 'vecchia' | 'cambiata' | 'errore' }
 async function giro({ forza = false, riscrivi = false, vault = vaultVero, T = oggi() } = {}) {
-  const s = stato(), r = { segnate: 0, sapevo: 0, scritte: 0, saltata: null, errore: null };
+  const s = stato(), r = { segnate: 0, sapevo: 0, gia: 0, scritte: 0, saltata: null, errore: null };
   let testo;
   try { testo = await vault.leggi(); } catch (e) { return { ...r, saltata: 'errore', errore: e?.message || String(e) }; }
   if (testo != null) {
@@ -97,9 +102,10 @@ async function giro({ forza = false, riscrivi = false, vault = vaultVero, T = og
       for (const e of n.esiti) {
         if (fatte.has(e.id)) continue;
         const c = D.carte.find(x => x.id === e.id); if (!c) continue;
+        if (e.id in s.carte && s.carte[e.id] !== segno(c)) { r.gia++; fatte.add(e.id); s.fatte.push(e.id); continue; }   // fatta sul computer
         rispondi(c, e.sapevo ? 4 : 0); fatte.add(e.id); s.fatte.push(e.id); r.segnate++; if (e.sapevo) r.sapevo++;
       }
-      if (r.segnate) salva();
+      if (r.segnate || r.gia) salva();
     }
   } else if (!forza) return { ...r, saltata: 'manca' };
   // prima di scrivere si rilegge: se è cambiata nel frattempo (Obsidian sta ancora sincronizzando) si riprova al giro dopo
@@ -108,7 +114,7 @@ async function giro({ forza = false, riscrivi = false, vault = vaultVero, T = og
   if ((ora == null ? null : impronta(ora)) !== (testo == null ? null : impronta(testo))) return { ...r, saltata: 'cambiata' };
   const carte = scegli(D.carte, T, D.esami), nuovo = id(), nota = scriviNota(carte, D.esami, nuovo, T);
   try { await vault.scrivi(nota); } catch (e) { return { ...r, saltata: 'errore', errore: e?.message || String(e) }; }
-  Object.assign(s, { giro: nuovo, impronta: impronta(nota), scritta: T, fatte: [] }); salva();
+  Object.assign(s, { giro: nuovo, impronta: impronta(nota), scritta: T, fatte: [], carte: Object.fromEntries(carte.map(c => [c.id, segno(c)])) }); salva();
   return { ...r, scritte: carte.length };
 }
 

@@ -77,7 +77,7 @@ prova('impronta: deterministica', T.impronta('Lode') === T.impronta('Lode') && T
 const finto = (testo = null) => ({ testo, scritture: 0, letture: 0, prima: null, async leggi() { this.letture++; this.prima?.(this); return this.testo; }, async scrivi(t) { this.scritture++; this.testo = t; } });
 D().carte = [carta('p1', OGGI), carta('p2', OGGI), carta('p3', OGGI), carta('p4', piu(-2)), carta('p5', piu(9))];
 delete D().tasca;
-prova('stato: D.tasca nasce vuoto', JSON.stringify(T.stato()) === JSON.stringify({ giro: null, impronta: null, scritta: null, sera: false, fatte: [] }));
+prova('stato: D.tasca nasce vuoto', JSON.stringify(T.stato()) === JSON.stringify({ giro: null, impronta: null, scritta: null, sera: false, fatte: [], carte: {} }));
 const v = finto();
 let r = await T.aggiorna({ vault: v });
 prova('giro: nota che manca, senza forza → niente', r.saltata === 'manca' && v.scritture === 0);
@@ -144,6 +144,29 @@ prova('sera: dopo le 19, una volta al giorno', vsera.scritture === 1 && T.stato(
 r = await T.controlla({ adesso: alle(21), vault: vsera });
 prova('sera: la seconda volta no', vsera.scritture === 1);
 T.sera(false); prova('sera: si spegne', T.stato().sera === false);
+
+/* ---------- la carta già ripassata sul computer ---------- */
+// la nota ha le carte di oggi, che sono anche nel ripasso di Lode: se lo studente ne fa una sul computer e poi la spunta sul
+// telefono, la spunta non vale (altrimenti «sapevo» due volte: l'intervallo SM-2 da 6 giorni passerebbe a circa 15)
+D().carte = [carta('q1', OGGI, 'an2', { rip: 2, int: 6, ease: 2.5 }), carta('q2', OGGI, 'an2', { rip: 2, int: 6, ease: 2.5 })];
+delete D().tasca;
+const vq = finto();
+await T.aggiorna({ forza: true, vault: vq });
+prova('già fatta: D.tasca.carte tiene il segno delle carte scritte', T.stato().carte.q1 === T.segno(D().carte[0]) && Object.keys(T.stato().carte).join() === 'q1,q2', JSON.stringify(T.stato().carte));
+const q1 = D().carte[0]; Dm.rispondi(q1, 4);   // sul computer, nel ripasso di Lode
+const dopoPc = { int: q1.int, rip: q1.rip, scad: q1.scad, ease: q1.ease }, q2prima = { ...D().carte[1] };
+const doppio = { ...q2prima }; Dm.rispondi(doppio, 4);
+const vq2 = finto(spunta(spunta(vq.testo, 'q1', 'sapevo'), 'q2', 'sapevo'));
+r = await T.aggiorna({ vault: vq2 });
+prova('già fatta: la spunta sul telefono non segna di nuovo', q1.int === dopoPc.int && q1.rip === dopoPc.rip && q1.scad === dopoPc.scad && q1.ease === dopoPc.ease, JSON.stringify([dopoPc, q1]));
+prova('già fatta: contata in r.gia', r.gia === 1 && r.segnate === 1 && r.sapevo === 1, JSON.stringify(r));
+prova('già fatta: l\'altra carta si segna come sempre', D().carte[1].int === doppio.int && D().carte[1].scad === doppio.scad && D().carte[1].rip === 3);
+prova('già fatta: la nota nuova ha i segni nuovi', vq2.scritture === 1 && Object.entries(T.stato().carte).every(([k, v]) => v === T.segno(D().carte.find(c => c.id === k))));
+// una nota scritta dalla versione di prima (D.tasca senza i segni): la spunta si segna come prima
+D().carte.push(carta('q3', OGGI)); const vq4 = finto(vq2.testo); await T.aggiorna({ forza: true, vault: vq4 });
+T.stato().carte = {}; const qn = D().carte.find(c => c.id === 'q3');
+r = await T.aggiorna({ vault: finto(spunta(vq4.testo, 'q3', 'sapevo')) });
+prova('già fatta: senza segni la spunta vale come prima', r.segnate === 1 && r.gia === 0 && qn.rip === 1 && qn.scad > OGGI, JSON.stringify(r));
 
 /* ---------- comandi ---------- */
 const c = f => C.interpreta(f);
