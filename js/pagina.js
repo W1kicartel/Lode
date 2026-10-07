@@ -8,6 +8,7 @@ import * as PG from './programma.js';
 import * as F from './focus.js';
 import { t, elenco, LINGUE, lingua, imposta } from './lingua.js';
 import { CODICI, nomeSistema } from './sistemi.js';
+import * as LB from './libretto.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -30,8 +31,9 @@ export function disegna() {
 
   <div class="stats ${primaVolta ? 'entra' : ''}">
     <div class="stat"><span class="lbl">${t('pagina.media-ponderata')}</span><b class="v" data-c="${esc(m.ponderata ?? '')}" data-dec="2">${m.ponderata ? '0' : '—'}</b><span class="d">${m.n ? t('pagina.media-dettaglio', { media: esc(num(m.aritmetica, 2)), n: esc(m.n) }) : t('pagina.primo-voto')}</span></div>
-    <div class="stat"><span class="lbl">${t('pagina.base-laurea')}</span><b class="v"><span data-c="${esc(m.base ?? '')}" data-dec="1">${m.base ? '0' : '—'}</span><small>/110</small></b><span class="d">${t('pagina.base-formula')}</span></div>
-    <div class="stat"><span class="lbl">${t('pagina.crediti')}</span><b class="v"><span data-c="${esc(cf)}" data-dec="0">0</span><small>/${esc(tot)}</small></b><div class="barra"><i style="transform:scaleX(0)" data-x="${esc(Math.min(1, cf / tot))}"></i></div><span class="d">${t('pagina.cfu-alla-laurea', { n: esc(Math.max(0, tot - cf)) })}</span></div>
+    ${LB.italiano() ? `<div class="stat"><span class="lbl">${t('pagina.base-laurea')}</span><b class="v"><span data-c="${esc(m.base ?? '')}" data-dec="1">${m.base ? '0' : '—'}</span><small>/110</small></b><span class="d">${t('pagina.base-formula')}</span></div>`
+    : `<div class="stat"><span class="lbl">${esc(LB.nomeFinale())}</span><b class="v">${esc(LB.finaleBreve().v)}${LB.finaleBreve().dett ? `<small>${esc(LB.finaleBreve().dett)}</small>` : ''}</b><span class="d">${t('libretto.formula', { crediti: esc(LB.crediti()) })}</span></div>`}
+    <div class="stat"><span class="lbl">${t('pagina.crediti')}</span><b class="v"><span data-c="${esc(cf)}" data-dec="0">0</span><small>/${esc(tot)}</small></b><div class="barra"><i style="transform:scaleX(0)" data-x="${esc(Math.min(1, cf / tot))}"></i></div><span class="d">${LB.italiano() ? t('pagina.cfu-alla-laurea', { n: esc(Math.max(0, tot - cf)) }) : t('libretto.alla-laurea', { n: esc(Math.max(0, tot - cf)), crediti: esc(LB.crediti()) })}</span></div>
     <div class="stat"><span class="lbl">${t('pagina.questa-settimana')}</span><b class="v" style="font-size:28px">${esc(ore(minS))}</b>
       <div class="sett" aria-label="${t('pagina.minuti-settimana')}">${sett.map(g => `<span class="${g.oggi ? 'oggi' : ''}" title="${t('pagina.giorno-ore', { giorno: esc(dataLunga(g.g)), ore: esc(ore(g.min)) })}"><i style="height:${Math.max(2, Math.round(g.min / maxS * 32))}px;transform:scaleY(0)"></i><em>${elenco('pagina.iniziali-giorni')[new Date(g.g + 'T12:00').getDay()]}</em></span>`).join('')}</div></div>
   </div>
@@ -71,11 +73,19 @@ function cartaEsame(e) {
 }
 function libretto() {
   const lista = fatti().sort((a, b) => (b.data || '').localeCompare(a.data || ''));
-  if (!lista.length) return `<p style="margin:0;padding:18px 16px;color:var(--muted);font-size:14px">${t('pagina.libretto-vuoto')}</p>`;
+  if (!lista.length) return `<p style="margin:0;padding:18px 16px;color:var(--muted);font-size:14px">${LB.italiano() ? t('pagina.libretto-vuoto') : t('libretto.libretto-vuoto', { voto: esc(LB.votoEsempio()) })}</p>`;
   const m = media();
+  if (!LB.italiano()) return librettoSistema(lista);
   return `<table><thead><tr><th>${t('pagina.col-esame')}</th><th class="num">${t('pagina.col-cfu')}</th><th class="num">${t('pagina.col-voto')}</th><th class="num">${t('pagina.col-data')}</th><th></th></tr></thead><tbody>
     ${lista.map(e => `<tr><td>${esc(e.nome)}</td><td class="num">${esc(e.cfu)}</td><td class="num"><span class="voto">${e.idoneita ? `<span class="tenue">${t('pagina.idoneo')}</span>` : e.lode ? t('pagina.voto-lode', { voto: esc(e.voto) }) : esc(e.voto)}</span></td><td class="num tenue">${e.data ? esc(dataBreve(e.data)) : ''}</td><td class="num"><button class="x" data-a="modifica" data-e="${esc(e.id)}" aria-label="${t('pagina.modifica-esame', { nome: esc(e.nome) })}">⋯</button></td></tr>`).join('')}
   </tbody></table><div class="tbl-piede"><span>${t('pagina.libretto-esami', { n: esc(lista.length), cfu: esc(cfuFatti()) })}</span><span>${t('pagina.libretto-media', { media: m.ponderata ? esc(num(m.ponderata, 2)) : '—', base: m.base ? esc(num(m.base, 1)) : '—' })}</span></div>`;
+}
+// il libretto fuori dall'Italia (js/libretto.js): i voti come si scrivono nel sistema, i crediti col loro nome, il voto finale
+function librettoSistema(lista) {
+  const q = LB.quadro();
+  return `<table><thead><tr><th>${t('pagina.col-esame')}</th><th class="num">${esc(q.crediti)}</th><th class="num">${t('pagina.col-voto')}</th><th class="num">${t('pagina.col-data')}</th><th></th></tr></thead><tbody>
+    ${lista.map(e => `<tr><td>${esc(e.nome)}</td><td class="num">${esc(e.cfu)}</td><td class="num"><span class="voto">${e.idoneita ? `<span class="tenue">${esc(LB.votoEsame(e))}</span>` : esc(LB.votoEsame(e))}</span></td><td class="num tenue">${e.data ? esc(dataBreve(e.data)) : ''}</td><td class="num"><button class="x" data-a="modifica" data-e="${esc(e.id)}" aria-label="${t('pagina.modifica-esame', { nome: esc(e.nome) })}">⋯</button></td></tr>`).join('')}
+  </tbody></table><div class="tbl-piede"><span>${t('libretto.piede-esami', { n: lista.length, cfu: esc(q.cfu), crediti: esc(q.crediti) })}</span><span>${t('libretto.piede-media', { media: q.m.ponderata != null ? esc(q.media) : '—', finale: esc(q.nomeFinale), valore: esc(q.valore) })}</span></div>`;
 }
 function mazzi() {
   const gruppi = new Map(); D.carte.forEach(c => { const k = c.esameId || ''; gruppi.set(k, (gruppi.get(k) || 0) + 1); });
@@ -100,13 +110,15 @@ function finestraEsame(id) {
   const e = id ? esame(id) : null;
   finestra(`<h2>${e ? esc(e.nome) : t('pagina.nuovo-esame')}</h2><p>${e ? t('pagina.esame-correggi') : t('pagina.esame-aiuto')}</p>
     <div class="campi"><label class="tutta">${t('pagina.campo-nome')}<input name="nome" required value="${esc(e?.nome || '')}" placeholder="${t('pagina.esempio-esame')}"></label>
-      <label>${t('pagina.campo-cfu')}<input name="cfu" type="number" min="1" max="30" value="${esc(e?.cfu || 6)}"></label>
+      ${LB.italiano() ? `<label>${t('pagina.campo-cfu')}<input name="cfu" type="number" min="1" max="30" value="${esc(e?.cfu || 6)}"></label>` : `<label>${t('libretto.campo-crediti', { crediti: esc(LB.crediti()) })}<input name="cfu" type="number" min="1" max="60" step="any" value="${esc(e?.cfu || LB.sis().esame)}"></label>`}
       <label>${e?.fatto ? t('pagina.campo-data') : t('pagina.campo-data-appello')}<input name="data" type="date" value="${esc(e?.data || '')}"></label>
-      <label>${t('pagina.campo-voto')} <small>${t('pagina.campo-voto-nota')}</small><select name="voto"><option value="">—</option>${Array.from({ length: 13 }, (_, i) => 18 + i).map(v => `<option${e?.voto === v ? ' selected' : ''}>${v}</option>`).join('')}<option value="L"${e?.lode ? ' selected' : ''}>${t('pagina.trenta-e-lode')}</option><option value="I"${e?.idoneita ? ' selected' : ''}>${t('pagina.idoneita')}</option></select></label>
+      ${!LB.italiano() ? `<label>${t('pagina.campo-voto')} <small>${t('libretto.campo-voto-nota', { esempio: esc(LB.votoEsempio()) })}</small><input name="voto" value="${esc(e?.fatto && (e.voto != null || e.idoneita) ? LB.votoEsame(e) : '')}" placeholder="${esc(LB.votoEsempio())}" autocomplete="off"></label>` : ''}
+      ${LB.italiano() ? `<label>${t('pagina.campo-voto')} <small>${t('pagina.campo-voto-nota')}</small><select name="voto"><option value="">—</option>${Array.from({ length: 13 }, (_, i) => 18 + i).map(v => `<option${e?.voto === v ? ' selected' : ''}>${v}</option>`).join('')}<option value="L"${e?.lode ? ' selected' : ''}>${t('pagina.trenta-e-lode')}</option><option value="I"${e?.idoneita ? ' selected' : ''}>${t('pagina.idoneita')}</option></select></label>` : ''}
       <label>${t('pagina.campo-ore')} <small>${t('pagina.campo-ore-nota')}</small><input name="ore" type="number" min="1" max="500" value="${esc(e ? obiettivo(e) : '')}" placeholder="${t('pagina.ore-segnaposto')}"></label></div>
     <div class="piedi">${e ? `<button class="btn piano" value="elimina">${t('pagina.elimina')}</button>` : ''}<div class="dx"><button class="btn piano" value="annulla" formnovalidate>${t('pagina.annulla')}</button><button class="btn primary" value="salva">${t('pagina.salva')}</button></div></div>`,
   (f, azione) => {
     if (azione === 'elimina') { if (!confirm(t('pagina.conferma-elimina', { nome: e.nome }))) return false; D.esami = D.esami.filter(x => x.id !== e.id); salva(); toast(t('pagina.esame-eliminato')); return; }
+    if (!LB.italiano()) return salvaEsameSistema(e, f);
     const v = f.get('voto'), x = e || aggiungiEsame({ nome: f.get('nome'), cfu: +f.get('cfu') });
     Object.assign(x, { nome: String(f.get('nome')).trim(), cfu: +f.get('cfu') || 6, data: f.get('data') || null, oreObiettivo: f.get('ore') ? +f.get('ore') : null,
       voto: v === 'L' ? 30 : v && v !== 'I' ? +v : null, lode: v === 'L', idoneita: v === 'I', fatto: !!v });
@@ -114,11 +126,21 @@ function finestraEsame(id) {
     salva(); toast(e ? t('pagina.salvato') : t('pagina.esame-aggiunto'));
   });
 }
+// salva l'esame della finestra fuori dall'Italia: il voto scritto si legge nel sistema dei voti (8,5 · 16/20 · 2,3 · A− · idoneo)
+function salvaEsameSistema(e, f) {
+  const scritto = String(f.get('voto') || '').trim(), r = scritto ? LB.leggiVoto(scritto) : null;
+  if (scritto && !r) { toast(t('libretto.voto-non-letto', { voto: scritto, esempio: LB.votoEsempio() })); return false; }
+  const x = e || aggiungiEsame({ nome: f.get('nome'), cfu: +f.get('cfu') || LB.sis().esame });
+  Object.assign(x, { nome: String(f.get('nome')).trim(), cfu: +f.get('cfu') || LB.sis().esame, data: f.get('data') || null, oreObiettivo: f.get('ore') ? +f.get('ore') : null,
+    voto: r && !r.idoneita ? r.voto : null, lode: !!r?.lode, idoneita: !!r?.idoneita, fatto: !!r });
+  if (x.fatto && !x.data) x.data = oggi();
+  salva(); toast(e ? t('pagina.salvato') : t('pagina.esame-aggiunto'));
+}
 function finestraImpostazioni() {
   const d = finestra(`<h2>${t('pagina.impostazioni')}</h2><p>${t('pagina.impostazioni-aiuto')}</p>
     <div class="campi"><label>${t('pagina.campo-tuo-nome')}<input name="nome" value="${esc(D.profilo.nome)}" placeholder="${t('pagina.esempio-nome')}"></label>
       <label>${t('pagina.campo-corso')}<input name="corso" value="${esc(D.profilo.corso)}" placeholder="${t('pagina.esempio-corso')}"></label>
-      <label>${t('pagina.campo-cfu-laurea')}<select name="cfuTotali">${[180, 120, 300, 360].map(v => `<option${D.profilo.cfuTotali === v ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
+      <label>${t('pagina.campo-cfu-laurea')}<select name="cfuTotali">${(LB.italiano() ? [180, 120, 300, 360] : LB.opzioniTotali()).map(v => `<option${D.profilo.cfuTotali === v ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
       <label>${t('pagina.campo-lode-vale')}<select name="lode">${[30, 31, 32, 33].map(v => `<option${D.profilo.lode === v ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
       <label>${t('impostazioni.lingua')}<select name="lingua">${Object.entries(LINGUE).map(([c, l]) => `<option value="${c}"${c === lingua ? ' selected' : ''}>${esc(l.nome)}</option>`).join('')}</select></label>
       <label>${t('sistemi.scelta')} <small>${t('impostazioni.sistema-nota')}</small><select name="sistema">${CODICI.map(c => `<option value="${c}"${(D.profilo.sistema || 'it') === c ? ' selected' : ''}>${esc(nomeSistema(c))}</option>`).join('')}</select></label>

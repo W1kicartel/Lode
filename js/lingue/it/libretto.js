@@ -1,0 +1,28 @@
+// Il libretto nei sistemi dei voti che non sono l'Italia (italiano, lingua di partenza): «quanto mi serve», «e se prendo»,
+// i crediti, il voto finale, il libretto incollato (js/libretto.js, js/lode.js, js/pagina.js, js/benvenuto.js).
+// In Italia restano le frasi di sempre (barra1, barra2, pagina, benvenuto).
+export default {
+  'libretto.crediti-di': '{fatti} di {tot} {crediti}',
+  'libretto.serve-gia': 'Per arrivare a <b>{obiettivo}</b> ti basta passare gli esami che restano.',
+  'libretto.serve-media': 'Per arrivare a <b>{obiettivo}</b> ti serve <b>{voto}</b> di media nei {cfu} {crediti} che mancano.',
+  'libretto.serve-impossibile': 'Arrivare a <b>{obiettivo}</b> non è più possibile: punta a {punta}.',
+  'libretto.obiettivo-fuori': 'Con il sistema {sistema} l\'obiettivo va da {da} a {a}.',
+  'libretto.simula-esito': 'Media <b>{media}</b> <span class="{classe}">{delta}</span> · {finale} <b>{valore}</b>',
+  'libretto.simula': 'Con **{voto}** in {nome} la media passa da {prima} a **{dopo}** ({delta}): {finale} **{valore}**.',
+  'libretto.simula-primo': 'Con {voto} in **{nome}** la tua media partirebbe da **{media}**: {finale} **{valore}**.',
+  'libretto.sintesi-media-finale': 'media {media}, {finale} {valore}',
+  'libretto.non-valido': 'Con il sistema {sistema} il voto {voto} non esiste.',
+  'libretto.non-superato': '{voto} in {nome} non basta per passare (serve {sufficienza}): non lo segno nel libretto.',
+  'libretto.nuovo-esame': 'Nuovo esame da {n} {crediti}: correggili nel libretto.',
+  'libretto.formula': 'media ponderata sui {crediti}',
+  'libretto.piede-esami': { one: '{n} esame · {cfu} {crediti}', other: '{n} esami · {cfu} {crediti}' },
+  'libretto.piede-media': 'media <b>{media}</b> · {finale} <b>{valore}</b>',
+  'libretto.campo-voto-nota': 'come sul libretto ({esempio}); vuoto se non l\'hai ancora dato',
+  'libretto.voto-non-letto': 'Non riesco a leggere il voto «{voto}»: scrivilo come sul libretto, per esempio {esempio}.',
+  'libretto.incolla-sotto': 'Apri il libretto sul portale dell\'ateneo, seleziona tutto, copia e incolla qui: una riga per esame, con nome, crediti e voto. Oppure scrivili tu, per esempio «{esempio}».',
+  'libretto.alla-laurea': '{n} {crediti} alla laurea',
+  'libretto.campo-crediti': 'Crediti ({crediti})',
+  'libretto.libretto-vuoto': 'Nessun esame dato. Scrivi nella barra <kbd>ho preso {voto} in fisica</kbd>.',
+  'libretto.riga-esempio': '{nome}, {n} {crediti}, {voto}',
+  'libretto.esame-esempio': 'Analisi 1',
+};

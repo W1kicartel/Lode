@@ -80,6 +80,10 @@ jobs:
       # Brasile, Regno Unito e Stati Uniti (voti, media, voto finale, «quanto mi serve», libretto incollato)
       - name: Sistemi dei voti
         run: node test/sistemi.mjs
+      # il libretto nel sistema scelto (js/libretto.js, js/dati.js): in Italia gli stessi numeri e comandi di prima; per ogni
+      # altro sistema voti detti nella barra, media, voto finale, «quanto mi serve», «e se prendo», libretto incollato
+      - name: Libretto nei sistemi dei voti
+        run: node test/libretto-sistemi.mjs
       - name: Formule dette a voce (italiano e inglese)
         run: node test/formule.mjs
       # la scelta della lingua e del sistema dei voti: chi usa già Lode resta in italiano, il benvenuto, le Impostazioni, «lingua …»,
