@@ -6,6 +6,7 @@
 // Lingue: ogni modello dice in quali si scrive (lingue: C, Java, Python; albero.js controlla che la stampa sia fedele) e, se
 // serve, le frasi e il concetto che cambiano con la lingua (python: { concetto, frasi, mutanti }, java: { … }).
 // test/stampa-vero.mjs li prova contro python3 e javac/java veri.
+import { t } from '../lingua.js';
 import { num, car, reale, v, indice, valore, indirizzo, bin, cast, ternario, assegna, incr, chiama, printf, dich, array, espr, blocco, se, mentre, fai, per, scegli, caso, interrompi, continua, ritorna, param, funzione, main, programma, clona, visita, esegui, stampaC, stampaIn, normalizza, ErroreC, NOMI_LINGUE } from './albero.js';
 
 /* ---------- il seme ---------- */
@@ -22,22 +23,27 @@ const impasta = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) h 
 /* ---------- i nomi ---------- */
 // gli argomenti (chiavi SM-2 'stampa|<id>' in D.codice.memoria). Stessi id e nomi di js/codice/diario.js
 export const CONCETTI = {
-  'c:for': 'Ciclo for', 'c:while': 'Ciclo while', 'c:do-while': 'Ciclo do-while', 'c:ritroso': 'Conteggio a ritroso', 'c:array': 'Array',
-  'c:divisione-intera': 'Divisione intera', 'c:resto': 'Resto con i negativi', 'c:cast': 'Cast a double', 'c:incremento': 'i++ e ++i',
-  'c:assegnamento': 'Assegnamenti composti (+=)', 'c:switch': 'switch e break', 'c:cortocircuito': '&& e || in cortocircuito',
-  'c:else-pendente': 'else pendente', 'c:puntatori': 'Passaggio per indirizzo', 'c:parametri': 'Passaggio per valore',
-  'c:visibilita': 'Variabili nei blocchi', 'c:char': 'char e codici ASCII', 'c:ricorsione': 'Ricorsione', 'c:annidati': 'Cicli annidati',
-  'c:break-continue': 'break e continue', 'c:ternario': 'Operatore ternario',
+  'c:for': t('modelli.concetti.for'), 'c:while': t('modelli.concetti.while'), 'c:do-while': t('modelli.concetti.do-while'),
+  'c:ritroso': t('modelli.concetti.ritroso'), 'c:array': t('modelli.concetti.array'), 'c:divisione-intera': t('modelli.concetti.divisione-intera'),
+  'c:resto': t('modelli.concetti.resto'), 'c:cast': t('modelli.concetti.cast'), 'c:incremento': t('modelli.concetti.incremento'),
+  'c:assegnamento': t('modelli.concetti.assegnamento'), 'c:switch': t('modelli.concetti.switch'), 'c:cortocircuito': t('modelli.concetti.cortocircuito'),
+  'c:else-pendente': t('modelli.concetti.else-pendente'), 'c:puntatori': t('modelli.concetti.puntatori'), 'c:parametri': t('modelli.concetti.parametri'),
+  'c:visibilita': t('modelli.concetti.visibilita'), 'c:char': t('modelli.concetti.char'), 'c:ricorsione': t('modelli.concetti.ricorsione'),
+  'c:annidati': t('modelli.concetti.annidati'), 'c:break-continue': t('modelli.concetti.break-continue'), 'c:ternario': t('modelli.concetti.ternario'),
 };
 // i sette errori della spec: quelli che contano in D.codice.errori («Sbagli spesso: …»). Stessi nomi di diario.js
-export const MUTANTI = { 'fuori-di-uno': 'fuori di uno', 'divisione-intera': 'divisione intera', 'post-vs-pre': 'i++ e ++i', 'break-dimenticato': 'break dimenticato', 'copia-del-parametro': 'copia del parametro', cortocircuito: 'cortocircuito', 'resto-col-segno': 'resto col segno' };
+export const MUTANTI = {
+  'fuori-di-uno': t('modelli.errori.fuori-di-uno'), 'divisione-intera': t('modelli.errori.divisione-intera'), 'post-vs-pre': t('modelli.errori.post-vs-pre'),
+  'break-dimenticato': t('modelli.errori.break-dimenticato'), 'copia-del-parametro': t('modelli.errori.copia-del-parametro'), cortocircuito: t('modelli.errori.cortocircuito'),
+  'resto-col-segno': t('modelli.errori.resto-col-segno'),
+};
 // tutti gli errori che i modelli sanno riconoscere (i sette, più quelli di argomenti che la spec non nomina)
 export const ERRORI = {
-  ...MUTANTI, 'piu-uguale': '+= e =', 'maggiore-o-uguale': '> e >=', 'indice-valore': 'indice e valore', sovrascrittura: 'primo e ultimo',
-  'else-pendente': 'else pendente', 'variabile-nascosta': 'variabile nascosta', 'carattere-codice': 'carattere e codice', 'caso-base': 'caso base',
-  'passo-del-ciclo': 'quando scatta il passo del ciclo',
-  ricorsione: 'ricorsione', 'cicli-annidati': 'cicli annidati', 'break-continue': 'break e continue', 'do-while': 'do-while',
-  ternario: 'ternario al contrario', 'scambi-in-fila': 'scambi in fila',
+  ...MUTANTI, 'piu-uguale': t('modelli.errori.piu-uguale'), 'maggiore-o-uguale': t('modelli.errori.maggiore-o-uguale'), 'indice-valore': t('modelli.errori.indice-valore'),
+  sovrascrittura: t('modelli.errori.sovrascrittura'), 'else-pendente': t('modelli.errori.else-pendente'), 'variabile-nascosta': t('modelli.errori.variabile-nascosta'),
+  'carattere-codice': t('modelli.errori.carattere-codice'), 'caso-base': t('modelli.errori.caso-base'), 'passo-del-ciclo': t('modelli.errori.passo-del-ciclo'),
+  ricorsione: t('modelli.errori.ricorsione'), 'cicli-annidati': t('modelli.errori.cicli-annidati'), 'break-continue': t('modelli.errori.break-continue'),
+  'do-while': t('modelli.errori.do-while'), ternario: t('modelli.errori.ternario'), 'scambi-in-fila': t('modelli.errori.scambi-in-fila'),
 };
 
 /* ---------- attrezzi per i modelli ---------- */
@@ -54,7 +60,7 @@ function cambia(p, segno, f) {
 const cambiaTutti = (p, ...passi) => passi.reduce((q, [segno, f]) => cambia(q, segno, f), p);
 // un programma che stampa solo questo testo: per gli errori che non sono una modifica del codice
 const soloUscita = s => programma(main(espr(printf(s.replace(/%/g, '%%')))));
-const hai = s => 'Hai scelto `' + s + '`';
+const hai = s => t('modelli.hai-scelto', { s });
 const NOME = l => NOMI_LINGUE[l] || 'C';
 const pr = l => l === 'python' ? 'print' : 'printf';
 // il range che stampaPython scrive per un for del C
@@ -64,8 +70,8 @@ const fila = (a, b) => Array.from({ length: Math.max(0, b - a + 1) }, (_, k) => 
 /* ---------- i modelli ---------- */
 export const MODELLI = [
   {
-    id: 'for-minore', cosa: 'questo for', concetti: ['c:for'],
-    concetto: 'Con `i < n` l\'ultimo giro ha i = n - 1: il valore n non viene mai stampato.',
+    id: 'for-minore', cosa: t('modelli.for-minore.cosa'), concetti: ['c:for'],
+    concetto: t('modelli.for-minore.concetto'),
     genera(r) {
       const a = tra(r, 0, 3), b = a + tra(r, 3, 6);
       return P({ a, b }, main(
@@ -73,14 +79,14 @@ export const MODELLI = [
         espr(printf('\n'))));
     },
     mutanti: [
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.op = '<='; }), frase: (s, d) => `${hai(s)}: è quello che stamperebbe con \`i <= ${d.b}\`. Qui il ciclo si ferma prima.` },
-      { id: 'passo-del-ciclo', applica: p => cambia(p, 'inizio', n => { n.v += 1; }), frase: (s, d) => `${hai(s)}: è come se \`i++\` scattasse prima del primo giro. L'incremento arriva alla fine di ogni giro: il primo giro ha i = ${d.a}.` },
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.b.v -= 1; }), frase: (s, d) => `${hai(s)}: ti sei fermato un giro prima. Con \`i < ${d.b}\` l'ultimo giro ha i = ${d.b - 1}.` },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.op = '<='; }), frase: (s, d) => t('modelli.for-minore.frase', { hai: hai(s), b: d.b }) },
+      { id: 'passo-del-ciclo', applica: p => cambia(p, 'inizio', n => { n.v += 1; }), frase: (s, d) => t('modelli.for-minore.frase-2', { hai: hai(s), a: d.a }) },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.b.v -= 1; }), frase: (s, d) => t('modelli.for-minore.frase-3', { hai: hai(s), b: d.b, b2: d.b - 1 }) },
     ],
   },
   {
-    id: 'for-passo', cosa: 'questo for', concetti: ['c:for'],
-    concetto: 'Con `<=` il ciclo fa anche il giro in cui i è uguale al limite.',
+    id: 'for-passo', cosa: t('modelli.for-passo.cosa'), concetti: ['c:for'],
+    concetto: t('modelli.for-passo.concetto'),
     genera(r) {
       const a = tra(r, 0, 4), s = tra(r, 2, 3), b = a + s * tra(r, 3, 4);
       return P({ a, s, b }, main(
@@ -88,13 +94,13 @@ export const MODELLI = [
         espr(printf('\n'))));
     },
     mutanti: [
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.op = '<'; }), frase: (s, d) => `${hai(s)}: è quello che stamperebbe con \`i < ${d.b}\`. Con \`<=\` anche ${d.b} viene stampato.` },
-      { id: 'passo-del-ciclo', applica: p => cambia(p, 'inizio', n => { n.v += p.dati.s; }), frase: (s, d) => `${hai(s)}: \`i += ${d.s}\` non scatta prima del primo giro. Il primo giro ha i = ${d.a}.` },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.op = '<'; }), frase: (s, d) => t('modelli.for-passo.frase', { hai: hai(s), b: d.b }) },
+      { id: 'passo-del-ciclo', applica: p => cambia(p, 'inizio', n => { n.v += p.dati.s; }), frase: (s, d) => t('modelli.for-passo.frase-2', { hai: hai(s), s: d.s, a: d.a }) },
     ],
   },
   {
-    id: 'for-indietro', cosa: 'questo conto alla rovescia', concetti: ['c:ritroso', 'c:for'],
-    concetto: 'Il ciclo gira finché la condizione è vera: con `i > L` il valore L non viene stampato.',
+    id: 'for-indietro', cosa: t('modelli.for-indietro.cosa'), concetti: ['c:ritroso', 'c:for'],
+    concetto: t('modelli.for-indietro.concetto'),
     genera(r) {
       const l = tra(r, 0, 2), n = l + tra(r, 3, 6);
       return P({ l, n }, main(
@@ -102,14 +108,14 @@ export const MODELLI = [
         espr(printf('\n'))));
     },
     mutanti: [
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.op = '>='; }), frase: (s, d) => `${hai(s)}: è quello che stamperebbe con \`i >= ${d.l}\`. Con \`i > ${d.l}\` l'ultimo giro ha i = ${d.l + 1}.` },
-      { id: 'passo-del-ciclo', applica: p => cambia(p, 'inizio', n => { n.v -= 1; }), frase: (s, d) => `${hai(s)}: \`i--\` arriva alla fine del giro, non prima. Il primo giro stampa ${d.n}.` },
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.b.v += 1; }), frase: (s, d) => `${hai(s)}: ti sei fermato un giro prima. Anche i = ${d.l + 1} rispetta \`i > ${d.l}\`.` },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.op = '>='; }), frase: (s, d) => t('modelli.for-indietro.frase', { hai: hai(s), l: d.l, l2: d.l + 1 }) },
+      { id: 'passo-del-ciclo', applica: p => cambia(p, 'inizio', n => { n.v -= 1; }), frase: (s, d) => t('modelli.for-indietro.frase-2', { hai: hai(s), n: d.n }) },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.b.v += 1; }), frase: (s, d) => t('modelli.for-indietro.frase-3', { hai: hai(s), l: d.l + 1, l2: d.l }) },
     ],
   },
   {
-    id: 'while-somma', cosa: 'questo while', concetti: ['c:while'],
-    concetto: 'Il while esce quando la condizione diventa falsa: dopo `while (i < n)` la variabile i vale n.',
+    id: 'while-somma', cosa: t('modelli.while-somma.cosa'), concetti: ['c:while'],
+    concetto: t('modelli.while-somma.concetto'),
     genera(r) {
       const n = tra(r, 3, 6);
       return P({ n }, main(
@@ -118,14 +124,14 @@ export const MODELLI = [
         S(espr(printf('%d %d\n', v('i'), v('s'))), 'stampa')));
     },
     mutanti: [
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.op = '<='; }), frase: (s, d) => `${hai(s)}: è quello che stamperebbe con \`i <= ${d.n}\`. Qui il ciclo fa un giro in meno.` },
-      { id: 'passo-del-ciclo', applica: p => cambia(p, 'corpo', n => { n.corpo.reverse(); }), frase: s => `${hai(s)}: è come se \`i++\` venisse prima di \`s += i\`. Qui s somma i e solo dopo i cresce.` },
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'stampa', n => { n.e.arg[1] = bin('-', v('i'), num(1)); }), frase: (s, d) => `${hai(s)}: dopo il ciclo i non vale ${d.n - 1}. Il while esce proprio quando i diventa ${d.n}.` },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.op = '<='; }), frase: (s, d) => t('modelli.while-somma.frase', { hai: hai(s), n: d.n }) },
+      { id: 'passo-del-ciclo', applica: p => cambia(p, 'corpo', n => { n.corpo.reverse(); }), frase: s => t('modelli.while-somma.frase-2', { hai: hai(s) }) },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'stampa', n => { n.e.arg[1] = bin('-', v('i'), num(1)); }), frase: (s, d) => t('modelli.while-somma.frase-3', { hai: hai(s), n: d.n - 1, n2: d.n }) },
     ],
   },
   {
-    id: 'while-dimezza', cosa: 'questo while', concetti: ['c:while', 'c:divisione-intera'],
-    concetto: 'Tra due int `/` tronca: 7 / 2 fa 3, e dimezzando si arriva a 1 senza virgole.',
+    id: 'while-dimezza', cosa: t('modelli.while-dimezza.cosa'), concetti: ['c:while', 'c:divisione-intera'],
+    concetto: t('modelli.while-dimezza.concetto'),
     genera(r) {
       let n; do n = tra(r, 9, 60); while ((n & (n - 1)) === 0);
       return P({ n }, main(
@@ -135,13 +141,13 @@ export const MODELLI = [
         espr(printf('%d %d\n', v('n'), v('k')))));
     },
     mutanti: [
-      { id: 'divisione-intera', applica: p => cambia(p, 'dn', n => { n.tipo = 'double'; }), frase: s => `${hai(s)}: è quello che succederebbe se n fosse un double. n è un int: \`n /= 2\` butta via la parte dopo la virgola.` },
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.op = '>='; }), frase: s => `${hai(s)}: è quello che stamperebbe con \`n >= 1\`. Il ciclo si ferma appena n arriva a 1.` },
+      { id: 'divisione-intera', applica: p => cambia(p, 'dn', n => { n.tipo = 'double'; }), frase: s => t('modelli.while-dimezza.frase', { hai: hai(s) }) },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.op = '>='; }), frase: s => t('modelli.while-dimezza.frase-2', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'while-post', cosa: 'questo while con i++', concetti: ['c:incremento', 'c:while'],
-    concetto: '`i++ < n` confronta il valore vecchio e poi incrementa: dentro il ciclo i è già cresciuto.',
+    id: 'while-post', cosa: t('modelli.while-post.cosa'), concetti: ['c:incremento', 'c:while'],
+    concetto: t('modelli.while-post.concetto'),
     genera(r) {
       const n = tra(r, 3, 6);
       return P({ n }, main(
@@ -150,14 +156,14 @@ export const MODELLI = [
         S(espr(printf('| %d\n', v('i'))), 'fine')));
     },
     mutanti: [
-      { id: 'post-vs-pre', applica: p => cambia(p, 'inc', n => { n.pre = true; }), frase: s => `${hai(s)}: è quello che stamperebbe con \`++i\`. Con \`i++\` il confronto usa il valore di prima.` },
-      { id: 'post-vs-pre', applica: p => cambia(p, 'stampa', n => { n.e.arg[1] = bin('-', v('i'), num(1)); }), frase: s => `${hai(s)}: quando printf parte, i è già stato incrementato dal confronto.` },
-      { id: 'post-vs-pre', applica: p => cambia(p, 'fine', n => { n.e.arg[1] = bin('-', v('i'), num(1)); }), frase: (s, d) => `${hai(s)}: anche l'ultimo confronto, quello falso, incrementa i. Alla fine i vale ${d.n + 1}.` },
+      { id: 'post-vs-pre', applica: p => cambia(p, 'inc', n => { n.pre = true; }), frase: s => t('modelli.while-post.frase', { hai: hai(s) }) },
+      { id: 'post-vs-pre', applica: p => cambia(p, 'stampa', n => { n.e.arg[1] = bin('-', v('i'), num(1)); }), frase: s => t('modelli.while-post.frase-2', { hai: hai(s) }) },
+      { id: 'post-vs-pre', applica: p => cambia(p, 'fine', n => { n.e.arg[1] = bin('-', v('i'), num(1)); }), frase: (s, d) => t('modelli.while-post.frase-3', { hai: hai(s), n: d.n + 1 }) },
     ],
   },
   {
-    id: 'array-somma', cosa: 'questa somma', concetti: ['c:array'],
-    concetto: 'Gli indici di un array di n elementi vanno da 0 a n - 1.',
+    id: 'array-somma', cosa: t('modelli.array-somma.cosa'), concetti: ['c:array'],
+    concetto: t('modelli.array-somma.concetto'),
     genera(r) {
       const k = tra(r, 4, 6), xs = Array.from({ length: k }, () => tra(r, 1, 9));
       return P({ k, xs }, main(
@@ -166,14 +172,14 @@ export const MODELLI = [
         espr(printf('%d\n', v('s')))));
     },
     mutanti: [
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'inizio', n => { n.v = 1; }), frase: s => `${hai(s)}: hai saltato \`v[0]\`. Il primo elemento ha indice 0.` },
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.b.v -= 1; }), frase: (s, d) => `${hai(s)}: hai lasciato fuori l'ultimo. Con \`i < ${d.k}\` l'ultimo giro legge \`v[${d.k - 1}]\`.` },
-      { id: 'piu-uguale', applica: p => cambia(p, 'acc', n => { n.e.op = '='; }), frase: s => `${hai(s)}: è l'ultimo elemento, come se ci fosse \`s = v[i]\`. \`+=\` aggiunge, non sostituisce.` },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'inizio', n => { n.v = 1; }), frase: s => t('modelli.array-somma.frase', { hai: hai(s) }) },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.b.v -= 1; }), frase: (s, d) => t('modelli.array-somma.frase-2', { hai: hai(s), k: d.k, k2: d.k - 1 }) },
+      { id: 'piu-uguale', applica: p => cambia(p, 'acc', n => { n.e.op = '='; }), frase: s => t('modelli.array-somma.frase-3', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'array-massimo', cosa: 'questo massimo', concetti: ['c:array'],
-    concetto: 'p è un indice: conta da 0. Con `>` resta la prima posizione del massimo.',
+    id: 'array-massimo', cosa: t('modelli.array-massimo.cosa'), concetti: ['c:array'],
+    concetto: t('modelli.array-massimo.concetto'),
     genera(r) {
       const k = tra(r, 4, 6), xs = Array.from({ length: k }, () => tra(r, 1, 19));
       const max = 20 + tra(r, 0, 9);
@@ -185,14 +191,14 @@ export const MODELLI = [
         S(espr(printf('%d %d\n', v('m'), v('p'))), 'stampa')));
     },
     mutanti: [
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'stampa', n => { n.e.arg[2] = bin('+', v('p'), num(1)); }), frase: (s, d, l) => `${hai(s)}: hai contato le posizioni da 1. In ${NOME(l)} il primo elemento ha indice 0.` },
-      { id: 'maggiore-o-uguale', applica: p => cambia(p, 'cmp', n => { n.op = '>='; }), frase: s => `${hai(s)}: è quello che farebbe \`>=\`. Con \`>\` un massimo uguale non sposta p: resta il primo.` },
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.b.v -= 1; }), frase: s => `${hai(s)}: hai lasciato fuori l'ultimo elemento. Anche lui viene confrontato.` },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'stampa', n => { n.e.arg[2] = bin('+', v('p'), num(1)); }), frase: (s, d, l) => t('modelli.array-massimo.frase', { hai: hai(s), linguaggio: NOME(l) }) },
+      { id: 'maggiore-o-uguale', applica: p => cambia(p, 'cmp', n => { n.op = '>='; }), frase: s => t('modelli.array-massimo.frase-2', { hai: hai(s) }) },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.b.v -= 1; }), frase: s => t('modelli.array-massimo.frase-3', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'array-ultimo', cosa: 'questa ricerca', concetti: ['c:array'],
-    concetto: 'Il ciclo non si ferma quando trova x: p viene sovrascritto e resta l\'ultima posizione.',
+    id: 'array-ultimo', cosa: t('modelli.array-ultimo.cosa'), concetti: ['c:array'],
+    concetto: t('modelli.array-ultimo.concetto'),
     genera(r) {
       const k = tra(r, 5, 6), x = tra(r, 1, 9), i = tra(r, 0, k - 3), j = tra(r, i + 1, k - 1);
       const xs = Array.from({ length: k }, (_, z) => z === i || z === j ? x : uno(r, fila(1, 9).filter(y => y !== x)));
@@ -203,14 +209,14 @@ export const MODELLI = [
         S(espr(printf('%d\n', v('p'))), 'stampa')));
     },
     mutanti: [
-      { id: 'sovrascrittura', applica: p => cambia(p, 'trova', n => blocco({ ...n, segno: undefined }, interrompi())), frase: s => `${hai(s)}: è la prima posizione. Il ciclo non si ferma: ogni volta che trova x riscrive p.` },
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'stampa', n => { n.e.arg[1] = bin('+', v('p'), num(1)); }), frase: (s, d, l) => `${hai(s)}: hai contato le posizioni da 1. In ${NOME(l)} il primo elemento ha indice 0.` },
-      { id: 'indice-valore', applica: p => cambia(p, 'stampa', n => { n.e.arg[1] = num(p.dati.x); }), frase: s => `${hai(s)}: è il valore cercato, non la sua posizione. p è un indice.` },
+      { id: 'sovrascrittura', applica: p => cambia(p, 'trova', n => blocco({ ...n, segno: undefined }, interrompi())), frase: s => t('modelli.array-ultimo.frase', { hai: hai(s) }) },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'stampa', n => { n.e.arg[1] = bin('+', v('p'), num(1)); }), frase: (s, d, l) => t('modelli.array-ultimo.frase-2', { hai: hai(s), linguaggio: NOME(l) }) },
+      { id: 'indice-valore', applica: p => cambia(p, 'stampa', n => { n.e.arg[1] = num(p.dati.x); }), frase: s => t('modelli.array-ultimo.frase-3', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'media-array', cosa: 'questa media', concetti: ['c:divisione-intera', 'c:cast'],
-    concetto: '`s / n` tra int tronca. `(double)s / n` converte prima e divide con la virgola.',
+    id: 'media-array', cosa: t('modelli.media-array.cosa'), concetti: ['c:divisione-intera', 'c:cast'],
+    concetto: t('modelli.media-array.concetto'),
     genera(r) {
       const k = uno(r, [3, 4, 5, 6, 7]), xs = Array.from({ length: k }, () => tra(r, 1, 9));
       if (xs.reduce((a, b) => a + b, 0) % k === 0) xs[0] = xs[0] === 9 ? 8 : xs[0] + 1;
@@ -220,14 +226,14 @@ export const MODELLI = [
         espr(printf('%d %.2f\n', S(bin('/', v('s'), num(k)), 'd1'), S(bin('/', cast('double', v('s')), num(k)), 'd2')))));
     },
     mutanti: [
-      { id: 'divisione-intera', applica: p => cambia(p, 'd1', n => { n.modo = 'reale'; }), frase: (s, d) => `${hai(s)}: \`s / ${d.k}\` è una divisione tra due int: la parte dopo la virgola si perde.` },
-      { id: 'divisione-intera', applica: p => cambia(p, 'd2', n => cast('double', bin('/', v('s'), num(p.dati.k)))), frase: s => `${hai(s)}: il cast \`(double)s\` avviene prima della divisione, quindi la divisione tiene la virgola.` },
-      { id: 'divisione-intera', applica: p => cambia(p, 'd1', n => { n.modo = 'arrotondata'; }), frase: s => `${hai(s)}: la divisione tra int non arrotonda, tronca.` },
+      { id: 'divisione-intera', applica: p => cambia(p, 'd1', n => { n.modo = 'reale'; }), frase: (s, d) => t('modelli.media-array.frase', { hai: hai(s), k: d.k }) },
+      { id: 'divisione-intera', applica: p => cambia(p, 'd2', n => cast('double', bin('/', v('s'), num(p.dati.k)))), frase: s => t('modelli.media-array.frase-2', { hai: hai(s) }) },
+      { id: 'divisione-intera', applica: p => cambia(p, 'd1', n => { n.modo = 'arrotondata'; }), frase: s => t('modelli.media-array.frase-3', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'divisione-double', cosa: 'questa divisione', concetti: ['c:divisione-intera'],
-    concetto: 'Il tipo del risultato non conta: `a / b` tra int tronca anche se finisce in un double.',
+    id: 'divisione-double', cosa: t('modelli.divisione-double.cosa'), concetti: ['c:divisione-intera'],
+    concetto: t('modelli.divisione-double.concetto'),
     genera(r) {
       const b = uno(r, [3, 5, 6, 7, 9]); let a; do a = tra(r, b + 1, 6 * b); while (a % b <= b / 2);
       return P({ a, b }, main(
@@ -236,13 +242,13 @@ export const MODELLI = [
         espr(printf('%.1f\n', v('m')))));
     },
     mutanti: [
-      { id: 'divisione-intera', applica: p => cambia(p, 'div', n => { n.modo = 'reale'; }), frase: s => `${hai(s)}: \`a / b\` si calcola tra int, prima di finire in m. Il double riceve un numero già troncato.` },
-      { id: 'divisione-intera', applica: p => cambia(p, 'div', n => { n.modo = 'arrotondata'; }), frase: s => `${hai(s)}: la divisione tra int non arrotonda, tronca verso lo zero.` },
+      { id: 'divisione-intera', applica: p => cambia(p, 'div', n => { n.modo = 'reale'; }), frase: s => t('modelli.divisione-double.frase', { hai: hai(s) }) },
+      { id: 'divisione-intera', applica: p => cambia(p, 'div', n => { n.modo = 'arrotondata'; }), frase: s => t('modelli.divisione-double.frase-2', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'cast-prima-dopo', cosa: 'questi due cast', concetti: ['c:cast', 'c:divisione-intera'],
-    concetto: '`(double)(s / n)` divide tra int e poi converte. `(double)s / n` converte e poi divide.',
+    id: 'cast-prima-dopo', cosa: t('modelli.cast-prima-dopo.cosa'), concetti: ['c:cast', 'c:divisione-intera'],
+    concetto: t('modelli.cast-prima-dopo.concetto'),
     genera(r) {
       const n = uno(r, [2, 3, 4, 5]); let s; do s = tra(r, n + 1, 9 * n); while (s % n === 0);
       return P({ s, n }, main(
@@ -250,14 +256,14 @@ export const MODELLI = [
         espr(printf('%.2f %.2f\n', S(cast('double', bin('/', v('s'), v('n'))), 'c1'), S(bin('/', cast('double', v('s')), v('n')), 'c2')))));
     },
     mutanti: [
-      { id: 'divisione-intera', applica: p => cambia(p, 'c1', () => bin('/', cast('double', v('s')), v('n'))), frase: s => `${hai(s)}: in \`(double)(s / n)\` le parentesi fanno dividere prima, tra int. Il cast arriva dopo.` },
-      { id: 'divisione-intera', applica: p => cambia(p, 'c2', () => cast('double', bin('/', v('s'), v('n')))), frase: s => `${hai(s)}: in \`(double)s / n\` il cast vale solo per s, e la divisione tiene la virgola.` },
-      { id: 'divisione-intera', applica: p => cambiaTutti(p, ['c1', () => bin('/', cast('double', v('s')), v('n'))], ['c2', () => cast('double', bin('/', v('s'), v('n')))]), frase: s => `${hai(s)}: li hai scambiati. Le parentesi decidono se il cast arriva prima o dopo la divisione.` },
+      { id: 'divisione-intera', applica: p => cambia(p, 'c1', () => bin('/', cast('double', v('s')), v('n'))), frase: s => t('modelli.cast-prima-dopo.frase', { hai: hai(s) }) },
+      { id: 'divisione-intera', applica: p => cambia(p, 'c2', () => cast('double', bin('/', v('s'), v('n')))), frase: s => t('modelli.cast-prima-dopo.frase-2', { hai: hai(s) }) },
+      { id: 'divisione-intera', applica: p => cambiaTutti(p, ['c1', () => bin('/', cast('double', v('s')), v('n'))], ['c2', () => cast('double', bin('/', v('s'), v('n')))]), frase: s => t('modelli.cast-prima-dopo.frase-3', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'diviso-due', cosa: 'questa divisione per 2', concetti: ['c:divisione-intera'],
-    concetto: 'Basta un double nel conto: `a / 2.0` tiene la virgola, `a / 2` no.',
+    id: 'diviso-due', cosa: t('modelli.diviso-due.cosa'), concetti: ['c:divisione-intera'],
+    concetto: t('modelli.diviso-due.concetto'),
     genera(r) {
       const a = 2 * tra(r, 2, 12) + 1;
       return P({ a }, main(
@@ -265,14 +271,14 @@ export const MODELLI = [
         espr(printf('%d %.1f\n', S(bin('/', v('a'), num(2)), 'd1'), S(bin('/', v('a'), reale(2)), 'd2')))));
     },
     mutanti: [
-      { id: 'divisione-intera', applica: p => cambia(p, 'd1', n => { n.modo = 'reale'; }), frase: s => `${hai(s)}: \`a / 2\` è tra due int: tronca e dà un int, che %d stampa senza virgola.` },
-      { id: 'divisione-intera', applica: p => cambia(p, 'd2', n => { n.b = num(2); }), frase: s => `${hai(s)}: \`2.0\` è un double, quindi \`a / 2.0\` tiene la virgola.` },
-      { id: 'divisione-intera', applica: p => cambia(p, 'd1', n => { n.modo = 'arrotondata'; }), frase: s => `${hai(s)}: \`a / 2\` non arrotonda: tronca verso lo zero.` },
+      { id: 'divisione-intera', applica: p => cambia(p, 'd1', n => { n.modo = 'reale'; }), frase: s => t('modelli.diviso-due.frase', { hai: hai(s) }) },
+      { id: 'divisione-intera', applica: p => cambia(p, 'd2', n => { n.b = num(2); }), frase: s => t('modelli.diviso-due.frase-2', { hai: hai(s) }) },
+      { id: 'divisione-intera', applica: p => cambia(p, 'd1', n => { n.modo = 'arrotondata'; }), frase: s => t('modelli.diviso-due.frase-3', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'resto-negativi', cosa: 'questo resto', concetti: ['c:resto'],
-    concetto: (d, l) => `In ${NOME(l)} la divisione tronca verso lo zero e il resto ha il segno del dividendo: -7 % 3 fa -1.`,
+    id: 'resto-negativi', cosa: t('modelli.resto-negativi.cosa'), concetti: ['c:resto'],
+    concetto: (d, l) => t('modelli.resto-negativi.concetto', { linguaggio: NOME(l) }),
     genera(r) {
       const segni = uno(r, [[-1, 1], [-1, 1], [1, -1]]), b0 = tra(r, 2, 5); let a0; do a0 = tra(r, b0 + 1, 20); while (a0 % b0 === 0);
       const a = segni[0] * a0, b = segni[1] * b0;
@@ -281,16 +287,16 @@ export const MODELLI = [
         espr(printf('%d %d\n', S(bin('/', v('a'), v('b')), 'div'), S(bin('%', v('a'), v('b')), 'mod')))));
     },
     mutanti: [
-      { id: 'resto-col-segno', applica: p => cambiaTutti(p, ['div', n => { n.modo = 'pavimento'; }], ['mod', n => { n.modo = 'divisore'; }]), frase: (s, d, l) => `${hai(s)}: così fa Python, che arrotonda verso il basso. In ${NOME(l)} si tronca verso lo zero.` },
-      { id: 'resto-col-segno', applica: p => cambia(p, 'mod', n => { n.modo = 'matematico'; }), frase: (s, d, l) => `${hai(s)}: in ${NOME(l)} il resto non è sempre positivo. Ha il segno del dividendo, cioè di a.` },
-      { id: 'divisione-intera', applica: p => cambia(p, 'div', n => { n.modo = 'pavimento'; }), frase: s => `${hai(s)}: la divisione tra int tronca verso lo zero, non verso il basso.` },
+      { id: 'resto-col-segno', applica: p => cambiaTutti(p, ['div', n => { n.modo = 'pavimento'; }], ['mod', n => { n.modo = 'divisore'; }]), frase: (s, d, l) => t('modelli.resto-negativi.frase', { hai: hai(s), linguaggio: NOME(l) }) },
+      { id: 'resto-col-segno', applica: p => cambia(p, 'mod', n => { n.modo = 'matematico'; }), frase: (s, d, l) => t('modelli.resto-negativi.frase-2', { hai: hai(s), linguaggio: NOME(l) }) },
+      { id: 'divisione-intera', applica: p => cambia(p, 'div', n => { n.modo = 'pavimento'; }), frase: s => t('modelli.resto-negativi.frase-3', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'post-pre', cosa: 'questi incrementi', concetti: ['c:incremento'],
+    id: 'post-pre', cosa: t('modelli.post-pre.cosa'), concetti: ['c:incremento'],
     // il concetto segue il segno del seme: con i-- e --i si parla di decremento
-    concetto: d => d.op === '--' ? '`x = i--` usa il valore di prima e poi decrementa; `y = --i` decrementa e poi usa il valore nuovo.'
-      : '`x = i++` usa il valore di prima e poi incrementa; `y = ++i` incrementa e poi usa il valore nuovo.',
+    concetto: d => d.op === '--' ? t('modelli.post-pre.concetto')
+      : t('modelli.post-pre.concetto-2'),
     genera(r) {
       const a = tra(r, 1, 9), op = uno(r, ['++', '--']);
       return P({ a, op }, main(
@@ -300,14 +306,14 @@ export const MODELLI = [
         espr(printf('%d %d %d\n', v('x'), v('y'), v('i')))));
     },
     mutanti: [
-      { id: 'post-vs-pre', applica: p => cambia(p, 'x', n => { n.pre = true; }), frase: (s, d) => `${hai(s)}: con \`x = i${d.op}\` x prende il valore di prima, poi i cambia.` },
-      { id: 'post-vs-pre', applica: p => cambia(p, 'y', n => { n.pre = false; }), frase: (s, d) => `${hai(s)}: con \`y = ${d.op}i\` prima cambia i, poi y prende il valore nuovo.` },
-      { id: 'post-vs-pre', applica: p => cambiaTutti(p, ['x', n => { n.pre = true; }], ['y', n => { n.pre = false; }]), frase: (s, d) => `${hai(s)}: li hai scambiati. Il segno dopo (\`i${d.op}\`) usa il valore di prima, quello prima (\`${d.op}i\`) il valore nuovo.` },
+      { id: 'post-vs-pre', applica: p => cambia(p, 'x', n => { n.pre = true; }), frase: (s, d) => t('modelli.post-pre.frase', { hai: hai(s), op: d.op }) },
+      { id: 'post-vs-pre', applica: p => cambia(p, 'y', n => { n.pre = false; }), frase: (s, d) => t('modelli.post-pre.frase-2', { hai: hai(s), op: d.op }) },
+      { id: 'post-vs-pre', applica: p => cambiaTutti(p, ['x', n => { n.pre = true; }], ['y', n => { n.pre = false; }]), frase: (s, d) => t('modelli.post-pre.frase-3', { hai: hai(s), op: d.op }) },
     ],
   },
   {
-    id: 'piu-uguale', cosa: 'questo +=', concetti: ['c:assegnamento', 'c:for'],
-    concetto: '`s += x` vuol dire `s = s + x`: aggiunge al valore che c\'era.',
+    id: 'piu-uguale', cosa: t('modelli.piu-uguale.cosa'), concetti: ['c:assegnamento', 'c:for'],
+    concetto: t('modelli.piu-uguale.concetto'),
     genera(r) {
       const a = tra(r, 1, 5), n = tra(r, 3, 5), k = tra(r, 2, 4);
       return P({ a, n, k }, main(
@@ -316,14 +322,14 @@ export const MODELLI = [
         espr(printf('%d\n', v('s')))));
     },
     mutanti: [
-      { id: 'piu-uguale', applica: p => cambia(p, 'acc', n => { n.e.op = '='; }), frase: s => `${hai(s)}: è solo l'ultimo giro, come se ci fosse \`=\`. \`+=\` aggiunge ogni volta.` },
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.op = '<'; }), frase: (s, d) => `${hai(s)}: con \`<=\` anche i = ${d.n} fa il suo giro.` },
-      { id: 'piu-uguale', applica: p => cambia(p, 's0', n => { n.v = 0; }), frase: (s, d) => `${hai(s)}: hai dimenticato il valore iniziale. s parte da ${d.a}.` },
+      { id: 'piu-uguale', applica: p => cambia(p, 'acc', n => { n.e.op = '='; }), frase: s => t('modelli.piu-uguale.frase', { hai: hai(s) }) },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.op = '<'; }), frase: (s, d) => t('modelli.piu-uguale.frase-2', { hai: hai(s), n: d.n }) },
+      { id: 'piu-uguale', applica: p => cambia(p, 's0', n => { n.v = 0; }), frase: (s, d) => t('modelli.piu-uguale.frase-3', { hai: hai(s), a: d.a }) },
     ],
   },
   {
-    id: 'switch', cosa: 'questo switch', concetti: ['c:switch'],
-    concetto: 'Senza break l\'esecuzione cade nel case sotto e continua fino al primo break o alla fine.',
+    id: 'switch', cosa: t('modelli.switch.cosa'), concetti: ['c:switch'],
+    concetto: t('modelli.switch.concetto'),
     genera(r) {
       const parole = ['uno', 'due', 'tre', 'quattro'];
       let rompe; do rompe = parole.map(() => r() < .4); while (rompe.every(Boolean) || !rompe.some(Boolean));
@@ -337,14 +343,14 @@ export const MODELLI = [
         espr(printf('\n'))));
     },
     mutanti: [
-      { id: 'break-dimenticato', applica: p => cambia(p, 'sw', n => { for (const c of n.casi) if (!c.corpo.some(x => x.t === 'interrompi')) c.corpo.push(interrompi()); }), frase: s => `${hai(s)}: è come se ogni case avesse il suo break. Senza break si continua nel case sotto.` },
-      { id: 'break-dimenticato', applica: p => cambia(p, 'sw', n => { for (const c of n.casi) c.corpo = c.corpo.filter(x => x.t !== 'interrompi'); }), frase: s => `${hai(s)}: hai saltato il break. Lì lo switch si ferma.` },
-      { id: 'break-dimenticato', applica: p => cambia(p, 'sw', n => { const d = clona(n.casi.at(-1).corpo); for (const c of n.casi) if (!c.corpo.some(x => x.t === 'interrompi')) c.corpo.push(interrompi()); return blocco({ ...n, segno: undefined }, ...d); }), frase: s => `${hai(s)}: default non parte sempre. Parte se nessun case corrisponde, o se ci arrivi cadendo da un case senza break.` },
+      { id: 'break-dimenticato', applica: p => cambia(p, 'sw', n => { for (const c of n.casi) if (!c.corpo.some(x => x.t === 'interrompi')) c.corpo.push(interrompi()); }), frase: s => t('modelli.switch.frase', { hai: hai(s) }) },
+      { id: 'break-dimenticato', applica: p => cambia(p, 'sw', n => { for (const c of n.casi) c.corpo = c.corpo.filter(x => x.t !== 'interrompi'); }), frase: s => t('modelli.switch.frase-2', { hai: hai(s) }) },
+      { id: 'break-dimenticato', applica: p => cambia(p, 'sw', n => { const d = clona(n.casi.at(-1).corpo); for (const c of n.casi) if (!c.corpo.some(x => x.t === 'interrompi')) c.corpo.push(interrompi()); return blocco({ ...n, segno: undefined }, ...d); }), frase: s => t('modelli.switch.frase-3', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'cortocircuito', cosa: 'questo if con || e &&', concetti: ['c:cortocircuito'],
-    concetto: 'Se il primo pezzo basta a decidere (vero con ||, falso con &&), il secondo non viene eseguito.',
+    id: 'cortocircuito', cosa: t('modelli.cortocircuito.cosa'), concetti: ['c:cortocircuito'],
+    concetto: t('modelli.cortocircuito.concetto'),
     genera(r) {
       const o = r() < .5, a = o ? tra(r, 1, 9) : tra(r, -9, 0);
       const cond = o ? bin('||', bin('>', v('a'), num(0)), bin('>', incr(v('n'), '++', true), num(1)))
@@ -355,13 +361,13 @@ export const MODELLI = [
         espr(printf('%d\n', v('n')))));
     },
     mutanti: [
-      { id: 'cortocircuito', applica: p => cambia(p, 'cond', n => { n.modo = 'entrambi'; }), frase: (s, d) => `${hai(s)}: \`++n\` non viene eseguito. Con \`${d.op}\` il primo pezzo basta già a decidere, e n resta 0.` },
-      { id: 'cortocircuito', applica: p => cambia(p, 'cond', n => { n.op = n.op === '||' ? '&&' : '||'; }), frase: (s, d) => `${hai(s)}: hai letto \`${d.op === '||' ? '&&' : '||'}\`. ${d.op === '||' ? '|| vuole vero almeno un pezzo' : '&& vuole veri tutti e due i pezzi'}.` },
+      { id: 'cortocircuito', applica: p => cambia(p, 'cond', n => { n.modo = 'entrambi'; }), frase: (s, d) => t('modelli.cortocircuito.frase', { hai: hai(s), op: d.op }) },
+      { id: 'cortocircuito', applica: p => cambia(p, 'cond', n => { n.op = n.op === '||' ? '&&' : '||'; }), frase: (s, d) => t('modelli.cortocircuito.frase-2', { hai: hai(s), op: d.op === '||' ? '&&' : '||', op2: d.op === '||' ? t('modelli.cortocircuito.frase-3') : t('modelli.cortocircuito.frase-4') }) },
     ],
   },
   {
-    id: 'else-pendente', cosa: 'questo else', concetti: ['c:else-pendente'],
-    concetto: 'L\'else va con l\'if più vicino che non ha già un else, qualunque sia il rientro.',
+    id: 'else-pendente', cosa: t('modelli.else-pendente.cosa'), concetti: ['c:else-pendente'],
+    concetto: t('modelli.else-pendente.concetto'),
     genera(r) {
       const n = uno(r, [4, 6]), t = tra(r, 0, 2);
       const dentro = se(bin('>', v('i'), num(t)), espr(printf('A%d ', v('i'))), espr(printf('B%d ', v('i'))));
@@ -372,13 +378,13 @@ export const MODELLI = [
         espr(printf('\n'))));
     },
     mutanti: [
-      { id: 'else-pendente', applica: p => cambia(p, 'fuori', n => { n.altrimenti = n.allora.altrimenti; n.allora.altrimenti = null; }), frase: (s, d) => `${hai(s)}: hai seguito il rientro. Ma l'else va con l'if più vicino, \`if (i > ${d.t})\`.` },
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.op = '<='; }), frase: (s, d) => `${hai(s)}: con \`i < ${d.n}\` l'ultimo giro ha i = ${d.n - 1}.` },
+      { id: 'else-pendente', applica: p => cambia(p, 'fuori', n => { n.altrimenti = n.allora.altrimenti; n.allora.altrimenti = null; }), frase: (s, d) => t('modelli.else-pendente.frase', { hai: hai(s), p: d.t }) },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.op = '<='; }), frase: (s, d) => t('modelli.else-pendente.frase-2', { hai: hai(s), n: d.n, n2: d.n - 1 }) },
     ],
   },
   {
-    id: 'swap-valore', cosa: 'questo scambio', concetti: ['c:parametri'],
-    concetto: 'Una funzione riceve copie dei valori: scambiare a e b non tocca x e y.',
+    id: 'swap-valore', cosa: t('modelli.swap-valore.cosa'), concetti: ['c:parametri'],
+    concetto: t('modelli.swap-valore.concetto'),
     genera(r) {
       const x = tra(r, 1, 9); let y; do y = tra(r, 1, 9); while (y === x);
       return P({ x, y }, funzione('void', 'scambia', [param('int', 'a'), param('int', 'b')],
@@ -386,13 +392,13 @@ export const MODELLI = [
       main(dich('int', ['x', num(x)], ['y', num(y)]), espr(chiama('scambia', v('x'), v('y'))), espr(printf('%d %d\n', v('x'), v('y')))));
     },
     mutanti: [
-      { id: 'copia-del-parametro', applica: p => soloUscita(`${p.dati.y} ${p.dati.x}\n${p.dati.y} ${p.dati.x}\n`), frase: s => `${hai(s)}: a e b sono copie di x e y. Lo scambio resta dentro la funzione.` },
-      { id: 'copia-del-parametro', applica: p => soloUscita(`${p.dati.x} ${p.dati.y}\n${p.dati.x} ${p.dati.y}\n`), frase: s => `${hai(s)}: dentro la funzione lo scambio avviene davvero. Sono le copie a scambiarsi, non x e y.` },
+      { id: 'copia-del-parametro', applica: p => soloUscita(`${p.dati.y} ${p.dati.x}\n${p.dati.y} ${p.dati.x}\n`), frase: s => t('modelli.swap-valore.frase', { hai: hai(s) }) },
+      { id: 'copia-del-parametro', applica: p => soloUscita(`${p.dati.x} ${p.dati.y}\n${p.dati.x} ${p.dati.y}\n`), frase: s => t('modelli.swap-valore.frase-2', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'swap-indirizzo', cosa: 'questi scambi con i puntatori', concetti: ['c:puntatori'],
-    concetto: 'Con `&x` la funzione riceve l\'indirizzo: `*a = …` cambia proprio x. Gli scambi avvengono uno dopo l\'altro.',
+    id: 'swap-indirizzo', cosa: t('modelli.swap-indirizzo.cosa'), concetti: ['c:puntatori'],
+    concetto: t('modelli.swap-indirizzo.concetto'),
     genera(r) {
       const [x, y, z] = mescola(r, fila(1, 9)).slice(0, 3);
       return P({ x, y, z }, funzione('void', 'scambia', [param('int', 'a', '*'), param('int', 'b', '*')],
@@ -402,14 +408,14 @@ export const MODELLI = [
         espr(printf('%d %d %d\n', v('x'), v('y'), v('z')))));
     },
     mutanti: [
-      { id: 'copia-del-parametro', applica: p => soloUscita(`${p.dati.x} ${p.dati.y} ${p.dati.z}\n`), frase: s => `${hai(s)}: qui non sono copie. \`&x\` passa l'indirizzo, e \`*a\` scrive proprio in x.` },
-      { id: 'scambi-in-fila', applica: p => soloUscita(`${p.dati.z} ${p.dati.x} ${p.dati.y}\n`), frase: s => `${hai(s)}: gli scambi vanno in ordine. Prima x con y, poi la y nuova con z.` },
-      { id: 'scambi-in-fila', applica: p => soloUscita(`${p.dati.y} ${p.dati.z} ${p.dati.y}\n`), frase: s => `${hai(s)}: il secondo scambio vede la y già cambiata dal primo.` },
+      { id: 'copia-del-parametro', applica: p => soloUscita(`${p.dati.x} ${p.dati.y} ${p.dati.z}\n`), frase: s => t('modelli.swap-indirizzo.frase', { hai: hai(s) }) },
+      { id: 'scambi-in-fila', applica: p => soloUscita(`${p.dati.z} ${p.dati.x} ${p.dati.y}\n`), frase: s => t('modelli.swap-indirizzo.frase-2', { hai: hai(s) }) },
+      { id: 'scambi-in-fila', applica: p => soloUscita(`${p.dati.y} ${p.dati.z} ${p.dati.y}\n`), frase: s => t('modelli.swap-indirizzo.frase-3', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'valore-e-indirizzo', cosa: 'questa funzione', concetti: ['c:puntatori', 'c:parametri'],
-    concetto: 'a è una copia di x; b è l\'indirizzo di y: solo `*b = …` cambia la variabile di main.',
+    id: 'valore-e-indirizzo', cosa: t('modelli.valore-e-indirizzo.cosa'), concetti: ['c:puntatori', 'c:parametri'],
+    concetto: t('modelli.valore-e-indirizzo.concetto'),
     genera(r) {
       const x = tra(r, 1, 9), y = tra(r, 1, 9), k = tra(r, 2, 3), nome = k === 2 ? 'raddoppia' : 'triplica';
       return P({ x, y, k }, funzione('void', nome, [param('int', 'a'), param('int', 'b', '*')],
@@ -417,13 +423,13 @@ export const MODELLI = [
       main(dich('int', ['x', num(x)], ['y', num(y)]), espr(chiama(nome, v('x'), indirizzo(v('y')))), espr(printf('%d %d\n', v('x'), v('y')))));
     },
     mutanti: [
-      { id: 'copia-del-parametro', applica: p => { const { x, y, k } = p.dati; return soloUscita(`${x * k} ${y * k}\n${x * k} ${y * k}\n`); }, frase: s => `${hai(s)}: a è una copia di x. Cambiare a non cambia x.` },
-      { id: 'copia-del-parametro', applica: p => { const { x, y, k } = p.dati; return soloUscita(`${x * k} ${y * k}\n${x} ${y}\n`); }, frase: s => `${hai(s)}: b non è una copia, è l'indirizzo di y. \`*b = …\` cambia y.` },
+      { id: 'copia-del-parametro', applica: p => { const { x, y, k } = p.dati; return soloUscita(`${x * k} ${y * k}\n${x * k} ${y * k}\n`); }, frase: s => t('modelli.valore-e-indirizzo.frase', { hai: hai(s) }) },
+      { id: 'copia-del-parametro', applica: p => { const { x, y, k } = p.dati; return soloUscita(`${x * k} ${y * k}\n${x} ${y}\n`); }, frase: s => t('modelli.valore-e-indirizzo.frase-2', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'array-in-funzione', cosa: 'questo array passato a una funzione', concetti: ['c:array', 'c:parametri'],
-    concetto: 'Un array passa per indirizzo: la funzione cambia proprio a. Un int invece passa come copia.',
+    id: 'array-in-funzione', cosa: t('modelli.array-in-funzione.cosa'), concetti: ['c:array', 'c:parametri'],
+    concetto: t('modelli.array-in-funzione.concetto'),
     genera(r) {
       const k = tra(r, 2, 3), xs = Array.from({ length: 3 }, () => tra(r, 1, 9));
       return P({ k, xs }, funzione('void', 'moltiplica', [param('int', 'v', '[]'), param('int', 'n')],
@@ -432,13 +438,13 @@ export const MODELLI = [
         espr(printf('%d %d %d %d\n', indice(v('a'), num(0)), indice(v('a'), num(1)), indice(v('a'), num(2)), v('n')))));
     },
     mutanti: [
-      { id: 'copia-del-parametro', applica: p => soloUscita(`${p.dati.xs.join(' ')} 3\n`), frase: s => `${hai(s)}: un array non viene copiato. La funzione lavora sugli stessi elementi di a.` },
-      { id: 'copia-del-parametro', applica: p => soloUscita(`${p.dati.xs.map(x => x * p.dati.k).join(' ')} 0\n`), frase: s => `${hai(s)}: n invece è una copia. Il \`n--\` della funzione non tocca la n di main.` },
+      { id: 'copia-del-parametro', applica: p => soloUscita(`${p.dati.xs.join(' ')} 3\n`), frase: s => t('modelli.array-in-funzione.frase', { hai: hai(s) }) },
+      { id: 'copia-del-parametro', applica: p => soloUscita(`${p.dati.xs.map(x => x * p.dati.k).join(' ')} 0\n`), frase: s => t('modelli.array-in-funzione.frase-2', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'blocco-ombra', cosa: 'queste due x', concetti: ['c:visibilita'],
-    concetto: 'La x dichiarata nel blocco è un\'altra variabile: nasconde quella di fuori e sparisce alla }.',
+    id: 'blocco-ombra', cosa: t('modelli.blocco-ombra.cosa'), concetti: ['c:visibilita'],
+    concetto: t('modelli.blocco-ombra.concetto'),
     genera(r) {
       const a = tra(r, 1, 9), b = tra(r, 10, 20);
       return P({ a, b }, main(
@@ -447,13 +453,13 @@ export const MODELLI = [
         espr(printf('%d %d\n', v('x'), v('y')))));
     },
     mutanti: [
-      { id: 'variabile-nascosta', applica: p => { const { b } = p.dati; return soloUscita(`${2 * b} ${2 * b} ${b + 1}\n`); }, frase: (s, d) => `${hai(s)}: \`int x = ${d.b}\` dentro le graffe crea una x nuova. Fuori la x vale ancora ${d.a}.` },
-      { id: 'variabile-nascosta', applica: p => { const { a, b } = p.dati; return soloUscita(`${2 * b} ${a} ${a + 1}\n`); }, frase: s => `${hai(s)}: dentro il blocco la x più vicina è quella interna. y la usa.` },
+      { id: 'variabile-nascosta', applica: p => { const { b } = p.dati; return soloUscita(`${2 * b} ${2 * b} ${b + 1}\n`); }, frase: (s, d) => t('modelli.blocco-ombra.frase', { hai: hai(s), b: d.b, a: d.a }) },
+      { id: 'variabile-nascosta', applica: p => { const { a, b } = p.dati; return soloUscita(`${2 * b} ${a} ${a + 1}\n`); }, frase: s => t('modelli.blocco-ombra.frase-2', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'char-ascii', cosa: 'questi char', concetti: ['c:char'],
-    concetto: 'Un char è un numero: \'a\' vale 97. %c stampa la lettera, %d il codice. Maiuscola = minuscola - 32.',
+    id: 'char-ascii', cosa: t('modelli.char-ascii.cosa'), concetti: ['c:char'],
+    concetto: t('modelli.char-ascii.concetto'),
     genera(r) {
       const k = tra(r, 1, 20);
       return P({ k }, main(
@@ -462,14 +468,14 @@ export const MODELLI = [
         S(espr(printf('%c %d %c\n', v('c'), v('c'), v('d'))), 'stampa')));
     },
     mutanti: [
-      { id: 'carattere-codice', applica: p => cambia(p, 'stampa', n => { n.e.arg[2] = bin('+', bin('-', v('c'), car('a')), num(1)); }), frase: s => `${hai(s)}: %d non dà la posizione nell'alfabeto. Dà il codice ASCII: 'a' vale 97.` },
-      { id: 'carattere-codice', applica: p => cambia(p, 'stampa', n => { n.e.arg[0].v = '%c %c %c\n'; }), frase: s => `${hai(s)}: %d stampa il numero del carattere, non la lettera.` },
-      { id: 'carattere-codice', applica: p => cambia(p, 'stampa', n => { n.e.arg[0].v = '%c %d %d\n'; }), frase: s => `${hai(s)}: d è un char e %c lo stampa come lettera, la maiuscola.` },
+      { id: 'carattere-codice', applica: p => cambia(p, 'stampa', n => { n.e.arg[2] = bin('+', bin('-', v('c'), car('a')), num(1)); }), frase: s => t('modelli.char-ascii.frase', { hai: hai(s) }) },
+      { id: 'carattere-codice', applica: p => cambia(p, 'stampa', n => { n.e.arg[0].v = '%c %c %c\n'; }), frase: s => t('modelli.char-ascii.frase-2', { hai: hai(s) }) },
+      { id: 'carattere-codice', applica: p => cambia(p, 'stampa', n => { n.e.arg[0].v = '%c %d %d\n'; }), frase: s => t('modelli.char-ascii.frase-3', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'fattoriale', cosa: 'questa ricorsione', concetti: ['c:ricorsione'],
-    concetto: 'fatt(n) = n · fatt(n - 1), e il caso base ferma la discesa a 1.',
+    id: 'fattoriale', cosa: t('modelli.fattoriale.cosa'), concetti: ['c:ricorsione'],
+    concetto: t('modelli.fattoriale.concetto'),
     genera(r) {
       const n = tra(r, 3, 7);
       return P({ n }, funzione('int', 'fatt', [param('int', 'n')],
@@ -478,14 +484,14 @@ export const MODELLI = [
       main(espr(printf('%d\n', S(chiama('fatt', num(n)), 'chiama')))));
     },
     mutanti: [
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'chiama', n => { n.arg[0].v -= 1; }), frase: (s, d) => `${hai(s)}: è fatt(${d.n - 1}). Hai fatto un passo in meno: si moltiplica da ${d.n} fino a 1.` },
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'chiama', n => { n.arg[0].v += 1; }), frase: (s, d) => `${hai(s)}: è fatt(${d.n + 1}). Hai fatto un passo in più: si parte da ${d.n}.` },
-      { id: 'ricorsione', applica: p => soloUscita(`${p.dati.n * (p.dati.n - 1)}\n`), frase: s => `${hai(s)}: ti sei fermato alla prima chiamata. fatt(n - 1) continua a chiamarsi fino al caso base.` },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'chiama', n => { n.arg[0].v -= 1; }), frase: (s, d) => t('modelli.fattoriale.frase', { hai: hai(s), n: d.n - 1, n2: d.n }) },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'chiama', n => { n.arg[0].v += 1; }), frase: (s, d) => t('modelli.fattoriale.frase-2', { hai: hai(s), n: d.n + 1, n2: d.n }) },
+      { id: 'ricorsione', applica: p => soloUscita(`${p.dati.n * (p.dati.n - 1)}\n`), frase: s => t('modelli.fattoriale.frase-3', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'somma-cifre', cosa: 'questa ricorsione', concetti: ['c:ricorsione'],
-    concetto: 'n % 10 è l\'ultima cifra, n / 10 toglie l\'ultima cifra. Il caso base restituisce la cifra che resta.',
+    id: 'somma-cifre', cosa: t('modelli.somma-cifre.cosa'), concetti: ['c:ricorsione'],
+    concetto: t('modelli.somma-cifre.concetto'),
     genera(r) {
       const cifre = Array.from({ length: tra(r, 3, 4) }, () => tra(r, 1, 9)), n = +cifre.join('');
       return P({ n, cifre }, funzione('int', 'cifre', [param('int', 'n')],
@@ -494,14 +500,14 @@ export const MODELLI = [
       main(espr(printf('%d\n', chiama('cifre', num(n))))));
     },
     mutanti: [
-      { id: 'caso-base', applica: p => cambia(p, 'base', n => { n.e = num(0); }), frase: s => `${hai(s)}: hai perso la prima cifra. Il caso base restituisce n, non 0.` },
-      { id: 'ricorsione', applica: p => soloUscita(`${p.dati.cifre.length}\n`), frase: s => `${hai(s)}: è il numero delle cifre. Qui ogni chiamata aggiunge \`n % 10\`, la cifra, non 1.` },
-      { id: 'ricorsione', applica: p => soloUscita(`${p.dati.n % 10}\n`), frase: s => `${hai(s)}: è solo l'ultima cifra. Il valore di ritorno si somma a quello della chiamata dopo.` },
+      { id: 'caso-base', applica: p => cambia(p, 'base', n => { n.e = num(0); }), frase: s => t('modelli.somma-cifre.frase', { hai: hai(s) }) },
+      { id: 'ricorsione', applica: p => soloUscita(`${p.dati.cifre.length}\n`), frase: s => t('modelli.somma-cifre.frase-2', { hai: hai(s) }) },
+      { id: 'ricorsione', applica: p => soloUscita(`${p.dati.n % 10}\n`), frase: s => t('modelli.somma-cifre.frase-3', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'ricorsione-ordine', cosa: 'questa ricorsione', concetti: ['c:ricorsione'],
-    concetto: 'printf viene dopo la chiamata: si stampa al ritorno, quindi dal più piccolo al più grande.',
+    id: 'ricorsione-ordine', cosa: t('modelli.ricorsione-ordine.cosa'), concetti: ['c:ricorsione'],
+    concetto: t('modelli.ricorsione-ordine.concetto'),
     genera(r) {
       const n = tra(r, 3, 6);
       return P({ n }, funzione('void', 'conta', [param('int', 'n')],
@@ -511,13 +517,13 @@ export const MODELLI = [
       main(espr(chiama('conta', num(n))), espr(printf('\n'))));
     },
     mutanti: [
-      { id: 'ricorsione', applica: p => soloUscita(fila(1, p.dati.n).reverse().join(' ') + '\n'), frase: s => `${hai(s)}: sarebbe così con printf prima della chiamata. Qui si stampa al ritorno.` },
-      { id: 'caso-base', applica: p => soloUscita(fila(0, p.dati.n).join(' ') + '\n'), frase: s => `${hai(s)}: con n = 0 la funzione esce subito, senza stampare.` },
+      { id: 'ricorsione', applica: p => soloUscita(fila(1, p.dati.n).reverse().join(' ') + '\n'), frase: s => t('modelli.ricorsione-ordine.frase', { hai: hai(s) }) },
+      { id: 'caso-base', applica: p => soloUscita(fila(0, p.dati.n).join(' ') + '\n'), frase: s => t('modelli.ricorsione-ordine.frase-2', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'annidati-conta', cosa: 'questi cicli annidati', concetti: ['c:annidati'],
-    concetto: 'Il ciclo interno riparte a ogni giro di quello esterno: qui gira i volte, cioè 0, 1, 2, …',
+    id: 'annidati-conta', cosa: t('modelli.annidati-conta.cosa'), concetti: ['c:annidati'],
+    concetto: t('modelli.annidati-conta.concetto'),
     genera(r) {
       const n = tra(r, 3, 6);
       return P({ n }, main(
@@ -527,13 +533,13 @@ export const MODELLI = [
         espr(printf('%d\n', v('c')))));
     },
     mutanti: [
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'jc', n => { n.op = '<='; }), frase: s => `${hai(s)}: è quello che darebbe \`j <= i\`. Con \`j < i\` il primo giro (i = 0) non conta niente.` },
-      { id: 'cicli-annidati', applica: p => cambia(p, 'jc', n => { n.b = num(p.dati.n); }), frase: (s, d) => `${hai(s)}: il ciclo interno non gira sempre ${d.n} volte: gira i volte.` },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'jc', n => { n.op = '<='; }), frase: s => t('modelli.annidati-conta.frase', { hai: hai(s) }) },
+      { id: 'cicli-annidati', applica: p => cambia(p, 'jc', n => { n.b = num(p.dati.n); }), frase: (s, d) => t('modelli.annidati-conta.frase-2', { hai: hai(s), n: d.n }) },
     ],
   },
   {
-    id: 'annidati-stelle', cosa: 'queste stelle', concetti: ['c:annidati'],
-    concetto: 'Per ogni riga i il ciclo interno stampa i simboli, poi `\\n` va a capo.',
+    id: 'annidati-stelle', cosa: t('modelli.annidati-stelle.cosa'), concetti: ['c:annidati'],
+    concetto: t('modelli.annidati-stelle.concetto'),
     genera(r) {
       const n = tra(r, 3, 4), x = uno(r, ['*', '#']);
       return P({ n, x }, main(
@@ -542,14 +548,14 @@ export const MODELLI = [
           espr(printf('\n'))))));
     },
     mutanti: [
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'jc', n => { n.op = '<='; }), frase: s => `${hai(s)}: un simbolo in più per riga. j parte da 0 e con \`j < i\` fa i giri.` },
-      { id: 'cicli-annidati', applica: p => cambia(p, 'jc', n => { n.b = num(p.dati.n); }), frase: (s, d) => `${hai(s)}: il ciclo interno dipende da i: non stampa sempre ${d.n} simboli.` },
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'ic', n => { n.op = '<'; }), frase: (s, d) => `${hai(s)}: manca l'ultima riga. Con \`i <= ${d.n}\` anche la riga ${d.n} viene stampata.` },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'jc', n => { n.op = '<='; }), frase: s => t('modelli.annidati-stelle.frase', { hai: hai(s) }) },
+      { id: 'cicli-annidati', applica: p => cambia(p, 'jc', n => { n.b = num(p.dati.n); }), frase: (s, d) => t('modelli.annidati-stelle.frase-2', { hai: hai(s), n: d.n }) },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'ic', n => { n.op = '<'; }), frase: (s, d) => t('modelli.annidati-stelle.frase-3', { hai: hai(s), n: d.n }) },
     ],
   },
   {
-    id: 'break-continue', cosa: 'questo break e questo continue', concetti: ['c:break-continue'],
-    concetto: (d, l) => `\`continue\` salta al giro dopo; \`break\` esce dal ciclo, e il ${pr(l)} di quel giro non arriva.`,
+    id: 'break-continue', cosa: t('modelli.break-continue.cosa'), concetti: ['c:break-continue'],
+    concetto: (d, l) => t('modelli.break-continue.concetto', { l: pr(l) }),
     genera(r) {
       const n = tra(r, 6, 8), a = tra(r, 1, 2), b = tra(r, a + 2, n - 2);
       return P({ n, a, b }, main(
@@ -560,14 +566,14 @@ export const MODELLI = [
         espr(printf('\n'))));
     },
     mutanti: [
-      { id: 'break-continue', applica: p => cambia(p, 'cont', () => interrompi()), frase: (s, d) => `${hai(s)}: \`continue\` non esce dal ciclo: salta solo il giro con i = ${d.a}.` },
-      { id: 'break-continue', applica: p => cambia(p, 'brk', () => continua()), frase: (s, d) => `${hai(s)}: \`break\` non salta un giro: esce dal ciclo quando i vale ${d.b}.` },
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'brk', () => blocco(espr(printf('%d ', v('i'))), interrompi())), frase: (s, d, l) => `${hai(s)}: il break arriva prima del ${pr(l)}: ${d.b} non viene stampato.` },
+      { id: 'break-continue', applica: p => cambia(p, 'cont', () => interrompi()), frase: (s, d) => t('modelli.break-continue.frase', { hai: hai(s), a: d.a }) },
+      { id: 'break-continue', applica: p => cambia(p, 'brk', () => continua()), frase: (s, d) => t('modelli.break-continue.frase-2', { hai: hai(s), b: d.b }) },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'brk', () => blocco(espr(printf('%d ', v('i'))), interrompi())), frase: (s, d, l) => t('modelli.break-continue.frase-3', { hai: hai(s), l: pr(l), b: d.b }) },
     ],
   },
   {
-    id: 'do-while', cosa: 'questo do-while', concetti: ['c:do-while'],
-    concetto: 'Il do-while controlla la condizione alla fine di ogni giro: il corpo gira sempre almeno una volta.',
+    id: 'do-while', cosa: t('modelli.do-while.cosa'), concetti: ['c:do-while'],
+    concetto: t('modelli.do-while.concetto'),
     // due casi, metà e metà. Falsa subito: il corpo gira lo stesso una volta (un while non girerebbe mai).
     // Vera all'inizio: i arriva proprio sul limite, e lì `<` e `<=` danno uscite diverse
     genera(r) {
@@ -581,15 +587,15 @@ export const MODELLI = [
         S(espr(printf('%d %d\n', v('n'), v('i'))), 'stampa')));
     },
     mutanti: [
-      { id: 'do-while', applica: p => cambia(p, 'ciclo', n => mentre(n.c, n.corpo)), frase: s => `${hai(s)}: è quello che farebbe un while. Il do-while esegue il corpo prima di controllare.` },
-      { id: 'do-while', applica: p => cambia(p, 'ciclo', n => blocco(clona(n.corpo), { ...n, segno: undefined })), frase: (s, d) => `${hai(s)}: un giro di troppo. ${d.vero ? 'Il do-while non aggiunge un giro: controlla la condizione alla fine di ogni giro.' : 'Dopo il primo giro la condizione è già falsa.'}` },
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.op += '='; }), frase: (s, d) => `${hai(s)}: è quello che darebbe \`i ${d.op}= ${d.b}\`. Con \`i ${d.op} ${d.b}\`, quando i arriva a ${d.b} il ciclo si ferma.` },
-      { id: 'fuori-di-uno', applica: p => cambia(p, 'stampa', n => { n.e.arg[2] = bin(p.dati.op === '<' ? '-' : '+', v('i'), num(p.dati.s)); }), frase: s => `${hai(s)}: hai stampato i com'era prima dell'ultimo giro. Anche l'ultimo giro cambia i: il controllo arriva dopo.` },
+      { id: 'do-while', applica: p => cambia(p, 'ciclo', n => mentre(n.c, n.corpo)), frase: s => t('modelli.do-while.frase', { hai: hai(s) }) },
+      { id: 'do-while', applica: p => cambia(p, 'ciclo', n => blocco(clona(n.corpo), { ...n, segno: undefined })), frase: (s, d) => t('modelli.do-while.frase-2', { hai: hai(s), vero: d.vero ? t('modelli.do-while.frase-3') : t('modelli.do-while.frase-4') }) },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'cond', n => { n.op += '='; }), frase: (s, d) => t('modelli.do-while.frase-5', { hai: hai(s), op: d.op, b: d.b }) },
+      { id: 'fuori-di-uno', applica: p => cambia(p, 'stampa', n => { n.e.arg[2] = bin(p.dati.op === '<' ? '-' : '+', v('i'), num(p.dati.s)); }), frase: s => t('modelli.do-while.frase-6', { hai: hai(s) }) },
     ],
   },
   {
-    id: 'ternario', cosa: 'questi ternari', concetti: ['c:ternario'],
-    concetto: '`c ? x : y` vale x se c è vera, y se è falsa.',
+    id: 'ternario', cosa: t('modelli.ternario.cosa'), concetti: ['c:ternario'],
+    concetto: t('modelli.ternario.concetto'),
     genera(r) {
       const a = tra(r, 1, 20); let b; do b = tra(r, 1, 20); while (b === a);
       return P({ a, b }, main(
@@ -599,9 +605,9 @@ export const MODELLI = [
         espr(printf('%d %d\n', v('m'), v('d')))));
     },
     mutanti: [
-      { id: 'ternario', applica: p => cambia(p, 't1', n => { [n.a, n.b] = [n.b, n.a]; }), frase: (s, d) => `${hai(s)}: per m hai preso il ramo sbagliato. \`a > b\` è ${d.a > d.b ? 'vera, quindi vale quello dopo `?`' : 'falsa, quindi vale quello dopo `:`'}.` },
-      { id: 'ternario', applica: p => cambia(p, 't2', n => { [n.a, n.b] = [n.b, n.a]; }), frase: (s, d) => `${hai(s)}: per d hai preso il ramo sbagliato. \`a < b\` è ${d.a < d.b ? 'vera, quindi vale quello dopo `?`' : 'falsa, quindi vale quello dopo `:`'}.` },
-      { id: 'ternario', applica: p => cambiaTutti(p, ['t1', n => { [n.a, n.b] = [n.b, n.a]; }], ['t2', n => { [n.a, n.b] = [n.b, n.a]; }]), frase: s => `${hai(s)}: hai letto i due ternari al contrario. Vero → il valore dopo \`?\`.` },
+      { id: 'ternario', applica: p => cambia(p, 't1', n => { [n.a, n.b] = [n.b, n.a]; }), frase: (s, d) => d.a > d.b ? t('modelli.ternario.frase-m-vera', { hai: hai(s) }) : t('modelli.ternario.frase-m-falsa', { hai: hai(s) }) },
+      { id: 'ternario', applica: p => cambia(p, 't2', n => { [n.a, n.b] = [n.b, n.a]; }), frase: (s, d) => d.a < d.b ? t('modelli.ternario.frase-d-vera', { hai: hai(s) }) : t('modelli.ternario.frase-d-falsa', { hai: hai(s) }) },
+      { id: 'ternario', applica: p => cambiaTutti(p, ['t1', n => { [n.a, n.b] = [n.b, n.a]; }], ['t2', n => { [n.a, n.b] = [n.b, n.a]; }]), frase: s => t('modelli.ternario.frase-7', { hai: hai(s) }) },
     ],
   },
 ];
@@ -624,93 +630,93 @@ const LINGUE_MODELLI = {
 // quello che cambia con la lingua: il concetto, le frasi (per posizione del mutante; null = quella del C) o tutti i mutanti
 const VARIANTI = {
   'for-minore': { python: {
-    concetto: d => `\`${rangeTesto(d.a, d.b)}\` si ferma prima di ${d.b}: l'ultimo giro ha i = ${d.b - 1}.`,
+    concetto: d => t('modelli.for-minore.python.concetto', { b: rangeTesto(d.a, d.b), b2: d.b, b3: d.b - 1 }),
     frasi: [
-      (s, d) => `${hai(s)}: è quello che stamperebbe \`${rangeTesto(d.a, d.b + 1)}\`. range si ferma prima del secondo numero.`,
-      (s, d) => `${hai(s)}: hai saltato il primo giro. range parte proprio da ${d.a}.`,
-      (s, d) => `${hai(s)}: ti sei fermato un giro prima. \`${rangeTesto(d.a, d.b)}\` arriva fino a ${d.b - 1}.`],
+      (s, d) => t('modelli.for-minore.python.frase', { hai: hai(s), b: rangeTesto(d.a, d.b + 1) }),
+      (s, d) => t('modelli.for-minore.python.frase-2', { hai: hai(s), a: d.a }),
+      (s, d) => t('modelli.for-minore.python.frase-3', { hai: hai(s), b: rangeTesto(d.a, d.b), b2: d.b - 1 })],
   } },
   'for-passo': { python: {
-    concetto: d => `\`${rangeTesto(d.a, d.b + 1, d.s)}\` va di ${d.s} in ${d.s} e si ferma prima di ${d.b + 1}: anche ${d.b} viene stampato.`,
+    concetto: d => t('modelli.for-passo.python.concetto', { s: rangeTesto(d.a, d.b + 1, d.s), s2: d.s, b: d.b + 1, b2: d.b }),
     frasi: [
-      (s, d) => `${hai(s)}: è quello che stamperebbe \`${rangeTesto(d.a, d.b, d.s)}\`. Qui il secondo numero è ${d.b + 1}, quindi anche ${d.b} viene stampato.`,
-      (s, d) => `${hai(s)}: range parte da ${d.a}, non da ${d.a + d.s}. Il passo si aggiunge dopo il primo giro.`],
+      (s, d) => t('modelli.for-passo.python.frase', { hai: hai(s), s: rangeTesto(d.a, d.b, d.s), b: d.b + 1, b2: d.b }),
+      (s, d) => t('modelli.for-passo.python.frase-2', { hai: hai(s), a: d.a, s: d.a + d.s })],
   } },
   'for-indietro': { python: {
-    concetto: d => `\`range(${d.n}, ${d.l}, -1)\` conta all'indietro e si ferma prima di ${d.l}: ${d.l} non viene stampato.`,
+    concetto: d => t('modelli.for-indietro.python.concetto', { n: d.n, l: d.l }),
     frasi: [
-      (s, d) => `${hai(s)}: hai stampato anche ${d.l}. range si ferma prima: l'ultimo giro ha i = ${d.l + 1}.`,
-      (s, d) => `${hai(s)}: range parte proprio da ${d.n}: il primo giro stampa ${d.n}.`,
-      (s, d) => `${hai(s)}: ti sei fermato un giro prima. Anche ${d.l + 1} viene stampato.`],
+      (s, d) => t('modelli.for-indietro.python.frase', { hai: hai(s), l: d.l, l2: d.l + 1 }),
+      (s, d) => t('modelli.for-indietro.python.frase-2', { hai: hai(s), n: d.n }),
+      (s, d) => t('modelli.for-indietro.python.frase-3', { hai: hai(s), l: d.l + 1 })],
   } },
   'while-somma': { python: {
-    concetto: 'Il while esce quando la condizione diventa falsa: dopo `while i < n` la variabile i vale n.',
-    frasi: [null, s => `${hai(s)}: è come se \`i += 1\` venisse prima di \`s += i\`. Qui s somma i e solo dopo i cresce.`, null],
+    concetto: t('modelli.while-somma.python.concetto'),
+    frasi: [null, s => t('modelli.while-somma.python.frase', { hai: hai(s) }), null],
   } },
   'while-dimezza': { python: {
-    concetto: '`//` è la divisione intera: 7 // 2 fa 3, e dimezzando si arriva a 1 senza virgole.',
-    frasi: [s => `${hai(s)}: hai tenuto la virgola, come farebbe \`n /= 2\`. \`n //= 2\` è la divisione intera: butta via la parte dopo la virgola.`, null],
+    concetto: t('modelli.while-dimezza.python.concetto'),
+    frasi: [s => t('modelli.while-dimezza.python.frase', { hai: hai(s) }), null],
   } },
   'array-somma': { python: {
-    frasi: [null, (s, d) => `${hai(s)}: hai lasciato fuori l'ultimo. \`range(${d.k})\` arriva fino a ${d.k - 1}: l'ultimo giro legge \`v[${d.k - 1}]\`.`, null],
+    frasi: [null, (s, d) => t('modelli.array-somma.python.frase', { hai: hai(s), k: d.k, k2: d.k - 1 }), null],
   } },
   'media-array': {
     python: {
-      concetto: '`s // n` è la divisione intera; `/` in Python tiene sempre la virgola, anche tra due int.',
+      concetto: t('modelli.media-array.python.concetto'),
       frasi: [
-        (s, d) => `${hai(s)}: \`s // ${d.k}\` è la divisione intera: la parte dopo la virgola si perde.`,
-        s => `${hai(s)}: in Python \`/\` tiene la virgola, non tronca come \`//\`.`,
-        s => `${hai(s)}: \`//\` non arrotonda: va verso il basso.`],
+        (s, d) => t('modelli.media-array.python.frase', { hai: hai(s), k: d.k }),
+        s => t('modelli.media-array.python.frase-2', { hai: hai(s) }),
+        s => t('modelli.media-array.python.frase-3', { hai: hai(s) })],
     },
-    java: { frasi: [(s, d) => `${hai(s)}: \`s / ${d.k}\` è tra due int: in Java (come in C, non come in Python) la divisione resta intera e la parte dopo la virgola si perde.`, null, null] },
+    java: { frasi: [(s, d) => t('modelli.media-array.java.frase', { hai: hai(s), k: d.k }), null, null] },
   },
   'divisione-double': { java: {
-    frasi: [s => `${hai(s)}: \`a / b\` si calcola tra int, prima di finire in m. In Java, come in C, la divisione tra due int tronca: il double riceve un numero già troncato.`, null],
+    frasi: [s => t('modelli.divisione-double.java.frase', { hai: hai(s) }), null],
   } },
   'diviso-due': { python: {
-    concetto: 'In Python `//` è la divisione intera e `/` tiene sempre la virgola, anche tra due int.',
+    concetto: t('modelli.diviso-due.python.concetto'),
     frasi: [
-      s => `${hai(s)}: \`a // 2\` è la divisione intera: dà un int, senza virgola.`,
-      s => `${hai(s)}: in Python \`/\` non tronca come in C o in Java: anche \`a / 2\` tiene la virgola.`,
-      s => `${hai(s)}: \`a // 2\` non arrotonda: va verso il basso.`],
+      s => t('modelli.diviso-due.python.frase', { hai: hai(s) }),
+      s => t('modelli.diviso-due.python.frase-2', { hai: hai(s) }),
+      s => t('modelli.diviso-due.python.frase-3', { hai: hai(s) })],
   } },
   'resto-negativi': { python: {
-    concetto: 'In Python `//` va verso il basso e il resto ha il segno del divisore: -7 // 3 fa -3 e -7 % 3 fa 2.',
+    concetto: t('modelli.resto-negativi.python.concetto'),
     mutanti: [
-      { id: 'resto-col-segno', applica: p => cambiaTutti(p, ['div', n => { n.modo = 'zero'; }], ['mod', n => { n.modo = 'dividendo'; }]), frase: s => `${hai(s)}: così fanno il C e Java, che troncano verso lo zero. In Python \`//\` va verso il basso.` },
-      { id: 'resto-col-segno', applica: p => cambia(p, 'mod', n => { n.modo = 'dividendo'; }), frase: s => `${hai(s)}: in Python il resto ha il segno del divisore, cioè di b, non del dividendo.` },
-      { id: 'divisione-intera', applica: p => cambia(p, 'div', n => { n.modo = 'zero'; }), frase: s => `${hai(s)}: \`//\` arrotonda verso il basso, non verso lo zero.` },
+      { id: 'resto-col-segno', applica: p => cambiaTutti(p, ['div', n => { n.modo = 'zero'; }], ['mod', n => { n.modo = 'dividendo'; }]), frase: s => t('modelli.resto-negativi.python.frase', { hai: hai(s) }) },
+      { id: 'resto-col-segno', applica: p => cambia(p, 'mod', n => { n.modo = 'dividendo'; }), frase: s => t('modelli.resto-negativi.python.frase-2', { hai: hai(s) }) },
+      { id: 'divisione-intera', applica: p => cambia(p, 'div', n => { n.modo = 'zero'; }), frase: s => t('modelli.resto-negativi.python.frase-3', { hai: hai(s) }) },
     ],
   } },
   'piu-uguale': { python: {
-    frasi: [null, (s, d) => `${hai(s)}: \`range(1, ${d.n + 1})\` arriva fino a ${d.n}: anche i = ${d.n} fa il suo giro.`, null],
+    frasi: [null, (s, d) => t('modelli.piu-uguale.python.frase', { hai: hai(s), n: d.n + 1, n2: d.n }), null],
   } },
   'swap-valore': { python: {
-    concetto: 'La funzione riceve i valori: riassegnare a e b dentro la funzione non tocca x e y.',
-    frasi: [s => `${hai(s)}: a e b sono nomi della funzione. Riassegnarli non cambia x e y.`, s => `${hai(s)}: dentro la funzione lo scambio avviene davvero. Si scambiano a e b, non x e y.`],
+    concetto: t('modelli.swap-valore.python.concetto'),
+    frasi: [s => t('modelli.swap-valore.python.frase', { hai: hai(s) }), s => t('modelli.swap-valore.python.frase-2', { hai: hai(s) })],
   } },
   'array-in-funzione': {
     python: {
-      concetto: 'La lista passa alla funzione così com\'è: `v[n] *= …` cambia proprio a. n invece è un nome della funzione: `n -= 1` non tocca la n di fuori.',
-      frasi: [s => `${hai(s)}: una lista non viene copiata. La funzione lavora sugli stessi elementi di a.`, s => `${hai(s)}: n invece no. Il \`n -= 1\` della funzione non tocca la n di fuori.`],
+      concetto: t('modelli.array-in-funzione.python.concetto'),
+      frasi: [s => t('modelli.array-in-funzione.python.frase', { hai: hai(s) }), s => t('modelli.array-in-funzione.python.frase-2', { hai: hai(s) })],
     },
-    java: { concetto: 'Un array passa come riferimento: la funzione cambia proprio a. Un int invece passa come copia.' },
+    java: { concetto: t('modelli.array-in-funzione.java.concetto') },
   },
-  'somma-cifre': { python: { concetto: '`n % 10` è l\'ultima cifra, `n // 10` toglie l\'ultima cifra. Il caso base restituisce la cifra che resta.' } },
+  'somma-cifre': { python: { concetto: t('modelli.somma-cifre.python.concetto') } },
   'ricorsione-ordine': { python: {
-    concetto: 'print viene dopo la chiamata: si stampa al ritorno, quindi dal più piccolo al più grande.',
-    frasi: [s => `${hai(s)}: sarebbe così con print prima della chiamata. Qui si stampa al ritorno.`, null],
+    concetto: t('modelli.ricorsione-ordine.python.concetto'),
+    frasi: [s => t('modelli.ricorsione-ordine.python.frase', { hai: hai(s) }), null],
   } },
   'annidati-conta': { python: {
-    concetto: 'Il ciclo interno riparte a ogni giro di quello esterno: `range(i)` fa i giri, cioè 0, 1, 2, …',
-    frasi: [s => `${hai(s)}: è quello che darebbe \`range(i + 1)\`. Con i = 0, \`range(i)\` non fa nessun giro.`, null],
+    concetto: t('modelli.annidati-conta.python.concetto'),
+    frasi: [s => t('modelli.annidati-conta.python.frase', { hai: hai(s) }), null],
   } },
   'annidati-stelle': {
     python: {
-      concetto: 'Per ogni riga i il ciclo interno stampa i simboli, poi `print()` va a capo.',
-      frasi: [s => `${hai(s)}: un simbolo in più per riga. \`range(i)\` fa i giri, non i + 1.`, null, (s, d) => `${hai(s)}: manca l'ultima riga. \`range(1, ${d.n + 1})\` arriva fino a ${d.n}.`],
+      concetto: t('modelli.annidati-stelle.python.concetto'),
+      frasi: [s => t('modelli.annidati-stelle.python.frase', { hai: hai(s) }), null, (s, d) => t('modelli.annidati-stelle.python.frase-2', { hai: hai(s), n: d.n + 1, n2: d.n })],
     },
-    java: { concetto: 'Per ogni riga i il ciclo interno stampa i simboli, poi `println()` va a capo.' },
+    java: { concetto: t('modelli.annidati-stelle.java.concetto') },
   },
 };
 for (const m of MODELLI) Object.assign(m, { lingue: LINGUE_MODELLI[m.id] || SOLO_C }, VARIANTI[m.id] || {});
@@ -725,7 +731,7 @@ export function variante(m, lingua = 'c') {
 
 /* ---------- una domanda pronta ---------- */
 // il testo di un'uscita da mostrare: com'è, oppure «(niente)»; in linea le righe si separano con ⏎
-export const vista = u => normalizza(u) || '(niente)';
+export const vista = u => normalizza(u) || t('modelli.niente');
 export const inLinea = u => vista(u).split('\n').join(' ⏎ ');
 const righe = u => { const n = normalizza(u); return n ? n.split('\n').length : 0; };
 
