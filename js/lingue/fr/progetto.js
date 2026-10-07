@@ -22,7 +22,7 @@ export default {
   'progetto.prima-di-cominciare': 'Avant de commencer',
   'progetto.ho-capito': "J'ai compris",
   'progetto.solo-app-desktop': "Suivre un projet, ça ne marche que dans l'**appli de bureau** de Lode : là, je regarde le dossier de ton TP.",
-  'progetto.va-bene-non-seguo': 'Ok, je ne suis rien.',
+  'progetto.va-bene-non-seguo': "D'accord, je ne suis aucun projet.",
   'progetto.seguo-gia': 'Je suis déjà **{nome}**.',
   'progetto.seguo-domanda': 'Je suis le projet <b>{nome}</b> ?',
   'progetto.seguo-aria': 'Je suis le projet {nome} ?',

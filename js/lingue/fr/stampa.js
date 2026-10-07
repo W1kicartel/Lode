@@ -6,7 +6,7 @@ export default {
   'stampa.hai-scritto-altro': "Tu as écrit `{uscita}` : ce n'est pas ce que ça affiche.",
   'stampa.nessuna-risposta': 'Aucune réponse.',
   'stampa.aria-codice': 'Code {lingua}',
-  'stampa.non-riesco': "Aujourd'hui je n'arrive pas à préparer les questions de {lingua}. Réessaie dans un moment.",
+  'stampa.non-riesco': "Aujourd'hui, je n'arrive pas à préparer les questions de {lingua}. Réessaie dans un moment.",
   'stampa.conto': '{i} sur {n}',
   'stampa.scrivi-uscita': 'Écris la sortie exacte',
   'stampa.scegli-uscita': 'Choisis la sortie · touches 1-4',
