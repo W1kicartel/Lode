@@ -1,0 +1,43 @@
+// Dados de exemplo (esempio() em js/dati.js) e as palavras que os programas de «Cosa stampa?» imprimem. Mesma forma que it/esempio.js.
+// Português do Brasil: notas de 0 a 10 (js/sistemi.js, sistema br).
+export default {
+  'esempio.nome': 'Júlia',
+  'esempio.corso': 'Engenharia de Computação',
+  'esempio.esami': ['Cálculo 1', 'Algoritmos e Programação', 'Geometria Analítica e Álgebra Linear', 'Física 1', 'Inglês Instrumental', 'Programação Orientada a Objetos', 'Cálculo 2', 'Banco de Dados', 'Física 2'],
+  'esempio.aule': ['Sala 104', 'Lab. 3', 'Auditório'],
+  'esempio.carte': [
+    ['O que é o gradiente de f(x, y)?', 'O vetor das derivadas parciais (∂f/∂x, ∂f/∂y): aponta na direção de maior crescimento.'],
+    ['Enuncie o teorema de Schwarz', 'Se as derivadas segundas mistas são contínuas em uma vizinhança, então f_xy = f_yx.'],
+    ['Condição para um ponto crítico', 'O gradiente se anula: ∇f(x₀) = 0.'],
+    ['Como se classifica um ponto crítico?', 'Com a matriz hessiana: definida positiva → mínimo, definida negativa → máximo, indefinida → ponto de sela.'],
+    ['O que é uma integral dupla sobre uma região simples?', 'Uma integral iterada: primeiro na variável “de dentro”, com limites que dependem da outra, depois na outra.'],
+    ['Teorema de Green: enunciado', 'A integral de linha sobre ∂D de P dx + Q dy é igual à integral dupla sobre D de (∂Q/∂x − ∂P/∂y).'],
+    ['Forma diferencial exata: definição', 'ω é exata se existe uma função U (um potencial) com dU = ω.'],
+    ['Série geométrica: quando converge?', 'Para |q| < 1, com soma 1/(1 − q).'],
+    ['O que é uma chave primária?', 'Um conjunto mínimo de atributos que identifica de forma única cada tupla de uma relação.'],
+    ['Diferença entre LEFT JOIN e INNER JOIN', 'O LEFT JOIN mantém todas as linhas da tabela da esquerda, mesmo sem correspondência (com NULL); o INNER só os pares que combinam.'],
+    ['O que a terceira forma normal garante?', 'Que todo atributo não chave dependa da chave, da chave inteira e de nada além da chave (sem dependências transitivas).'],
+  ],
+  'esempio.domande': ['Por que o teorema de Schwarz exige que as derivadas mistas sejam contínuas?'],
+  'esempio.stelle': ['O teorema de Green cai em toda prova, com a demonstração', 'Classificar pontos críticos com a hessiana: questão certa na prova'],
+  'esempio.stelle-basi': ['Normalização até a FNBC: sempre cai na prova'],
+  'esempio.definizioni': [
+    ['Gradiente', 'O vetor das derivadas parciais de f: aponta na direção de maior crescimento.'],
+    ['Ponto crítico', 'Um ponto em que o gradiente da função se anula.'],
+    ['Matriz hessiana', 'A matriz quadrada das derivadas parciais de segunda ordem de uma função.'],
+    ['Ponto de sela', 'Um ponto crítico que não é nem máximo nem mínimo local: a hessiana é indefinida.'],
+    ['Teorema de Green', 'Relaciona a integral de linha ao longo da fronteira de uma região com a integral dupla sobre a região.'],
+    ['Forma diferencial exata', 'Uma forma que admite um potencial, ou seja, é a diferencial de uma função.'],
+  ],
+  'esempio.definizioni-basi': [
+    ['Chave primária', 'Um conjunto mínimo de atributos que identifica de forma única cada tupla.'],
+    ['Chave estrangeira', 'Um atributo que faz referência à chave primária de outra relação.'],
+    ['Dependência funcional', 'Uma restrição em que o valor de um conjunto de atributos determina o de outro.'],
+    ['Forma normal de Boyce-Codd', 'Toda dependência funcional não trivial tem uma superchave do lado esquerdo.'],
+  ],
+  'esempio.switch-parole': ['um', 'dois', 'três', 'quatro'],
+  'esempio.switch-altro': 'outro',
+  'esempio.si': 'sim',
+  'esempio.no': 'não',
+  'esempio.hai-scritto': 'Você escreveu `{s}`',
+};
