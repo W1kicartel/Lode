@@ -82,6 +82,9 @@ jobs:
         run: node test/sistemi.mjs
       - name: Formule dette a voce (italiano e inglese)
         run: node test/formule.mjs
+      # README.md (inglese) e README.it.md: lingue in cima, ancore (anche da rilascio.yml e dai documenti), file, stessi comandi e stessi link
+      - name: I README (inglese e italiano)
+        run: node test/readme.mjs
       # aggiornamenti (desktop/aggiorna.mjs): versioni, installer giusto, latest*.yml, Mac senza firma, finto electron-updater
       - name: Aggiornamenti
         run: node test/aggiorna.mjs

@@ -245,10 +245,10 @@ jobs:
               else
                 if [ -n "$FIRMA_MAC" ]; then echo "L'installer del Mac è firmato e notarizzato da Apple."; fi
                 if [ -n "$FIRMA_WINDOWS" ]; then echo "L'installer di Windows è firmato."; fi
-                echo "Quelli non firmati con un certificato a pagamento al primo avvio chiedono una conferma. Come fare, passo per passo: https://github.com/W1kicartel/Lode#installa"
+                echo "Quelli non firmati con un certificato a pagamento al primo avvio chiedono una conferma. Come fare, passo per passo: https://github.com/W1kicartel/Lode/blob/main/README.it.md#installa (in English: https://github.com/W1kicartel/Lode#install)"
               fi
               echo
-              echo "Le impronte SHA-256 di tutti i file sono in \`SHA256SUMS.txt\` (GitHub le mostra anche accanto a ogni file). Come controllare l'installer scaricato: https://github.com/W1kicartel/Lode#installa"
+              echo "Le impronte SHA-256 di tutti i file sono in \`SHA256SUMS.txt\` (GitHub le mostra anche accanto a ogni file). Come controllare l'installer scaricato: https://github.com/W1kicartel/Lode/blob/main/README.it.md#installa (in English: https://github.com/W1kicartel/Lode#install)"
             } > note.md
             # il tag deve stare su main (lo stesso commit o uno più indietro): un tag su un commit fuori da main non pubblica.
             # Difende dagli sbagli, non da chi può cambiare questo file nel commit del tag: per quello servono le regole sui
