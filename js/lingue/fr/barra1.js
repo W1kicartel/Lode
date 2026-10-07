@@ -87,8 +87,8 @@ export default {
   'barra1.libretto': 'Relevé de notes',
   // en cours, Répète, la transcription, l'accueil
   'barra1.in-aula': 'En cours · {corso}',
-  'barra1.aula-finisce-tra': 'salle {aula} · fini dans {n} min',
-  'barra1.finisce-tra': 'fini dans {n} min',
+  'barra1.aula-finisce-tra': 'salle {aula} · finit dans {n} min',
+  'barra1.finisce-tra': 'finit dans {n} min',
   'barra1.cattura-stella': "★ À l'exam",
   'barra1.cattura-definizione': 'Définition',
   'barra1.cattura-domanda': 'Question',
