@@ -9,6 +9,7 @@
 // Sul Mac l'audio arriva da lode-ascolta (desktop/ascolta.mjs, il process tap di CoreAudio): chiede solo il permesso
 // dell'audio di sistema. La condivisione dello schermo sul Mac vorrebbe anche il permesso di registrare lo schermo, troppo
 // per sentire una lezione: lì si usa solo se lode-ascolta non c'è.
+import { t } from './lingua.js';
 const SR = 16000, L = typeof window !== 'undefined' ? window.lodeDesktop : null, MAC = L?.piattaforma === 'darwin';
 let flusso = null, nativo = false, ctx = null, src = null, proc = null, livello = 0, ultimoSuono = 0, inizio = 0, accensione = null;
 const ascoltatori = new Set();
@@ -29,7 +30,7 @@ if (MAC) {
 async function accendiMac() {
   const r = await L.invoca('computer:avvia');
   if (!r?.ok) {
-    const e = new Error(r?.motivo === 'macos' ? 'Serve macOS 14.2 o più recente.' : `lode-ascolta non parte (${r?.motivo || 'motivo sconosciuto'}${r?.codice != null ? ' ' + r.codice : ''}).`);
+    const e = new Error(r?.motivo === 'macos' ? t('computer.serve-macos') : t('computer.ascolta-non-parte', { motivo: `${r?.motivo || t('computer.motivo-sconosciuto')}${r?.codice != null ? ' ' + r.codice : ''}` }));
     e.name = r?.motivo === 'macos' ? 'VersioneMac' : 'SenzaAudio'; throw e;
   }
   nativo = true; inizio = Date.now(); ultimoSuono = 0; livello = 0; avvisa(); return true;
@@ -45,7 +46,7 @@ export function accendi() {
     const f = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
     f.getVideoTracks().forEach(t => t.stop());
     const tracce = f.getAudioTracks();
-    if (!tracce.length) { f.getTracks().forEach(t => t.stop()); const e = new Error('Il sistema non mi dà l\'audio del computer.'); e.name = 'SenzaAudio'; throw e; }
+    if (!tracce.length) { f.getTracks().forEach(t => t.stop()); const e = new Error(t('computer.senza-audio')); e.name = 'SenzaAudio'; throw e; }
     flusso = new MediaStream(tracce);
     ctx = new AudioContext({ sampleRate: SR }); if (ctx.state === 'suspended') await ctx.resume().catch(() => { });
     // un canale solo: lo ScriptProcessor a 1 ingresso fonde i canali (stereo → mono)
