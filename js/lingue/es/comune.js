@@ -1,0 +1,23 @@
+// Textos comunes (español): fechas, tiempos, botones del repaso.
+export default {
+  'comune.giorni': ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'],
+  'comune.mesi': ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'],
+  'comune.mesiBrevi': ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'],
+  'comune.dataLunga': '{giorno} {n} de {mese}',
+  'comune.dataBreve': '{n} {mese}',
+  'comune.passato': 'pasado',
+  'comune.oggi': 'hoy',
+  'comune.domani': 'mañana',
+  'comune.traGiorni': 'en {n} días',
+  'comune.oreMinuti': '{h} h {m} min',
+  'comune.ore': '{h} h',
+  'comune.minuti': '{m} min',
+  'comune.risposta0': 'Otra vez',
+  'comune.risposta3': 'Difícil',
+  'comune.risposta4': 'Bien',
+  'comune.risposta5': 'Fácil',
+  'comune.adesso': 'ahora',
+  'comune.giorniBrevi': '{n} d',
+  'comune.mesi_n': { one: '{n} mes', other: '{n} meses' },
+  'comune.anni': '{x} años',
+};

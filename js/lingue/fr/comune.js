@@ -1,0 +1,23 @@
+// Textes communs (français) : dates, durées, boutons de révision.
+export default {
+  'comune.giorni': ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'],
+  'comune.mesi': ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'],
+  'comune.mesiBrevi': ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'],
+  'comune.dataLunga': '{giorno} {n} {mese}',
+  'comune.dataBreve': '{n} {mese}',
+  'comune.passato': 'passé',
+  'comune.oggi': "aujourd'hui",
+  'comune.domani': 'demain',
+  'comune.traGiorni': 'dans {n} jours',
+  'comune.oreMinuti': '{h} h {m} min',
+  'comune.ore': '{h} h',
+  'comune.minuti': '{m} min',
+  'comune.risposta0': 'À revoir',
+  'comune.risposta3': 'Difficile',
+  'comune.risposta4': 'Bien',
+  'comune.risposta5': 'Facile',
+  'comune.adesso': 'maintenant',
+  'comune.giorniBrevi': '{n} j',
+  'comune.mesi_n': { one: '{n} mois', other: '{n} mois' },
+  'comune.anni': '{x} ans',
+};

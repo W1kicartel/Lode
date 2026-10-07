@@ -1,0 +1,23 @@
+// Common texts (English): dates, times, review buttons.
+export default {
+  'comune.giorni': ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  'comune.mesi': ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+  'comune.mesiBrevi': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  'comune.dataLunga': '{giorno} {n} {mese}',
+  'comune.dataBreve': '{n} {mese}',
+  'comune.passato': 'past',
+  'comune.oggi': 'today',
+  'comune.domani': 'tomorrow',
+  'comune.traGiorni': 'in {n} days',
+  'comune.oreMinuti': '{h} h {m} min',
+  'comune.ore': '{h} h',
+  'comune.minuti': '{m} min',
+  'comune.risposta0': 'Again',
+  'comune.risposta3': 'Hard',
+  'comune.risposta4': 'Good',
+  'comune.risposta5': 'Easy',
+  'comune.adesso': 'now',
+  'comune.giorniBrevi': '{n} d',
+  'comune.mesi_n': { one: '{n} month', other: '{n} months' },
+  'comune.anni': '{x} years',
+};

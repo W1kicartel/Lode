@@ -1,0 +1,23 @@
+// Gemeinsame Texte (Deutsch): Daten, Zeiten, Wiederholungs-Knöpfe.
+export default {
+  'comune.giorni': ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'],
+  'comune.mesi': ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'],
+  'comune.mesiBrevi': ['Jan.', 'Feb.', 'März', 'Apr.', 'Mai', 'Juni', 'Juli', 'Aug.', 'Sept.', 'Okt.', 'Nov.', 'Dez.'],
+  'comune.dataLunga': '{giorno}, {n}. {mese}',
+  'comune.dataBreve': '{n}. {mese}',
+  'comune.passato': 'vorbei',
+  'comune.oggi': 'heute',
+  'comune.domani': 'morgen',
+  'comune.traGiorni': 'in {n} Tagen',
+  'comune.oreMinuti': '{h} Std. {m} Min.',
+  'comune.ore': '{h} Std.',
+  'comune.minuti': '{m} Min.',
+  'comune.risposta0': 'Nochmal',
+  'comune.risposta3': 'Schwer',
+  'comune.risposta4': 'Gut',
+  'comune.risposta5': 'Leicht',
+  'comune.adesso': 'jetzt',
+  'comune.giorniBrevi': '{n} T.',
+  'comune.mesi_n': { one: '{n} Monat', other: '{n} Monate' },
+  'comune.anni': '{x} Jahre',
+};

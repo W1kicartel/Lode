@@ -1,0 +1,23 @@
+// Textos comuns (português): datas, tempos, botões da revisão.
+export default {
+  'comune.giorni': ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'],
+  'comune.mesi': ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'],
+  'comune.mesiBrevi': ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'],
+  'comune.dataLunga': '{giorno}, {n} de {mese}',
+  'comune.dataBreve': '{n} {mese}',
+  'comune.passato': 'passado',
+  'comune.oggi': 'hoje',
+  'comune.domani': 'amanhã',
+  'comune.traGiorni': 'daqui a {n} dias',
+  'comune.oreMinuti': '{h} h {m} min',
+  'comune.ore': '{h} h',
+  'comune.minuti': '{m} min',
+  'comune.risposta0': 'De novo',
+  'comune.risposta3': 'Difícil',
+  'comune.risposta4': 'Bem',
+  'comune.risposta5': 'Fácil',
+  'comune.adesso': 'agora',
+  'comune.giorniBrevi': '{n} d',
+  'comune.mesi_n': { one: '{n} mês', other: '{n} meses' },
+  'comune.anni': '{x} anos',
+};

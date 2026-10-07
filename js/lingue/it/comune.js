@@ -1,0 +1,23 @@
+// Testi comuni (italiano, lingua di partenza): date, tempi, bottoni del ripasso.
+export default {
+  'comune.giorni': ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'],
+  'comune.mesi': ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'],
+  'comune.mesiBrevi': ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'],
+  'comune.dataLunga': '{giorno} {n} {mese}',
+  'comune.dataBreve': '{n} {mese}',
+  'comune.passato': 'passato',
+  'comune.oggi': 'oggi',
+  'comune.domani': 'domani',
+  'comune.traGiorni': 'tra {n} giorni',
+  'comune.oreMinuti': '{h} h {m} min',
+  'comune.ore': '{h} h',
+  'comune.minuti': '{m} min',
+  'comune.risposta0': 'Di nuovo',
+  'comune.risposta3': 'Difficile',
+  'comune.risposta4': 'Bene',
+  'comune.risposta5': 'Facile',
+  'comune.adesso': 'ora',
+  'comune.giorniBrevi': '{n} g',
+  'comune.mesi_n': { one: '{n} mese', other: '{n} mesi' },
+  'comune.anni': '{x} anni',
+};

@@ -2,6 +2,7 @@
 // Niente account, niente server. La chiave AI non va mai nel vault (i vault si sincronizzano): resta in questo computer.
 // Esami e voti, sessioni di studio, carte del ripasso, impostazioni. Più i conti che servono a uno studente:
 // media ponderata, base di laurea, voto che serve, ore da fare oggi, ripasso a intervalli (SM-2).
+import { t, elenco, numero } from './lingua.js';
 const CHIAVE = 'lode:v1';
 export const VUOTO = () => ({
   v: 1,
@@ -129,16 +130,17 @@ export const oggi = () => isoGiorno(new Date());
 export function isoGiorno(d) { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; }
 export function piuGiorni(iso, n) { const d = new Date(iso + 'T12:00'); d.setDate(d.getDate() + n); return isoGiorno(d); }
 export const giorniTra = (a, b) => Math.round((new Date(b + 'T12:00') - new Date(a + 'T12:00')) / 864e5);
-export const GIORNI = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
-export const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
-export const dataLunga = iso => { const d = new Date(iso + 'T12:00'); return `${GIORNI[d.getDay()]} ${d.getDate()} ${MESI[d.getMonth()]}`; };
-export const dataBreve = iso => { const d = new Date(iso + 'T12:00'); return `${d.getDate()} ${MESI[d.getMonth()].slice(0, 3)}`; };
+// nomi dei giorni e dei mesi nella lingua della barra (in italiano: «domenica»… e «gennaio»…)
+export const GIORNI = elenco('comune.giorni');
+export const MESI = elenco('comune.mesi');
+export const dataLunga = iso => { const d = new Date(iso + 'T12:00'); return t('comune.dataLunga', { giorno: GIORNI[d.getDay()], n: d.getDate(), mese: MESI[d.getMonth()] }); };
+export const dataBreve = iso => { const d = new Date(iso + 'T12:00'); return t('comune.dataBreve', { n: d.getDate(), mese: elenco('comune.mesiBrevi')[d.getMonth()] }); };
 export function traQuanto(iso) {
   const n = giorniTra(oggi(), iso);
-  return n < 0 ? 'passato' : n === 0 ? 'oggi' : n === 1 ? 'domani' : `tra ${n} giorni`;
+  return n < 0 ? t('comune.passato') : n === 0 ? t('comune.oggi') : n === 1 ? t('comune.domani') : t('comune.traGiorni', { n });
 }
-export const num = (x, dec = 1) => Number(x).toLocaleString('it-IT', { minimumFractionDigits: dec, maximumFractionDigits: dec });
-export const ore = min => { const h = Math.floor(min / 60), m = Math.round(min % 60); return h ? (m ? `${h} h ${m} min` : `${h} h`) : `${m} min`; };
+export const num = (x, dec = 1) => numero(x, dec);
+export const ore = min => { const h = Math.floor(min / 60), m = Math.round(min % 60); return h ? (m ? t('comune.oreMinuti', { h, m }) : t('comune.ore', { h })) : t('comune.minuti', { m }); };
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -231,7 +233,7 @@ export function piano(e) {
 }
 
 /* ---------- ripasso a intervalli (SM-2 semplificato) ---------- */
-export const RISPOSTE = [{ q: 0, t: 'Di nuovo', k: '1' }, { q: 3, t: 'Difficile', k: '2' }, { q: 4, t: 'Bene', k: '3' }, { q: 5, t: 'Facile', k: '4' }];
+export const RISPOSTE = [{ q: 0, t: t('comune.risposta0'), k: '1' }, { q: 3, t: t('comune.risposta3'), k: '2' }, { q: 4, t: t('comune.risposta4'), k: '3' }, { q: 5, t: t('comune.risposta5'), k: '4' }];
 export const daRipassare = (esameId) => D.carte.filter(c => (!esameId || c.esameId === esameId) && c.scad <= oggi());
 export function aggiungiCarta({ esameId = null, fronte, retro }) {
   const c = { id: id(), esameId, fronte: String(fronte).trim(), retro: String(retro).trim(), ease: 2.5, int: 0, rip: 0, scad: oggi(), creata: Date.now() };
@@ -250,7 +252,7 @@ export function rispondi(c, q) {
   if (VER != null) OPS.push({ tipo: 'ripasso', carta: c.id, q, giorno: oggi(), ris: { ease: c.ease, int: c.int, rip: c.rip, scad: c.scad } });
   salva();
 }
-export const intervalloTesto = n => n === 0 ? 'ora' : n === 1 ? '1 g' : n < 30 ? `${n} g` : n < 365 ? `${Math.round(n / 30)} mesi` : `${num(n / 365)} anni`;
+export const intervalloTesto = n => n === 0 ? t('comune.adesso') : n < 30 ? t('comune.giorniBrevi', { n }) : n < 365 ? t('comune.mesi_n', { n: Math.round(n / 30) }) : t('comune.anni', { x: num(n / 365) });
 
 /* ---------- orario delle lezioni ---------- */
 const minutiDi = hhmm => { const [h, m] = String(hhmm).split(':').map(Number); return h * 60 + (m || 0); };
