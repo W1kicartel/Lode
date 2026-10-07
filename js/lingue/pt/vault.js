@@ -30,7 +30,7 @@ export default {
   'vault.ancora-nessuna': 'Nenhuma ainda.',
   'vault.note-commento': 'Escreva aqui como você quer ser ajudado: «me explica com exemplos práticos», «tenho dislexia, frases curtas», «a oral de Cálculo é com o Rossi, bem teórica».',
   // Home
-  'vault.home-carte': '{n} cartões para revisar',
+  'vault.home-carte': { one: '{n} cartão para revisar', other: '{n} cartões para revisar' },
   'vault.alias-memoria': 'O que o Lode sabe de mim',
   'vault.alias-benvenuto': 'Como funciona',
   'vault.titolo-oggi': 'Hoje',
@@ -43,7 +43,7 @@ export default {
   'vault.appello': 'prova {data}',
   'vault.corsi-vuoto': 'Adicione o horário pela barra: «aula cálculo 2 segunda 9-11 sala 7».',
   'vault.titolo-ultime-lezioni': 'Últimas aulas',
-  'vault.definizioni-n': '{n} definições',
+  'vault.definizioni-n': { one: '{n} definição', other: '{n} definições' },
   'vault.titolo-carriera': 'Vida acadêmica',
   'vault.carriera': 'Média **{media}** · base de formatura **{base}**/110 · {cfu} de {tot} créditos → {esami}',
   // Esami
@@ -65,7 +65,7 @@ export default {
   'vault.corso-cfu': '**{cfu} créditos**',
   'vault.corso-voto': 'nota {voto}',
   'vault.corso-voto-lode': 'nota {voto} com louvor',
-  'vault.corso-appello': 'prova **{data}** (daqui a {n} dias) · {fatte} de {tot} h estudadas',
+  'vault.corso-appello': { one: 'prova **{data}** (daqui a {n} dia) · {fatte} de {tot} h estudadas', other: 'prova **{data}** (daqui a {n} dias) · {fatte} de {tot} h estudadas' },
   'vault.corso-lezioni': 'Aulas: {elenco}',
   'vault.orario-voce': '{giorni} {inizio}–{fine}',
   'vault.orario-voce-aula': '{giorni} {inizio}–{fine} sala {aula}',

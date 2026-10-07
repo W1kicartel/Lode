@@ -30,7 +30,7 @@ export default {
   'vault.ancora-nessuna': 'None yet.',
   'vault.note-commento': 'Write here how you want to be helped: “explain with practical examples”, “I\'m dyslexic, short sentences”, “the Calculus oral is with Rossi, very theoretical”.',
   // Home
-  'vault.home-carte': '{n} cards to review',
+  'vault.home-carte': { one: '{n} card to review', other: '{n} cards to review' },
   'vault.alias-memoria': 'What Lode knows about me',
   'vault.alias-benvenuto': 'How it works',
   'vault.titolo-oggi': 'Today',
@@ -43,7 +43,7 @@ export default {
   'vault.appello': 'exam {data}',
   'vault.corsi-vuoto': 'Add your timetable from the bar: “lecture calculus 2 Monday 9-11 room 7”.',
   'vault.titolo-ultime-lezioni': 'Latest lectures',
-  'vault.definizioni-n': '{n} definitions',
+  'vault.definizioni-n': { one: '{n} definition', other: '{n} definitions' },
   'vault.titolo-carriera': 'Degree',
   'vault.carriera': 'Average **{media}** · starting graduation mark **{base}**/110 · {cfu} of {tot} credits → {esami}',
   // Exams
@@ -65,7 +65,7 @@ export default {
   'vault.corso-cfu': '**{cfu} credits**',
   'vault.corso-voto': 'grade {voto}',
   'vault.corso-voto-lode': 'grade {voto} cum laude',
-  'vault.corso-appello': 'exam on **{data}** (in {n} days) · {fatte} of {tot} h studied',
+  'vault.corso-appello': { one: 'exam on **{data}** (in {n} day) · {fatte} of {tot} h studied', other: 'exam on **{data}** (in {n} days) · {fatte} of {tot} h studied' },
   'vault.corso-lezioni': 'Lectures: {elenco}',
   'vault.orario-voce': '{giorni} {inizio}–{fine}',
   'vault.orario-voce-aula': '{giorni} {inizio}–{fine} room {aula}',

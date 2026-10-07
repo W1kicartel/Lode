@@ -3,7 +3,7 @@
 export default {
   'progetto.solo-app': 'Seguir un proyecto solo se puede en la app de escritorio de Lode.',
   'progetto.provo': 'probando…',
-  'progetto.file-cambiati': '{n} arch. +{piu} −{meno}',
+  'progetto.file-cambiati': { one: '{n} arch. +{piu} −{meno}', other: '{n} arch. +{piu} −{meno}' },
   'progetto.fatto-non-provato': 'hecho · sin probar',
   'progetto.oggi-non-provato': '{nome}: sin probar',
   'progetto.oggi-esito': '{nome}: {breve}',

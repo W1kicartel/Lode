@@ -30,7 +30,7 @@ export default {
   'vault.ancora-nessuna': 'Aucune pour le moment.',
   'vault.note-commento': "Écris ici comment tu veux être aidé : « explique-moi avec des exemples concrets », « je suis dyslexique, des phrases courtes », « l'oral d'analyse est avec Martin, très théorique ».",
   // Home
-  'vault.home-carte': '{n} cartes à réviser',
+  'vault.home-carte': { one: '{n} carte à réviser', other: '{n} cartes à réviser' },
   'vault.alias-memoria': 'Ce que Lode sait de moi',
   'vault.alias-benvenuto': 'Comment ça marche',
   'vault.titolo-oggi': "Aujourd'hui",
@@ -43,7 +43,7 @@ export default {
   'vault.appello': 'examen le {data}',
   'vault.corsi-vuoto': "Ajoute ton emploi du temps depuis la barre : « cours analyse 2 lundi 9h-11h salle 7 ».",
   'vault.titolo-ultime-lezioni': 'Derniers cours',
-  'vault.definizioni-n': '{n} définitions',
+  'vault.definizioni-n': { one: '{n} définition', other: '{n} définitions' },
   'vault.titolo-carriera': 'Parcours',
   'vault.carriera': 'Moyenne **{media}** · « base di laurea » **{base}**/110 · {cfu} sur {tot} crédits → {esami}',
   // Esami
@@ -65,7 +65,7 @@ export default {
   'vault.corso-cfu': '**{cfu} crédits**',
   'vault.corso-voto': 'note {voto}',
   'vault.corso-voto-lode': 'note {voto} avec mention (e lode)',
-  'vault.corso-appello': 'examen **{data}** (dans {n} jours) · {fatte} sur {tot} h de révision',
+  'vault.corso-appello': { one: 'examen **{data}** (dans {n} jour) · {fatte} sur {tot} h de révision', other: 'examen **{data}** (dans {n} jours) · {fatte} sur {tot} h de révision' },
   'vault.corso-lezioni': 'Cours : {elenco}',
   'vault.orario-voce': '{giorni} {inizio}–{fine}',
   'vault.orario-voce-aula': '{giorni} {inizio}–{fine} salle {aula}',

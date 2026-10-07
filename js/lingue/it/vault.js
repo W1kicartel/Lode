@@ -30,7 +30,7 @@ export default {
   'vault.ancora-nessuna': 'Ancora nessuna.',
   'vault.note-commento': 'Scrivi qui come vuoi essere aiutato: «spiegami con esempi pratici», «sono dislessico, frasi brevi», «l\'orale di Analisi è con Rossi, molto teorico».',
   // Home
-  'vault.home-carte': '{n} carte da ripassare',
+  'vault.home-carte': { one: '{n} carta da ripassare', other: '{n} carte da ripassare' },
   'vault.alias-memoria': 'Cosa sa Lode di me',
   'vault.alias-benvenuto': 'Come funziona',
   'vault.titolo-oggi': 'Oggi',
@@ -43,7 +43,7 @@ export default {
   'vault.appello': 'appello {data}',
   'vault.corsi-vuoto': 'Aggiungi l\'orario dalla barra: «lezione analisi 2 lunedì 9-11 aula 7».',
   'vault.titolo-ultime-lezioni': 'Ultime lezioni',
-  'vault.definizioni-n': '{n} definizioni',
+  'vault.definizioni-n': { one: '{n} definizione', other: '{n} definizioni' },
   'vault.titolo-carriera': 'Carriera',
   'vault.carriera': 'Media **{media}** · base di laurea **{base}**/110 · {cfu} di {tot} CFU → {esami}',
   // Esami
@@ -65,7 +65,7 @@ export default {
   'vault.corso-cfu': '**{cfu} CFU**',
   'vault.corso-voto': 'voto {voto}',
   'vault.corso-voto-lode': 'voto {voto} e lode',
-  'vault.corso-appello': 'appello **{data}** (tra {n} giorni) · {fatte} di {tot} h studiate',
+  'vault.corso-appello': { one: 'appello **{data}** (tra {n} giorno) · {fatte} di {tot} h studiate', other: 'appello **{data}** (tra {n} giorni) · {fatte} di {tot} h studiate' },
   'vault.corso-lezioni': 'Lezioni: {elenco}',
   'vault.orario-voce': '{giorni} {inizio}–{fine}',
   'vault.orario-voce-aula': '{giorni} {inizio}–{fine} aula {aula}',

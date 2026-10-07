@@ -1,7 +1,8 @@
 // Le lingue di Lode: node test/lingue.mjs
 // 1) ogni catalogo di ogni lingua ha le STESSE chiavi dell'italiano, con gli stessi parametri {x}, gli stessi tag HTML,
 //    elenchi della stessa lunghezza e plurali con «other»; 2) ogni t('…') / elenco('…') scritto nel codice ha la sua
-//    chiave in italiano; 3) ogni file dei cataloghi è nella cache del service worker (sw.js, FILE).
+//    chiave in italiano; 3) ogni file dei cataloghi è nella cache del service worker (sw.js, FILE); 4) ogni chiave
+//    italiana è usata da qualche file (le chiavi composte con una variabile stanno in COMPOSTE).
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { AREE } from '../js/lingue/indice.js';
 import { LINGUE } from '../js/lingua.js';
@@ -53,6 +54,29 @@ for (const f of [...file('js/'), ...file('desktop/').filter(f => !f.includes('no
   for (const m of s.matchAll(/\b(?:t|elenco|tn)\(\s*'([a-z][\w-]*\.[\w.-]+)'/g)) { usate.add(m[1]); prova(`${f}: chiave ${m[1]} in italiano`, m[1] in IT); }
 }
 prova('ci sono chiavi usate', usate.size > 0);
+// 4) nessuna chiave dimenticata: ogni chiave del catalogo italiano compare nel codice fra virgolette ('area.chiave'),
+//    oppure è costruita da un prefisso che sta in COMPOSTE (chiavi fatte con una variabile). Una chiave che non usa più
+//    nessuno si toglie da tutte e sei le lingue; una chiave nuova composta con una variabile si aggiunge qui
+const COMPOSTE = {
+  'sistemi.nome.': 'js/sistemi.js, nomeSistema',
+  'sistemi.crediti.': 'js/sistemi.js, nomeCrediti',
+  'sistemi.finale.': 'js/sistemi.js, etichettaFinale',
+  'sistemi.mention.': 'js/sistemi.js e js/libretto.js, la mention francese',
+  'sistemi.classe.': 'js/sistemi.js e js/libretto.js, la classe inglese',
+  'desktop.progetto-esito-': 'desktop/progetto.mjs, K + tipo',
+  'vaultnomi.': "js/nomi.js, v('cartella-lezioni')…: il resto della chiave fra virgolette in nomi.js",
+};
+const codice = [...file('js/'), ...file('desktop/').filter(f => !f.includes('node_modules') && !f.startsWith('desktop/web/'))]
+  .map(f => readFileSync(new URL(f, R), 'utf8').replace(/^\s*(\/\/|\/\*|\*).*$/gm, '')).join('\n') + readFileSync(new URL('index.html', R), 'utf8');   // senza le righe di commento
+const nomi = readFileSync(new URL('js/nomi.js', R), 'utf8');
+for (const p of Object.keys(COMPOSTE)) prova(`chiavi composte: il prefisso ${p} si usa ancora`, codice.includes(`'${p}'`) || codice.includes('`' + p + '${') || codice.includes(`'${p}' +`), COMPOSTE[p]);
+const inutili = Object.keys(IT).filter(k => {
+  if ([`'${k}'`, `"${k}"`, '`' + k + '`'].some(x => codice.includes(x))) return false;
+  const p = Object.keys(COMPOSTE).find(p => k.startsWith(p));
+  if (p === 'vaultnomi.') return !nomi.includes(`'${k.slice(p.length)}'`);
+  return !p;
+});
+prova('ogni chiave del catalogo è usata nel codice', inutili.length === 0, `nessuno usa ${inutili.length}: ${inutili.slice(0, 12).join(', ')}`);
 // cache del service worker
 const sw = readFileSync(new URL('sw.js', R), 'utf8');
 for (const cod of Object.keys(LINGUE)) for (const a of AREE) if (existsSync(new URL(`js/lingue/${cod}/${a}.js`, R))) prova(`sw.js ha js/lingue/${cod}/${a}.js`, sw.includes(`'js/lingue/${cod}/${a}.js'`));

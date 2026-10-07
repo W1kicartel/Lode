@@ -30,7 +30,7 @@ export default {
   'vault.ancora-nessuna': 'Noch keine.',
   'vault.note-commento': 'Schreib hier, wie ich dir helfen soll: „erklär mir mit praktischen Beispielen“, „ich bin Legastheniker, kurze Sätze“, „die Mündliche in Analysis ist bei Rossi, sehr theoretisch“.',
   // Home
-  'vault.home-carte': '{n} Karten zu wiederholen',
+  'vault.home-carte': { one: '{n} Karte zu wiederholen', other: '{n} Karten zu wiederholen' },
   'vault.alias-memoria': 'Was Lode über mich weiß',
   'vault.alias-benvenuto': 'So funktioniert es',
   'vault.titolo-oggi': 'Heute',
@@ -43,7 +43,7 @@ export default {
   'vault.appello': 'Prüfung {data}',
   'vault.corsi-vuoto': 'Füg den Stundenplan über die Leiste hinzu: „Vorlesung Analysis 2 Montag 9-11 Raum 7“.',
   'vault.titolo-ultime-lezioni': 'Letzte Vorlesungen',
-  'vault.definizioni-n': '{n} Definitionen',
+  'vault.definizioni-n': { one: '{n} Definition', other: '{n} Definitionen' },
   'vault.titolo-carriera': 'Studium',
   'vault.carriera': 'Schnitt **{media}** · Abschlussbasis (Italien) **{base}**/110 · {cfu} von {tot} ECTS → {esami}',
   // Esami
@@ -65,7 +65,7 @@ export default {
   'vault.corso-cfu': '**{cfu} ECTS**',
   'vault.corso-voto': 'Note {voto}',
   'vault.corso-voto-lode': 'Note {voto} cum laude',
-  'vault.corso-appello': 'Prüfung **{data}** (in {n} Tagen) · {fatte} von {tot} Std. gelernt',
+  'vault.corso-appello': { one: 'Prüfung **{data}** (in {n} Tag) · {fatte} von {tot} Std. gelernt', other: 'Prüfung **{data}** (in {n} Tagen) · {fatte} von {tot} Std. gelernt' },
   'vault.corso-lezioni': 'Vorlesungen: {elenco}',
   'vault.orario-voce': '{giorni} {inizio}–{fine}',
   'vault.orario-voce-aula': '{giorni} {inizio}–{fine} Raum {aula}',
