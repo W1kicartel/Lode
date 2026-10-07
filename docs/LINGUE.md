@@ -65,7 +65,7 @@ La lingua si sceglie:
 
 ## Sistemi dei voti
 
-`js/sistemi.js` descrive ogni sistema. Lo studente lo sceglie nel benvenuto e lo salva in `profilo.sistema`. Il predefinito viene dalla lingua: `it` → `it`, `es` → `es`, `fr` → `fr`, `de` → `de`, `pt` → `pt`, `en` → `uk`.
+`js/sistemi.js` descrive ogni sistema. Lo studente lo sceglie nel benvenuto e lo salva in `profilo.sistema`. Il predefinito viene dalla lingua: `it` → `it`, `es` → `es`, `fr` → `fr`, `de` → `de`, `pt` → `br` (la lingua è il portoghese del Brasile; chi studia in Portogallo sceglie `pt`), `en` → `uk`.
 
 | Codice | Paese | Voti | Sufficienza | Migliore | Crediti | Voto finale |
 |---|---|---|---|---|---|---|

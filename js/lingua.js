@@ -14,7 +14,7 @@ export const LINGUE = {
   es: { nome: 'Español', locale: 'es-ES' },
   fr: { nome: 'Français', locale: 'fr-FR' },
   de: { nome: 'Deutsch', locale: 'de-DE' },
-  pt: { nome: 'Português', locale: 'pt-PT' },
+  pt: { nome: 'Português', locale: 'pt-BR' },   // il portoghese del Brasile (la maggior parte di chi lo parla); i voti del Portogallo restano un sistema a parte
 };
 const CHIAVE = 'lode:lingua';
 

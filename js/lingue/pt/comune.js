@@ -1,4 +1,4 @@
-// Textos comuns (português): datas, tempos, botões da revisão.
+// Textos comuns (português do Brasil): datas, tempos, botões da revisão.
 export default {
   'comune.giorni': ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'],
   'comune.mesi': ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'],
