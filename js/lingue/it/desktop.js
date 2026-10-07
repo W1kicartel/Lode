@@ -169,7 +169,7 @@ export default {
   'desktop.esegui-make-prove': 'Con il Makefile le {n} prove .in/.out non le lancio: non so quale programma crea.',
   'desktop.esegui-poi-prove': { one: 'poi la prova (file .in → .out atteso)', other: 'poi le {n} prove (file .in → .out atteso)' },
   'desktop.esegui-poi-prove-in': { one: 'poi la prova in {cartella}/ (file .in → .out atteso)', other: 'poi le {n} prove in {cartella}/ (file .in → .out atteso)' },
-  'desktop.esegui-senza-programma': '; {n} senza un programma chiaro',
+  'desktop.esegui-senza-programma': '{prove}; {n} senza un programma chiaro',
   'desktop.esegui-make-leggi': 'make esegue i comandi scritti nel Makefile: leggilo prima di confermare.',
   'desktop.esegui-make-assente': 'C\'è un Makefile ma non trovo make: compilo io i file .c.',
   'desktop.esegui-niente-codice': 'Non trovo codice C, Python o Java da provare in questa cartella.',

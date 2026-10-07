@@ -200,10 +200,11 @@ export async function proponi({ nome, file, leggi, bin, trova = TROVA, piattafor
     const casi = assegna(casiTutti, p.programmi || []);
     const testo = (p.passi || []).map(x => mostraArgv(x.argv, { bin, etichette: ETICHETTE })).join(' && ');
     const pronte = casi.filter(k => k.programma), cartelleCasi = [...new Set(pronte.map(k => posix.dirname(k.in)))];
+    // le prove senza un programma chiaro si aggiungono nella frase del catalogo, non attaccate in coda
+    const conSenza = (prove, n) => n > 0 ? t('desktop.esegui-senza-programma', { prove, n }) : prove;
     const testoCasi = !casiTutti.length ? (p.tipo === 'make' ? '' : t('desktop.esegui-senza-prove'))
       : p.tipo === 'make' ? t('desktop.esegui-make-prove', { n: casiTutti.length })
-        : (cartelleCasi.length === 1 && cartelleCasi[0] !== '.' ? t('desktop.esegui-poi-prove-in', { n: pronte.length, cartella: cartelleCasi[0] }) : t('desktop.esegui-poi-prove', { n: pronte.length }))
-          + (casi.length > pronte.length ? t('desktop.esegui-senza-programma', { n: casi.length - pronte.length }) : '');
+        : conSenza(cartelleCasi.length === 1 && cartelleCasi[0] !== '.' ? t('desktop.esegui-poi-prove-in', { n: pronte.length, cartella: cartelleCasi[0] }) : t('desktop.esegui-poi-prove', { n: pronte.length }), casi.length - pronte.length);
     const chiave = JSON.stringify([p.tipo, (p.passi || []).map(x => x.argv), (p.programmi || []).map(x => x.argv)]);
     // lanciati: i programmi che riceveranno almeno una prova. La conferma vale solo per questi (progetto.mjs)
     return { tipo: p.tipo, passi: p.passi || [], programmi: p.programmi || [], casi, lanciati: lanciati(casi), cartelle: p.cartelle || [], manca: p.manca || null, strumento: p.strumento || null, testo, testoCasi, chiave, note };
