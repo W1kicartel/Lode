@@ -65,6 +65,13 @@ jobs:
         run: |
           swift build -c release --force-resolved-versions || bash compila.sh
           mkdir -p ../bin && cp .build/release/lode-voce ../bin/lode-voce && file ../bin/lode-voce
+      - name: Audio del computer (solo Mac)
+        # lode-ascolta: il process tap di CoreAudio per la «Lezione dal computer». Se non si compila, l'installer esce lo
+        # stesso: sul Mac la videolezione passa allora dalla condivisione dello schermo
+        if: matrix.nome == 'mac'
+        continue-on-error: true
+        working-directory: desktop/ascolta-mac
+        run: bash compila.sh && file ../bin/lode-ascolta
       - name: Dipendenze
         working-directory: desktop
         run: npm ci

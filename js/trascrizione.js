@@ -7,13 +7,14 @@ import * as Voce from './voce.js';
 import { parlatoInFormule } from './formule.js';
 import * as V from './vault.js';
 import * as O from './orecchio.js';
+import * as C from './computer.js';
 
 let R = null;
 let sospese = [], scrivendo = null, tRiprova = 0;   // righe trascritte che non sono ancora entrate nella nota
 const avvisa = () => dispatchEvent(new CustomEvent('lode:trascrizione', { detail: stato() }));
 export const attiva = () => !!R;
 export const occupata = () => !!R?.lavora;
-export const stato = () => R ? { lezione: R.lezione, inizio: R.inizio, parole: R.parole, righe: R.righe, ultima: R.ultima, inPausa: R.inPausa, coda: R.coda.length, sospese: sospese.length, minuti: Math.round((Date.now() - R.inizio - R.pausaTot) / 60000) } : null;
+export const stato = () => R ? { sorgente: R.sorgente, lezione: R.lezione, inizio: R.inizio, parole: R.parole, righe: R.righe, ultima: R.ultima, inPausa: R.inPausa, coda: R.coda.length, sospese: sospese.length, minuti: Math.round((Date.now() - R.inizio - R.pausaTot) / 60000) } : null;
 const ora = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 const attendi = ms => new Promise(r => setTimeout(r, ms));
 
@@ -74,19 +75,23 @@ function segmentatore(onPezzo) {
   };
 }
 
-export async function avvia(lezione, { audioProva } = {}) {
+// sorgente: 'microfono' (in aula) o 'computer' (l'audio che esce dal computer: videolezioni, js/computer.js)
+export async function avvia(lezione, { audioProva, sorgente = 'microfono' } = {}) {
   if (R) return stato();
   await Voce.prepara();
-  R = { lezione, inizio: Date.now(), parole: 0, righe: 0, ultima: '', coda: [], inPausa: false, pausaTot: 0, pausaDa: 0 };
+  // l'audio del computer si chiede subito: se il sistema dice di no, non si scrive niente nella nota
+  if (sorgente === 'computer' && !audioProva) await C.accendi();
+  R = { lezione, inizio: Date.now(), parole: 0, righe: 0, ultima: '', coda: [], inPausa: false, pausaTot: 0, pausaDa: 0, sorgente };
   const seg = segmentatore((audio, quando) => { R?.coda.push({ audio, quando }); lavora(); avvisa(); });
   R.seg = seg;
   await scrivi();   // prima le righe rimaste indietro dalla volta scorsa
   // se la nota non si scrive nemmeno adesso, meglio dirlo subito, prima che il prof cominci
-  try { await riprova(() => V.annota('trascrizione', `%% Trascrizione automatica di Lode, iniziata alle ${ora(new Date())}. Le formule dette a voce sono in LaTeX. %%`, { lezione, grezza: true })); } catch (e) { R = null; throw e; }
+  try { await riprova(() => V.annota('trascrizione', `%% Trascrizione automatica di Lode${sorgente === 'computer' ? ' dall\'audio del computer (videolezione)' : ''}, iniziata alle ${ora(new Date())}. Le formule dette a voce sono in LaTeX. %%`, { lezione, grezza: true })); } catch (e) { R = null; if (sorgente === 'computer') C.spegni(); throw e; }
   if (audioProva) {   // prove: l'audio arriva da un file invece che dal microfono, più veloce del tempo reale
     for (let i = 0; i < audioProva.length && R; i += 2048) { seg.aggiungi(audioProva.subarray(i, i + 2048)); if (i % (2048 * 64) === 0) await new Promise(r => setTimeout(r, 0)); }
     avvisa(); return stato();
   }
+  if (sorgente === 'computer') { const via = C.ascolta(x => { if (R && !R.inPausa) R.seg.aggiungi(x); }); R.spegni = () => { via(); C.spegni(); }; avvisa(); return stato(); }
   // il microfono è quello condiviso (orecchio.js): resta acceso anche per «Ripeti», se l'hai attivato
   await O.accendi();
   R.spegni = O.ascolta(x => { if (R && !R.inPausa) R.seg.aggiungi(x); });

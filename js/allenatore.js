@@ -7,6 +7,7 @@ import { D, salva, prossimi, daGiocare, daRipassare, lezioneOra, prossimaLezione
 import * as F from './focus.js';
 import * as TR from './trascrizione.js';
 import * as AI from './ai.js';
+import * as PG from './programma.js';
 import { anteprima, scaduti, corsoProgrammazione, linguaDi, RE_PROGRAMMAZIONE } from './codice/stampa.js';
 
 const L = typeof window !== 'undefined' ? window.lodeDesktop : null;
@@ -38,6 +39,9 @@ export function candidati() {
     if (carte.length >= 3) out.push({ tipo: 'ripasso', esame: e, titolo: `${e.nome} · ${quando}`, testo: `${carte.length} carte da ripassare, circa ${Math.max(2, Math.round(carte.length * .4))} minuti`, bottone: 'Ripassa', peso: .9 * u });
     if (stelle.length >= 2) out.push({ tipo: 'stelle', esame: e, titolo: `${e.nome} · ${quando}`, testo: `Rileggi le ${Math.min(stelle.length, 8)} cose che il prof ha detto «da esame»`, bottone: 'Rileggi', peso: .7 * u, stelle: stelle.slice(-8) });
     if (AI.attiva() && g <= 21) out.push({ tipo: 'orale', esame: e, titolo: `${e.nome} · ${quando}`, testo: 'Tre domande lampo, come all\'orale?', bottone: 'Interrogami', peso: .8 * u * (g <= 7 ? 1.5 : 1) });
+    // il programma d'esame: l'argomento di oggi non ancora toccato (prima quelli da studiare)
+    const og = PG.oggiDi(e), arg = og && [...og.studia, ...og.ripassa].find(c => !c.oggi);
+    if (arg) { const t = arg.a.t.length > 40 ? arg.a.t.slice(0, 39).replace(/\s+\S*$/, '') + '…' : arg.a.t; out.push({ tipo: 'programma', esame: e, argomento: arg.a.id, titolo: `${e.nome} · ${quando}`, testo: AI.attiva() ? `Oggi tocca a «${t}»: due domande?` : `Oggi nel piano: «${t}»`, bottone: AI.attiva() ? 'Interrogami' : 'Apri il piano', peso: (AI.attiva() ? 1.1 : .6) * u }); }
     const p = piano(e);
     if (p.oggi >= .75 && fascia() === (D.imp.momento || 'pomeriggio')) out.push({ tipo: 'focus', esame: e, titolo: `${e.nome} · ${quando}`, testo: `Oggi ti mancano ${num(p.oggi)} h per stare in pari: un focus da ${D.imp.focus || 25}?`, bottone: 'Focus', peso: .6 * u });
   }

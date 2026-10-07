@@ -1,7 +1,7 @@
 // Lode, l'app desktop. Una finestra trasparente in cima allo schermo, sopra tutte le altre: dentro c'è solo la barra.
 // I clic passano attraverso tranne che sulla barra. Scorciatoie globali per la cattura in aula. Il vault Obsidian in
 // Documenti/Lode è la memoria: dati di Lode in .lode/dati.json, lezioni in Markdown. Icona nella barra dei menu.
-import { app, BrowserWindow, Menu, ShareMenu, Tray, clipboard, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, net, powerMonitor, safeStorage, screen, shell, utilityProcess } from 'electron';
+import { app, BrowserWindow, Menu, desktopCapturer, ShareMenu, Tray, clipboard, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, net, powerMonitor, safeStorage, screen, shell, utilityProcess } from 'electron';
 import { existsSync, readFileSync, mkdirSync, writeFileSync, rmSync, renameSync, copyFileSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { totalmem } from 'node:os';
@@ -11,6 +11,7 @@ import * as V from './vault.mjs';
 import * as I from './installa.mjs';
 import * as VOCE from './voce.mjs';
 import * as VOCE_ONNX from './voce-onnx.mjs';
+import * as ASCOLTA from './ascolta.mjs';
 import * as PROGETTO from './progetto.mjs';
 import * as AGGIORNA from './aggiorna.mjs';
 import { creaSincronizzazione } from './sincronizza.mjs';
@@ -79,7 +80,15 @@ function creaBarra() {
   barra.once('ready-to-show', () => barra.showInactive());
   barra.webContents.setWindowOpenHandler(({ url }) => { if (/^https?:|^obsidian:/.test(url)) shell.openExternal(url); return { action: 'deny' }; });
   restaLode(barra);
-  barra.webContents.session.setPermissionRequestHandler((_, p, cb) => cb(['media', 'notifications', 'clipboard-sanitized-write'].includes(p)));
+  barra.webContents.session.setPermissionRequestHandler((_, p, cb) => cb(['media', 'display-capture', 'notifications', 'clipboard-sanitized-write'].includes(p)));
+  // «Lezione dal computer» (js/computer.js): la barra chiede l'audio che esce dal computer. Si concede l'audio del sistema
+  // (loopback: WASAPI su Windows, CoreAudio tap sul Mac da 14.2 con NSAudioCaptureUsageDescription, il monitor su Linux);
+  // lo schermo serve solo all'API e la barra ferma subito il video. Solo la barra lo chiede, e solo quando lo studente lo avvia
+  barra.webContents.session.setDisplayMediaRequestHandler((req, cb) => {
+    desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } })
+      .then(s => s[0] ? cb({ video: s[0], audio: 'loopback' }) : cb({}))
+      .catch(e => { console.warn('Lode: audio del computer non concesso', e); cb({}); });
+  });
   // Alt+F4 (o Ctrl+W) non la distrugge: si richiude e basta. Se ne va solo uscendo da Lode
   barra.on('close', e => { if (!uscendo) { e.preventDefault(); rilascia(); } });
   const idBarra = barra.webContents.id;   // preso prima: dopo 'closed' webContents non c'è più
@@ -447,6 +456,13 @@ ipcMain.handle('sistema:inattivo', () => powerMonitor.getSystemIdleTime());
 //   rovinato, spazio): il main risponde { errore, ripiego: true } e la barra ritrascrive lo stesso audio con Whisper.
 //   Un addon che non si carica resta segnato in config.json fino alla versione dopo di Lode: niente tentativi a ogni avvio.
 const progressoVoce = x => { for (const w of BrowserWindow.getAllWindows()) w.webContents.send('voce:progresso', x); };
+// «Lezione dal computer» sul Mac: l'audio del sistema da lode-ascolta (desktop/ascolta.mjs), solo alla barra
+const ascolta = ASCOLTA.crea({ binario: [join(process.resourcesPath || '', 'bin', 'lode-ascolta'), join(QUI, 'bin', 'lode-ascolta')].find(existsSync) || join(QUI, 'bin', 'lode-ascolta'), sorgenti: join(QUI, 'ascolta-mac'),
+  manda: (canale, x) => { if (barra && !barra.isDestroyed()) barra.webContents.send(canale, x); } });
+ipcMain.handle('computer:disponibile', () => ascolta.disponibile());
+ipcMain.handle('computer:avvia', () => ascolta.avvia().catch(e => ({ ok: false, motivo: e.message })));
+ipcMain.handle('computer:ferma', () => ascolta.ferma());
+app.on('will-quit', () => ascolta.ferma());
 const voce = VOCE.crea({ binario: [join(process.resourcesPath || '', 'bin', 'lode-voce'), join(QUI, 'bin', 'lode-voce')].find(existsSync) || join(QUI, 'bin', 'lode-voce'),   // nel pacchetto: Resources/bin
   avanza: progressoVoce });
 // nelle prove (solo in sviluppo): LODE_VOCE sceglie il motore (mac, onnx, whisper), LODE_MODELLO_ONNX la cartella del modello

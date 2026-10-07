@@ -99,6 +99,18 @@ export function interpreta(frase) {
     if (!domanda && !programma) return { tipo: 'anki', corso: r && !/^(?:tutt[eio]|tutti i corsi|ogni corso)$/.test(r) ? r : null };
   }
 
+  // il programma d'esame: «programma di analisi 2», «programma», «programma analisi 2: 1. limiti …» (incollato, anche su
+  // più righe: si legge dalla frase com'era, con gli a capo). «programma di oggi» resta il piano di oggi
+  if ((m = grezzo0.match(/^(?:(?:apri|mostrami|vedi|ecco|incolla) )?(?:il )?programma(?: d['’]esame| dell['’]esame| del corso)?(?:\s+(?:di|del|della|dello|dei|delle|per)\b|\s*d['’])?\s*([^:\n]*?)\s*(?:[:\n]([\s\S]*))?$/i)) && !/^(?:di )?(?:oggi|domani)$/i.test(m[1].trim())) {
+    const nome = pulisci(numeri(m[1]).toLowerCase()); return { tipo: 'programma', esame: nome ? trovaEsame(nome) : null, nomeDetto: nome, testo: (m[2] || '').trim() };
+  }
+  // «te lo spiego io: green», «spiego le serie di potenze», «lo spiego io»: lo studente spiega, Lode controlla cosa ha detto
+  if ((m = t.match(/^(?:te lo spiego io|lo spiego io|spiego io|ti spiego|spiego|fammi spiegare|voglio spiegare)\b\s*:?\s*(.*)$/))) return { tipo: 'spiego', q: pulisci(m[1] || '') };
+  // le domande uscite agli appelli: «domande uscite di analisi 2: …» (una per riga)
+  if ((m = grezzo0.match(/^(?:(?:ecco|incolla|aggiungi) )?(?:le )?domande (?:uscite|d['’]esame|degli appelli|dell['’]esame|fatte all['’]esame|dei compagni)(?:\s+(?:di|del|della|dello|a|ad|in|per)\b|\s*d['’])?\s*([^:\n]*?)\s*(?:[:\n]([\s\S]*))?$/i))) {
+    const nome = pulisci(numeri(m[1]).toLowerCase()); return { tipo: 'domande', esame: nome ? trovaEsame(nome) : null, nomeDetto: nome, testo: (m[2] || '').trim() };
+  }
+
   // in aula: ★ da esame, definizione, domanda per il prof
   if ((m = grezzo.match(/^(?:★|\*{1,2}|!|da esame\s*:?|importante\s*:|stella\s*:?|segna(?: che)?(?: è)? da esame\s*:?|questo è da esame\s*:?)\s*(.+)$/i))) return { tipo: 'stella', testo: m[1].trim() };
   if ((m = grezzo.match(/^(?:definizione|definisci|def)\s*:?\s*(.+?)\s*(?:::|:|=|→|—|-{1,2}>|\buguale a\b|\buguale\b|\bvuol dire\b|\bsignifica\b|\bè\b)\s*(.+)$/i))) return { tipo: 'definizione', termine: m[1].replace(/\*\*/g, '').trim(), testo: m[2].trim() };
@@ -117,6 +129,8 @@ export function interpreta(frase) {
     const r = pulisci(m[1] || ''); return { tipo: 'gioco', corso: r || null };
   }
   if (/^(?:apri )?(?:gli |i miei )?(?:appunti|obsidian|vault|la nota|nota)( di oggi| della lezione)?$/.test(t)) return { tipo: 'appunti' };
+  // «Lezione dal computer»: la videolezione (o Teams, Zoom, la piattaforma della telematica) trascritta dall'audio del computer
+  if ((m = t.match(/^(?:(?:trascrivi|registra|ascolta|sbobina)(?: (?:la|questa|una|l'))? ?(?:videolezione|video lezione|video|audio del (?:computer|pc|mac)|lezione (?:dal|sul|del) (?:computer|pc|mac|browser)|lezione online|lezione registrata)|(?:lezione|videolezione) dal (?:computer|pc|mac)|ascolta (?:il )?(?:computer|pc|mac))\b\s*(?:di |del |della |dello |per )?(.*)$/))) return { tipo: 'trascrivi', sorgente: 'computer', corso: pulisci(m[1] || '') || null };
   if (/^(?:trascrivi|registra|ascolta|sbobina)(?: (?:la|tutta la|questa))? lezione\b|^(?:avvia|inizia|parti con) (?:la )?(?:trascrizione|sbobinatura)/.test(t)) return { tipo: 'trascrivi' };
   if (/^(?:ripeti|ripetimi|ripeti(?:mi)? (?:l'ultima frase|gli ultimi \d+ secondi|cosa ha detto)|cosa ha (?:appena )?detto|che (?:cosa )?ha detto|non ho capito|mi sono pers[oa] (?:qualcosa|una frase)|cos'ha detto)(?: il prof(?:essore)?)?$/.test(t)) { const sec = +(t.match(/(\d+) secondi/)?.[1] || 60); return { tipo: 'ripeti', sec: Math.min(90, sec) }; }
   if (/^(?:spegni|disattiva|basta)(?: il)? ripeti$/.test(t)) return { tipo: 'spegniRipeti' };
@@ -199,8 +213,12 @@ export function interpreta(frase) {
     const r = pulisci(m[1] || ''); return { tipo: 'ripasso', esame: r ? trovaEsame(r) : null, nomeDetto: r };
   }
 
+  // il quiz a crocette: «quiz di analisi 2», «crocette», «simulazione d'esame di diritto privato», «test a crocette»
+  if ((m = t.match(/^(?:fammi |fai(?:mi)? |avvia |inizia |facciamo )?(?:un |una |il |lo |la )?(quiz(?: a crocette)?|test a crocette|domande a crocette|crocette|simulazione(?: d'esame| dell'esame| esame| dello scritto)?|simula(?: l')?esame(?: scritto)?|scritto a crocette)\b\s*(.*)$/))) {
+    const r = pulisci(m[2] || ''); return { tipo: 'crocette', esame: r ? trovaEsame(r) : null, nomeDetto: r, simulazione: /simul/.test(m[1]) };
+  }
   // interrogazione
-  if ((m = t.match(/^(?:interrogami|interroga(?:mi)?|fammi (?:delle |qualche )?domande|simula(?:mo)? (?:l'|un )?orale|orale|mettimi alla prova|quiz)\s*(.*)$/))) {
+  if ((m = t.match(/^(?:interrogami|interroga(?:mi)?|fammi (?:delle |qualche )?domande|simula(?:mo)? (?:l'|un )?orale|orale|mettimi alla prova)\s*(.*)$/))) {
     const r = pulisci(m[1] || ''); return { tipo: 'orale', esame: r ? trovaEsame(r) : null, nomeDetto: r };
   }
 
@@ -236,6 +254,11 @@ export const ESEMPI = [
   ['esame basi di dati il 15 gennaio 9 cfu', 'aggiunge l\'appello'],
   ['quanto mi serve per 110', 'la media che ti serve da qui alla fine'],
   ['se prendo 30 in analisi 2', 'simula la media'],
+  ['programma di analisi 2', 'incolla il programma: mappa degli argomenti e piano fino all\'appello'],
+  ['domande uscite di analisi 2: …', 'quelle del gruppo del corso: salgono nel piano'],
+  ['te lo spiego io: teorema di Green', 'spieghi un argomento, Lode ti dice cosa hai saltato'],
+  ['quiz di analisi 2', 'domande a crocette: allenamento, o simulazione d\'esame a tempo'],
+  ['trascrivi la videolezione di diritto privato', 'dall\'audio del computer: per chi studia da casa'],
   ['ripassa analisi 2', 'le carte di oggi'],
   ['carta: teorema di Green = …', 'una carta al volo'],
   ['esporta per anki', 'carte e definizioni in un file per Anki, un mazzo per corso'],

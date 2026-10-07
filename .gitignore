@@ -6,6 +6,7 @@ desktop/voce-mac/.pm/
 desktop/voce-mac/vendor/
 desktop/voce-mac/build/
 desktop/voce-mac/build-log.txt
+desktop/ascolta-mac/.build/
 desktop/voce-mac/prova/*.wav
 desktop/voce-mac/prova/*.aiff
 desktop/bin/

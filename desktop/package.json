@@ -60,6 +60,7 @@
       "voce.mjs",
       "voce-onnx.mjs",
       "voce-onnx-motore.mjs",
+      "ascolta.mjs",
       "progetto.mjs",
       "esegui.mjs",
       "aggiorna.mjs",
@@ -87,7 +88,8 @@
           "from": "bin",
           "to": "bin",
           "filter": [
-            "lode-voce"
+            "lode-voce",
+            "lode-ascolta"
           ]
         }
       ],
@@ -101,13 +103,14 @@
       ],
       "extendInfo": {
         "LSUIElement": true,
-        "NSMicrophoneUsageDescription": "Lode usa il microfono quando parli con lui, per «Ripeti» in aula e per trascrivere le lezioni che scegli. L'audio non resta mai sul computer."
+        "NSMicrophoneUsageDescription": "Lode usa il microfono quando parli con lui, per «Ripeti» in aula e per trascrivere le lezioni che scegli. L'audio non resta mai sul computer.",
+        "NSAudioCaptureUsageDescription": "Lode ascolta l'audio del computer solo quando trascrivi una videolezione. L'audio non resta mai sul computer: nella nota va solo il testo."
       },
       "hardenedRuntime": true,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "artifactName": "Lode-${version}-mac.${ext}",
-      "x64ArchFiles": "Contents/Resources/bin/lode-voce"
+      "x64ArchFiles": "Contents/Resources/bin/{lode-voce,lode-ascolta}"
     },
     "win": {
       "target": "nsis",

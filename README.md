@@ -34,6 +34,9 @@ Trascina un file sulla pillola, anche chiusa: si allarga e ti chiede *cosa ne fa
 ![Un PDF lasciato sulla pillola: cosa ne faccio?](docs/immagini/file.jpg)
 
 ### A casa
+- **Il programma d'esame, argomento per argomento.** Incolla il programma del corso (o trascina il PDF) e Lode lo divide in argomenti. Per ognuno guarda cosa hai davvero: appunti, ★ del prof, carte, ripasso, interrogazioni. Ne esce una mappa, da «mai toccato» a «sicuro», e un piano giorno per giorno fino all'appello. Si comincia dagli argomenti deboli e da quelli che escono di più, e ogni argomento nuovo torna dopo qualche giorno. Il giorno prima dell'esame è per il ripasso generale e, se c'è tempo, c'è un giorno cuscinetto per gli imprevisti. Il piano si rifà ogni giorno da quello che sai. Senza AI funziona; con l'AI legge meglio i programmi disordinati e ti interroga argomento per argomento.
+- **Le domande uscite agli appelli.** Quelle che girano nel gruppo del corso: incollale («domande uscite di analisi 2: …», una per riga). Lode le mette sotto il loro argomento, le conta e fa salire nel piano gli argomenti che escono di più. Nell'interrogazione, il prof ne fa di simili.
+- **«Te lo spiego io».** Spieghi un argomento con parole tue, scritte o a voce, come all'orale. Senza AI Lode controlla i punti che trova nel programma e nei tuoi appunti e ti dice quali hai saltato; con l'AI ti dà un giudizio come all'interrogazione. Spiegare con parole proprie è uno dei modi di studiare che funzionano di più, e l'esito aggiorna la mappa.
 - **Ti allena quando hai due minuti.** Digli quando hai l'esame («ho l'esame di analisi 2 il 15 gennaio»). Quando sei al computer e libero, la pillola si allunga e ti propone una cosa piccola: un gioco sulle definizioni, le carte da ripassare, le ★ da rileggere, tre domande come all'orale. Più l'esame è vicino, più spesso. Mai a lezione o nelle ore di silenzio. Impara cosa ti serve.
 - **Giochi di memoria** sulle definizioni delle tue lezioni: abbina, chi sono?, completa, flash.
 - **Ripasso a intervalli** (SM-2): le carte difficili tornano domani, le facili tra settimane.
@@ -45,6 +48,10 @@ Trascina un file sulla pillola, anche chiusa: si allarga e ti chiede *cosa ne fa
 ![La proposta a sorpresa nella pillola](docs/immagini/proposta.jpg)
 
 ![Il gioco: abbina ogni termine alla sua definizione](docs/immagini/gioco.jpg)
+
+### Per chi non frequenta (studenti lavoratori, università telematiche, lezioni registrate)
+- **Lezione dal computer.** Fai partire la videolezione dove la segui (la piattaforma del tuo ateneo o della telematica, Teams, Zoom, una registrazione) e scrivi «trascrivi la videolezione di diritto privato»: Lode ascolta l'audio che esce dal computer e la scrive nella nota della lezione, formule comprese, come in aula. Non scarica il video, non entra nella piattaforma e non chiede account: sente quello che senti tu. L'audio resta in memoria solo il tempo di trascriverlo. Sul Mac (da macOS 14.2) la prima volta il sistema chiede il permesso di registrare l'audio di sistema, non lo schermo: dal codice Lode compila da solo, in pochi secondi, il piccolo programma che lo ascolta (`desktop/ascolta-mac`). Su Windows e Linux non serve niente. Se dopo 25 secondi non sente niente, te lo dice. Le lezioni sono dei docenti: la trascrizione è per studiare tu, non condividerla se il regolamento del tuo ateneo non lo permette.
+- **Quiz a crocette.** «quiz di analisi 2», o trascina la dispensa e scegli «Quiz a crocette». Quattro risposte, una giusta, come allo scritto. Ci sono due modi: **allenamento** (10 domande, la correzione subito con la spiegazione) e **simulazione d'esame** (di solito 30 domande in 30 minuti, come alle telematiche, con il tempo che scorre, la correzione alla fine e il voto in trentesimi). Senza AI le domande vengono dalle tue carte e definizioni, e le risposte sbagliate sono quelle di altre carte del corso. Con l'AI vengono dalla dispensa: il modello deve copiare la frase che dimostra la risposta giusta, e la domanda resta solo se quella frase c'è davvero. Le sbagliate diventano carte del ripasso con un clic, e l'esito aggiorna la mappa del programma.
 
 ### Parli come parli
 Nessun comando da imparare. Scrivi, oppure tieni premuto ⌥ Spazio (Ctrl+Shift+Spazio su Windows) e parla:
@@ -411,6 +418,8 @@ node test/sync-sim/fuzz.mjs --motore test/sync-sim/motore-v2.mjs --giri 1000 --s
 | `desktop/main.mjs` | L'app Electron: finestra trasparente sempre in primo piano, scorciatoie globali, icona nella barra dei menu, chiamate all'AI |
 | `desktop/installa.mjs` | Installa Obsidian e Ollama + Qwen3.5 |
 | `desktop/voce.mjs`, `desktop/voce-mac/` | `lode-voce`: Parakeet v3 via FluidAudio |
+| `desktop/ascolta.mjs`, `desktop/ascolta-mac/` | `lode-ascolta`: l'audio del Mac per la «Lezione dal computer» (process tap di CoreAudio, macOS 14.2+) |
+| `js/programma.js`, `js/crocette.js`, `js/computer.js` | il programma d'esame (mappa e piano), il quiz a crocette, l'audio del computer |
 | `desktop/voce-onnx.mjs`, `desktop/voce-onnx-motore.mjs` | Parakeet v3 ONNX con sherpa-onnx: scelta del motore, download verificato del modello, il processo che trascrive |
 | `desktop/vault.mjs` | Crea il vault, lo registra in Obsidian, rilegge le lezioni quando cambiano |
 | `desktop/progetto.mjs`, `desktop/esegui.mjs` | Le cartelle seguite: versioni, diff, impronta, e le prove eseguite solo dopo la conferma |

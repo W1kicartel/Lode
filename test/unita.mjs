@@ -333,7 +333,7 @@ D di (∂Q/∂x − ∂P/∂y).`;
     && ['sherpa-onnx-node', ...addon].every(a => lock.packages['node_modules/' + a]?.version === V && lock.packages['node_modules/' + a]?.resolved?.startsWith('https://registry.npmjs.org/')), JSON.stringify(addon.map(a => lock.packages['node_modules/' + a]?.version)));
   prova('voce: nessuno script d\'installazione nei pacchetti di sherpa-onnx', ['sherpa-onnx-node', ...addon].every(a => !lock.packages['node_modules/' + a]?.hasInstallScript));
   const B = pkg.build;
-  prova('voce: i due moduli nel pacchetto, l\'addon fuori dall\'asar, il Mac universale senza sherpa', ['voce-onnx.mjs', 'voce-onnx-motore.mjs'].every(f => B.files.includes(f)) && ['win', 'linux'].every(s => B.asarUnpack?.includes(`node_modules/sherpa-onnx-${s}-*/**`)) && B.files.includes('!node_modules/sherpa-onnx-darwin-*{,/**}') && !B.mac.files && B.mac.x64ArchFiles === 'Contents/Resources/bin/lode-voce');
+  prova('voce: i due moduli nel pacchetto, l\'addon fuori dall\'asar, il Mac universale senza sherpa (lode-voce e lode-ascolta già universali)', ['voce-onnx.mjs', 'voce-onnx-motore.mjs'].every(f => B.files.includes(f)) && ['win', 'linux'].every(s => B.asarUnpack?.includes(`node_modules/sherpa-onnx-${s}-*/**`)) && B.files.includes('!node_modules/sherpa-onnx-darwin-*{,/**}') && !B.mac.files && B.mac.x64ArchFiles === 'Contents/Resources/bin/{lode-voce,lode-ascolta}');
   // nel pacchetto ci sono tutti i moduli che il main importa (a cascata): nella 0.5.0 mancavano sincronizza.mjs e sync/,
   // e l'app installata si chiudeva all'avvio. vendor.mjs si importa solo in sviluppo (!app.isPackaged)
   {
@@ -557,6 +557,115 @@ D di (∂Q/∂x − ∂P/∂y).`;
     for (const [k, v] of Object.entries(env)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
     try { rmSync(T, { recursive: true, force: true }); } catch { }
   }
+}
+
+// il programma d'esame (js/programma.js): leggere il programma, abbinare le domande uscite, la mappa e il piano
+{
+  D.sostituisci(D.esempio());
+  const P = await import('../js/programma.js');
+  prova('programma: comando', c('programma di analisi 2')?.tipo === 'programma' && c('programma di analisi 2').esame?.nome === 'Analisi 2' && c('programma')?.esame === null);
+  prova('programma: a voce', c('Programma di analisi due.')?.esame?.nome === 'Analisi 2');
+  prova('programma: incollato su più righe', c('programma analisi 2:\n1. Limiti\n2. Derivate')?.testo === '1. Limiti\n2. Derivate');
+  prova('programma incollato con «CFU» non è il libretto', c('programma di analisi 2:\nANALISI 2 (9 CFU)\n1. Limiti')?.tipo === 'programma');
+  prova('programma di oggi resta il piano', c('programma di oggi')?.tipo === 'oggi');
+  prova('domande uscite', c("domande uscite di analisi 2: teorema di Green?")?.tipo === 'domande' && c("domande d'esame analisi 2\nGreen?").testo === 'Green?');
+  const SCH = `ANALISI MATEMATICA 2 (9 CFU)
+Obiettivi
+Fornire gli strumenti del calcolo differenziale in più variabili.
+Programma
+1. Successioni e serie di funzioni: convergenza puntuale e uniforme; serie di potenze; serie di Taylor.
+2. Funzioni di più variabili: limiti, continuità, derivate parziali, gradiente, differenziabilità, teorema di Schwarz.
+3. Massimi e minimi: punti stazionari, matrice hessiana, punti di sella, moltiplicatori di Lagrange.
+4. Integrali doppi e tripli: domini normali, cambiamento di variabili, coordinate polari.
+5. Curve e integrali di linea; forme differenziali esatte e chiuse; teorema di Green.
+6. Equazioni differenziali ordinarie (10 ore): problema di Cauchy, equazioni lineari del secondo ordine.
+Testi consigliati
+Bramanti, Pagani, Salsa - Analisi matematica 2`;
+  const arg = P.leggiProgramma(SCH);
+  prova('programma: argomenti numerati', arg.length === 6 && arg[0].t === 'Successioni e serie di funzioni' && arg[2].sotto.includes('matrice hessiana'), JSON.stringify(arg.map(a => a.t)));
+  prova('programma: «;» senza due punti', arg[4].t === 'Curve e integrali di linea' && arg[4].sotto.includes('teorema di Green'));
+  prova('programma: niente ore né testi', arg[5].t === 'Equazioni differenziali ordinarie' && !arg.some(a => /Bramanti|Obiettivi|Fornire/.test(a.t)));
+  const par = P.leggiProgramma('Il corso tratta: fonti del diritto; la Costituzione italiana; il Parlamento e il procedimento legislativo; il Governo; la Corte costituzionale.');
+  prova('programma: un paragrafo', par.length === 5 && par[0].t === 'Fonti del diritto', JSON.stringify(par.map(a => a.t)));
+  const dom = P.leggiDomande('1. Enunciare e dimostrare il teorema di Green\n2) Come si classificano i punti stazionari con la matrice hessiana?\n- enunciare e dimostrare il teorema di Green\nok\nParlami della Juventus');
+  prova('domande: numeri tolti, doppioni contati', dom.length === 3 && dom[0].n === 2 && !dom.some(d => d.t === 'ok'), JSON.stringify(dom));
+  const e = D.trovaEsame('analisi 2');
+  P.impostaProgramma(e, arg, { fonte: 'prova' });
+  const r = P.aggiungiDomande(e, dom.map(d => d.t), { conta: dom.map(d => d.n) });
+  const green = e.programma.argomenti[4], massimi = e.programma.argomenti[2];
+  prova('domande: abbinate all\'argomento', r.messe === 2 && r.senza === 1 && green.domande[0].n === 2 && massimi.domande.length === 1 && e.programma.senza[0].t === 'Parlami della Juventus');
+  const cop = P.copertura(e), per = id => cop.find(x => x.a.id === id);
+  prova('mappa: appunti e carte dall\'esempio', per(green.id).stato === 1 && per(green.id).stelle === 1 && per(e.programma.argomenti[0].id).stato === 0, JSON.stringify(cop.map(x => [x.a.t, x.stato])));
+  const pi = P.piano(e, cop), tutti = pi.giorni.flatMap(g => [...g.studia, ...g.ripassa]);
+  prova('piano: fino al giorno prima dell\'appello', pi.giorni.length === D.giorniTra(D.oggi(), e.data) && pi.giorni.at(-1).tipo === 'generale' && pi.giorni.some(g => g.tipo === 'cuscinetto'));
+  prova('piano: ogni argomento non sicuro c\'è', cop.filter(x => x.stato < 3).every(x => tutti.includes(x.a.id)));
+  prova('piano: prima il più urgente', pi.giorni[0].studia.includes(green.id) || pi.giorni[0].studia.includes(massimi.id), JSON.stringify(pi.giorni[0]));
+  const k = pi.giorni.findIndex(g => g.studia.includes(green.id)), j = pi.giorni.findIndex((g, i) => i > k && g.ripassa.includes(green.id));
+  prova('piano: il ripasso dopo qualche giorno', k >= 0 && j - k >= 2, `${k} ${j}`);
+  prova('piano: niente giorni vuoti di studio', pi.giorni.filter(g => g.tipo === 'studio').every(g => g.studia.length + g.ripassa.length > 0));
+  P.registraEsito(e, green.id, 'giusta');
+  prova('esito: giusta → sicuro', P.copertura(e).find(x => x.a.id === green.id).stato === 3);
+  P.registraEsito(e, green.id, 'sbagliata');
+  prova('esito: sbagliata → da rivedere', P.copertura(e).find(x => x.a.id === green.id).debole === true);
+  const prima = green.id; P.impostaProgramma(e, [{ t: 'Curve e integrali di linea', sotto: [] }, { t: 'Analisi complessa', sotto: [] }]);
+  prova('programma nuovo: tiene domande ed esiti', e.programma.argomenti[0].id === prima && e.programma.argomenti[0].esiti.length === 2 && e.programma.argomenti[0].domande.length === 1);
+  prova('programma nuovo: le domande degli argomenti tolti non si perdono', e.programma.argomenti.flatMap(a => a.domande).length + e.programma.senza.length >= 3);
+  prova('abbina: argomento dall\'orale', P.abbina('Green: enunciato e dimostrazione', P.leggiProgramma(SCH))?.t === 'Curve e integrali di linea' && P.abbina('la Juventus', P.leggiProgramma(SCH)) === null);
+  prova('materiale dell\'argomento', /Domande uscite/.test(P.materialeArgomento(e, e.programma.argomenti[0])) && /Teorema di Green/.test(P.materialeArgomento(e, e.programma.argomenti[0])));
+  prova('spiego: comando', c('te lo spiego io: green')?.tipo === 'spiego' && c('te lo spiego io: green').q === 'green' && c('Spiego le serie di potenze.')?.q === 'le serie di potenze' && c('spiegami green')?.tipo !== 'spiego');
+  {
+    const e2 = D.trovaEsame('analisi 2'); P.impostaProgramma(e2, P.leggiProgramma(SCH));
+    const mm = e2.programma.argomenti.find(a => a.t === 'Massimi e minimi');
+    const punti = P.puntiDi(e2, mm).map(p => p.t);
+    prova('spiego: punti dal programma e dagli appunti', punti.includes('matrice hessiana') && punti.includes('Punto di sella'), JSON.stringify(punti));
+    const buona = P.controllaSpiegazione(e2, mm, 'Si cercano i punti stazionari, dove il gradiente si annulla; poi la matrice hessiana: se è indefinita è un punto di sella. Con i vincoli si usano i moltiplicatori di Lagrange. Il punto stazionario è dove il gradiente è zero.');
+    const scarsa = P.controllaSpiegazione(e2, mm, 'Boh, si deriva e si vede cosa succede alla funzione in quel punto.');
+    prova('spiego: buona spiegazione → giusta', buona.esito === 'giusta', JSON.stringify(buona.punti.map(p => [p.t, p.detto])));
+    prova('spiego: spiegazione vaga → sbagliata', scarsa.esito === 'sbagliata', JSON.stringify(scarsa));
+    prova('spiego: tre parole → non so', P.controllaSpiegazione(e2, mm, 'non lo so').esito === 'non so');
+  }
+  const vicino = { ...e, data: D.piuGiorni(D.oggi(), 1) }, pv = P.piano(vicino, P.copertura(vicino));
+  prova('piano: esame domani → solo ripasso generale', pv.giorni.length === 1 && pv.giorni[0].ripassa.length > 0 && !pv.giorni[0].studia.length);
+  const bk = JSON.parse(JSON.stringify(D.esporta()));
+  prova('backup col programma valido', D.backupValido(bk));
+  D.sostituisci(D.esempio());
+}
+
+// il quiz a crocette (js/crocette.js)
+{
+  D.sostituisci(D.esempio());
+  const Q = await import('../js/crocette.js'), P = await import('../js/programma.js');
+  prova('crocette: comandi', c('quiz di analisi 2')?.tipo === 'crocette' && c('quiz di analisi 2').esame?.nome === 'Analisi 2' && c("simulazione d'esame di analisi 2")?.simulazione === true && c('crocette')?.tipo === 'crocette' && c('interrogami su analisi 2')?.tipo === 'orale');
+  let seme = 7; const caso = () => (seme = (seme * 16807) % 2147483647) / 2147483647;
+  const e = D.trovaEsame('analisi 2'), mat = P.materialeDi(e);
+  const qs = Q.daMateriale(mat, { n: 10, caso });
+  prova('crocette senza AI: dalle carte e dalle definizioni', qs.length === 10 && qs.every(q => q.opzioni.length === 4 && new Set(q.opzioni).size === 4 && q.giusta >= 0 && q.giusta < 4), JSON.stringify(qs[0]));
+  prova('crocette: la giusta è davvero la risposta della carta', qs.filter(q => q.fonte === 'carta').every(q => mat.carte.some(cc => cc.fronte === q.domanda && cc.retro.startsWith(q.opzioni[q.giusta].replace(/…$/, '')))));
+  prova('crocette: la giusta non è sempre la prima', new Set(qs.map(q => q.giusta)).size >= 2);
+  prova('crocette: poco materiale, niente quiz', Q.daMateriale({ carte: mat.carte.slice(0, 3), definizioni: [] }).length === 0);
+  const M = 'Il teorema di Green lega l\'integrale di linea lungo il bordo di un dominio all\'integrale doppio sul dominio stesso. La matrice hessiana è la matrice delle derivate seconde parziali.';
+  const grezze = [
+    { domanda: 'Cosa lega il teorema di Green?', opzioni: ['Integrale di linea sul bordo e integrale doppio sul dominio', 'Due integrali tripli', 'Derivate prime e seconde', 'Serie e successioni'], giusta: 0, citazione: 'lega l\'integrale di linea lungo il bordo di un dominio all\'integrale doppio', spiegazione: 'È l\'enunciato.' },
+    { domanda: 'Cos\'è la hessiana?', opzioni: ['A', 'B', 'C', 'Tutte le precedenti'], giusta: 1, citazione: 'la matrice delle derivate seconde parziali', spiegazione: '' },
+    { domanda: 'Inventata', opzioni: ['a', 'b', 'c', 'd'], giusta: 2, citazione: 'una frase che nel materiale non compare proprio per niente', spiegazione: '' },
+    { domanda: 'Doppie', opzioni: ['x', 'x', 'y', 'z'], giusta: 0, citazione: 'La matrice hessiana è la matrice delle derivate seconde parziali', spiegazione: '' },
+  ];
+  const v = Q.valida(grezze, M, caso);
+  prova('crocette con AI: solo quelle dimostrate dal materiale', v.domande.length === 1 && v.scartate === 3 && v.domande[0].opzioni[v.domande[0].giusta].startsWith('Integrale di linea'), JSON.stringify(v));
+  prova('crocette: citazione nel materiale', Q.citazioneNelMateriale('LEGA L\'integrale di linea, lungo il bordo', M) && !Q.citazioneNelMateriale('integrale', M));
+  prova('crocette: voto in trentesimi', Q.voto(27, 30).voto === 27 && Q.voto(15, 30).superato === false && Q.voto(18, 30).superato === true);
+  const lungo = Array.from({ length: 60 }, (_, i) => `Riga ${i} del materiale con un po' di testo per arrivare alla lunghezza giusta.`).join('\n');
+  const pz = Q.pezzi(lungo, 3);
+  prova('crocette: il materiale in pezzi', pz.length === 3 && pz.every(p => p.length > 300) && pz[2].includes('Riga 59'));
+  D.sostituisci(D.esempio());
+}
+
+// «Lezione dal computer»: i comandi
+{
+  const v = c('trascrivi la videolezione di diritto privato');
+  prova('computer: videolezione', v?.tipo === 'trascrivi' && v.sorgente === 'computer' && v.corso === 'diritto privato', JSON.stringify(v));
+  prova('computer: altre frasi', c('lezione dal computer')?.sorgente === 'computer' && c('Trascrivi l\'audio del computer.')?.sorgente === 'computer' && c('ascolta il pc')?.sorgente === 'computer' && c('trascrivi la lezione online di analisi 2')?.corso === 'analisi 2');
+  prova('computer: la lezione in aula resta dal microfono', c('trascrivi la lezione')?.tipo === 'trascrivi' && !c('trascrivi la lezione').sorgente);
 }
 console.log(`${ok} prove passate, ${ko} fallite`);
 process.exit(ko ? 1 : 0);

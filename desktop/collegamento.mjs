@@ -10,6 +10,7 @@ import { existsSync, mkdirSync, writeFileSync, chmodSync, rmSync, copyFileSync, 
 import { dirname, join } from 'node:path';
 
 const ID = 'it.lode.sorgente';
+const AUDIO_COMPUTER = 'Lode ascolta l\'audio del computer solo quando trascrivi una videolezione. L\'audio non resta mai sul computer: nella nota va solo il testo.';
 const MICROFONO = 'Lode usa il microfono quando parli con lui, per «Ripeti» in aula e per trascrivere le lezioni che scegli. L\'audio non resta mai sul computer.';
 
 // d = { piattaforma, home, appData, scrivania, eseguibile, cartella, argomenti: [] }
@@ -42,6 +43,7 @@ export function fileMac(d) {
   <key>CFBundleShortVersionString</key><string>${xml(d.versione || '0')}</string>
   <key>LSUIElement</key><true/>
   <key>NSMicrophoneUsageDescription</key><string>${xml(MICROFONO)}</string>
+  <key>NSAudioCaptureUsageDescription</key><string>${xml(AUDIO_COMPUTER)}</string>
 </dict>
 </plist>
 `;
@@ -106,7 +108,9 @@ export function haIcona(d, shell) { return percorsi(d).icone.some(f => nostra(d,
 
 // l'icona punta già a questa cartella?
 function puntaQuiFile(d, f, shell) {
-  if (d.piattaforma === 'darwin') return leggi(join(f, 'Contents', 'MacOS', 'Lode')).includes(sh(d.cartella));
+  // sul Mac anche l'Info.plist dev'essere quello di adesso: senza NSAudioCaptureUsageDescription (icone create prima della
+  // «Lezione dal computer») macOS dà l'audio del sistema muto, senza chiedere niente
+  if (d.piattaforma === 'darwin') return leggi(join(f, 'Contents', 'MacOS', 'Lode')).includes(sh(d.cartella)) && leggi(join(f, 'Contents', 'Info.plist')).includes('NSAudioCaptureUsageDescription');
   if (d.piattaforma === 'win32') { try { const l = shell.readShortcutLink(f), c = collegamentoWin(d); return l.target === c.target && l.args === c.args; } catch { return false; } }
   return leggi(f).includes(dq(d.cartella));
 }

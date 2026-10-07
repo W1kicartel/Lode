@@ -412,8 +412,32 @@ const SCHEMA_VERIFICA = { type: 'object', additionalProperties: false, required:
 const SCHEMA_GIUDIZIO = { type: 'object', additionalProperties: false, required: ['esito', 'giudizio', 'mancava'], properties: {
   esito: { type: 'string', enum: ['giusta', 'parziale', 'sbagliata', 'fuori tema', 'non so'] }, giudizio: { type: 'string' }, mancava: { type: 'string' } } };
 const materialeOrale = m => m ? `Materiale dello studente (basati su questo):\n${String(m).slice(0, 12000)}` : `Dati dello studente:\n${contesto()}`;
-export async function domandaOrale({ nome, materiale, fatte = [] }) {
-  const r = await strutturato(`Sei un docente universitario italiano all'esame orale di «${nome}». Fai UNA sola domanda d'orale, come la farebbe un prof: chiara, su un concetto importante del materiale qui sopra, a cui si risponde a voce in 3-4 frasi.${fatte.length ? ` Non ripetere questi argomenti, già chiesti: ${fatte.join('; ')}.` : ' È la prima domanda: un argomento centrale del corso.'}
+// il programma d'esame (js/programma.js) quando il testo è lungo o disordinato: gli argomenti in ordine, con le loro voci
+const SCHEMA_PROGRAMMA = { type: 'object', additionalProperties: false, required: ['argomenti'], properties: {
+  argomenti: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['titolo', 'voci'], properties: { titolo: { type: 'string' }, voci: { type: 'array', items: { type: 'string' } } } } } } };
+export async function leggiProgramma({ nome, testo }) {
+  const r = await strutturato(`Qui sopra c'è il programma (o la scheda) del corso «${nome}». Elenca gli argomenti del programma d'esame, nell'ordine in cui compaiono:
+- titolo: da 2 a 8 parole, con le parole del programma;
+- voci: i sotto-argomenti che il programma scrive per quell'argomento (anche nessuno), corti.
+Da 4 a 30 argomenti. Solo quello che c'è scritto nel programma: niente testi consigliati, modalità d'esame, obiettivi, orari, prerequisiti.`, String(testo).slice(0, 40000), SCHEMA_PROGRAMMA);
+  return (r.argomenti || []).map(a => ({ t: String(a.titolo || '').trim(), sotto: (a.voci || []).map(x => String(x).trim()).filter(Boolean).slice(0, 12) })).filter(a => a.t).slice(0, 40);
+}
+// il quiz a crocette (js/crocette.js): il modello scrive le domande, il codice tiene solo quelle che il materiale dimostra
+const SCHEMA_CROCETTE = { type: 'object', additionalProperties: false, required: ['domande'], properties: {
+  domande: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['domanda', 'opzioni', 'giusta', 'citazione', 'spiegazione'], properties: {
+    domanda: { type: 'string' }, opzioni: { type: 'array', items: { type: 'string' } }, giusta: { type: 'integer' }, citazione: { type: 'string' }, spiegazione: { type: 'string' } } } } } };
+export async function crocette({ nome, materiale, n = 10, fatte = [] }) {
+  const r = await strutturato(`Sei il docente di «${nome}» e scrivi lo scritto a crocette. Dal materiale qui sopra crea ${n} domande a risposta multipla, in italiano:
+- domanda: chiara, su un concetto del materiale, che si risolve in meno di un minuto;
+- opzioni: esattamente 4, una sola giusta; le sbagliate plausibili (errori tipici di chi ha studiato male) ma sicuramente false secondo il materiale; lunghezze simili; mai «tutte le precedenti» o «nessuna delle precedenti»;
+- giusta: la posizione (0, 1, 2 o 3) della risposta giusta in opzioni;
+- citazione: copia IDENTICA dal materiale la frase che dimostra la risposta giusta (almeno 8 parole di fila);
+- spiegazione: una frase che dice perché è giusta.
+Domande su punti diversi del materiale.${fatte.length ? ` Non ripetere queste, già fatte: ${fatte.slice(-30).join(' | ')}.` : ''}`, `Materiale:\n${String(materiale).slice(0, 24000)}`, SCHEMA_CROCETTE);
+  return r.domande || [];
+}
+export async function domandaOrale({ nome, materiale, fatte = [], argomento = '' }) {
+  const r = await strutturato(`Sei un docente universitario italiano all'esame orale di «${nome}». Fai UNA sola domanda d'orale, come la farebbe un prof: chiara, su un concetto importante del materiale qui sopra, a cui si risponde a voce in 3-4 frasi.${argomento ? ` La domanda deve essere sull'argomento del programma «${argomento}». Se qui sopra ci sono domande uscite agli appelli, fanne una come quelle, con parole tue.` : ''}${fatte.length ? ` Non ripetere ${argomento ? 'domande già fatte' : 'questi argomenti, già chiesti'}: ${fatte.join('; ')}.` : argomento ? '' : ' È la prima domanda: un argomento centrale del corso.'}
 Rispondi solo con la domanda (massimo 30 parole, dai del tu) e l'argomento in 2-4 parole. Niente saluti, niente giudizi.`, materialeOrale(materiale), SCHEMA_DOMANDA, 'chat');
   return { domanda: String(r.domanda || '').trim(), argomento: String(r.argomento || '').trim() };
 }

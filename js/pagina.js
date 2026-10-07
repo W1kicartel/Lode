@@ -4,6 +4,7 @@ import { D, VUOTO, backupValido, aggiungiCarta, aggiungiEsame, cfuFatti, dataBre
 import { azioni, TASTI } from './lode.js';
 import { conta, tween } from './motore.js';
 import * as AI from './ai.js';
+import * as PG from './programma.js';
 import * as F from './focus.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -48,6 +49,13 @@ export function disegna() {
     <span><button data-a="importa">Importa un backup</button> · <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a></span></footer>`;
   anima(main, primaVolta); primaVolta = false;
 }
+// il programma d'esame sulla carta dell'esame: quanto è pronto e cosa c'è oggi nel piano
+function rigaProgramma(e) {
+  const o = PG.oggiDi(e);
+  if (!o) return `<button class="programma vuoto" data-a="programma" data-e="${esc(e.id)}">+ Programma d'esame</button>`;
+  const oggiT = o.tipo === 'cuscinetto' ? 'giorno cuscinetto' : o.tipo === 'generale' ? 'ripasso generale' : [...o.studia, ...o.ripassa].map(c => c.a.t).join(' · ') || 'niente di nuovo';
+  return `<button class="programma" data-a="programma" data-e="${esc(e.id)}"><span class="cop">${o.cop.map(c => `<i class="s${c.stato}"></i>`).join('')}</span><span class="t"><b>${esc(Math.round(PG.pronto(o.cop) * 100))}% del programma</b> · oggi: ${esc(oggiT)}</span></button>`;
+}
 function cartaEsame(e) {
   const pi = piano(e), g = e.data ? giorniTra(oggi(), e.data) : null, nc = D.carte.filter(c => c.esameId === e.id).length, nd = daRipassare(e.id).length;
   return `<article class="esame${g != null && g <= 7 ? ' vicino' : ''}">
@@ -55,6 +63,7 @@ function cartaEsame(e) {
       ${g != null ? `<div class="g">${g === 0 ? 'oggi' : esc(g)}${g ? `<small>${g === 1 ? 'GIORNO' : 'GIORNI'}</small>` : ''}</div>` : ''}</div>
     <div class="avanza"><div class="riga"><span>${pi.fatte < .05 ? '0' : esc(num(pi.fatte, pi.fatte < 10 ? 1 : 0))} di ${esc(pi.tot)} h studiate</span><span>${e.data ? (pi.oggi >= .1 ? `<b>${esc(num(pi.oggi))} h</b> oggi` : 'oggi in pari') : ''}</span></div><div class="q"><i style="transform:scaleX(0)" data-x="${esc(pi.quota)}"></i></div></div>
     <div class="az"><button class="btn small primary" data-a="focus" data-e="${esc(e.id)}">Focus</button><button class="btn small" data-a="ripassaE" data-e="${esc(e.id)}"${nc ? '' : ' disabled'}>Ripassa${nd ? ' ' + nd : ''}</button><button class="btn small" data-a="interroga" data-e="${esc(e.id)}">Interrogami</button></div>
+    ${rigaProgramma(e)}
     <button class="modifica" data-a="modifica" data-e="${esc(e.id)}">Modifica · Segna voto</button>
   </article>`;
 }
@@ -157,7 +166,7 @@ export function collega() {
     ({
       impostazioni: finestraImpostazioni, esporta: scarica, importa, nuovoEsame: () => finestraEsame(null), modifica: () => finestraEsame(id),
       nuovoVoto: () => azioni.scrivi('ho preso '), esempio: () => dispatchEvent(new CustomEvent('lode:esempio')),
-      focus: () => azioni.focus(id), ripassaE: () => azioni.ripassa(id || null), ripassa: () => azioni.ripassa(null), interroga: () => azioni.interroga(id), file: () => azioni.file(),
+      focus: () => azioni.focus(id), ripassaE: () => azioni.ripassa(id || null), ripassa: () => azioni.ripassa(null), interroga: () => azioni.interroga(id), programma: () => azioni.programma(id), file: () => azioni.file(),
     })[b.dataset.a]?.();
   });
   addEventListener('lode:esempio', () => {
