@@ -14,7 +14,7 @@ export const LINGUE = {
   es: { nome: 'Español', locale: 'es-ES' },
   fr: { nome: 'Français', locale: 'fr-FR' },
   de: { nome: 'Deutsch', locale: 'de-DE' },
-  pt: { nome: 'Português', locale: 'pt-PT' },
+  pt: { nome: 'Português', locale: 'pt-BR' },   // il portoghese di Lode è quello del Brasile (docs/LINGUE.md)
 };
 const CHIAVE = 'lode:lingua';
 

@@ -127,6 +127,7 @@ prova('sw.js e indice.js: l\'area impostazioni e tutti i riconoscitori', ind.inc
 
 /* ---------- 4. il sistema dei voti nei dati ---------- */
 prova('VUOTO: profilo.sistema è l\'Italia', Dati.VUOTO().profilo.sistema === 'it');
+prova('il portoghese di Lode è quello del Brasile (date e numeri pt-BR)', L.LINGUE.pt.locale === 'pt-BR');
 prova('predefinito: il portoghese va al Brasile, l\'inglese al Regno Unito', S.predefinito('pt') === 'br' && S.predefinito('en') === 'uk' && S.predefinito('it') === 'it' && S.predefinito('xx') === 'it');
 const backup = s => Dati.backupValido({ v: 1, profilo: { nome: 'Ada', corso: '', cfuTotali: 180, lode: 30, ...(s === undefined ? {} : { sistema: s }) }, esami: [] });
 prova('backup vecchio senza sistema: valido', backup(undefined));
