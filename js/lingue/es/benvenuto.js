@@ -61,7 +61,7 @@ export default {
   'benvenuto.scarico-solo-voce': 'Todavía estoy descargando: {cosa}. La voz vuelve a la barra en cuanto abras Lode.',
   // configuración rápida
   'benvenuto.veloce-titolo': '{nome}, ¿quieres la configuración rápida?',
-  'benvenuto.veloce-sotto': 'Cuéntame universidad, exámenes y horarios: desde mañana Lode sabe cuándo estás en clase, cuánto te falta para terminar la carrera y qué repasar antes de cada examen.',
+  'benvenuto.veloce-sotto': 'Háblame de tu universidad, tus exámenes y tus horarios: desde mañana Lode sabe cuándo estás en clase, cuánto te falta para terminar la carrera y qué repasar antes de cada examen.',
   'benvenuto.veloce-lista': ['Universidad y carrera', 'Tu expediente, pegado desde el portal de la universidad o escrito a mano', 'Los exámenes que te quedan, con las fechas', 'El horario de clases, también desde el calendario de la universidad (.ics)', 'Cómo y cuándo estudias'],
   'benvenuto.veloce-nota': 'Todo opcional, todo se puede cambiar después. Nada va a internet.',
   'benvenuto.facciamolo': 'Vamos',

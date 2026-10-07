@@ -2,7 +2,7 @@
 export default {
   'stampa.titolo': '¿Qué imprime?',
   'stampa.anteprima': '¿Qué imprime {cosa}?',
-  'stampa.risposta-assente': 'Esta respuesta no está.',
+  'stampa.risposta-assente': 'Esa respuesta no está entre las opciones.',
   'stampa.hai-scritto-altro': 'Escribiste `{uscita}`: no es lo que imprime.',
   'stampa.nessuna-risposta': 'Sin respuesta.',
   'stampa.aria-codice': 'Código {lingua}',

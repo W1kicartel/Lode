@@ -33,7 +33,7 @@ export default {
   'progetto.valutato': 'Proyecto evaluado (entrega)',
   'progetto.valutato-spiega': 'Te digo dónde mirar, pero nada de correcciones listas',
   'progetto.no-diario': 'No escribir el diario de este proyecto',
-  'progetto.no-diario-spiega': 'En el vault no acaban nombres de archivos ni de funciones',
+  'progetto.no-diario-spiega': 'Al vault no llegan nombres de archivos ni de funciones',
   'progetto.n-file': { one: '{n} archivo', other: '{n} archivos' },
   'progetto.segui': 'Seguir',
   'progetto.annulla': 'Cancelar',

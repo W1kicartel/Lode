@@ -69,5 +69,5 @@ export default {
   'vault.corso-lezioni': 'Clases: {elenco}',
   'vault.orario-voce': '{giorni} {inizio}–{fine}',
   'vault.orario-voce-aula': '{giorni} {inizio}–{fine} aula {aula}',
-  'vault.lezioni-vuoto': 'Ninguna todavía: la primera nace cuando apuntas algo en clase.',
+  'vault.lezioni-vuoto': 'Ninguna todavía: la primera aparece cuando apuntas algo en clase.',
 };
