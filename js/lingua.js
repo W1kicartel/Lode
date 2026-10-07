@@ -20,7 +20,9 @@ const CHIAVE = 'lode:lingua';
 
 // la lingua scelta: quella salvata (nell'app la passa il processo principale), poi quella del sistema, poi l'italiano
 export function scelta() {
-  if (typeof window === 'undefined') return (typeof process !== 'undefined' && LINGUE[process.env?.LODE_LINGUA] && process.env.LODE_LINGUA) || 'it';   // prove in node: italiano, salvo LODE_LINGUA
+  // in node (prove, processo principale) italiano, salvo LODE_LINGUA: anche quando una prova finge window, perché da Node 21
+  // navigator.language esiste (en-US). Nella finestra dell'app (sandbox, contextIsolation) e nel browser process non c'è
+  if (typeof window === 'undefined' || (typeof process !== 'undefined' && process.versions?.node)) return (typeof process !== 'undefined' && LINGUE[process.env?.LODE_LINGUA] && process.env.LODE_LINGUA) || 'it';
   let s = null;
   try { s = (typeof window !== 'undefined' && window.lodeDesktop?.lingua) || localStorage.getItem(CHIAVE); } catch { }
   if (s && LINGUE[s]) return s;
