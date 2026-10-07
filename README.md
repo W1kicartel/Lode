@@ -1,365 +1,393 @@
+**English** · [Italiano](README.it.md)
+
 # Lode
 
-**L'assistente di studio per l'università che vive in cima allo schermo. Open source, gratis, in italiano. I tuoi appunti restano sul tuo computer.**
+**The study assistant for university that lives at the top of your screen. Open source, free, in six languages. Your notes stay on your computer.**
 
-Lode è una piccola pillola di vetro nero in cima allo schermo. Mentre sei a lezione e prendi appunti, ascolta per te e ti fa recuperare quello che ti sei perso. A casa ti allena sulle cose che il prof ha detto davvero. Tutto finisce in un vault [Obsidian](https://obsidian.md) che è tuo: file Markdown che puoi leggere, correggere e portarti dietro.
+Lode is a small pill of black glass at the top of your screen. While you're in class taking notes, it listens for you and helps you catch what you missed. At home it drills you on the things your professor actually said. Everything ends up in an [Obsidian](https://obsidian.md) vault that belongs to you: Markdown files you can read, fix and take with you.
 
-![«Ripeti»: gli ultimi 60 secondi del prof, con l'ultima frase in evidenza](docs/immagini/ripeti.jpg)
+![“Repeat”: the professor's last 60 seconds, with the last sentence highlighted](docs/immagini/ripeti.jpg)
 
-> **Stato: beta.** È fatto per **Windows, macOS e Linux**, ma finora è stato provato a fondo solo su un Mac con chip Apple. Il codice per Windows c'è tutto (installazione di Obsidian e dell'AI, scorciatoie, voce), però non l'abbiamo ancora provato su un PC vero: se lo provi, [raccontaci com'è andata](https://github.com/W1kicartel/Lode/issues/new/choose) (prima togli dal messaggio il tuo nome, le chiavi e i percorsi: il modulo te lo ricorda).
+> **Status: beta.** It's made for **Windows, macOS and Linux**, but so far it has only been tested thoroughly on a Mac with Apple silicon. All the Windows code is there (installing Obsidian and the AI, shortcuts, voice), but we haven't tried it on a real PC yet: if you do, [tell us how it went](https://github.com/W1kicartel/Lode/issues/new/choose) (first remove your name, keys and file paths from the message: the form reminds you).
 
-**[Installa Lode](#installa)** su Windows, Mac o Linux: una volta sola, dal terminale, copiando pochi comandi. Poi si apre dalla sua icona come le altre app e parte da sola all'accensione.
-
----
-
-## Cosa fa
-
-### In aula
-- **Ripeti** (⌃⌥P). Ti sei perso una frase? Lode tiene in memoria l'ultimo minuto e mezzo, solo in RAM e mai su disco, e su richiesta ti scrive gli ultimi 60 secondi, con l'ultima frase del prof in evidenza. Un clic e va negli appunti o tra le cose «★ da esame». A lezione si accende da solo, se l'hai attivato una volta; se lo accendi tu (con ⌃⌥P o dal pannello) fuori dall'orario resta acceso al massimo 3 ore. Quando il microfono è acceso, la pillola lo segnala con un pallino.
-- **Trascrive la lezione intera** (⌃⌥R) nella nota della lezione in Obsidian, a pezzi di 20-30 secondi: se il computer si spegne, quello che c'era è già salvato.
-- **Le formule dette a voce diventano formule.** «l'integrale da zero a uno di x al quadrato in dx» diventa $\int_{0}^{1} x^{2} \, dx$, e lo stesso vale per limiti, derivate, sommatorie, frazioni e lettere greche.
-- **Cattura veloce** senza lasciare gli appunti: ⌃⌥S **★ Da esame**, ⌃⌥D **Definizione**, ⌃⌥Q **Domanda per il prof**.
-- **Sa quando sei a lezione.** Scrivi una volta «lezione analisi 2 lunedì e mercoledì 9-11 aula 7» e la pillola mostra `● Analisi 2 · fine tra 23 min · ★2`.
-
-![La lezione trascritta nella nota, con le formule](docs/immagini/trascrizione.jpg)
-
-### Con i file
-Trascina un file sulla pillola, anche chiusa: si allarga e ti chiede *cosa ne faccio?*
-
-- **PDF e slide (`.pptx`):** carte del ripasso, riassunto in Obsidian, definizioni per i giochi, interrogazione, allegato alla lezione.
-- **Foto della lavagna:** trascritta in appunti, formule comprese.
-- **Registrazioni audio:** trascritte nella lezione.
-- **Appunti (`.md`, `.txt`, `.docx`), sbobine dei compagni e mazzi di Anki.**
-
-![Un PDF lasciato sulla pillola: cosa ne faccio?](docs/immagini/file.jpg)
-
-### A casa
-- **Il programma d'esame, argomento per argomento.** Incolla il programma del corso (o trascina il PDF) e Lode lo divide in argomenti. Per ognuno guarda cosa hai davvero: appunti, ★ del prof, carte, ripasso, interrogazioni. Ne esce una mappa, da «mai toccato» a «sicuro», e un piano giorno per giorno fino all'appello. Si comincia dagli argomenti deboli e da quelli che escono di più, e ogni argomento nuovo torna dopo qualche giorno. Il giorno prima dell'esame è per il ripasso generale e, se c'è tempo, c'è un giorno cuscinetto per gli imprevisti. Il piano si rifà ogni giorno da quello che sai. Senza AI funziona; con l'AI legge meglio i programmi disordinati e ti interroga argomento per argomento.
-- **Il piano per chi lavora.** Scrivi i turni una volta («lavoro lunedì mercoledì venerdì 14-19») e Lode li toglie dalle ore di studio, con mezz'ora per il viaggio, insieme alle lezioni. Nei giorni di lavoro il piano si ferma a 2 ore (lo cambi tu). «piano della settimana» mette tutti gli esami in un calendario solo, a minuti e non a numero di argomenti: «Lun 13 · circa 1 h 45 libere · lavoro 14–19». Quando non ci sta tutto, Lode lo dice con le opzioni accanto e quanto fa risparmiare ognuna; decidi tu, con un clic. Al lavoro la pillola non ti propone niente. Senza lavoro e con un esame solo, il piano resta quello del programma.
-- **Le domande uscite agli appelli.** Quelle che girano nel gruppo del corso: incollale («domande uscite di analisi 2: …», una per riga). Lode le mette sotto il loro argomento, le conta e fa salire nel piano gli argomenti che escono di più. Nell'interrogazione, il prof ne fa di simili.
-- **I temi d'esame, uno al giorno.** I compiti vecchi che girano nel gruppo del corso: trascina il PDF (scegli «Temi d'esame») o incollali («temi d'esame di analisi 2: …»). Lode li divide in esercizi sui segni che trova («Esercizio 1», «Es. 2», «Problema 3»), ti fa controllare la divisione e mette ogni esercizio sotto il suo argomento del programma. Ogni giorno, nel piano, c'è un esercizio sugli argomenti di oggi: lo fai su carta, senza appunti, e poi dici tu com'è andata. Lode non corregge e non dà voti finti: se è giusto torna tra una settimana, se è sbagliato tra 3 giorni, se non sapevi da dove partire tra 2. La soluzione del prof, se c'è nel testo, la vedi solo dopo. L'esito aggiorna la mappa. Senza AI: un PDF scansionato non lo legge, il testo lo incolli tu.
-- **La prova generale.** «prova generale di analisi 2» (o il bottone sotto i temi d'esame): un compito vecchio intero, con il tempo vero. Lode sceglie il più recente che non hai mai fatto intero, legge la durata dal compito («Tempo: 2 ore») o propone 2 ore, e fa partire il timer nella pillola. Vedi tutti gli esercizi in fila, senza soluzioni; «Passo al prossimo» segna quanto stai su ognuno. Alla consegna (o a tempo scaduto) dici tu com'è andato ogni esercizio: giusto, a metà, sbagliato, non fatto. Se l'hai fatta partire per sbaglio, «Lascio perdere» la toglie senza segnare niente. Solo dopo la consegna vedi le soluzioni del prof. Niente voto: se il compito scrive i punti, Lode somma quelli che ti sei dato giusti, e lo dice chiaro che li hai decisi tu. Gli esiti tornano nei temi e nella mappa del programma.
-- **«Te lo spiego io».** Spieghi un argomento con parole tue, scritte o a voce, come all'orale. Senza AI Lode controlla i punti che trova nel programma e nei tuoi appunti e ti dice quali hai saltato; con l'AI ti dà un giudizio come all'interrogazione. Spiegare con parole proprie è uno dei modi di studiare che funzionano di più, e l'esito aggiorna la mappa.
-- **Ti allena quando hai due minuti.** Digli quando hai l'esame («ho l'esame di analisi 2 il 15 gennaio»). Quando sei al computer e libero, la pillola si allunga e ti propone una cosa piccola: un gioco sulle definizioni, le carte da ripassare, le ★ da rileggere, tre domande come all'orale. Più l'esame è vicino, più spesso. Mai a lezione o nelle ore di silenzio. Impara cosa ti serve.
-- **Giochi di memoria** sulle definizioni delle tue lezioni: abbina, chi sono?, completa, flash.
-- **Ripasso a intervalli** (SM-2): le carte difficili tornano domani, le facili tra settimane.
-- **Le carte anche in Anki.** Scrivi «esporta per anki» (o «esporta le carte di analisi 2 per anki») e Lode prepara un file con le carte del ripasso e le definizioni delle lezioni, senza doppioni: un mazzo per corso (`Lode::Analisi 2`), con le formule, il codice e il grassetto. Nell'app il file va nella cartella `Anki` del vault, nel browser si scarica. In Anki: **File › Importa**, scegli il file e come tipo di nota **Basilare** (in inglese *Basic*), una volta sola per tutti i corsi. Se lo importi di nuovo, Anki aggiorna le carte che ha già invece di raddoppiarle.
-- **Il ripasso in tasca.** Scrivi «ripasso in tasca» e Lode mette le carte di domani (al massimo 20, prima quelle in ritardo) nella nota `In tasca.md` del vault. Sul telefono la apri in Obsidian: tocchi «Risposta» per vederla e spunti «sapevo» o «non sapevo». Quando la nota torna sul computer, Lode segna il ripasso e la riscrive con le carte nuove. Con «ripasso in tasca ogni sera» la riscrive da sola dopo le 19. Lode non usa la rete: la nota la porta il servizio che usi già (iCloud, Obsidian Sync, Syncthing). Se arriva una copia vecchia della nota, Lode non segna niente: mai due volte la stessa carta. Solo nell'app.
-- **Interrogazione:** un prof d'orale che fa una domanda alla volta, ti corregge e alla fine ti dà un voto onesto.
-- **Libretto e conti:** media ponderata, base di laurea, «quanto mi serve per 110», «se prendo 30 in analisi», ore da fare oggi per arrivare all'appello.
-- **Sbobine da passare ai compagni:** un `.md` per Obsidian e una pagina `.html` che si apre su qualsiasi telefono, con le formule disegnate.
-
-![La proposta a sorpresa nella pillola](docs/immagini/proposta.jpg)
-
-![Il gioco: abbina ogni termine alla sua definizione](docs/immagini/gioco.jpg)
-
-### Per chi non frequenta (studenti lavoratori, università telematiche, lezioni registrate)
-- **Lezione dal computer.** Fai partire la videolezione dove la segui (la piattaforma del tuo ateneo o della telematica, Teams, Zoom, una registrazione) e scrivi «trascrivi la videolezione di diritto privato»: Lode ascolta l'audio che esce dal computer e la scrive nella nota della lezione, formule comprese, come in aula. Non scarica il video, non entra nella piattaforma e non chiede account: sente quello che senti tu. L'audio resta in memoria solo il tempo di trascriverlo. Sul Mac (da macOS 14.2) la prima volta il sistema chiede il permesso di registrare l'audio di sistema, non lo schermo: dal codice Lode compila da solo, in pochi secondi, il piccolo programma che lo ascolta (`desktop/ascolta-mac`). Su Windows e Linux non serve niente. Se dopo 25 secondi non sente niente, te lo dice. Le lezioni sono dei docenti: la trascrizione è per studiare tu, non condividerla se il regolamento del tuo ateneo non lo permette.
-- **Moodle del tuo ateneo.** «collega moodle»: scrivi l'indirizzo della piattaforma dei corsi (Virtuale, Ariel, e-learning…) ed entri come nell'app Moodle ufficiale, con il login dell'ateneo (anche SPID) in una finestra di Lode o con utente e password. Scegli quali corsi seguire: i file nuovi (slide, dispense, esercizi) arrivano in Lode come se li avessi trascinati, con il corso già scelto, e la pillola ti avvisa quando ce ne sono. «scadenze» mostra le consegne delle prossime settimane, e «programma di …» può prendere il programma dalla descrizione del corso. Solo lettura: Lode non consegna e non scrive niente. Il collegamento resta cifrato su questo computer (mai nel vault, mai online) e la password non si salva. Le università telematiche hanno piattaforme proprie senza accesso per le app: lì vale la «Lezione dal computer».
-- **Quiz a crocette.** «quiz di analisi 2», o trascina la dispensa e scegli «Quiz a crocette». Quattro risposte, una giusta, come allo scritto. Ci sono due modi: **allenamento** (10 domande, la correzione subito con la spiegazione) e **simulazione d'esame** (di solito 30 domande in 30 minuti, come alle telematiche, con il tempo che scorre, la correzione alla fine e il voto in trentesimi). Senza AI le domande vengono dalle tue carte e definizioni, e le risposte sbagliate sono quelle di altre carte del corso. Con l'AI vengono dalla dispensa: il modello deve copiare la frase che dimostra la risposta giusta, e la domanda resta solo se quella frase c'è davvero. Le sbagliate diventano carte del ripasso con un clic, e l'esito aggiorna la mappa del programma.
-
-### Parli come parli
-Nessun comando da imparare. Scrivi, oppure tieni premuto ⌥ Spazio (Ctrl+Shift+Spazio su Windows) e parla:
-
-```
-ho preso 28 in fisica 2
-esame basi di dati il 15 gennaio 9 cfu
-quanto mi serve per 110
-def: gradiente = vettore delle derivate parziali
-ripeti
-trascrivi la lezione
-interrogami su analisi 2
-spiegami il teorema di Green
-esporta per anki
-ripasso in tasca
-lavoro lunedì mercoledì venerdì 14-19
-piano della settimana
-```
-
-### Per chi studia informatica
-Per Programmazione e i laboratori. Niente AI: le risposte le calcola il computer, e Lode non scrive codice al posto tuo.
-
-- **«Cosa stampa?»** Cinque domande da un minuto su piccoli programmi in C, Java o Python: cicli, divisione intera, `%` con i negativi, `i++` e `++i`, switch senza break, puntatori, ricorsione. La lingua la prende dal nome del corso («Programmazione in Python», «Fondamenti di Java»; se non si capisce, C) oppure la dici tu: «cosa stampa python», «cosa stampa java». In ogni lingua escono solo i programmi che si scrivono fedeli (i puntatori restano al C, lo switch che cade e il do-while non vanno in Python) e la risposta segue le regole vere della lingua: in Python `-7 // 2` fa -4. La risposta giusta la calcola Lode, e nelle prove la confrontiamo con un compilatore vero (e con python3 e javac) su centinaia di programmi. Le risposte sbagliate sono gli errori tipici, e se ne scegli una ti dice quale: «è quello che stamperebbe con `i <= 4`». Se hai un corso di programmazione, compare anche il bottone **Codice** e ogni tanto la pillola te lo propone.
-- **«Segui progetto».** Scegli la cartella del laboratorio. Lode ti dice cosa è cambiato davvero, file per file, con le funzioni nuove, e se l'hai provato dopo l'ultima modifica. Vale anche se il codice lo scrive Claude Code, Codex o un copia-incolla: Lode non sa chi ha scritto le righe, e lo dice. Lode nella tua cartella non scrive: le versioni le tiene nella sua. I comandi che confermi (per esempio make) e il tuo programma invece sì, come dal terminale.
-- **Le prove a un clic.** Lode compila e lancia le prove `.in`/`.out` che trova nella cartella. Ti mostra prima il comando esatto, e lo esegue solo dopo il tuo sì in una finestra del sistema. Non è una sandbox: il programma gira sul tuo computer, come dal terminale. Se manca il compilatore te lo dice e ti spiega come installarlo, ma non scarica niente da sola.
-- **Gli errori in italiano.** «**lista.c, riga 42**: usi `nodo` ma non è dichiarato», con la tua riga sotto e tre passi da aprire uno alla volta: dove guardare, cosa vuol dire e, solo per gli errori meccanici, la correzione. Nei progetti segnati «valutato» la correzione non c'è (e finché ne segui uno, nemmeno per gli errori copiati). Funziona anche senza seguire un progetto: copia l'errore dal terminale, da Code::Blocks o da Dev-C++ e scrivi «spiegami l'errore».
-- **Il ponte con gli agenti.** Scrivi «agenti» e collega quello che usi: **Claude Code, Codex CLI, Gemini CLI, Cursor, GitHub Copilot CLI, Windsurf, Qwen Code, OpenCode, Kilo Code, Aider**. L'agente manda a Lode, su questo computer, cosa fa nei progetti che segui: file toccati, comandi, fine del turno. A fine turno la pillola ti dice cosa ha fatto davvero e ti avvisa se **dice che i test passano ma dopo l'ultima modifica non li ha rilanciati**, o se **ha modificato i test mentre fallivano**. Solo lettura: Lode non risponde agli agenti, non decide niente e non allarga i loro permessi. Prima di scrivere nella loro configurazione ti mostra in una finestra del sistema le righe esatte; tiene una copia del file com'era (`.prima-di-lode`) e «scollega» toglie solo le sue righe. Gli eventi fuori dai progetti seguiti si buttano, e il testo che scrivi all'agente non si salva. Sono stime da regole fisse: se non trovano niente, non è una garanzia. Per ora non ci sono Kiro, Amp, Cline e Junie (formati non ancora stabili o non verificati), né Zed e Roo Code, che non hanno hook.
-- **Cose nuove.** Quando una riga aggiunta in un progetto che segui usa una funzione della libreria standard che in quel file prima non c'era (`realloc`, `strtok`, `computeIfAbsent`, `enumerate`…), la scheda del turno dell'agente e «Fatto. In parole semplici» te lo dicono, con file e riga. Lode guarda il file intero, fino a 2000 righe; nei file più lunghi solo le righe vicine alla modifica. Per ognuna c'è la domanda che ti farebbero all'orale, con la risposta: «Mettila nel ripasso» la fa diventare una carta, «La so già» non te la ripropone più. Il dizionario è fisso e scritto a mano, circa 60 voci tra C, Java e Python: niente AI, e Lode vede solo i nomi, non le idee.
-- **Pronto per la discussione.** «preparami alla discussione di lab3» ti dà l'elenco delle funzioni cambiate da quando segui il progetto. Prima quelle cambiate mentre lavorava un agente e che non hai mai spiegato, poi le altre: «Spiegate: 5 su 12». Con «Proviamo» Lode ti mostra solo la firma e la riga, e tu la spieghi per scritto come alla discussione: cosa riceve, cosa restituisce, come funziona. Poi ti dice cosa hai detto e cosa hai saltato (i parametri, il valore restituito, un ciclo, la ricorsione, una funzione di libreria come `malloc`), e solo allora ti mostra il codice. Niente AI: i punti li trova il codice, alla buona, e non giudica se la spiegazione è giusta. «Cambiata mentre lavorava l'agente» è una stima: vuol dire che il file è cambiato durante un suo turno, non chi ha scritto le righe, che Lode non sa. Si salvano solo i nomi delle funzioni, mai il codice, e il diario del giorno dice «Spiegate: 7 su 12» con i nomi da rivedere; con il diario spento non si salva niente.
-- **Il registro nel vault.** Il diario del progetto (`Progetti/<nome>/<giorno>.md`), la tabella «Cosa so davvero» nella pagina del corso e gli errori che fai più spesso. È un registro per te, non una prova per il prof: lo puoi correggere o spegnere, e niente esce dal computer.
-
-Cosa è permesso con gli agenti e con l'AI lo decide il tuo corso: chiedi al docente. Su Windows serve un compilatore C (MSYS2 o WinLibs): finora l'abbiamo provato solo sul Mac. Su Windows, mentre Lode segue una cartella, non la puoi rinominare né spostare: prima scrivi «smetti di seguire».
-
-```
-cosa stampa
-cosa stampa python
-segui progetto
-cosa è cambiato
-provato?
-prova il progetto
-spiegami l'errore
-diario del progetto
-non scrivere il diario del progetto lab3
-preparami alla discussione di lab3
-smetti di seguire lab3
-```
+**[Install Lode](#install)** on Windows, Mac or Linux: once, from the terminal, by copying a few commands. After that it opens from its icon like any other app and starts by itself when you turn on your computer.
 
 ---
 
-## Installazione
+## What it does
 
-### Installa
+### In class
+- **Repeat** (⌃⌥P). Missed a sentence? Lode keeps the last minute and a half in memory, only in RAM and never on disk, and when you ask it writes out the last 60 seconds, with the professor's last sentence highlighted. One click and it goes into your notes or among the “★ for the exam” items. In class it turns on by itself, if you enabled it once; if you turn it on yourself (with ⌃⌥P or from the panel) outside your timetable it stays on for 3 hours at most. When the microphone is on, the pill shows a dot.
+- **Transcribes the whole lecture** (⌃⌥R) into the lecture's note in Obsidian, in chunks of 20-30 seconds: if the computer shuts down, what was there is already saved.
+- **Formulas spoken aloud become formulas.** “the integral from zero to one of x squared dx” becomes $\int_{0}^{1} x^{2} \, dx$, and the same goes for limits, derivatives, sums, fractions and Greek letters. This works in English and Italian.
+- **Quick capture** without leaving your notes: ⌃⌥S **★ For the exam**, ⌃⌥D **Definition**, ⌃⌥Q **Question for the professor**.
+- **Knows when you're in class.** Write once “lecture calculus 2 monday and wednesday 9-11 room 7” and the pill shows `● Calculus 2 · ends in 23 min · ★2`.
 
-Per ora Lode si installa dal codice: gli installer da scaricare arriveranno quando saranno firmati con un certificato ([perché](#gli-installer-non-ancora-firmati)). Non serve saper programmare. Apri il terminale una volta, copi i comandi della tua sezione e al resto pensa Lode. Così il sistema non blocca niente: Node.js, Electron, Obsidian e Ollama sono firmati dai loro autori.
+![The lecture transcribed into the note, with formulas](docs/immagini/trascrizione.jpg)
 
-Ti servono circa **5 GB liberi** (Obsidian circa 300 MB, l'AI locale circa 3,5 GB, la voce dai 200 ai 640 MB) e 15-30 minuti, quasi tutti di download. I comandi mettono Lode nella cartella `Lode` dentro la tua cartella utente.
+### With files
+Drag a file onto the pill, even when it's closed: it opens up and asks *what should I do with it?*
 
-Scegli il tuo sistema: **[Windows](#windows)** · **[Mac](#mac)** · **[Linux](#linux)**.
+- **PDFs and slides (`.pptx`):** review cards, a summary in Obsidian, definitions for the games, a quiz, an attachment to the lecture.
+- **Whiteboard photos:** turned into notes, formulas included.
+- **Audio recordings:** transcribed into the lecture.
+- **Notes (`.md`, `.txt`, `.docx`), classmates' lecture transcripts and Anki decks.**
 
-Al primo avvio Lode ti chiede il nome e con un clic installa Obsidian, l'AI locale e la voce (su Linux l'AI locale no: prima installa Ollama, come spiega la sezione Linux). Poi crea la sua **icona**:
-- **Mac:** in **Applicazioni** (quella della tua cartella utente); la trovi anche con Spotlight;
-- **Windows:** nel **menu Start** e sul **desktop**;
-- **Linux:** nel **menu delle applicazioni**.
+![A PDF dropped on the pill: what should I do with it?](docs/immagini/file.jpg)
 
-Da lì la riapri come le altre app, e all'accensione del computer parte da sola: il terminale non serve più. Icona e avvio all'accensione si tolgono dal menu dell'icona di Lode. Sul Mac, quando Lode attiva l'avvio all'accensione, macOS mostra la notifica «Elementi in background aggiunti»: è lei.
+### At home
+- **The exam syllabus, topic by topic.** Paste the course syllabus (or drag the PDF) and Lode splits it into topics. For each one it looks at what you really have: notes, the professor's ★, cards, reviews, quizzes. You get a map, from “never touched” to “solid”, and a day-by-day plan up to the exam date. It starts with your weak topics and the ones that come up most often, and every new topic comes back after a few days. The day before the exam is for a general review and, if there's time, there's a buffer day for the unexpected. The plan is rebuilt every day from what you know. It works without AI; with AI it reads messy syllabi better and quizzes you topic by topic.
+- **The plan for students who work.** Write your shifts once (“I work monday wednesday friday 2-7pm”) and Lode takes them out of your study hours, with half an hour for the commute, along with your lectures. On work days the plan stops at 2 hours (you can change that). “weekly plan” puts all your exams in a single calendar, in minutes rather than number of topics: “Mon 13 · about 1 h 45 free · work 14–19”. When it doesn't all fit, Lode says so, with the options next to it and how much time each one saves; you decide, with one click. At work the pill doesn't suggest anything. With no job and a single exam, the plan stays the syllabus plan.
+- **Questions from past exams.** The ones going around your course's group chat: paste them (“past exam questions for calculus 2: …”, one per line). Lode puts them under their topic, counts them and moves the topics that come up most often higher in the plan. In the oral quiz, the professor asks similar ones.
+- **Past papers, one a day.** The old exams going around your course's group chat: drag the PDF (choose “Past papers”) or paste them (“past papers for calculus 2: …”). Lode splits them into exercises using the markers it finds (“Exercise 1”, “Ex. 2”, “Problem 3”), lets you check the split and puts each exercise under its syllabus topic. Every day, in the plan, there's an exercise on today's topics: you do it on paper, without notes, and then you say how it went. Lode doesn't grade it and doesn't give fake marks: if you got it right it comes back in a week, if you got it wrong in 3 days, if you didn't know where to start in 2. You see the professor's solution, if the paper has one, only afterwards. The result updates the map. Without AI: it can't read a scanned PDF, so you paste the text yourself.
+- **The mock exam.** “mock exam for calculus 2” (or the button under the past papers): a whole old exam, with the real time limit. Lode picks the most recent one you've never done in full, reads the duration from the paper (“Time: 2 hours”) or suggests 2 hours, and starts the timer in the pill. You see all the exercises in a row, without solutions; “Next one” records how long you spend on each. When you hand it in (or when time runs out) you say how each exercise went: right, half right, wrong, not done. If you started it by mistake, “Never mind” removes it without recording anything. Only after you hand it in do you see the professor's solutions. No grade: if the paper lists points, Lode adds up the ones you marked as right, and says clearly that you decided them. The results go back into the past papers and the syllabus map.
+- **“Let me explain it to you.”** You explain a topic in your own words, written or spoken, as in an oral exam. Without AI, Lode checks the points it finds in the syllabus and in your notes and tells you which ones you skipped; with AI it gives you feedback as in an oral exam. Explaining in your own words is one of the study methods that work best, and the result updates the map.
+- **Drills you when you have two minutes.** Tell it when your exam is (“the calculus 2 exam is on 15 January”). When you're at the computer and free, the pill stretches out and suggests something small: a game on definitions, cards to review, ★ to reread, three questions as in an oral exam. The closer the exam, the more often. Never in class or during your quiet hours. It learns what you need.
+- **Memory games** on the definitions from your lectures: match, who am I?, fill in the blank, flash.
+- **Spaced repetition** (SM-2): hard cards come back tomorrow, easy ones in weeks.
+- **Your cards in Anki too.** Write “export to anki” (or “export my calculus 2 cards to anki”) and Lode prepares a file with your review cards and the definitions from your lectures, without duplicates: one deck per course (`Lode::Calculus 2`), with formulas, code and bold text. In the app the file goes into the `Anki` folder of your vault; in the browser it downloads. In Anki: **File › Import**, choose the file and **Basic** as the note type, once for all courses. If you import it again, Anki updates the cards it already has instead of doubling them.
+- **Review in your pocket.** Write “pocket review” and Lode puts tomorrow's cards (20 at most, overdue ones first) in a note in your vault. On your phone you open it in Obsidian: tap “Answer” to see it and tick “knew it” or “didn't know”. When the note comes back to the computer, Lode records the review and rewrites it with the new cards. With “pocket review every evening” it rewrites it by itself after 7 pm. Lode doesn't use the network: the note travels with the service you already use (iCloud, Obsidian Sync, Syncthing). If an old copy of the note arrives, Lode records nothing: never the same card twice. Desktop app only.
+- **Oral quiz:** an oral-exam professor who asks one question at a time, corrects you and at the end gives you an honest grade.
+- **Grades and maths:** weighted average, “what do I need for 110”, “what if I get 30 in calculus”, hours to study today to be ready for the exam. In the Italian system also the *base di laurea*, the starting point of the final degree mark. Lode supports the grading systems of Italy, Spain, France, Germany, Portugal, Brazil, the United Kingdom and the United States: see [Languages](#languages).
+- **Lecture transcripts to pass to classmates:** an `.md` for Obsidian and an `.html` page that opens on any phone, with the formulas rendered.
 
-Lode vive nella barra dei menu (Mac) o nell'area di notifica (Windows): non cercarla nel Dock. È la pillola nera in cima allo schermo: si apre con un clic, o tenendo premuto **⌥ Spazio** sul Mac e **Ctrl+Shift+Spazio** su Windows e Linux.
+![The surprise suggestion in the pill](docs/immagini/proposta.jpg)
 
-**Aggiornare.** Installata dal codice, Lode non si aggiorna da sola. Ogni tanto chiudila (menu della sua icona › Esci da Lode) e dal terminale scrivi:
-- **Mac e Linux:** `cd ~/Lode && git pull && cd desktop && npm install`
+![The game: match each term to its definition](docs/immagini/gioco.jpg)
+
+### If you don't attend (working students, online universities, recorded lectures)
+- **Lecture from the computer.** Start the video lecture wherever you watch it (your university's platform, an online university, Teams, Zoom, a recording) and write “transcribe the video lecture of private law”: Lode listens to the audio coming out of the computer and writes it into the lecture's note, formulas included, just like in class. It doesn't download the video, doesn't log into the platform and doesn't ask for accounts: it hears what you hear. The audio stays in memory only for the time it takes to transcribe it. On the Mac (from macOS 14.2) the first time, the system asks for permission to record system audio, not the screen: Lode compiles from source by itself, in a few seconds, the small program that listens (`desktop/ascolta-mac`). On Windows and Linux nothing is needed. If it hears nothing after 25 seconds, it tells you. Lectures belong to the lecturers: the transcript is for your own study, don't share it if your university's rules don't allow it.
+- **Your university's Moodle.** “connect moodle”: write the address of your course platform (many universities run Moodle under their own name) and log in as in the official Moodle app, with your university login (including single sign-on, such as Italy's SPID) in a Lode window, or with username and password. Choose which courses to follow: new files (slides, handouts, exercises) arrive in Lode as if you had dragged them in, with the course already chosen, and the pill tells you when there are some. “deadlines” shows the assignments due in the next few weeks, and “syllabus for …” can take the syllabus from the course description. Read only: Lode doesn't submit or write anything. The connection stays encrypted on this computer (never in the vault, never online) and the password isn't saved. Online universities often have their own platforms with no access for apps: there, use “Lecture from the computer”.
+- **Multiple-choice quiz.** “quiz on calculus 2”, or drag the handout and choose “Multiple-choice quiz”. Four answers, one right, as in a written exam. There are two modes: **practice** (10 questions, corrected right away with the explanation) and **exam simulation** (usually 30 questions in 30 minutes, as at Italian online universities, with the clock running, the correction at the end and a grade out of 30). Without AI the questions come from your cards and definitions, and the wrong answers are taken from other cards of the course. With AI they come from the handout: the model has to copy the sentence that proves the right answer, and the question is kept only if that sentence really is there. Wrong answers become review cards with one click, and the result updates the syllabus map.
+
+### Talk the way you talk
+No commands to learn. Type, or hold ⌥ Space (Ctrl+Shift+Space on Windows) and speak:
+
+```
+I got 28 in physics 2
+exam databases on 15 January 9 credits
+what do I need for 110
+def: gradient = vector of partial derivatives
+repeat
+transcribe the lecture
+quiz me on calculus 2
+explain Green's theorem
+export to anki
+pocket review
+I work monday wednesday friday 2-7pm
+weekly plan
+```
+
+The bar understands sentences like these in English, Italian, Spanish, French, German and Portuguese. The grades here are on the Italian scale (pass 18, top 30, degree mark out of 110): see [Languages](#languages).
+
+### If you study computer science
+For Programming courses and labs. No AI: the answers are computed by the computer, and Lode doesn't write code for you.
+
+- **“What does it print?”** Five one-minute questions on small programs in C, Java or Python: loops, integer division, `%` with negative numbers, `i++` and `++i`, switch without break, pointers, recursion. It takes the language from the course name (“Programming in Python”, “Java Fundamentals”; if it can't tell, C) or you say it: “what does it print in python”, “what does it print in java”. In each language you only get programs that can be written faithfully (pointers stay in C, fall-through switch and do-while don't go to Python) and the answer follows the real rules of the language: in Python `-7 // 2` is -4. Lode computes the right answer, and in our tests we compare it with a real compiler (and with python3 and javac) on hundreds of programs. The wrong answers are the typical mistakes, and if you pick one it tells you which: “that's what it would print with `i <= 4`”. If you have a programming course, a **Code** button appears too, and every so often the pill suggests it.
+- **“Follow project”.** Choose your lab folder. Lode tells you what really changed, file by file, with the new functions, and whether you tested it after the last change. This holds even if the code was written by Claude Code, Codex or copy-paste: Lode doesn't know who wrote the lines, and says so. Lode doesn't write in your folder: it keeps the versions in its own. The commands you confirm (for example make) and your program do write, as from the terminal.
+- **Tests in one click.** Lode compiles and runs the `.in`/`.out` tests it finds in the folder. It shows you the exact command first, and runs it only after you say yes in a system dialog. It isn't a sandbox: the program runs on your computer, as from the terminal. If the compiler is missing it tells you and explains how to install it, but it doesn't download anything by itself.
+- **Errors in plain words.** “**lista.c, line 42**: you use `nodo` but it isn't declared”, with your line underneath and three steps to open one at a time: where to look, what it means and, only for mechanical errors, the fix. In projects marked “graded” there's no fix (and while you follow one, not even for copied errors). It also works without following a project: copy the error from the terminal, from Code::Blocks or from Dev-C++ and write “explain the error”.
+- **The bridge with agents.** Write “agents” and connect the one you use: **Claude Code, Codex CLI, Gemini CLI, Cursor, GitHub Copilot CLI, Windsurf, Qwen Code, OpenCode, Kilo Code, Aider**. The agent sends Lode, on this computer, what it does in the projects you follow: files touched, commands, end of turn. At the end of a turn the pill tells you what it really did and warns you if **it says the tests pass but it didn't rerun them after the last change**, or if **it changed the tests while they were failing**. Read only: Lode doesn't reply to agents, doesn't decide anything and doesn't widen their permissions. Before writing into their configuration it shows you the exact lines in a system dialog; it keeps a copy of the file as it was (`.prima-di-lode`) and “disconnect” removes only its own lines. Events outside the projects you follow are thrown away, and what you write to the agent isn't saved. These are estimates from fixed rules: if they find nothing, that's not a guarantee. For now Kiro, Amp, Cline and Junie aren't there (formats not stable yet or not verified), nor Zed and Roo Code, which have no hooks.
+- **New things.** When a line added in a project you follow uses a standard library function that wasn't in that file before (`realloc`, `strtok`, `computeIfAbsent`, `enumerate`…), the agent's turn card and “Done. In plain words” tell you, with file and line. Lode looks at the whole file, up to 2000 lines; in longer files only the lines near the change. For each one there's the question they'd ask you at the oral exam, with the answer: “Add it to my review” turns it into a card, “I already know it” never suggests it again. The dictionary is fixed and written by hand, about 60 entries across C, Java and Python: no AI, and Lode only sees names, not ideas.
+- **Ready for the discussion.** “prepare me for the discussion of lab3” gives you the list of functions changed since you started following the project. First the ones changed while an agent was working and that you've never explained, then the others: “Explained: 5 of 12”. With “Let's try” Lode shows you only the signature and the line, and you explain it in writing as at the project discussion: what it takes, what it returns, how it works. Then it tells you what you said and what you skipped (the parameters, the return value, a loop, recursion, a library function like `malloc`), and only then shows you the code. No AI: the code finds the points, roughly, and doesn't judge whether the explanation is right. “Changed while the agent was working” is an estimate: it means the file changed during one of its turns, not who wrote the lines, which Lode doesn't know. Only function names are saved, never the code, and the day's diary says “Explained: 7 of 12” with the names to go over; with the diary off nothing is saved.
+- **The log in your vault.** The project diary (one note per project per day), the “What I really know” table on the course page and the errors you make most often. It's a log for you, not evidence for your professor: you can edit it or turn it off, and nothing leaves your computer.
+
+What's allowed with agents and with AI is up to your course: ask your lecturer. On Windows you need a C compiler (MSYS2 or WinLibs): so far we've only tested it on the Mac. On Windows, while Lode follows a folder, you can't rename or move it: first write “stop following”.
+
+```
+what does it print
+what does it print in python
+follow project
+what changed
+tested?
+test the project
+explain the error
+project diary
+don't write the project diary for lab3
+prepare me for the discussion of lab3
+stop following lab3
+```
+
+## Languages
+
+Lode speaks six languages: **English, Italiano, Español, Français, Deutsch, Português**. The language changes the text of the bar, the page and the welcome, the commands the bar understands without AI, dates and numbers, and the language the AI answers in. If a translation is missing, you see the Italian text (Lode was born in Italian).
+
+- **Choosing it:** in the welcome (it's the first question), from the bar (“language italian”, “lingua inglese”, “idioma español”…) or in Settings. At first Lode uses your system language, if it knows it; otherwise English.
+- **Your vault.** A new vault is created with folder and note names in the language you chose; an existing vault keeps its own.
+- **Voice** understands all six languages. Spoken formulas become formulas in English and Italian; in the other languages the text stays as it is.
+- **Language isn't country.** The grading system is chosen separately: an Italian student on Erasmus in Madrid can have the bar in Italian and Spanish grades.
+
+| System | Grades | Pass | Credits | Final result |
+|---|---|---|---|---|
+| Italy | 18–30, and 30 *e lode* (with honours: hence the name) | 18 | CFU | *base di laurea* = average × 110 / 30 |
+| Spain | 0–10 | 5 | ECTS | weighted average 0–10 |
+| France | 0–20 | 10 | ECTS | *moyenne* 0–20 with *mention* |
+| Germany | 1.0–5.0 (lower is better) | 4.0 | ECTS | *Gesamtnote* 1.0–4.0 |
+| Portugal | 0–20 | 10 | ECTS | *média final* 0–20 |
+| Brazil | 0–10 | usually 6 (depends on the university) | *créditos* | average 0–10 |
+| United Kingdom | 0–100 % | 40 | credits | degree class (First, 2:1, 2:2, Third) |
+| United States | A–F | D | credit hours | GPA 0–4.0 |
+
+The weighted average, “what do I need for …” and “what if I get …” follow the system you chose. Pasting your transcript works with Esse3 (the student portal of many Italian universities) and, for the other systems, with a plain table (name · credits · grade).
+
+How it works inside and how to add a language: [docs/LINGUE.md](docs/LINGUE.md) (in Italian) and [CONTRIBUTING.md](CONTRIBUTING.md#in-english).
+
+---
+
+## Installation
+
+### Install
+
+For now Lode is installed from source: downloadable installers will come once they're signed with a certificate ([why](#the-installers-not-signed-yet)). You don't need to know how to code. You open the terminal once, copy the commands for your system and Lode takes care of the rest. This way the system doesn't block anything: Node.js, Electron, Obsidian and Ollama are signed by their authors.
+
+You need about **5 GB free** (Obsidian about 300 MB, the local AI about 3.5 GB, voice between 200 and 640 MB) and 15-30 minutes, almost all of it downloading. The commands put Lode in the `Lode` folder inside your user folder.
+
+Choose your system: **[Windows](#windows)** · **[Mac](#mac)** · **[Linux](#linux)**.
+
+On first launch Lode asks your name and with one click installs Obsidian, the local AI and voice (on Linux not the local AI: install Ollama first, as the Linux section explains). Then it creates its **icon**:
+- **Mac:** in **Applications** (the one in your user folder); you can also find it with Spotlight;
+- **Windows:** in the **Start menu** and on the **desktop**;
+- **Linux:** in the **applications menu**.
+
+From there you reopen it like any other app, and it starts by itself when you turn on the computer: you don't need the terminal any more. The icon and start at login can be removed from the menu of Lode's icon. On the Mac, when Lode turns on start at login, macOS shows the “Background Items Added” notification: that's Lode.
+
+Lode lives in the menu bar (Mac) or the notification area (Windows): don't look for it in the Dock. It's the black pill at the top of the screen: it opens with a click, or by holding **⌥ Space** on the Mac and **Ctrl+Shift+Space** on Windows and Linux.
+
+**Updating.** Installed from source, Lode doesn't update by itself. Every so often quit it (menu of its icon › Quit Lode) and in the terminal type:
+- **Mac and Linux:** `cd ~/Lode && git pull && cd desktop && npm install`
 - **Windows** (PowerShell): `cd ~\Lode; git pull; cd desktop; npm.cmd install`
 
-Poi riaprila dall'icona. Sul Mac, se avevi compilato la voce per il Neural Engine, rilancia anche `bash ~/Lode/desktop/voce-mac/compila.sh`.
+Then reopen it from the icon. On the Mac, if you had compiled the voice for the Neural Engine, also rerun `bash ~/Lode/desktop/voce-mac/compila.sh`.
 
 ### Windows
 
-**Cosa serve:** Windows 10 o 11 a 64 bit, almeno 8 GB di memoria (16 GB consigliati per l'AI locale).
+**What you need:** 64-bit Windows 10 or 11, at least 8 GB of memory (16 GB recommended for the local AI).
 
-1. **Apri PowerShell.** Tasto Windows, scrivi «PowerShell», Invio. Aprilo normale, non «come amministratore».
+1. **Open PowerShell.** Windows key, type “PowerShell”, Enter. Open it normally, not “as administrator”.
 
-2. **Installa Node.js e Git** (una volta sola):
+2. **Install Node.js and Git** (once):
    ```powershell
    winget install OpenJS.NodeJS.LTS
    ```
    ```powershell
    winget install Git.Git
    ```
-   La prima volta winget chiede di accettare le sue condizioni: scrivi **Y** e Invio. Windows chiede anche il permesso di installare Node.js e Git: rispondi sì. Poi **chiudi e riapri PowerShell**, così vede i programmi nuovi. Se `winget` non c'è, scaricali a mano da [nodejs.org](https://nodejs.org) (versione «LTS») e [git-scm.com](https://git-scm.com/download/win).
+   The first time, winget asks you to accept its terms: type **Y** and Enter. Windows also asks for permission to install Node.js and Git: say yes. Then **close and reopen PowerShell**, so it sees the new programs. If `winget` isn't there, download them by hand from [nodejs.org](https://nodejs.org) (the “LTS” version) and [git-scm.com](https://git-scm.com/download/win).
 
-3. **Scarica Lode e avvialo** (copia la riga intera; `npm install` scarica qualche centinaio di MB e ci mette qualche minuto):
+3. **Download Lode and start it** (copy the whole line; `npm install` downloads a few hundred MB and takes a few minutes):
    ```powershell
    cd ~; git clone https://github.com/W1kicartel/Lode.git; cd Lode\desktop; npm.cmd install; npm.cmd start
    ```
 
-4. **La configurazione guidata** si apre da sola. Ti chiede come ti chiami e con un clic installa **Obsidian**, l'**AI locale** (Ollama + Qwen3.5) e la **voce** (Parakeet, o Whisper se il computer ha meno di 6 GB di memoria). Il vault con i tuoi appunti nasce in `Documenti\Lode`. La pillola compare in cima allo schermo; l'icona di Lode è vicino all'orologio, nell'area di notifica.
+4. **The guided setup** opens by itself. It asks your name and with one click installs **Obsidian**, the **local AI** (Ollama + Qwen3.5) and **voice** (Parakeet, or Whisper if the computer has less than 6 GB of memory). The vault with your notes is created in `Documents\Lode`. The pill appears at the top of the screen; Lode's icon is near the clock, in the notification area.
 
-5. **Il microfono.** Se la voce non sente niente: *Impostazioni → Privacy e sicurezza → Microfono* e attiva «Consenti alle app desktop di accedere al microfono».
+5. **The microphone.** If voice hears nothing: *Settings → Privacy & security → Microphone* and turn on “Let desktop apps access your microphone”.
 
-**Su Windows cambia questo:**
+**What's different on Windows:**
 
 | | Windows |
 |---|---|
-| Voce, Ripeti, trascrizione | **Parakeet v3** sul processore (con [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)), se il computer ha almeno 6 GB di memoria; altrimenti **Whisper** (base o small), dentro l'app. Vedi [La voce](#la-voce). |
-| Scorciatoie | **Ctrl+Shift+Spazio** tenuto premuto per parlare. Poi Ctrl+Alt+P Ripeti, Ctrl+Alt+R trascrivi, Ctrl+Alt+S/D/Q cattura. |
-| AI locale | Va bene con una scheda video NVIDIA o AMD. Senza scheda video funziona lo stesso, ma è lenta: le carte da un PDF possono richiedere qualche minuto (intanto puoi chiudere il pannello e continuare). Se il computer è debole, puoi collegare la tua AI (vedi sotto). |
-| Condividere una sbobina | Lode apre la cartella con i file, da mandare come vuoi (WhatsApp Web, Drive, mail). Sul Mac c'è il menu Condividi. |
+| Voice, Repeat, transcription | **Parakeet v3** on the processor (with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)), if the computer has at least 6 GB of memory; otherwise **Whisper** (base or small), inside the app. See [The voice](#the-voice). |
+| Shortcuts | **Ctrl+Shift+Space** held down to speak. Then Ctrl+Alt+P Repeat, Ctrl+Alt+R transcribe, Ctrl+Alt+S/D/Q capture. |
+| Local AI | Works well with an NVIDIA or AMD graphics card. Without a graphics card it still works, but it's slow: cards from a PDF can take a few minutes (meanwhile you can close the panel and carry on). If the computer is weak, you can connect your own AI (see below). |
+| Sharing a lecture transcript | Lode opens the folder with the files, to send however you like (WhatsApp Web, Drive, email). On the Mac there's the Share menu. |
 
-**Se qualcosa non va su Windows:**
-- **`npm` dà «impossibile caricare il file… l'esecuzione di script è disabilitata»:** PowerShell blocca gli script. Una volta sola:
+**If something goes wrong on Windows:**
+- **`npm` says “cannot be loaded because running scripts is disabled on this system”:** PowerShell is blocking scripts. Once:
   ```powershell
   Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
   ```
-  oppure usa `npm.cmd install` e `npm.cmd start`.
-- **La pillola non risponde alle scorciatoie:** un altro programma usa le stesse combinazioni (per esempio alcune utility di schede video o di tastiera). Chiudilo, oppure usa la pillola col mouse.
-- **Windows Defender chiede il permesso** per Ollama o Obsidian: sono gli installer ufficiali, scaricati dai loro siti.
+  or use `npm.cmd install` and `npm.cmd start`.
+- **The pill doesn't respond to shortcuts:** another program uses the same key combinations (for example some graphics card or keyboard utilities). Close it, or use the pill with the mouse.
+- **Windows Defender asks for permission** for Ollama or Obsidian: they're the official installers, downloaded from their websites.
 
 ### Mac
 
-**Cosa serve:** macOS con chip Apple (M1 o successivi) e almeno 8 GB di memoria. Funziona anche sui Mac Intel: nell'app scaricata con Whisper al posto di Parakeet, dal codice con Parakeet sul processore.
+**What you need:** macOS with Apple silicon (M1 or later) and at least 8 GB of memory. It also works on Intel Macs: in the downloaded app with Whisper instead of Parakeet, from source with Parakeet on the processor.
 
-1. **Gli strumenti di Apple.** Servono per git e per la voce Parakeet. Apri il Terminale e scrivi:
+1. **Apple's tools.** You need them for git and for the Parakeet voice. Open Terminal and type:
    ```bash
    xcode-select --install
    ```
-   Si apre una finestra: premi **Installa**. Se dice che sono già installati, va bene così.
+   A window opens: press **Install**. If it says they're already installed, that's fine.
 
-2. **Node.js.** Scarica la versione «LTS» da [nodejs.org](https://nodejs.org) e installala.
+2. **Node.js.** Download the “LTS” version from [nodejs.org](https://nodejs.org) and install it.
 
-3. **Scarica Lode e avvialo** (copia la riga intera; `npm install` scarica qualche centinaio di MB e ci mette qualche minuto):
+3. **Download Lode and start it** (copy the whole line; `npm install` downloads a few hundred MB and takes a few minutes):
    ```bash
    cd ~ && git clone https://github.com/W1kicartel/Lode.git && cd Lode/desktop && npm install && npm start
    ```
 
-4. **La configurazione guidata** si apre da sola:
-   - **Obbligatoria.** Come ti chiami, poi un clic installa **Obsidian** (l'installer ufficiale, con la firma verificata), l'**AI locale** (Ollama + Qwen3.5, scelto in base alla memoria del computer) e la **voce**. I download continuano anche mentre vai avanti.
-   - **Facoltativa, il setup veloce.** Ateneo e corso, il **libretto incollato da Esse3** (letto anche senza AI), gli esami con le date, l'**orario** (a parole, incollato dal sito o dal calendario `.ics`), quando studi e quanto spesso Lode può proporti cose.
+4. **The guided setup** opens by itself:
+   - **Required.** Your name, then one click installs **Obsidian** (the official installer, with its signature verified), the **local AI** (Ollama + Qwen3.5, chosen according to the computer's memory) and **voice**. Downloads keep going while you move on.
+   - **Optional, the quick setup.** University and course, your **transcript of records** pasted from Esse3 (the portal of many Italian universities; read even without AI) or as a plain table, exams with their dates, your **timetable** (in words, pasted from the website or from an `.ics` calendar), when you study and how often Lode may suggest things.
 
-   La pillola compare in cima allo schermo. Il vault Obsidian è in `Documenti/Lode`. Ti serve di nuovo la configurazione? Dal menu dell'icona: «Rifai la configurazione…».
+   The pill appears at the top of the screen. The Obsidian vault is in `Documents/Lode`. Need the setup again? From the icon's menu: “Redo the setup…”.
 
-5. **Il microfono.** La prima volta che usi la voce, Ripeti o la trascrizione, macOS chiede il permesso: concedilo. Se hai avviato Lode dal Terminale lo chiede per il Terminale; se l'hai aperta dall'icona può chiederlo per «Electron», il programma su cui gira Lode. Se l'hai negato, si riattiva da *Impostazioni di Sistema → Privacy e sicurezza → Microfono*.
+5. **The microphone.** The first time you use voice, Repeat or transcription, macOS asks for permission: allow it. If you started Lode from Terminal it asks for Terminal; if you opened it from the icon it may ask for “Electron”, the program Lode runs on. If you denied it, turn it back on in *System Settings → Privacy & Security → Microphone*.
 
-6. **La voce migliore (consigliato, Mac con chip Apple).** Lode parte con Parakeet sul processore (sherpa-onnx, la stessa voce di Windows e Linux). Sul Neural Engine è più veloce: chiudi Lode (menu della sua icona › Esci da Lode) e compila `lode-voce`, ci vogliono 3-5 minuti la prima volta:
+6. **The best voice (recommended, Macs with Apple silicon).** Lode starts with Parakeet on the processor (sherpa-onnx, the same voice as Windows and Linux). On the Neural Engine it's faster: quit Lode (menu of its icon › Quit Lode) and compile `lode-voce`, which takes 3-5 minutes the first time:
    ```bash
    bash ~/Lode/desktop/voce-mac/compila.sh
    ```
-   Poi riapri Lode dall'icona.
+   Then reopen Lode from the icon.
 
-**Se qualcosa non va sul Mac:**
-- **`npm install` dà `EACCES`:** la cartella della cache di npm appartiene a root (un vecchio difetto di npm). Si sistema con:
+**If something goes wrong on the Mac:**
+- **`npm install` gives `EACCES`:** npm's cache folder belongs to root (an old npm bug). Fix it with:
   ```bash
   sudo chown -R $(id -u):$(id -g) ~/.npm
   ```
-- **`compila.sh` si ferma con errori su `PackageDescription` o `SwiftBridging`:** sono due difetti noti dei Command Line Tools 16.4 di Apple. Lo script li aggira da solo. Se fallisce comunque, aggiorna gli strumenti di Apple (passo 1) e riprova.
-- **La prima trascrizione con Parakeet ci mette circa 45 secondi:** il Mac sta preparando il modello per il Neural Engine. Succede una volta sola.
+- **`compila.sh` stops with errors about `PackageDescription` or `SwiftBridging`:** these are two known bugs in Apple's Command Line Tools 16.4. The script works around them by itself. If it still fails, update Apple's tools (step 1) and try again.
+- **The first transcription with Parakeet takes about 45 seconds:** the Mac is preparing the model for the Neural Engine. It happens only once.
 
 ### Linux
 
-**Cosa serve:** una distribuzione a 64 bit recente, Node.js 20 o successivo e git (dal gestore pacchetti).
+**What you need:** a recent 64-bit distribution, Node.js 20 or later and git (from your package manager).
 
-1. **Ollama** su Linux si installa con lo script ufficiale, da [ollama.com/download/linux](https://ollama.com/download/linux). Lode installa da sé Obsidian (AppImage) e il modello.
-2. **Scarica Lode e avvialo** (copia la riga intera):
+1. **Ollama** on Linux is installed with the official script, from [ollama.com/download/linux](https://ollama.com/download/linux). Lode installs Obsidian (AppImage) and the model by itself.
+2. **Download Lode and start it** (copy the whole line):
    ```bash
    cd ~ && git clone https://github.com/W1kicartel/Lode.git && cd Lode/desktop && npm install && npm start
    ```
-   Se si ferma con «The SUID sandbox helper binary was found, but is not configured correctly» (succede su alcune distribuzioni, per esempio Ubuntu 24.04), avvialo con `npm start -- --no-sandbox`: l'icona che crea Lode se lo ricorda.
-3. La voce è Parakeet sul processore (Whisper con meno di 6 GB di memoria) e le scorciatoie sono quelle di Windows. Le finestre trasparenti e le scorciatoie globali dipendono dal desktop (GNOME, KDE…): su Wayland alcune potrebbero non funzionare. Raccontaci com'è andata.
+   If it stops with “The SUID sandbox helper binary was found, but is not configured correctly” (this happens on some distributions, for example Ubuntu 24.04), start it with `npm start -- --no-sandbox`: the icon Lode creates remembers it.
+3. Voice is Parakeet on the processor (Whisper with less than 6 GB of memory) and the shortcuts are the same as on Windows. Transparent windows and global shortcuts depend on the desktop (GNOME, KDE…): on Wayland some may not work. Tell us how it went.
 
-### Gli installer (non ancora firmati)
+### The installers (not signed yet)
 
-Nella pagina **[Release](https://github.com/W1kicartel/Lode/releases/latest)** ci sono già gli installer per Mac (`.dmg`), Windows (`.exe`) e Linux (`.AppImage`). Non sono ancora firmati con un certificato (Apple 99 $ l'anno; per Windows serve un servizio di firma, vedi [docs/FIRMA.md](docs/FIRMA.md)), quindi macOS e Windows li bloccano alla prima apertura e chiedono di confermare a mano. Quando saranno firmati torneranno la via più semplice, e si aggiorneranno da soli.
+On the **[Releases](https://github.com/W1kicartel/Lode/releases/latest)** page there are already installers for Mac (`.dmg`), Windows (`.exe`) and Linux (`.AppImage`). They aren't signed with a certificate yet (Apple costs $99 a year; Windows needs a signing service, see [docs/FIRMA.md](docs/FIRMA.md)), so macOS and Windows block them the first time you open them and ask you to confirm by hand. Once they're signed they'll be the easiest way again, and they'll update by themselves.
 
-**Attenzione:** gli installer della **0.5.0** non si aprono: nel pacchetto mancavano due file della sincronizzazione (nel codice è già corretto). Fino ai prossimi installer, firmati, installa Lode dal codice.
+**Warning:** the **0.5.0** installers don't open: two sync files were missing from the package (already fixed in the code). Until the next installers, signed, install Lode from source.
 
 <details>
-<summary>Usarli lo stesso</summary>
+<summary>Using them anyway</summary>
 
-**Controlla che sia quello vero.** Scarica Lode solo dalla pagina Release di questo repository: un «Lode» passato in un gruppo o preso da un altro sito può avere lo stesso aspetto ed essere un'altra cosa. Accanto a ogni file GitHub mostra la sua impronta SHA-256 (`sha256:…`); dalle versioni dopo la 0.3.0 le stesse impronte sono anche nel file `SHA256SUMS.txt` della Release. Prima di aprirlo, calcola quella del file che hai scaricato e confrontale: devono avere le stesse lettere e cifre (Windows le scrive in maiuscolo). Se sono diverse, non aprirlo.
+**Check that it's the real one.** Download Lode only from the Releases page of this repository: a “Lode” passed around in a group chat or taken from another site can look the same and be something else. Next to each file GitHub shows its SHA-256 fingerprint (`sha256:…`); from the versions after 0.3.0 the same fingerprints are also in the Release's `SHA256SUMS.txt` file. Before opening it, compute the fingerprint of the file you downloaded and compare them: they must have the same letters and digits (Windows writes them in upper case). If they're different, don't open it.
 
-- **Mac** (Terminale): `shasum -a 256 ~/Downloads/Lode-*.dmg`
+- **Mac** (Terminal): `shasum -a 256 ~/Downloads/Lode-*.dmg`
 - **Windows** (PowerShell): `Get-FileHash $HOME\Downloads\Lode-*.exe`
-- **Linux**: `sha256sum Lode-*.AppImage`, nella cartella dove l'hai scaricato
+- **Linux**: `sha256sum Lode-*.AppImage`, in the folder where you downloaded it
 
-Gli installer non sono firmati con un certificato a pagamento (costa ogni anno e Lode è gratis), quindi **la prima volta** il sistema chiede una conferma:
+The installers aren't signed with a paid certificate (it costs money every year and Lode is free), so **the first time** the system asks for confirmation:
 
-| | Scarica | Primo avvio |
+| | Download | First launch |
 |---|---|---|
-| **Mac** (chip Apple e Intel) | `Lode-…-mac.dmg` | Apri il `.dmg` e trascina Lode in **Applicazioni**. Aprilo: il Mac dice che non può verificarlo, premi **Fine**. Poi vai in **Impostazioni di Sistema › Privacy e sicurezza**, scorri in fondo e premi **Apri comunque** accanto a «Lode». Serve solo la prima volta. |
-| **Windows** 10 e 11 | `Lode-…-windows.exe` | Aprilo. Se compare «Windows ha protetto il PC», premi **Ulteriori informazioni**, poi **Esegui comunque**. Si installa per il tuo utente, senza permessi di amministratore, e parte da solo. |
-| **Linux** (64 bit) | `Lode-…-linux.AppImage` | Rendilo eseguibile (tasto destro › Proprietà › «Consenti l'esecuzione», oppure `chmod +x Lode-*.AppImage`) e aprilo. L'AI locale su Linux non si installa da sola: prima installa Ollama con lo script di [ollama.com](https://ollama.com/download/linux). |
+| **Mac** (Apple silicon and Intel) | `Lode-…-mac.dmg` | Open the `.dmg` and drag Lode into **Applications**. Open it: the Mac says it can't verify it, press **Done**. Then go to **System Settings › Privacy & Security**, scroll to the bottom and press **Open Anyway** next to “Lode”. Only needed the first time. |
+| **Windows** 10 and 11 | `Lode-…-windows.exe` | Open it. If “Windows protected your PC” appears, press **More info**, then **Run anyway**. It installs for your user, without administrator rights, and starts by itself. |
+| **Linux** (64-bit) | `Lode-…-linux.AppImage` | Make it executable (right click › Properties › “Allow executing file as program”, or `chmod +x Lode-*.AppImage`) and open it. On Linux the local AI doesn't install by itself: first install Ollama with the script from [ollama.com](https://ollama.com/download/linux). |
 
-**Gli aggiornamenti.** Su Windows e Linux (AppImage) Lode si aggiorna da sola: scarica la versione nuova in background e in «Oggi» compare «Lode X.Y.Z è pronta» con **Riavvia ora**; se non premi niente, si installa quando chiudi Lode. Sul Mac, finché l'app non è firmata con un certificato Apple, la barra ti avvisa che è uscita una versione nuova e con **Scarica** apre il `.dmg`: lo trascini in Applicazioni come la prima volta. Si spengono da «Prepara Lode» o dal menu dell'icona. Gli aggiornamenti ci sono dalle versioni dopo la 0.3.0: chi ha la 0.3.0 o una precedente scarica la nuova una volta, a mano.
+**Updates.** On Windows and Linux (AppImage) Lode updates by itself: it downloads the new version in the background and “Lode X.Y.Z is ready” appears in “Today” with **Restart now**; if you don't press anything, it installs when you quit Lode. On the Mac, until the app is signed with an Apple certificate, the bar tells you a new version is out and **Download** opens the `.dmg`: you drag it into Applications like the first time. They can be turned off from “Prepare Lode” or from the icon's menu. Updates exist from the versions after 0.3.0: if you have 0.3.0 or earlier, download the new one by hand, once.
 
 </details>
 
-### Per tutti
+### For everyone
 
-**Quanto è veloce l'AI locale.** Dipende dal computer. Su un Mac con 8 GB, Qwen3.5 4B scrive circa 20 parole al secondo e le carte da un PDF arrivano in circa mezzo minuto. Su un portatile senza scheda video ci mette di più.
+**How fast the local AI is.** It depends on the computer. On a Mac with 8 GB, Qwen3.5 4B writes about 20 words per second and cards from a PDF arrive in about half a minute. On a laptop without a graphics card it takes longer.
 
-**Aggiornare:** vedi [Installa](#installa).
+**Updating:** see [Install](#install).
 
-**Disinstallare.** Dal menu dell'icona di Lode togli la spunta a «Avvia Lode all'accensione» e all'icona di Lode, poi esci e cancella la cartella `Lode`. I tuoi appunti restano in `Documenti/Lode`: sono tuoi. Obsidian e Ollama sono programmi normali e si disinstallano come gli altri. Il modello si toglie con `ollama rm qwen3.5:4b`.
+**Uninstalling.** From the menu of Lode's icon untick “Start Lode at login” and Lode's icon, then quit and delete the `Lode` folder. Your notes stay in `Documents/Lode`: they're yours. Obsidian and Ollama are normal programs and are uninstalled like any other. The model is removed with `ollama rm qwen3.5:4b`.
 
-**Solo nel browser, senza installare.** Per provare libretto, conti, timer, ripasso e giochi, dalla cartella `Lode`:
+**Just in the browser, without installing.** To try grades, maths, timer, reviews and games, from the `Lode` folder:
 ```bash
 npx --yes http-server@14.1.1 -a 127.0.0.1 -p 5173
 ```
-(`-a 127.0.0.1`: lo vede solo questo computer, non chi è sul tuo stesso Wi-Fi; `@14.1.1`: sempre la stessa versione, non l'ultima pubblicata) poi apri http://localhost:5173: segui la configurazione oppure, per vederlo pieno in un attimo, premi «Esempio» nella barra. Voce, trascrizione, Ripeti, Obsidian e AI locale sono solo nell'app.
+(`-a 127.0.0.1`: only this computer sees it, not whoever is on your Wi-Fi; `@14.1.1`: always the same version, not the latest published) then open http://localhost:5173: follow the setup or, to see it full in a moment, press “Example” in the bar. Voice, transcription, Repeat, Obsidian and the local AI are only in the app.
 
-## L'AI: gratis di base, potenziabile con la tua chiave
+## AI: free by default, more with your own key
 
-**Niente da pagare.** L'AI locale (Ollama + Qwen3.5) gira sul tuo computer, gratis e offline: gli appunti non escono. Lode sceglie il modello in base alla memoria:
+**Nothing to pay.** The local AI (Ollama + Qwen3.5) runs on your computer, free and offline: your notes don't leave it. Lode chooses the model according to memory:
 
-| Memoria del computer | Modello |
+| Computer memory | Model |
 |---|---|
-| fino a 15 GB | Qwen3.5 4B |
-| da 16 GB | Qwen3.5 9B |
-| da 40 GB | Qwen3.5 35B-A3B, un modello «a esperti»: grande ma veloce come uno piccolo |
+| up to 15 GB | Qwen3.5 4B |
+| from 16 GB | Qwen3.5 9B |
+| from 40 GB | Qwen3.5 35B-A3B, a “mixture of experts” model: big but as fast as a small one |
 
-Sulle slide di prova Qwen3.5 4B ha scritto carte tutte fedeli al materiale. Il modello che usavamo prima, Gemma 3 4B, ne sbagliava o inventava circa una su tre.
+On our test slides Qwen3.5 4B wrote cards that were all faithful to the material. The model we used before, Gemma 3 4B, got about one in three wrong or made it up.
 
-**Se vuoi di più**, scrivi **«AI»** nella barra e collega la chiave del servizio che preferisci:
+**If you want more**, type **“AI”** in the bar and connect the key of the service you prefer:
 - **Claude** (Anthropic);
 - **ChatGPT** (OpenAI);
 - **Gemini** (Google);
-- **Mistral** (server in Europa);
+- **Mistral** (servers in Europe);
 - **Groq**;
 - **OpenRouter**;
 - **DeepSeek**.
 
-Paghi direttamente il servizio, a consumo, di solito pochi centesimi a sessione: Lode non vede né incassa niente. Alcuni servizi hanno piani gratuiti con limiti. Lode ti dice quando i testi possono essere usati per addestrare i modelli: per esempio il piano gratuito di Gemini.
+You pay the service directly, per use, usually a few cents per session: Lode sees nothing and earns nothing. Some services have free plans with limits. Lode tells you when your text may be used to train models: for example Gemini's free plan.
 
-- **Appunti sul computer.** Con l'opzione «Appunti e lezioni restano sul computer», la tua AI fa solo spiegazioni e orale. Carte, definizioni e riordino restano all'AI locale.
-- **Con Claude** Lode può anche proporre carte, esami e voti da confermare.
-- **L'AI propone, tu decidi.** Ogni modifica ai tuoi dati arriva con **Conferma / Annulla**.
+- **Notes on the computer.** With the option “Notes and lectures stay on the computer”, your AI only does explanations and oral quizzes. Cards, definitions and tidying up stay with the local AI.
+- **With Claude** Lode can also suggest cards, exams and grades for you to confirm.
+- **The AI suggests, you decide.** Every change to your data comes with **Confirm / Cancel**.
 
-## La voce
+## The voice
 
-| | Mac con chip Apple (dal codice dopo `compila.sh`, vedi [Mac](#mac); prima vale la colonna accanto) | Windows e Linux, e il Mac dal codice senza `compila.sh` (almeno 6 GB di memoria) | Mac Intel dall'installer, e i computer con meno di 6 GB |
+| | Mac with Apple silicon (from source after `compila.sh`, see [Mac](#mac); before that the next column applies) | Windows and Linux, and the Mac from source without `compila.sh` (at least 6 GB of memory) | Intel Mac from the installer, and computers with less than 6 GB |
 |---|---|---|---|
-| Motore | **Parakeet TDT v3** di NVIDIA sul Neural Engine, con [FluidAudio](https://github.com/FluidInference/FluidAudio), lo stesso motore dell'app FluidVoice | **Parakeet TDT v3** sul processore, in formato ONNX, con [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) | **Whisper** (base o small), dentro l'app |
-| Download, una volta sola | circa 470 MB | circa 640 MB | 200 o 600 MB |
-| Un minuto di Ripeti (prova sul Mac di sviluppo) | 0,8 s, quasi senza errori, con la punteggiatura | 2-4 s nella barra (il motore da solo: circa 2 s; 90 secondi: 2,7 s), quasi senza errori, con la punteggiatura. Misurato sul Mac di sviluppo con 4 fili: su un PC dipende dal processore | 3,7 s, con qualche errore |
+| Engine | NVIDIA's **Parakeet TDT v3** on the Neural Engine, with [FluidAudio](https://github.com/FluidInference/FluidAudio), the same engine as the FluidVoice app | **Parakeet TDT v3** on the processor, in ONNX format, with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) | **Whisper** (base or small), inside the app |
+| Download, once | about 470 MB | about 640 MB | 200 or 600 MB |
+| One minute of Repeat (test on the development Mac) | 0.8 s, almost no errors, with punctuation | 2-4 s in the bar (the engine alone: about 2 s; 90 seconds: 2.7 s), almost no errors, with punctuation. Measured on the development Mac with 4 threads: on a PC it depends on the processor | 3.7 s, with a few errors |
 
-Tutto offline. L'audio non resta mai su disco: sul Mac passa a Parakeet in un file temporaneo che si cancella subito (anche se qualcosa va storto); su Windows e Linux passa al motore in memoria.
+All offline. Audio never stays on disk: on the Mac it goes to Parakeet in a temporary file that is deleted right away (even if something goes wrong); on Windows and Linux it goes to the engine in memory.
 
-**Parakeet su Windows e Linux.** Il modello (Parakeet TDT 0.6B v3, int8, convertito per sherpa-onnx) si scarica la prima volta che prepari la voce, da Hugging Face, sempre dalla stessa versione (un commit preciso, non «l'ultima»), nella cartella dei dati di Lode. Lode controlla l'impronta SHA256 di ogni file quando arriva e di nuovo prima di usarlo, una volta a ogni avvio di Lode (0,3 secondi sul Mac di sviluppo, qualche secondo su un PC lento): se non torna, cancella il file e lo riscarica. Se il download si interrompe, la volta dopo riprende da dove era rimasto. Il riconoscimento gira in un processo a parte, che tiene circa 1,5 GB di memoria; l'audio lungo (Ripeti arriva a 90 secondi) passa a pezzi di al massimo 30 secondi, così la memoria non sale. Se qualcosa non va (manca un pezzo del programma, poco spazio sul disco, un modello che non si carica o che arriva sbagliato), Lode lo dice e passa a Whisper senza perdere la frase o il pezzo di lezione in corso. Un file del modello rovinato sul disco invece va riscaricato: se in quel momento manca la rete, la voce dà errore finché la connessione non torna. Il pacchetto del Mac non include sherpa-onnx: il `.dmg` è universale (chip Apple e Intel insieme) e l'addon ha un file diverso per ogni processore, quindi sui Mac Intel resta Whisper.
+**Parakeet on Windows and Linux.** The model (Parakeet TDT 0.6B v3, int8, converted for sherpa-onnx) is downloaded the first time you set up voice, from Hugging Face, always from the same version (a precise commit, not “the latest”), into Lode's data folder. Lode checks the SHA256 fingerprint of each file when it arrives and again before using it, once every time Lode starts (0.3 seconds on the development Mac, a few seconds on a slow PC): if it doesn't match, it deletes the file and downloads it again. If the download is interrupted, next time it resumes where it left off. Recognition runs in a separate process, which holds about 1.5 GB of memory; long audio (Repeat goes up to 90 seconds) is passed in pieces of 30 seconds at most, so memory doesn't climb. If something goes wrong (a piece of the program is missing, little disk space, a model that doesn't load or arrives wrong), Lode says so and switches to Whisper without losing the sentence or the piece of lecture in progress. A model file damaged on disk, on the other hand, has to be downloaded again: if the network is down at that moment, voice gives an error until the connection comes back. The Mac package doesn't include sherpa-onnx: the `.dmg` is universal (Apple silicon and Intel together) and the addon has a different file for each processor, so Intel Macs keep Whisper.
 
 ## Privacy
-- **Niente account, niente server di Lode, niente pubblicità, niente tracciamento.**
-- I dati stanno sul tuo computer: nel vault Obsidian (`Documenti/Lode`) e nei file dell'app.
-- Il microfono si accende solo quando lo chiedi: voce, Ripeti in aula se l'hai attivato (o fuori lezione, se lo accendi tu: al massimo 3 ore), trascrizione. Per Ripeti l'audio vive solo in memoria, per 90 secondi.
-- La chiave della tua AI resta su questo computer e parte solo verso il servizio che hai scelto. Non finisce nel vault né nei backup.
-- **Aggiornamenti:** l'app degli installer (dal codice no) chiede a GitHub, poco dopo l'avvio e poi ogni 6 ore, se c'è una versione nuova di Lode, e da lì la scarica. Non manda niente di tuo: né dati, né identificativi, né statistiche. Si spengono da «Prepara Lode» o dal menu dell'icona.
-- **Registrare una lezione** dipende dal regolamento del tuo ateneo e dal docente: chiedi prima.
+- **No account, no Lode server, no ads, no tracking.**
+- Your data stays on your computer: in the Obsidian vault (`Documents/Lode`) and in the app's files.
+- The microphone turns on only when you ask: voice, Repeat in class if you enabled it (or outside class, if you turn it on yourself: 3 hours at most), transcription. For Repeat the audio lives only in memory, for 90 seconds.
+- Your AI key stays on this computer and goes only to the service you chose. It doesn't end up in the vault or in backups.
+- **Updates:** the installer app (not the one from source) asks GitHub, shortly after starting and then every 6 hours, whether there's a new version of Lode, and downloads it from there. It sends nothing of yours: no data, no identifiers, no statistics. They can be turned off from “Prepare Lode” or from the icon's menu.
+- **Recording a lecture** depends on your university's rules and on the lecturer: ask first.
 
-## Sincronizza fra i tuoi computer (sperimentale)
+## Sync between your computers (experimental)
 
-> **Nuova e sperimentale.** È spenta finché non la accendi tu. È stata provata a fondo con un simulatore di più computer e un cloud che fa di tutto per rompere le cose (centinaia di migliaia di sequenze, più tre giri di revisione indipendente), ma non ancora da tanti studenti. Prima di accenderla Lode tiene una copia di tutto: il vault di adesso resta dov'è, intatto, e i dati di Lode vanno anche nella cartella «copie» dei dati di Lode. Se qualcosa non torna, [raccontacelo](https://github.com/W1kicartel/Lode/issues).
+> **New and experimental.** It's off until you turn it on. It has been tested thoroughly with a simulator of several computers and a cloud that does everything it can to break things (hundreds of thousands of sequences, plus three rounds of independent review), but not yet by many students. Before turning it on, Lode keeps a copy of everything: your current vault stays where it is, untouched, and Lode's data also goes into the “copies” folder of Lode's data. If something doesn't add up, [tell us](https://github.com/W1kicartel/Lode/issues).
 
-Facoltativa, nell'app desktop: in **Prepara Lode › Sincronizza fra i tuoi computer** (o scrivi «sincronizza»). Lode usa la cartella cloud che hai già (iCloud Drive, OneDrive, Dropbox, Google Drive, Syncthing): niente account, niente server di Lode. Sposta il vault lì (la cartella di prima resta dov'è, intatta; se lo spostamento si interrompe, riprende da dove era rimasto) e ogni computer scrive solo il suo diario: niente conflitti, niente si perde. Sugli altri computer: **Uso già Lode su un altro computer**, nel benvenuto o in Prepara Lode. Se su quel computer Lode aveva già esami, voti o carte suoi, non spariscono: compaiono in «Dati di un altro primo avvio» nella scheda, e con **Importa le aggiunte** entrano nel gruppo (profilo e impostazioni restano nel file dei dati del vault di prima). Prima di accenderla, aggiorna Lode su tutti i computer.
+Optional, in the desktop app: in **Prepare Lode › Sync between your computers** (or type “sync”). Lode uses the cloud folder you already have (iCloud Drive, OneDrive, Dropbox, Google Drive, Syncthing): no account, no Lode server. It moves the vault there (the old folder stays where it is, untouched; if the move is interrupted, it resumes where it left off) and each computer writes only its own journal: no conflicts, nothing gets lost. On the other computers: **I already use Lode on another computer**, in the welcome or in Prepare Lode. If Lode on that computer already had its own exams, grades or cards, they don't disappear: they appear under “Data from another first launch” in the panel, and with **Import the additions** they join the group (profile and settings stay in the data file of the previous vault). Before turning it on, update Lode on all your computers.
 
-**La password è facoltativa e si sceglie una volta, all'accensione.** Con la password sono cifrati i dati di Lode nel diario: esami, voti, carte e ripassi, sessioni, profilo, impostazioni. Restano **in chiaro** nella cartella cloud, anche con la password (e le pagine per Obsidian riportano molti di quei dati):
-- appunti, Sbobine, file per Anki, diari dei Progetti;
-- Orario.md con le aule;
-- le pagine che Lode scrive per Obsidian, ricavate proprio da quei dati: Esami (voti, media, CFU e ore studiate per esame), Memoria (ore di studio del mese, in che fascia del giorno studi, la serie di giorni, le definizioni sbagliate e quante volte), Home (il prossimo appello, quante carte ci sono da ripassare), Corsi, Glossario;
-- nomi, dimensioni e orari dei file (quando studi);
-- quanti computer ci sono, quanti file scrive ciascuno e quante azioni ha in ogni file (un file per giorno);
-- il file del gruppo (sale e controllo della password, quando è nato e da quale computer, l'impronta del dati.json di prima);
-- quando è cambiata la password;
-- il dati.json minimo che dice «Aggiorna Lode».
+**The password is optional and is chosen once, when you turn sync on.** With the password, Lode's data in the journal is encrypted: exams, grades, cards and reviews, sessions, profile, settings. What stays **unencrypted** in the cloud folder, even with the password (and the pages for Obsidian show much of that data):
+- notes, lecture transcripts, files for Anki, project diaries;
+- the timetable note with the rooms;
+- the pages Lode writes for Obsidian, derived from that very data: Exams (grades, average, credits and hours studied per exam), Memory (study hours this month, what time of day you study, your streak of days, the definitions you got wrong and how many times), Home (the next exam, how many cards are due for review), Courses, Glossary;
+- names, sizes and times of the files (when you study);
+- how many computers there are, how many files each one writes and how many actions are in each file (one file per day);
+- the group file (salt and password check, when it was created and from which computer, the fingerprint of the previous dati.json);
+- when the password was changed;
+- the minimal dati.json that says “Update Lode”.
 
-Sul computer il diario di Lode resta in chiaro, protetto solo dal tuo account del sistema; nella cronologia del servizio cloud resta quello che era passato in chiaro prima della password. **Se dimentichi la password non si perde niente**: ogni computer ha i suoi dati sul disco, e con «Ho dimenticato la password» ne scegli una nuova (gli altri computer te la chiederanno). La password si ricorda nel portachiavi del sistema (su Linux senza portachiavi Lode la chiede a ogni avvio). **Smetti su questo computer** copia il vault in una cartella fuori dal cloud: gli altri computer continuano tra loro. Come funziona dentro: [docs/SINCRONIZZAZIONE.md](docs/SINCRONIZZAZIONE.md).
+On the computer, Lode's journal stays unencrypted, protected only by your system account; the cloud service's history keeps whatever passed through unencrypted before the password. **If you forget the password nothing is lost**: each computer has its data on disk, and with “I forgot the password” you choose a new one (the other computers will ask you for it). The password is remembered in the system keychain (on Linux without a keychain Lode asks for it at every start). **Stop on this computer** copies the vault to a folder outside the cloud: the other computers carry on among themselves. How it works inside: [docs/SINCRONIZZAZIONE.md](docs/SINCRONIZZAZIONE.md) (in Italian).
 
-## Sicurezza
-Hai trovato un problema di sicurezza? Non aprire una issue pubblica: segnalalo in privato, come spiegato in [SECURITY.md](SECURITY.md). Lì c'è anche cosa togliere (nome, chiavi, percorsi, pezzi del vault) prima di incollare un errore o uno screenshot in una issue.
+## Security
+Found a security problem? Don't open a public issue: report it privately, as explained in [SECURITY.md](SECURITY.md). There you'll also find what to remove (name, keys, paths, pieces of your vault) before pasting an error or a screenshot into an issue.
 
-## Come cresce con te
-Lode non ha un server e non addestra modelli: **la sua memoria è il tuo vault**.
-1. **Ogni lezione è una nota.** Contiene appunti, ★, definizioni, domande, trascrizione e appunti riordinati. Lode la rilegge anche quando scrivi in Obsidian.
-2. **Ogni definizione ha una memoria.** Ogni risposta ai giochi e al ripasso decide quando ripresentarla.
-3. **`Lode/Memoria.md`** riassume cosa sai, cosa sbagli, quando studi e quali proposte ti piacciono. Nella sezione «Note per Lode» puoi dirgli come vuoi essere aiutato.
-4. **L'AI legge tutto questo** quando le chiedi qualcosa: le spiegazioni e l'orale sono sul *tuo* corso, con le parole del *tuo* prof.
-5. **Le pagine Home, Esami, Glossario e dei corsi** si aggiornano da sole. Lode scrive solo dentro i suoi riquadri, il resto è tuo.
+## How it grows with you
+Lode has no server and doesn't train models: **its memory is your vault**.
+1. **Every lecture is a note.** It holds notes, ★, definitions, questions, transcript and tidied-up notes. Lode rereads it even when you write in Obsidian.
+2. **Every definition has a memory.** Every answer in the games and reviews decides when to show it again.
+3. **The Memory page** (`Lode/Memoria.md` in an Italian vault) sums up what you know, what you get wrong, when you study and which suggestions you like. In its “Notes for Lode” section you can tell it how you want to be helped.
+4. **The AI reads all of this** when you ask it something: explanations and oral quizzes are about *your* course, in *your* professor's words.
+5. **The Home, Exams, Glossary and course pages** update by themselves. Lode writes only inside its own boxes; the rest is yours.
 
-## Scorciatoie
+## Shortcuts
 
-| | Mac | Windows e Linux |
+| | Mac | Windows and Linux |
 |---|---|---|
-| parla (tieni premuto) | ⌥ Spazio | Ctrl+Shift+Spazio |
-| scrivi | ⌃⌥ Spazio | Ctrl+Alt+Spazio |
-| Ripeti | ⌃⌥P | Ctrl+Alt+P |
-| trascrivi la lezione / fine | ⌃⌥R | Ctrl+Alt+R |
-| ★ da esame · definizione · domanda | ⌃⌥S · ⌃⌥D · ⌃⌥Q | Ctrl+Alt+S · D · Q |
-| gioco | ⌃⌥G | Ctrl+Alt+G |
-| indietro, poi chiudi | Esc | Esc |
+| speak (hold down) | ⌥ Space | Ctrl+Shift+Space |
+| type | ⌃⌥ Space | Ctrl+Alt+Space |
+| Repeat | ⌃⌥P | Ctrl+Alt+P |
+| transcribe the lecture / stop | ⌃⌥R | Ctrl+Alt+R |
+| ★ for the exam · definition · question | ⌃⌥S · ⌃⌥D · ⌃⌥Q | Ctrl+Alt+S · D · Q |
+| game | ⌃⌥G | Ctrl+Alt+G |
+| back, then close | Esc | Esc |
 
 ---
 
-## Per chi sviluppa
+## For developers
 
-**Niente build:** HTML, CSS e moduli ES che il browser legge così come sono. L'app desktop è Electron.
+**No build:** HTML, CSS and ES modules that the browser reads as they are. The desktop app is Electron. Code, comments and the developer docs in `docs/` are in Italian; the text students see lives in one catalog per language (`js/lingue/`, see [docs/LINGUE.md](docs/LINGUE.md)).
 
-**Prove:**
+**Tests:**
 ```bash
 node --experimental-vm-modules test/unita.mjs
 node test/codice.mjs
@@ -377,95 +405,97 @@ node test/sync-sim/autoprova.mjs
 node test/sync-sim/scenari.mjs --motore test/sync-sim/motore-v2.mjs
 node test/sync-sim/fuzz.mjs --motore test/sync-sim/motore-v2.mjs --giri 1000 --seme 1
 ```
-- `test/unita.mjs` controlla comandi, formule, note, conti e il file per Anki, più la sicurezza della barra (librerie con versione esatta, Content-Security-Policy, percorsi, backup, dati del vault, chiavi, finestre che restano su Lode) e le parti della voce Parakeet ONNX che non hanno bisogno del modello (scelta del motore, versioni esatte, download con ripresa e impronta SHA256, la fila, il riposo, l'audio lungo a finestre, la chiusura durante l'avvio, il ripiego su Whisper): 168 prove.
-- Informatica: `codice.mjs` (222 prove su «Cosa stampa?», anche in Java e in Python), `verifica-c.mjs` (452 programmi confrontati con il compilatore vero; senza compilatore salta), `stampa-vero.mjs` (gli stessi esercizi in Python e in Java, eseguiti con python3 e con javac + java; senza strumenti salta), `progetto.mjs` (119, «Segui il progetto»), `errori.mjs` (218, gli errori spiegati), `diario.mjs` (90, il registro nel vault). Su GitHub girano tutte su Windows, Linux e macOS.
-- La sincronizzazione v2 ([docs/SINCRONIZZAZIONE.md](docs/SINCRONIZZAZIONE.md)): `sync-motore.mjs` prova le parti pure del motore (`desktop/sync/`); `sincronizza-app.mjs` prova l'app vera con Electron, tre computer uno alla volta su una cartella «cloud» temporanea (accensione con e senza password, spostamento interrotto e ripreso, modifiche contemporanee, Orario.md cambiato in Obsidian, «Smetti su questo computer»); `test/sync-sim/` è il simulatore di due o tre computer e di un servizio cloud dispettoso, con gli scenari dei problemi noti e il fuzz che, quando trova un errore, riduce la storia alla più corta e la racconta.
-- `test/aggiorna.mjs` (411 prove) controlla gli aggiornamenti senza Electron e senza rete: versioni con le prerelease, l'installer giusto per sistema e architettura, i `latest*.yml`, il Mac senza firma, un finto electron-updater, e che package.json, preload ed entitlements stiano insieme.
-- `test/voce-onnx.mjs` prova la voce Parakeet ONNX con il modello vero, senza Electron e senza microfono: trascrive le frasi di `test/audio`, misura un minuto di audio e un Ripeti di 90 secondi (su Mac e Linux anche la memoria del processo, che non deve salire), controlla le impronte, la fila, il riposo, la chiusura durante l'avvio e i ripieghi (crash, addon che manca, modello rovinato). Il modello lo cerca in `LODE_MODELLO_ONNX`; con `--scarica` lo scarica lì (circa 640 MB). Senza modello salta. Su GitHub gira su Windows e Linux solo a richiesta («Run workflow» o `[voce]` nel messaggio del commit), con il modello nella cache.
-- `test/controlla-privacy.mjs` guarda i file che finirebbero su GitHub (quelli in git e i nuovi non ignorati) e si ferma se trova chiavi, percorsi con un nome vero (`/Users/<nome>/`, `C:\Users\<nome>\`, `/home/<nome>/`, anche il tuo nome utente), file privati (`.env`, certificati, un vault di prova, foto e risultati delle prove), codice da un CDN o `npx --yes` senza versione esatta, pacchetti di `desktop/package-lock.json` fuori dal registro npm. Lancialo prima di ogni commit: su GitHub gira con le prove unitarie.
-- `test/prova-app.mjs` fa il giro completo dell'app su un vault temporaneo, senza toccare i tuoi dati: 81 prove (80 senza compilatore C). Con `LODE_SOLO='informatica|stampa|progetto|errore|diario|davvero'` fa solo i passi di informatica (2-3 minuti). Con `LODE_SOLO='anki'` solo «Esporta per Anki» (meno di un minuto). Per ora gira solo su macOS (su Windows e Linux manca la voce di sistema per generare l'audio delle prove; contributi benvenuti): le frasi «parlate» le genera la voce di sistema e l'audio va direttamente al motore, senza altoparlanti né microfono.
+- `test/unita.mjs` checks commands, formulas, notes, maths and the Anki file, plus the bar's security (libraries with exact versions, Content-Security-Policy, paths, backups, vault data, keys, windows that stay on Lode) and the parts of the Parakeet ONNX voice that don't need the model (engine choice, exact versions, download with resume and SHA256 fingerprint, the queue, idling, long audio in windows, quitting during startup, the fallback to Whisper): 168 tests.
+- Computer science: `codice.mjs` (222 tests on “What does it print?”, also in Java and Python), `verifica-c.mjs` (452 programs compared with the real compiler; skipped without a compiler), `stampa-vero.mjs` (the same exercises in Python and Java, run with python3 and with javac + java; skipped without the tools), `progetto.mjs` (119, “Follow project”), `errori.mjs` (218, errors explained), `diario.mjs` (90, the log in the vault). On GitHub they all run on Windows, Linux and macOS.
+- Sync v2 ([docs/SINCRONIZZAZIONE.md](docs/SINCRONIZZAZIONE.md)): `sync-motore.mjs` tests the pure parts of the engine (`desktop/sync/`); `sincronizza-app.mjs` tests the real app with Electron, three computers one at a time on a temporary “cloud” folder (turning on with and without a password, a move interrupted and resumed, simultaneous changes, the timetable changed in Obsidian, “Stop on this computer”); `test/sync-sim/` is the simulator of two or three computers and a spiteful cloud service, with the scenarios of known problems and the fuzzer that, when it finds an error, shrinks the history to the shortest one and tells it.
+- `test/aggiorna.mjs` (411 tests) checks updates without Electron and without the network: versions with prereleases, the right installer for each system and architecture, the `latest*.yml` files, the unsigned Mac, a fake electron-updater, and that package.json, preload and entitlements agree.
+- `test/voce-onnx.mjs` tests the Parakeet ONNX voice with the real model, without Electron and without a microphone: it transcribes the sentences in `test/audio`, measures one minute of audio and a 90-second Repeat (on Mac and Linux also the process memory, which must not climb), checks the fingerprints, the queue, idling, quitting during startup and the fallbacks (crash, missing addon, damaged model). It looks for the model in `LODE_MODELLO_ONNX`; with `--scarica` it downloads it there (about 640 MB). Without the model it's skipped. On GitHub it runs on Windows and Linux only on request (“Run workflow” or `[voce]` in the commit message), with the model in the cache.
+- `test/controlla-privacy.mjs` looks at the files that would end up on GitHub (the ones in git and new ones not ignored) and stops if it finds keys, paths with a real name (`/Users/<name>/`, `C:\Users\<name>\`, `/home/<name>/`, including your own username), private files (`.env`, certificates, a test vault, test photos and results), code from a CDN or `npx --yes` without an exact version, packages in `desktop/package-lock.json` outside the npm registry. Run it before every commit: on GitHub it runs with the unit tests.
+- `test/prova-app.mjs` does the full tour of the app on a temporary vault, without touching your data: 81 tests (80 without a C compiler). With `LODE_SOLO='informatica|stampa|progetto|errore|diario|davvero'` it only does the computer science steps (2-3 minutes). With `LODE_SOLO='anki'` only “Export to Anki” (less than a minute). For now it only runs on macOS (on Windows and Linux the system voice used to generate the test audio is missing; contributions welcome): the “spoken” sentences are generated by the system voice and the audio goes straight to the engine, without speakers or microphone.
+- `test/lingue.mjs` checks the language catalogs (the same keys, parameters and tags as Italian in every language); `test/readme.mjs` checks this README and the Italian one (the links between the two, `#anchors`, files, the same terminal commands).
 
-**Provare le modifiche senza rischi** (le tue, e soprattutto quelle degli altri: una pull request, un ramo scaricato):
-- **Mai sul vault vero né con le chiavi vere.** In sviluppo `npm start` usa la stessa configurazione dell'app installata: il vault in `Documenti/Lode`, le chiavi della tua AI, le cartelle che segui. `LODE_DATI` e `LODE_VAULT` spostano tutto in cartelle temporanee, `LODE_OBSIDIAN_DIR` tiene il vault di prova fuori dall'elenco di Obsidian. Dalla cartella `desktop`, su Mac e Linux:
+**Trying changes safely** (yours, and above all other people's: a pull request, a downloaded branch):
+- **Never on your real vault or with your real keys.** In development `npm start` uses the same configuration as the installed app: the vault in `Documents/Lode`, your AI keys, the folders you follow. `LODE_DATI` and `LODE_VAULT` move everything into temporary folders, `LODE_OBSIDIAN_DIR` keeps the test vault out of Obsidian's list. From the `desktop` folder, on Mac and Linux:
   ```bash
   LODE_DATI="$(mktemp -d)" LODE_VAULT="$(mktemp -d)/Vault" LODE_OBSIDIAN_DIR="$(mktemp -d)" npm start
   ```
-  Su Windows (PowerShell; le variabili restano finché non chiudi la finestra):
+  On Windows (PowerShell; the variables last until you close the window):
   ```powershell
   $t = Join-Path $env:TEMP "lode-prova-$(Get-Random)"; New-Item -ItemType Directory "$t\dati", "$t\obsidian" | Out-Null
   $env:LODE_DATI = "$t\dati"; $env:LODE_VAULT = "$t\Vault"; $env:LODE_OBSIDIAN_DIR = "$t\obsidian"; npm start
   ```
-  Se serve l'AI, usa quella locale o una chiave fatta apposta per le prove, con un limite di spesa basso, da cancellare dopo.
-- **Prima leggi il diff, poi `npm install` o `npm start`.** Il codice di una PR gira con i tuoi permessi: `desktop/*.mjs` e `test/*.mjs` sono Node completo e leggono tutta la tua cartella utente. Guarda soprattutto `desktop/package.json`, `desktop/package-lock.json` (un pacchetto può puntare a un altro archivio, e `npm install` ne esegue gli script), `desktop/*.mjs` e `.github/workflows/`. Per installare le dipendenze di una PR: `npm ci --ignore-scripts` (esattamente il lockfile, senza script dei pacchetti; a `npm start` basta).
-- **Le cartelle a parte proteggono i tuoi dati da un errore, non da codice scritto apposta**: per quello leggi il diff o usa una macchina virtuale.
-- **Foto e risultati delle prove fuori dal repository**: `LODE_FOTO` e `LODE_RISULTATI` in una cartella temporanea, non dentro `Lode`. Il JSON ha il «registro» dell'app, con i percorsi della tua macchina; le foto mostrano la barra con nome, voti e orario.
-- **Prima di incollare un registro o uno screenshot** (in una issue, in una PR): sostituisci il tuo nome con `<nome>`, anche nei percorsi (`C:\Users\<nome>\…`, `/Users/<nome>/…`, i «Vault di prova:» e «Laboratorio di prova:» di `prova-app.mjs`), togli chiavi e token, copri voti, appunti e il saluto della barra. Dettagli in [SECURITY.md](SECURITY.md).
+  If you need AI, use the local one or a key made just for testing, with a low spending limit, to delete afterwards.
+- **Read the diff first, then `npm install` or `npm start`.** A PR's code runs with your permissions: `desktop/*.mjs` and `test/*.mjs` are full Node and can read your whole user folder. Look especially at `desktop/package.json`, `desktop/package-lock.json` (a package can point to another archive, and `npm install` runs its scripts), `desktop/*.mjs` and `.github/workflows/`. To install a PR's dependencies: `npm ci --ignore-scripts` (exactly the lockfile, without package scripts; enough for `npm start`).
+- **Separate folders protect your data from a mistake, not from code written on purpose**: for that, read the diff or use a virtual machine.
+- **Test photos and results outside the repository**: `LODE_FOTO` and `LODE_RISULTATI` in a temporary folder, not inside `Lode`. The JSON has the app's “log”, with the paths on your machine; the photos show the bar with your name, grades and timetable.
+- **Before pasting a log or a screenshot** (in an issue, in a PR): replace your name with `<name>`, in paths too (`C:\Users\<name>\…`, `/Users/<name>/…`, the “Vault di prova:” and “Laboratorio di prova:” lines of `prova-app.mjs`), remove keys and tokens, cover grades, notes and the bar's greeting. Details in [SECURITY.md](SECURITY.md).
 
-**Pacchetti** (non firmati): `cd desktop`, poi `npm run dist:mac`, `dist:win` oppure `dist:linux`. Gli installer pubblici li costruisce GitHub da solo (`.github/workflows/rilascio.yml`) quando si pubblica un tag `v…` uguale alla versione di `desktop/package.json`, su un commit già su `main`, insieme ai `latest*.yml` per gli aggiornamenti e a `SHA256SUMS.txt` con le impronte. Se nel repository ci sono i certificati, li firma (e sul Mac li notarizza); se no escono come oggi. Come attivare la firma: [docs/FIRMA.md](docs/FIRMA.md).
+**Packages** (unsigned): `cd desktop`, then `npm run dist:mac`, `dist:win` or `dist:linux`. The public installers are built by GitHub by itself (`.github/workflows/rilascio.yml`) when a `v…` tag equal to the version in `desktop/package.json` is published, on a commit already on `main`, together with the `latest*.yml` files for updates and `SHA256SUMS.txt` with the fingerprints. If the certificates are in the repository, it signs them (and notarizes them on the Mac); if not, they come out as they do today. How to turn on signing: [docs/FIRMA.md](docs/FIRMA.md).
 
-| File | Cosa fa |
+| File | What it does |
 |---|---|
-| `js/lode.js` | La barra: pillola, pannello a molla, conversazione, schede, conferme, voce, file trascinati, «La tua AI» |
-| `js/comandi.js` | Capisce l'italiano senza AI: date, voti, minuti, nomi d'esame approssimati |
-| `js/dati.js` | Dati e conti: media, base di laurea, voto che serve, piano, SM-2 |
-| `js/ore.js` | Il piano per chi lavora: ore libere vere (lezioni, turni, silenzio), tutti gli esami a minuti, cosa non ci sta e le opzioni |
-| `js/ai.js` | L'AI: locale (Ollama), Claude con gli strumenti (API chiamata con `fetch`, senza SDK), oppure un servizio in formato OpenAI; il prof dell'orale |
-| `js/fornitori.js` | I servizi della «tua AI», un elenco solo per la barra e per il main (che accetta dalla barra solo l'id del servizio) |
-| `js/librerie.js`, `desktop/vendor.mjs` | Le librerie di altri (pdf.js, Temml, transformers.js) con la versione esatta: nell'app file locali in `vendor/`, copiati da `desktop/node_modules`; nel browser da jsDelivr con l'impronta nell'import map |
-| `js/voce.js` | La voce: Parakeet (Neural Engine sul Mac, ONNX altrove) o Whisper, in fila con priorità per Ripeti e i comandi; il ripiego su Whisper |
-| `js/orecchio.js` | Il microfono condiviso in aula, con gli ultimi 90 secondi solo in memoria |
-| `js/trascrizione.js` | La lezione intera: microfono, pezzi da 20-30 s, voce, formule, nota Obsidian |
-| `js/formule.js` | Le formule dette a voce in LaTeX |
-| `js/file.js` | I file trascinati: tipo, testo di PDF (pdf.js), Word e PowerPoint, audio a 16 kHz |
-| `js/sbobina.js` | Sbobine da condividere (.md + .html con formule) e sbobine ricevute |
-| `js/anki.js` | «Esporta per Anki»: carte e definizioni nel testo d'importazione di Anki, un mazzo per corso, senza doppioni |
-| `js/tasca.js` | «Ripasso in tasca»: le carte di domani in `In tasca.md` da fare sul telefono, le spunte che tornano diventano ripasso (giro contro le copie vecchie) |
-| `js/prova.js` | «Prova generale»: i compiti interi dai temi d'esame (fonte e data), la prova in corso in localStorage col timer della pillola, gli esiti scelti dallo studente in `esami[i].prove` e sui temi, il riepilogo senza voti |
-| `js/allenatore.js` | Le proposte a sorpresa: quando, cosa, e cosa impara |
-| `js/benvenuto.js` | La configurazione guidata |
-| `js/codice/albero.js`, `js/codice/modelli.js`, `js/codice/stampa.js` | «Cosa stampa?»: un piccolo C che Lode sa eseguire e scrivere anche in Java e in Python, i modelli di domanda con i loro errori tipici, la scheda |
-| `js/codice/progetto.js` | «Segui il progetto» nella barra: pillola, «Fatto. In parole semplici», «Provato?» |
-| `js/errori.js` | Gli errori di gcc, clang, MinGW, Python e Java spiegati in italiano, senza AI |
-| `js/codice/diario.js` | Il registro nel vault: diario del progetto, «Cosa so davvero», la sezione «Informatica» della Memoria |
-| `js/codice/glossario.js` | «Cose nuove»: il dizionario fisso delle funzioni di libreria di C, Java e Python, con la domanda da orale e la risposta |
-| `js/codice/discussione.js` | «Pronto per la discussione»: le funzioni cambiate da spiegare, la firma trovata nel file e il controllo della spiegazione, senza AI |
-| `js/giochi.js` | I giochi di memoria |
-| `js/markdown.js`, `js/vault.js` | Le note di Obsidian e il vault visto dalla barra |
-| `js/mascotte.js`, `js/motore.js` | La gemma con gli occhi e le animazioni |
-| `desktop/main.mjs` | L'app Electron: finestra trasparente sempre in primo piano, scorciatoie globali, icona nella barra dei menu, chiamate all'AI |
-| `desktop/installa.mjs` | Installa Obsidian e Ollama + Qwen3.5 |
+| `js/lode.js` | The bar: pill, spring panel, conversation, cards, confirmations, voice, dragged files, “Your AI” |
+| `js/comandi.js` | Understands plain sentences without AI: dates, grades, minutes, approximate exam names |
+| `js/lingua.js`, `js/lingue/` | The languages: which one is chosen, `t()` and the text catalogs, one folder per language ([docs/LINGUE.md](docs/LINGUE.md)) |
+| `js/dati.js` | Data and maths: average, *base di laurea*, grade needed, plan, SM-2 |
+| `js/ore.js` | The plan for students who work: real free hours (lectures, shifts, quiet hours), all exams in minutes, what doesn't fit and the options |
+| `js/ai.js` | The AI: local (Ollama), Claude with tools (API called with `fetch`, no SDK), or a service in OpenAI format; the oral-exam professor |
+| `js/fornitori.js` | The “Your AI” services, a single list for the bar and for main (which accepts only the service id from the bar) |
+| `js/librerie.js`, `desktop/vendor.mjs` | Third-party libraries (pdf.js, Temml, transformers.js) at exact versions: in the app, local files in `vendor/`, copied from `desktop/node_modules`; in the browser from jsDelivr with the fingerprint in the import map |
+| `js/voce.js` | Voice: Parakeet (Neural Engine on the Mac, ONNX elsewhere) or Whisper, queued with priority for Repeat and commands; the fallback to Whisper |
+| `js/orecchio.js` | The shared microphone in class, with the last 90 seconds only in memory |
+| `js/trascrizione.js` | The whole lecture: microphone, 20-30 s chunks, voice, formulas, Obsidian note |
+| `js/formule.js` | Spoken formulas into LaTeX |
+| `js/file.js` | Dragged files: type, text from PDF (pdf.js), Word and PowerPoint, audio at 16 kHz |
+| `js/sbobina.js` | Lecture transcripts to share (.md + .html with formulas) and transcripts received |
+| `js/anki.js` | “Export to Anki”: cards and definitions in Anki's import text, one deck per course, no duplicates |
+| `js/tasca.js` | “Pocket review”: tomorrow's cards in a note to do on the phone; the ticks that come back become reviews (guarded against old copies) |
+| `js/prova.js` | “Mock exam”: whole papers from the past papers (source and date), the exam in progress in localStorage with the pill's timer, the results chosen by the student in `esami[i].prove` and on the past papers, the summary without grades |
+| `js/allenatore.js` | The surprise suggestions: when, what, and what it learns |
+| `js/benvenuto.js` | The guided setup |
+| `js/codice/albero.js`, `js/codice/modelli.js`, `js/codice/stampa.js` | “What does it print?”: a small C that Lode can run and also write in Java and Python, the question templates with their typical mistakes, the card |
+| `js/codice/progetto.js` | “Follow project” in the bar: pill, “Done. In plain words”, “Tested?” |
+| `js/errori.js` | gcc, clang, MinGW, Python and Java errors explained in plain words, without AI |
+| `js/codice/diario.js` | The log in the vault: project diary, “What I really know”, the “Computer science” section of the Memory page |
+| `js/codice/glossario.js` | “New things”: the fixed dictionary of C, Java and Python library functions, with the oral-exam question and the answer |
+| `js/codice/discussione.js` | “Ready for the discussion”: the changed functions to explain, the signature found in the file and the check of the explanation, without AI |
+| `js/giochi.js` | The memory games |
+| `js/markdown.js`, `js/vault.js` | Obsidian notes and the vault as seen from the bar |
+| `js/mascotte.js`, `js/motore.js` | The gem with eyes and the animations |
+| `desktop/main.mjs` | The Electron app: transparent always-on-top window, global shortcuts, menu bar icon, calls to the AI |
+| `desktop/installa.mjs` | Installs Obsidian and Ollama + Qwen3.5 |
 | `desktop/voce.mjs`, `desktop/voce-mac/` | `lode-voce`: Parakeet v3 via FluidAudio |
-| `desktop/ascolta.mjs`, `desktop/ascolta-mac/` | `lode-ascolta`: l'audio del Mac per la «Lezione dal computer» (process tap di CoreAudio, macOS 14.2+) |
-| `desktop/agenti.mjs`, `desktop/agenti-collegamenti.mjs` | il ponte con gli agenti di programmazione: server locale, eventi, avvisi, collegamenti a 10 agenti |
-| `desktop/moodle.mjs` | Moodle in sola lettura: accesso come l'app ufficiale (SSO o password), corsi, file, scadenze |
-| `js/programma.js`, `js/crocette.js`, `js/computer.js` | il programma d'esame (mappa e piano), il quiz a crocette, l'audio del computer |
-| `js/temi.js` | i temi d'esame: il compito diviso in esercizi, l'esercizio di oggi sugli argomenti del piano, gli intervalli dopo l'esito |
-| `desktop/voce-onnx.mjs`, `desktop/voce-onnx-motore.mjs` | Parakeet v3 ONNX con sherpa-onnx: scelta del motore, download verificato del modello, il processo che trascrive |
-| `desktop/vault.mjs` | Crea il vault, lo registra in Obsidian, rilegge le lezioni quando cambiano |
-| `desktop/progetto.mjs`, `desktop/esegui.mjs` | Le cartelle seguite: versioni, diff, impronta, e le prove eseguite solo dopo la conferma |
-| `desktop/aggiorna.mjs`, `desktop/verifica-rilascio.mjs` | Gli aggiornamenti: electron-updater su Windows e Linux, avviso e `.dmg` sul Mac senza firma; il controllo dei `latest*.yml` prima di pubblicare |
+| `desktop/ascolta.mjs`, `desktop/ascolta-mac/` | `lode-ascolta`: the Mac's audio for “Lecture from the computer” (CoreAudio process tap, macOS 14.2+) |
+| `desktop/agenti.mjs`, `desktop/agenti-collegamenti.mjs` | the bridge with coding agents: local server, events, warnings, connections to 10 agents |
+| `desktop/moodle.mjs` | Read-only Moodle: login like the official app (SSO or password), courses, files, deadlines |
+| `js/programma.js`, `js/crocette.js`, `js/computer.js` | the exam syllabus (map and plan), the multiple-choice quiz, the computer's audio |
+| `js/temi.js` | past papers: the paper split into exercises, today's exercise on the plan's topics, the intervals after the result |
+| `desktop/voce-onnx.mjs`, `desktop/voce-onnx-motore.mjs` | Parakeet v3 ONNX with sherpa-onnx: engine choice, verified model download, the process that transcribes |
+| `desktop/vault.mjs` | Creates the vault, registers it in Obsidian, rereads lectures when they change |
+| `desktop/progetto.mjs`, `desktop/esegui.mjs` | Followed folders: versions, diff, fingerprint, and tests run only after confirmation |
+| `desktop/aggiorna.mjs`, `desktop/verifica-rilascio.mjs` | Updates: electron-updater on Windows and Linux, notice and `.dmg` on the unsigned Mac; the check of the `latest*.yml` files before publishing |
 
-**Sicurezza della barra.** `index.html` ha una Content-Security-Policy: script solo dalla cartella dell'app (niente script scritti nella pagina, niente `eval`), rete solo verso i servizi della «tua AI» e i modelli della voce (Ollama e gli aggiornamenti da GitHub passano dal main, non dalla pagina), nessun form verso altri indirizzi. Nell'app impacchettata `desktop/prepara.mjs` toglie anche jsDelivr e l'import map. Le finestre dell'app non navigano verso altre pagine: un link https si apre nel browser. Una libreria nuova o una versione nuova: `desktop/package.json` (`npm install`), `js/librerie.js`, import map e CSP in `index.html`; `test/unita.mjs` controlla che coincidano. In sviluppo l'app copia da sola le librerie in `vendor/` (ignorata da git). Le variabili `LODE_*` per le prove valgono solo in sviluppo: l'app installata le ignora.
+**The bar's security.** `index.html` has a Content-Security-Policy: scripts only from the app's folder (no scripts written in the page, no `eval`), network only to the “Your AI” services and the voice models (Ollama and updates from GitHub go through main, not the page), no forms to other addresses. In the packaged app `desktop/prepara.mjs` also removes jsDelivr and the import map. The app's windows don't navigate to other pages: an https link opens in the browser. A new library or a new version: `desktop/package.json` (`npm install`), `js/librerie.js`, import map and CSP in `index.html`; `test/unita.mjs` checks that they match. In development the app copies the libraries into `vendor/` by itself (ignored by git). The `LODE_*` variables for tests only work in development: the installed app ignores them.
 
-Design: solo bianco e nero, font [Geist](https://github.com/vercel/geist-font), movimento morbido, `prefers-reduced-motion` rispettato. Le regole per contribuire sono in [CONTRIBUTING.md](CONTRIBUTING.md).
+Design: black and white only, the [Geist](https://github.com/vercel/geist-font) font, soft motion, `prefers-reduced-motion` respected. The rules for contributing are in [CONTRIBUTING.md](CONTRIBUTING.md#in-english).
 
-## Cosa manca (cerco mani)
-- [ ] Firma degli installer: il workflow è pronto, mancano solo i certificati (Apple 99 $ l'anno; per Windows Azure Trusted Signing o SignPath). Cosa comprare e come attivarla: [docs/FIRMA.md](docs/FIRMA.md)
-- [ ] Parakeet su Windows e Linux c'è (ONNX, sul processore), ma va provato su un PC vero: raccontaci quanto ci mette
-- [ ] La sincronizzazione fra i tuoi computer c'è dalla 0.5.0, cifrata se vuoi, ma è [sperimentale](#sincronizza-fra-i-tuoi-computer-sperimentale): va provata con iCloud, OneDrive, Dropbox e Google Drive veri. Raccontaci com'è andata
-- [ ] Riconoscere chi parla (prof o studenti) nella trascrizione
-- [ ] Regole dei singoli atenei per il voto di laurea
+## What's missing (help wanted)
+- [ ] Signing the installers: the workflow is ready, only the certificates are missing (Apple $99 a year; for Windows Azure Trusted Signing or SignPath). What to buy and how to turn it on: [docs/FIRMA.md](docs/FIRMA.md)
+- [ ] Parakeet on Windows and Linux is there (ONNX, on the processor), but it needs testing on a real PC: tell us how long it takes
+- [ ] Sync between your computers has been there since 0.5.0, encrypted if you want, but it's [experimental](#sync-between-your-computers-experimental): it needs testing with real iCloud, OneDrive, Dropbox and Google Drive. Tell us how it went
+- [ ] Recognizing who's speaking (professor or students) in the transcript
+- [ ] Each university's own rules for the final degree mark
 
-## Crediti
-Lode usa, senza modificarli:
-- [Obsidian](https://obsidian.md): gratis per uso personale, non open source;
-- [Ollama](https://ollama.com) (MIT) e [Qwen3.5](https://huggingface.co/Qwen) (Apache 2.0);
-- [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache 2.0) e il modello [Parakeet TDT v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) di NVIDIA (CC BY 4.0);
-- [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (Apache 2.0) con la [versione ONNX di Parakeet TDT v3](https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8);
-- [transformers.js](https://github.com/huggingface/transformers.js) (Apache 2.0) con [Whisper](https://github.com/openai/whisper) (MIT);
-- [pdf.js](https://github.com/mozilla/pdf.js) (Apache 2.0) e [Temml](https://temml.org) (MIT);
+## Credits
+Lode uses, without modifying them:
+- [Obsidian](https://obsidian.md): free for personal use, not open source;
+- [Ollama](https://ollama.com) (MIT) and [Qwen3.5](https://huggingface.co/Qwen) (Apache 2.0);
+- [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache 2.0) and NVIDIA's [Parakeet TDT v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) model (CC BY 4.0);
+- [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) (Apache 2.0) with the [ONNX version of Parakeet TDT v3](https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8);
+- [transformers.js](https://github.com/huggingface/transformers.js) (Apache 2.0) with [Whisper](https://github.com/openai/whisper) (MIT);
+- [pdf.js](https://github.com/mozilla/pdf.js) (Apache 2.0) and [Temml](https://temml.org) (MIT);
 - [Electron](https://www.electronjs.org) (MIT);
 - [Geist](https://github.com/vercel/geist-font) (SIL OFL 1.1).
 
-## Licenza
-MIT. Fai quello che vuoi, citando il progetto. Geist e Geist Mono: SIL Open Font License 1.1 (vedi `fonts/LICENZE.txt`).
+## License
+MIT. Do what you want, crediting the project. Geist and Geist Mono: SIL Open Font License 1.1 (see `fonts/LICENZE.txt`).

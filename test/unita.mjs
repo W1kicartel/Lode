@@ -495,7 +495,7 @@ D di (∂Q/∂x − ∂P/∂y).`;
   prova('sync: un esame tolto è un cancella; chiave e suggerimento restano sul computer', k.length === 1 && k[0].tipo === 'cancella' && k[0].id === 'e1', JSON.stringify(k));
   const ev = dopo(x => { x.codice.eventi = [{ t: 1, tipo: 'errore' }, { t: 2, tipo: 'prova' }]; });
   prova('sync: i diari dei progetti mandano solo le voci nuove', ev.length === 1 && ev[0].tipo === 'eventi' && ev[0].voci.length === 2, JSON.stringify(ev));
-  const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+  const readme = readFileSync(new URL('../README.it.md', import.meta.url), 'utf8');   // il README italiano (README.md è in inglese)
   prova('sync: il README dice cosa resta in chiaro con le stesse parole di js/sync-testi.js (#4 #23)', TS.IN_CHIARO.every(t => readme.includes(t)) && readme.includes('Se dimentichi la password non si perde niente'), TS.IN_CHIARO.filter(t => !readme.includes(t)).join(' | '));
   prova('sync: la riga di stato dice la verità', TS.rigaStato({ acceso: false }).startsWith('Spenta') && TS.rigaStato({ acceso: true, cloud: true, stato: 'password' }) === 'In pausa: scrivi la password per sincronizzare.' && /Sincronizzato con iCloud Drive · cifrato/.test(TS.rigaStato({ acceso: true, cloud: true, stato: 'in_pari', servizio: 'iCloud Drive', cifrato: true })));
 }

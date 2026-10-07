@@ -227,7 +227,7 @@ prova('F: con la password e il vault già nel cloud accende sul posto, cifrato, 
 prova('F: sotto .lode nella cartella cloud niente in chiaro (né eventi né dati.prev.json)', !inChiaroF.length && !existsSync(join(V3, '.lode', 'dati.prev.json')), inChiaroF.join(', '));
 
 /* ---------- il testo unico: il README dice le stesse cose di js/sync-testi.js (#4 #23) ---------- */
-const readme = leggi(join(QUI, '..', 'README.md'));
+const readme = leggi(join(QUI, '..', 'README.it.md'));   // il README italiano (README.md è in inglese)
 prova('README: l\'elenco di cosa resta in chiaro coincide con js/sync-testi.js', IN_CHIARO.every(x => readme.includes(x)), IN_CHIARO.filter(x => !readme.includes(x)).join(' | '));
 
 console.log(`\n${ok} prove passate, ${ko} fallite (cartella: ${DIR})`);
