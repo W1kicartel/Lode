@@ -9,6 +9,7 @@ import { conAnno } from '../../js/comandi/comune.js';
 export const ESAMI = [
   ['Analisi 1', 9, 27], ['Analisi 2', 9], ['Basi di dati', 9], ['Fisica 2', 6], ['Diritto privato', 9], ['Lingua inglese B2', 3, null, true],
   ['Calculus 1', 9, 27], ['Calculus 2', 9], ['Databases', 9], ['Physics 2', 6], ['Private law', 9], ['English B2', 3, null, true],
+  ['Mathe 1', 9, 27], ['Mathe 2', 9], ['Datenbanken', 9], ['Physik 2', 6], ['Privatrecht', 9], ['Englisch B2', 3, null, true],
 ];
 // l'esame con questo nome, nel risultato atteso: il banco lo sostituisce con l'oggetto vero del libretto
 export const E = nome => '@esame:' + nome;
