@@ -157,7 +157,7 @@ export function trovaEsame(testo, { anche = 'tutti' } = {}) {
   const lista = anche === 'daFare' ? daFare() : D.esami;
   let migliore = null, punti = 0;
   for (const e of lista) {
-    const n = norm(e.nome);
+    const n = numeroInFondo(norm(e.nome));   // anche il nome salvato: «Physics Two» si trova con «physics two» come prima
     let p = n === q ? 100 : n.startsWith(q) ? 80 : n.includes(q) ? 60 : 0;
     if (!p) { const parole = q.split(' '); const tutte = parole.every(w => n.split(' ').some(x => x.startsWith(w))); if (tutte) p = 50; }
     if (!p && sigla(e.nome) === q.replace(/ /g, '')) p = 55;

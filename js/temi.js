@@ -7,7 +7,7 @@
 // così la mappa del programma si aggiorna. Tutto senza AI e senza OCR: un PDF scansionato si incolla a mano.
 // Dove sta: dentro l'esame (esami[i].temi), come il programma. piano() non si tocca: gli esercizi si agganciano ai suoi giorni.
 import { salva, id, oggi, piuGiorni, norm } from './dati.js';
-import { meseDa, meseAltre } from './parole.js';
+import { meseDa, meseInglese } from './parole.js';
 import { abbina, oggiDi, registraEsito } from './programma.js';
 import { t } from './lingua.js';
 
@@ -79,9 +79,9 @@ export function dataDi(testo) {
     const me = meseDa(x[2]), g = +x[1];
     if (me && g >= 1 && g <= 31) return iso(x[3], me, g);
   }
-  // «February 12, 2024»: solo con un mese delle altre lingue (una parola italiana come «settore 12 2024» non è una data)
+  // «February 12, 2024»: solo con un mese inglese (una parola italiana come «settore 12 2024» o «Marco 12 2024» non è una data)
   for (const x of n.matchAll(/\b([a-z]{3,}) (\d{1,2})(?= (\d{4})\b)/g)) {
-    const me = meseAltre(x[1]), g = +x[2];
+    const me = meseInglese(x[1]), g = +x[2];
     if (me && g >= 1 && g <= 31) return iso(x[3], me, g);
   }
   return null;

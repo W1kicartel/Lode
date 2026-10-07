@@ -299,5 +299,30 @@ for (const d of [{ t: 'Gradient', d: 'The vector which points between the steepe
     prova(`crocette: «${op}» si scarta`, QC.valida([q(op)], mat).domande.length === 0);
 }
 
+/* ---------- le parole delle altre lingue non cambiano l'italiano (e non rompono i testi veri) ---------- */
+// «Metodologia della ricerca» è un argomento italiano, non il titolo spagnolo o portoghese «Metodología»
+prova('programma it: «Metodologia della ricerca» resta un argomento', J(P.leggiProgramma('Programma\nIntroduzione alla psicologia\nMetodologia della ricerca\nStatistica descrittiva\nTesti consigliati\nZimbardo').map(a => a.t)) === J(['Introduzione alla psicologia', 'Metodologia della ricerca', 'Statistica descrittiva']));
+prova('programma es: «Metodología» da sola è il titolo dove fermarsi', J(P.leggiProgramma('Temario\nLímites y continuidad\nDerivadas\nIntegrales\nMetodología\nClases magistrales').map(a => a.t)) === J(['Límites y continuidad', 'Derivadas', 'Integrales']));
+// «Reading and writing files», «Unit testing», «Topic modeling», «Examination of the abdomen»: argomenti, non titoli né segni
+{
+  const a = P.leggiProgramma('Course content\nPython basics\nReading and writing files\nUnit testing with pytest\nTopic modeling and LDA\nRecommended reading\nLutz, Learning Python').map(a => a.t);
+  prova('programma en: «Reading…», «Unit testing», «Topic modeling» sono argomenti interi', J(a) === J(['Python basics', 'Reading and writing files', 'Unit testing with pytest', 'Topic modeling and LDA']), J(a));
+  const b = P.leggiProgramma('Contents\nHistory taking\nExamination of the abdomen\nCardiac auscultation\nAssessment\nOSCE').map(a => a.t);
+  prova('programma en: «Examination of…» è un argomento, «Assessment» il titolo dove fermarsi', J(b) === J(['History taking', 'Examination of the abdomen', 'Cardiac auscultation']), J(b));
+  const c = P.leggiProgramma('Inhalte\nTeil A: Grundlagen der Mengenlehre\nTeil B: Gruppen und Ringe\nTeil C: Körper\nPrüfungsform\nKlausur').map(a => a.t);
+  prova('programma de: «Teil A:» è un segno', J(c) === J(['Grundlagen der Mengenlehre', 'Gruppen und Ringe', 'Körper']), J(c));
+}
+prova('chiavi it: «pelo» è una parola piena (non il «pelo» portoghese)', P.chiavi('Struttura del pelo e del follicolo').includes('pelo'));
+// «Marco 12 2024» in un'intestazione italiana non è il 12 marzo (il «março» portoghese): l'ordine mese-giorno è solo inglese
+prova('data: «Prof. Marco 12 2024» non è una data', TE.dataDi('Prof. Marco 12 2024') === null, TE.dataDi('Prof. Marco 12 2024'));
+prova('data: «Dec 5, 2024» sì', TE.dataDi('Exam, Dec 5, 2024') === '2024-12-05', TE.dataDi('Exam, Dec 5, 2024'));
+// un esame salvato col numero in lettere («Physics Two») si trova ancora col suo nome
+{
+  const prima = JSON.parse(JSON.stringify(D.D.esami));
+  D.D.esami.push({ id: 'pt2', nome: 'Physics Two', cfu: 6, fatto: false });
+  prova('esame: «physics two» trova «Physics Two» (come prima)', D.trovaEsame('physics two')?.nome === 'Physics Two' && D.trovaEsame('physics 2')?.nome === 'Physics Two', D.trovaEsame('physics two')?.nome);
+  D.D.esami.length = 0; D.D.esami.push(...prima);
+}
+
 console.log(`contenuti-lingue: ${ok} prove passate, ${ko} fallite`);
 process.exit(ko ? 1 : 0);

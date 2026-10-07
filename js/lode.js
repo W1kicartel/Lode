@@ -4,8 +4,8 @@
 // Senza AI capisce i comandi in italiano (comandi.js); con il cervello locale (gratis) o la tua AI preferita spiega, crea carte e interroga come all'orale.
 import { inverti, datiIllegibili, piuGiorni, norm, D, DESKTOP, lezioneOra, prossimaLezione, daGiocare, ricorda, aggiungiOrario, lezioni, RISPOSTE, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esc, fatti, media, minuti, num, oggi, ore, piano, prossimi, prossimoIntervallo, registraVoto, rispondi, salva, serie, serve, simula, sostituisci, traQuanto, trovaEsame, intervalloTesto, giorniTra, definizioni } from './dati.js';
 import { t, elenco, numero } from './lingua.js';
-import { t as tn } from './lingua.js';
-import { numeroCorto, oraBreve } from './parole.js';   // t() dove una variabile locale si chiama già t (arrivaTurno, schedaTurno, piedeSync, schedaNote)
+import { t as tn } from './lingua.js';   // t() dove una variabile locale si chiama già t (arrivaTurno, schedaTurno, piedeSync, schedaNote)
+import { numeroCorto, oraBreve } from './parole.js';   // numeri e ore nella forma della lingua
 import { RIDOTTO, attendi, comprimi, conta, dopo, entra, h, lineare, morbido, ogni, premi, tween } from './motore.js';
 import { ESEMPI, interpreta } from './comandi.js';
 import * as F from './focus.js';

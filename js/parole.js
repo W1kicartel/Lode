@@ -30,15 +30,18 @@ const MESI_LINGUE = [
 const piana = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
 // una parola delle altre lingue («february», «Feb.», «März», «juil») → il numero del mese, o 0: il nome intero, o
 // un'abbreviazione di almeno 3 lettere che è l'inizio di un mese solo (in francese «jui» è giugno e luglio: non vale)
-export function meseAltre(parola) {
+export function meseAltre(parola, lingue = MESI_LINGUE.slice(1)) {
   const w = piana(parola); if (w.length < 3) return 0;
-  for (const mesi of MESI_LINGUE.slice(1)) {
+  for (const mesi of lingue) {
     const i = mesi.indexOf(w); if (i >= 0) return i + 1;
     const inizio = mesi.flatMap((m, k) => m.startsWith(w) ? [k] : []);
     if (inizio.length === 1) return inizio[0] + 1;
   }
   return 0;
 }
+// solo i mesi inglesi: l'ordine «February 12, 2024» è solo inglese (con tutte le lingue «Marco 12 2024», un nome italiano
+// in un'intestazione, diventava il 12 marzo per il «março» portoghese)
+export const meseInglese = parola => meseAltre(parola, [MESI_LINGUE[1]]);
 // una parola qualsiasi → il numero del mese, o 0. Prima la regola italiana di sempre (le prime 3 lettere di un mese
 // italiano: «febbraio», «feb», «sett.»), poi le altre lingue. Le prime 3 lettere non si contraddicono mai fra le sei lingue
 // («mar» è marzo ovunque, «set» settembre in italiano e in portoghese)
