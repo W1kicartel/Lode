@@ -145,8 +145,8 @@ export default {
   // fin
   'benvenuto.fine-titolo': 'Listo, {nome}.',
   'benvenuto.fine-sotto': 'Lode ahora vive arriba de la pantalla. Pasa el cursor por encima para abrirla, mantén pulsado <b>{tasti}</b> para hablarle, arrastra encima un PDF o una foto de la pizarra.',
-  'benvenuto.fine-esami': 'Exámenes en tu expediente: {fatti}; te quedan {dare}',
-  'benvenuto.fine-esami-prossimo': 'Exámenes en tu expediente: {fatti}; te quedan {dare} · el próximo es {nome}',
+  'benvenuto.fine-esami': { one: 'Exámenes en tu expediente: {fatti}; te quedan {dare}', other: 'Exámenes en tu expediente: {fatti}; te quedan {dare}' },
+  'benvenuto.fine-esami-prossimo': { one: 'Exámenes en tu expediente: {fatti}; te quedan {dare} · el próximo es {nome}', other: 'Exámenes en tu expediente: {fatti}; te quedan {dare} · el próximo es {nome}' },
   'benvenuto.fine-lezioni': { one: 'Clases a la semana en tu horario: {n}', other: 'Clases a la semana en tu horario: {n}' },
   'benvenuto.fine-proposte': 'Propuestas: {quante}',
   'benvenuto.quante-mai': 'nunca',

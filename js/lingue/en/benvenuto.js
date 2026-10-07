@@ -145,8 +145,8 @@ export default {
   // end
   'benvenuto.fine-titolo': 'Done, {nome}.',
   'benvenuto.fine-sotto': 'Lode now lives at the top of your screen. Hover over it to open it, hold <b>{tasti}</b> to talk to it, drag a PDF or a photo of the board onto it.',
-  'benvenuto.fine-esami': '{fatti} exams in your grades, {dare} to take',
-  'benvenuto.fine-esami-prossimo': '{fatti} exams in your grades, {dare} to take · the next one is {nome}',
+  'benvenuto.fine-esami': { one: '{fatti} exam in your grades, {dare} to take', other: '{fatti} exams in your grades, {dare} to take' },
+  'benvenuto.fine-esami-prossimo': { one: '{fatti} exam in your grades, {dare} to take · the next one is {nome}', other: '{fatti} exams in your grades, {dare} to take · the next one is {nome}' },
   'benvenuto.fine-lezioni': { one: '{n} lecture a week in your timetable', other: '{n} lectures a week in your timetable' },
   'benvenuto.fine-proposte': 'Suggestions: {quante}',
   'benvenuto.quante-mai': 'never',

@@ -145,8 +145,8 @@ export default {
   // fine
   'benvenuto.fine-titolo': 'Fatto, {nome}.',
   'benvenuto.fine-sotto': 'Lode ora vive in cima allo schermo. Passaci sopra per aprirla, tieni premuto <b>{tasti}</b> per parlarle, trascinaci sopra un PDF o una foto della lavagna.',
-  'benvenuto.fine-esami': '{fatti} esami nel libretto, {dare} da dare',
-  'benvenuto.fine-esami-prossimo': '{fatti} esami nel libretto, {dare} da dare · il prossimo è {nome}',
+  'benvenuto.fine-esami': { one: '{fatti} esame nel libretto, {dare} da dare', other: '{fatti} esami nel libretto, {dare} da dare' },
+  'benvenuto.fine-esami-prossimo': { one: '{fatti} esame nel libretto, {dare} da dare · il prossimo è {nome}', other: '{fatti} esami nel libretto, {dare} da dare · il prossimo è {nome}' },
   'benvenuto.fine-lezioni': { one: '{n} lezione a settimana in orario', other: '{n} lezioni a settimana in orario' },
   'benvenuto.fine-proposte': 'Proposte: {quante}',
   'benvenuto.quante-mai': 'mai',

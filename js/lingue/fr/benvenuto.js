@@ -145,8 +145,8 @@ export default {
   // fin
   'benvenuto.fine-titolo': "C'est fait, {nome}.",
   'benvenuto.fine-sotto': "Lode vit maintenant en haut de l'écran. Passe dessus pour l'ouvrir, maintiens <b>{tasti}</b> pour lui parler, glisse dessus un PDF ou une photo du tableau.",
-  'benvenuto.fine-esami': '{fatti} examens dans le relevé, {dare} à passer',
-  'benvenuto.fine-esami-prossimo': "{fatti} examens dans le relevé, {dare} à passer · le prochain, c'est {nome}",
+  'benvenuto.fine-esami': { one: '{fatti} examen dans le relevé, {dare} à passer', other: '{fatti} examens dans le relevé, {dare} à passer' },
+  'benvenuto.fine-esami-prossimo': { one: "{fatti} examen dans le relevé, {dare} à passer · le prochain, c'est {nome}", other: "{fatti} examens dans le relevé, {dare} à passer · le prochain, c'est {nome}" },
   'benvenuto.fine-lezioni': { one: '{n} cours par semaine dans ton emploi du temps', other: '{n} cours par semaine dans ton emploi du temps' },
   'benvenuto.fine-proposte': 'Suggestions : {quante}',
   'benvenuto.quante-mai': 'jamais',

@@ -38,7 +38,7 @@ h('div', 'riga', `<b>${esc(e.nome)}</b> ${t('barra.traGiorni', { n })}`);   // e
 - **Comandi citati:** un testo che cita fra virgolette una frase da scrivere nella barra («segui il progetto», «sì», «esci») cita, in ogni lingua, una frase che il riconoscitore di quella lingua capisce davvero (`interpreta()`, o le parole delle schede in `PAROLE`). Se cita un bottone o una voce di menu, cita l'etichetta della lingua (lo stesso testo della chiave del bottone).
 - **Frasi intere, non pezzi.** Mai `t('a') + nome + t('b')`: in un'altra lingua l'ordine delle parole cambia. Si scrive una frase sola con il parametro: `t('x', { nome })`.
 - **Date e numeri:** `dataLunga`, `dataBreve`, `traQuanto`, `ore`, `num` di `js/dati.js` (che usano il catalogo `comune`), oppure `numero()` e `data()` di `js/lingua.js`. Mai `'it-IT'` scritto a mano.
-- **In italiano, ogni testo resta identico a prima, carattere per carattere:** le prove esistenti controllano proprio le frasi italiane.
+- **In italiano, ogni testo resta identico a prima, carattere per carattere:** le prove esistenti controllano proprio le frasi italiane. Le sole eccezioni volute sono le forme con 1 dei plurali che prima erano sbagliate («1 carta», «tra 1 giorno», «E un altro file.» al posto di «1 carte», «tra 1 giorni», «E altri 1 file.»): la forma `other` resta il testo di prima. Anche i numeri restano come prima: dove l'italiano scriveva «1.2 GB» col punto, il punto resta (`desktop/installa.mjs`).
 - **`node test/lingue.mjs`** controlla:
   - stesse chiavi, parametri, tag e lunghezze degli elenchi in tutte le lingue, plurali con `other`;
   - ogni `t('…')` scritto nel codice ha la sua chiave in italiano;

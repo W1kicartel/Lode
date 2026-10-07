@@ -470,7 +470,7 @@ function contesto(html) {
 function mostraFatto(d = {}, dove) {
   d.annulla?.fotografa?.();   // D subito dopo il comando: «Annulla» toglie solo quello che il comando ha cambiato
   const f = h('div', 'ld-fatto' + (d.no ? ' no' : ''), `${d.no ? IC.croce : IC.spunta}<b>${esc(d.testo || t('barra1.fatto'))}</b>${d.nota ? `<span>${esc(d.nota)}</span>` : ''}`);
-  if (d.annulla) { const b = h('button', 'btn small', t('barra1.disfa')); b.type = 'button'; b.addEventListener('click', () => { d.annulla(); b.replaceWith(h('span', '', t('barra1.annullato-minuscolo'))); aggiornaTutto(); }, { once: true }); f.append(b); }
+  if (d.annulla) { const b = h('button', 'btn small', t('barra1.disfa')); b.type = 'button'; b.addEventListener('click', () => { d.annulla(); b.replaceWith(h('span', '', t('barra1.disfatto'))); aggiornaTutto(); }, { once: true }); f.append(b); }
   if (d.azione) { const b = h('button', 'btn small', esc(d.azione[0])); b.type = 'button'; b.addEventListener('click', d.azione[1]); f.append(b); }
   if (dove) dove.replaceWith(f); else (A.turno || nuovoTurno()).append(f);
   if (d.sintesi && A.turno) A.turno.dataset.sintesi = d.sintesi;

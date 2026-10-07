@@ -146,8 +146,8 @@ export default {
   // fine
   'benvenuto.fine-titolo': 'Fertig, {nome}.',
   'benvenuto.fine-sotto': 'Lode wohnt jetzt oben am Bildschirm. Fahr mit der Maus drüber, um es zu öffnen, halt <b>{tasti}</b> gedrückt, um mit ihm zu sprechen, zieh ein PDF oder ein Foto der Tafel drauf.',
-  'benvenuto.fine-esami': '{fatti} Prüfungen in der Notenübersicht, {dare} noch offen',
-  'benvenuto.fine-esami-prossimo': '{fatti} Prüfungen in der Notenübersicht, {dare} noch offen · die nächste ist {nome}',
+  'benvenuto.fine-esami': { one: '{fatti} Prüfung in der Notenübersicht, {dare} noch offen', other: '{fatti} Prüfungen in der Notenübersicht, {dare} noch offen' },
+  'benvenuto.fine-esami-prossimo': { one: '{fatti} Prüfung in der Notenübersicht, {dare} noch offen · die nächste ist {nome}', other: '{fatti} Prüfungen in der Notenübersicht, {dare} noch offen · die nächste ist {nome}' },
   'benvenuto.fine-lezioni': { one: '{n} Vorlesung pro Woche im Stundenplan', other: '{n} Vorlesungen pro Woche im Stundenplan' },
   'benvenuto.fine-proposte': 'Vorschläge: {quante}',
   'benvenuto.quante-mai': 'nie',

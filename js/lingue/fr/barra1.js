@@ -145,6 +145,7 @@ export default {
   'barra1.annulla': 'Annuler',
   'barra1.disfa': 'Annuler',
   'barra1.annullato-minuscolo': 'annulé',
+  'barra1.disfatto': 'annulé',
   'barra1.confermi': 'Tu confirmes ?',
   'barra1.conferma': 'Confirmer',
   'barra1.scrivi-si': 'Tu peux aussi écrire « ok ».',

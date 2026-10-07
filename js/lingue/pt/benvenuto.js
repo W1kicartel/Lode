@@ -145,8 +145,8 @@ export default {
   // fim
   'benvenuto.fine-titolo': 'Pronto, {nome}.',
   'benvenuto.fine-sotto': 'Agora o Lode mora no topo da tela. Passe o mouse por cima para abrir, segure <b>{tasti}</b> para falar com ele, arraste um PDF ou uma foto do quadro para cima dele.',
-  'benvenuto.fine-esami': '{fatti} provas no histórico, {dare} para fazer',
-  'benvenuto.fine-esami-prossimo': '{fatti} provas no histórico, {dare} para fazer · a próxima é {nome}',
+  'benvenuto.fine-esami': { one: '{fatti} prova no histórico, {dare} para fazer', other: '{fatti} provas no histórico, {dare} para fazer' },
+  'benvenuto.fine-esami-prossimo': { one: '{fatti} prova no histórico, {dare} para fazer · a próxima é {nome}', other: '{fatti} provas no histórico, {dare} para fazer · a próxima é {nome}' },
   'benvenuto.fine-lezioni': { one: '{n} aula por semana no horário', other: '{n} aulas por semana no horário' },
   'benvenuto.fine-proposte': 'Sugestões: {quante}',
   'benvenuto.quante-mai': 'nunca',
