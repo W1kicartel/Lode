@@ -12,6 +12,7 @@ import * as I from './installa.mjs';
 import * as VOCE from './voce.mjs';
 import * as VOCE_ONNX from './voce-onnx.mjs';
 import * as ASCOLTA from './ascolta.mjs';
+import * as MOODLE from './moodle.mjs';
 import * as PROGETTO from './progetto.mjs';
 import * as AGGIORNA from './aggiorna.mjs';
 import { creaSincronizzazione } from './sincronizza.mjs';
@@ -594,6 +595,8 @@ app.whenReady().then(async () => {
   // «Segui il progetto»: gli handler progetto:* e i progetti già seguiti. Ogni comando passa dalla finestra di conferma del sistema
   // (progetto.mjs); conf.progetti sta in userData/config.json, mai nel vault. conf come funzione: leggiConf() la riassegna
   try { progetti = PROGETTO.registra({ ipcMain, dialog, app, conf: () => conf, salvaConf, manda }); } catch (x) { console.error('Lode: progetti non avviati', x); }
+  // Moodle in sola lettura (moodle.mjs): il token cifrato in conf.moodle, mai nel vault; net.fetch usa il proxy del sistema
+  try { MOODLE.registra({ ipcMain, BrowserWindow, safeStorage, conf: () => conf, salvaConf, fetch: (u, o) => net.fetch(u, o), manda }); } catch (x) { console.error('Lode: Moodle non avviato', x); }
   // le versioni nuove (aggiorna.mjs): solo nell'app impacchettata e mai nelle prove. Prima di «Riavvia ora» i dati in sospeso
   // vanno sul disco e la barra smette di rifiutare la chiusura (uscendo), se no l'installazione resterebbe ferma. Se poi
   // l'installazione non parte e Lode resta aperta (annullaUscita), si torna come prima: Alt+F4 richiude la pillola e basta,

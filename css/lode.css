@@ -745,3 +745,21 @@ button.ld-ripeti-riga:hover{background:rgba(255,255,255,.06)}
 .ld-sbagliate span{display:block;color:var(--ld-tenue)}
 .ld-sbagliate span.g{color:var(--ink)}
 .ld-sbagliate small{display:block;color:var(--ld-tenue);margin-top:2px}
+
+/* Moodle (desktop/moodle.mjs) */
+.ld-moodle p{margin:6px 0 8px;font-size:13.5px;line-height:1.5}
+.ld-moodle .az{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.ld-moodle .passo:empty{display:none}
+.ld-moodle .passo{margin-top:10px}
+.ld-corsi-m{display:flex;flex-direction:column;gap:6px;margin:8px 0;max-height:360px;overflow:auto}
+.ld-corsi-m label{display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--ld-riga)}
+.ld-corsi-m label b{display:block;font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ld-corsi-m label small{font-size:11.5px;color:var(--ld-tenue)}
+.ld-file-m{list-style:none;margin:8px 0;padding:0;max-height:380px;overflow:auto}
+.ld-file-m li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;min-height:46px;border-top:1px solid var(--ld-riga)}
+.ld-file-m .t{min-width:0;display:flex;flex-direction:column;gap:1px}
+.ld-file-m .t b{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ld-file-m .t small{font-size:11.5px;color:var(--ld-tenue)}
+.ld-file-m .t em{font-style:normal;color:var(--ink)}
+.ld-file-m .q{display:flex;flex-direction:column;align-items:flex-end;font-size:13px}
+.ld-file-m .q small{font-size:11px;color:var(--ld-tenue)}

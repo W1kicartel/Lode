@@ -61,6 +61,7 @@
       "voce-onnx.mjs",
       "voce-onnx-motore.mjs",
       "ascolta.mjs",
+      "moodle.mjs",
       "progetto.mjs",
       "esegui.mjs",
       "aggiorna.mjs",

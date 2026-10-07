@@ -667,5 +667,8 @@ Bramanti, Pagani, Salsa - Analisi matematica 2`;
   prova('computer: altre frasi', c('lezione dal computer')?.sorgente === 'computer' && c('Trascrivi l\'audio del computer.')?.sorgente === 'computer' && c('ascolta il pc')?.sorgente === 'computer' && c('trascrivi la lezione online di analisi 2')?.corso === 'analisi 2');
   prova('computer: la lezione in aula resta dal microfono', c('trascrivi la lezione')?.tipo === 'trascrivi' && !c('trascrivi la lezione').sorgente);
 }
+
+// Moodle: i comandi
+prova('moodle: comandi', c('collega moodle')?.tipo === 'moodle' && c('collega moodle').cosa === null && c('novità da moodle')?.cosa === 'novita' && c('scadenze')?.cosa === 'scadenze' && c('scollega moodle')?.cosa === 'scollega' && c('corsi di moodle')?.cosa === 'corsi' && c('moodle')?.tipo === 'moodle');
 console.log(`${ok} prove passate, ${ko} fallite`);
 process.exit(ko ? 1 : 0);

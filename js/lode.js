@@ -921,9 +921,9 @@ function opzioniPer(x) {
   ].map(o => /programm|syllabus|scheda.?(?:del.?)?corso/i.test(x.nome) ? { ...o, primo: o.k === 'programma' } : /domande|appell/i.test(x.nome) ? { ...o, primo: o.k === 'domande' } : o);
   return [];
 }
-function schedaFile(x) {
+function schedaFile(x, { corso: suggerito } = {}) {
   if (x.tipo === 'altro') return rispostaFissa(`Questo non lo so usare: ${x.motivo}.`);
-  const op = opzioniPer(x), corsi = corsiPossibili(), serveCorso = op.some(o => o.corso), serveData = op.some(o => o.data);
+  const op = opzioniPer(x), tutti = corsiPossibili(), corsi = suggerito ? [suggerito, ...tutti.filter(c => norm(c) !== norm(suggerito))] : tutti, serveCorso = op.some(o => o.corso), serveData = op.some(o => o.data);
   const s = scheda('ld-file-op', `<div class="capo">${ico(ICONA_FILE[x.tipo] || 'doc')}<span class="t"><b>${esc(x.nome)}</b><span>${NOME_TIPO[x.tipo]} · ${x.mb < 1 ? Math.max(1, Math.round(x.mb * 1024)) + ' KB' : x.mb.toFixed(1).replace('.', ',') + ' MB'}</span></span></div>
     <span class="ld-lbl">Cosa ne faccio?</span>
     <div class="ld-opzioni">${op.map(o => `<button type="button" class="ld-op${o.primo && !o.no ? ' primo' : ''}" data-op="${o.k}"${o.no ? ' disabled' : ''}><b>${esc(o.t)}</b><span>${esc(o.no ? o.d + ' · ' + o.no : o.d)}</span></button>`).join('')}</div>
@@ -1036,6 +1036,7 @@ async function accettaProposta() {
   if (p.tipo === 'stampa') return ST.schedaStampa({ corso: p.corso, seme: p.seme });   // con lo stesso seme parte dalla domanda annunciata
   if (p.tipo === 'ripasso') return schedaRipasso(p.esame?.id);
   if (p.tipo === 'orale') return avviaOrale(p.esame);
+  if (p.tipo === 'moodle') return schedaMoodle('novita');
   if (p.tipo === 'programma') { const a = p.esame?.programma?.argomenti?.find(x => x.id === p.argomento); return a && AI.attiva() ? avviaOraleProgramma(p.esame, [a], { max: 2 }) : schedaProgramma({ esame: p.esame }); }
   if (p.tipo === 'focus') return avviaFocus({ esameId: p.esame?.id });
   if (p.tipo === 'stelle') {
@@ -1556,6 +1557,7 @@ async function esegui(c) {
     }
     case 'programma': return schedaProgramma(c);
     case 'crocette': return schedaCrocette(c);
+    case 'moodle': return schedaMoodle(c.cosa);
     case 'spiego': {
       // l'argomento detto, cercato nei programmi degli esami da fare; senza argomento, il primo di oggi nel piano
       const conP = daFare().filter(e => PG.programmaDi(e));
@@ -1857,6 +1859,117 @@ async function chiudiOrale() {
 }
 function esciOrale() { if (!A.orale) return; A.orale = null; A.storia = []; mostraFatto({ testo: 'Orale chiuso.', nota: 'Ripassa le domande dove hai esitato.' }); }
 
+/* ---------- Moodle in sola lettura (desktop/moodle.mjs): corsi, file nuovi, scadenze ---------- */
+const nomeMoodle = st => st?.nome || st?.sito || 'Moodle';
+async function schedaMoodle(cosa = null) {
+  if (!BRIDGE) return rispostaFissa('Il collegamento a Moodle è nell\'**app desktop** di Lode.');
+  let st; try { st = await BRIDGE.invoca('moodle:stato'); } catch (e) { return rispostaFissa('Moodle non risponde: ' + e.message, { errore: true }); }
+  if (cosa === 'scollega') { if (!st.collegato) return rispostaFissa('Moodle non è collegato.'); await BRIDGE.invoca('moodle:scollega'); return mostraFatto({ testo: 'Moodle scollegato.', nota: 'Il token è cancellato da questo computer. I file già presi restano nel tuo vault.' }); }
+  if (!st.collegato) return collegaMoodle(st);
+  if (cosa === 'corsi' || !Object.keys(st.corsi || {}).length) return corsiMoodle(st);
+  if (cosa === 'novita') return novitaMoodle(st);
+  if (cosa === 'scadenze') return scadenzeMoodle(st);
+  const s = scheda('ld-moodle', `<span class="ld-lbl">Moodle · ${esc(nomeMoodle(st))}</span>
+    <p>${esc(st.utente || '')}${st.utente ? ' · ' : ''}${Object.keys(st.corsi).length} ${Object.keys(st.corsi).length === 1 ? 'corso seguito' : 'corsi seguiti'}: ${esc(Object.values(st.corsi).join(', '))}</p>
+    <div class="az"><button type="button" class="btn primary" data-m="novita">File nuovi</button><button type="button" class="btn" data-m="scadenze">Scadenze</button><button type="button" class="btn" data-m="corsi">Corsi</button><button type="button" class="btn ld-piano" data-m="scollega">Scollega</button></div>
+    ${st.memoria ? '<p class="ld-nota">Questo computer non ha un portachiavi: il collegamento vale fino a quando chiudi Lode.</p>' : ''}`);
+  s.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => { nuovoTurno(); detto(A.turno, { novita: 'Novità da Moodle', scadenze: 'Scadenze', corsi: 'Corsi di Moodle', scollega: 'Scollega Moodle' }[b.dataset.m]); schedaMoodle(b.dataset.m); }));
+  if (A.turno) A.turno.dataset.sintesi = `Moodle · ${nomeMoodle(st)}`;
+}
+function collegaMoodle() {
+  const s = scheda('ld-moodle', `<span class="ld-lbl">Collega Moodle</span>
+    <p>La piattaforma dei corsi del tuo ateneo (Virtuale, Ariel, e-learning…): Lode prende i file nuovi e le scadenze dei corsi che scegli. Solo lettura: non consegna niente e non scrive niente.</p>
+    <form class="ld-riga-form" data-sito><input name="s" placeholder="Indirizzo, per esempio virtuale.unibo.it" aria-label="Indirizzo di Moodle" required autocomplete="off" spellcheck="false"><button class="btn primary" type="submit">Continua</button></form>
+    <div class="passo"></div>
+    <p class="ld-nota">Entri come nell'app Moodle ufficiale. Il collegamento resta cifrato su questo computer, mai nel vault; con «scollega moodle» lo togli.</p>`);
+  const passo = s.querySelector('.passo'), inp = s.querySelector('[data-sito] input');
+  s.querySelector('[data-sito]').addEventListener('submit', async ev => {
+    ev.preventDefault(); const indirizzo = inp.value.trim(); if (!indirizzo) return;
+    passo.innerHTML = '<p class="ld-nota">Cerco il sito…</p>';
+    const v = await BRIDGE.invoca('moodle:verifica', indirizzo).catch(e => ({ ok: false, motivo: e.message }));
+    if (!v.ok) { passo.innerHTML = `<p class="ld-nota">${v.motivo === 'indirizzo' ? 'Questo non sembra un indirizzo.' : `Non trovo un Moodle con l'app attiva a questo indirizzo (${esc(v.motivo)}). Copia l'indirizzo dalla barra del browser quando sei sulla pagina dei tuoi corsi.`}</p>`; return; }
+    const fatto = async r => {
+      if (!r.ok) { passo.querySelector('.esito').textContent = r.motivo === 'finestra chiusa' ? 'Accesso annullato.' : `Accesso non riuscito: ${r.motivo}.`; passo.querySelectorAll('button').forEach(b => { b.disabled = false; }); return; }
+      segnala('fatto'); nuovoTurno(); detto(A.turno, 'Corsi di Moodle'); corsiMoodle(r);
+    };
+    if (v.tipo === 'browser') {
+      passo.innerHTML = `<p><b>${esc(v.nome)}</b> · si entra con il login dell'ateneo (SPID o le credenziali d'ateneo), in una finestra di Lode.</p><div class="az"><button type="button" class="btn primary" data-sso>Accedi</button></div><p class="ld-nota esito"></p>`;
+      passo.querySelector('[data-sso]').addEventListener('click', async e => { e.target.disabled = true; passo.querySelector('.esito').textContent = 'Accedi nella finestra che si è aperta…'; fatto(await BRIDGE.invoca('moodle:accediBrowser', indirizzo).catch(x => ({ ok: false, motivo: x.message }))); });
+    } else {
+      passo.innerHTML = `<p><b>${esc(v.nome)}</b> · accesso con utente e password di Moodle.</p><form class="ld-riga-form" data-pw><input name="u" placeholder="Utente" aria-label="Utente" autocomplete="username" required><input name="p" type="password" placeholder="Password" aria-label="Password" autocomplete="current-password" required><button class="btn primary" type="submit">Accedi</button></form><p class="ld-nota esito">La password va solo a Moodle: Lode non la salva.</p>`;
+      passo.querySelector('[data-pw]').addEventListener('submit', async e => {
+        e.preventDefault(); const f = new FormData(e.target); passo.querySelectorAll('button').forEach(b => { b.disabled = true; });
+        const r = await BRIDGE.invoca('moodle:accedi', { indirizzo, utente: String(f.get('u')), password: String(f.get('p')) }).catch(x => ({ ok: false, motivo: x.message }));
+        e.target.reset(); fatto(r);
+      });
+    }
+    entra(passo, { dy: 4, blur: 4, ms: 320 });
+  });
+  requestAnimationFrame(() => inp.focus({ preventScroll: true }));
+  if (A.turno) A.turno.dataset.sintesi = 'collega Moodle';
+}
+// quali corsi seguire e con che nome in Lode: proposto dal nome dell'esame o del corso che Lode conosce già
+async function corsiMoodle(st) {
+  modo('pensa', 'Leggo i tuoi corsi…');
+  let corsi; try { corsi = await BRIDGE.invoca('moodle:corsi'); } catch (e) { modo('riposo'); return rispostaFissa('Non riesco a leggere i corsi: ' + e.message, { errore: true }); }
+  modo('riposo');
+  if (!corsi.length) return rispostaFissa('Su Moodle non risulti iscritto a nessun corso.');
+  const noti = [...new Set([...daFare().map(e => e.nome), ...corsiPossibili()])], adesso = Date.now();
+  const proposta = k => st.corsi?.[k.id] || trovaEsame(k.nome, { anche: 'daFare' })?.nome || trovaEsame(k.breve || '', { anche: 'daFare' })?.nome || noti.find(n => norm(k.nome).includes(norm(n)) && norm(n).length >= 4) || '';
+  const attivi = [...corsi].sort((a, b) => (b.fine === 0 || b.fine > adesso) - (a.fine === 0 || a.fine > adesso));
+  const s = scheda('ld-moodle', `<span class="ld-lbl">Corsi di Moodle · ${esc(nomeMoodle(st))}</span>
+    <p>Scegli quali seguire e con quale corso di Lode: i loro file nuovi arrivano qui.</p>
+    <div class="ld-corsi-m">${attivi.slice(0, 40).map(k => { const p = proposta(k); return `<label><span><b>${esc(k.nome)}</b>${k.fine && k.fine < adesso ? '<small>concluso</small>' : ''}</span><select data-k="${esc(k.id)}" aria-label="Corso di Lode per ${esc(k.nome)}"><option value="">Non seguire</option>${[...new Set([p, ...noti].filter(Boolean))].map(n => `<option${n === p ? ' selected' : ''}>${esc(n)}</option>`).join('')}<option value="__nuovo">Con il nome di Moodle</option></select></label>`; }).join('')}</div>
+    <div class="az"><button type="button" class="btn primary" data-salva>Salva</button></div>`);
+  s.querySelector('[data-salva]').addEventListener('click', async () => {
+    const scelta = {}; s.querySelectorAll('select[data-k]').forEach(x => { const k = corsi.find(c => String(c.id) === x.dataset.k); if (x.value) scelta[x.dataset.k] = x.value === '__nuovo' ? k.nome : x.value; });
+    const r = await BRIDGE.invoca('moodle:segui', scelta); segnala('fatto');
+    const n = Object.keys(r.corsi || {}).length;
+    await mostraFatto({ testo: n ? `Seguo ${n} ${n === 1 ? 'corso' : 'corsi'} su Moodle.` : 'Nessun corso seguito.', nota: n ? 'Ti avviso quando arrivano file nuovi.' : '', azione: n ? ['File nuovi', () => { nuovoTurno(); detto(A.turno, 'Novità da Moodle'); schedaMoodle('novita'); }] : null }, s);
+  });
+  if (A.turno) A.turno.dataset.sintesi = 'corsi di Moodle';
+}
+async function novitaMoodle(st) {
+  modo('pensa', 'Guardo i file su Moodle…');
+  let r; try { r = await BRIDGE.invoca('moodle:novita', { segna: true }); } catch (e) { modo('riposo'); return rispostaFissa('Moodle non risponde: ' + e.message, { errore: true }); }
+  modo('riposo'); moodleNuovi = 0;
+  const nuovi = r.file.filter(f => f.nuovo), lista = r.primaVolta ? r.file.slice(0, 20) : nuovi.length ? nuovi : r.file.slice(0, 8);
+  if (!r.file.length) return rispostaFissa(r.errori?.length ? `Non riesco a leggere ${r.errori.map(x => x.corso).join(', ')}: ${r.errori[0].errore}.` : 'Nei corsi che segui non ci sono ancora file.');
+  const s = scheda('ld-moodle', `<span class="ld-lbl">Moodle · ${r.primaVolta ? 'i file più recenti' : nuovi.length ? `${nuovi.length} ${nuovi.length === 1 ? 'file nuovo' : 'file nuovi'}` : 'niente di nuovo, gli ultimi file'}</span>
+    <ul class="ld-file-m">${lista.map(f => `<li><span class="t"><b>${esc(f.nome)}</b><small>${esc(f.corso)}${f.modulo && f.modulo !== f.nome ? ' · ' + esc(f.modulo) : ''} · ${esc(dataBreve(isoDi(f.quando)))}${f.mb >= .1 ? ` · ${esc(num(f.mb))} MB` : ''}${f.nuovo && !r.primaVolta ? ' · <em>nuovo</em>' : ''}</small></span><button type="button" class="btn small" data-i="${f.i}">Apri</button></li>`).join('')}</ul>
+    <p class="ld-nota">«Apri» lo porta in Lode come se lo avessi trascinato: carte, riassunto, programma, quiz.</p>`);
+  s.querySelectorAll('[data-i]').forEach(b => b.addEventListener('click', async () => {
+    b.disabled = true; b.textContent = 'Scarico…';
+    const x = await BRIDGE.invoca('moodle:scarica', +b.dataset.i).catch(e => ({ ok: false, motivo: e.message }));
+    if (!x.ok) { b.textContent = 'Non riesco'; b.title = x.motivo; return; }
+    b.textContent = 'Aperto';
+    const file = new File([x.dati], x.nome, { type: x.mime || '' });
+    nuovoTurno(); detto(A.turno, `${x.nome} da Moodle`);
+    try { schedaFile(await FILE.classifica(file), { corso: x.corso }); } catch (e) { rispostaFissa('Non riesco a leggere il file: ' + e.message, { errore: true }); }
+  }));
+  if (A.turno) A.turno.dataset.sintesi = `Moodle: ${nuovi.length} file nuovi`;
+}
+async function scadenzeMoodle() {
+  let ev; try { ev = await BRIDGE.invoca('moodle:scadenze'); } catch (e) { return rispostaFissa('Moodle non risponde: ' + e.message, { errore: true }); }
+  if (!ev.length) return rispostaFissa('Nessuna scadenza su Moodle nelle prossime settimane.');
+  const s = scheda('ld-moodle', `<span class="ld-lbl">Scadenze su Moodle</span><ul class="ld-file-m">${ev.slice(0, 20).map(e => `<li><span class="t"><b>${esc(e.nome)}</b><small>${esc(e.corso)}</small></span><span class="q">${esc(traQuanto(isoDi(e.quando)))}<small>${esc(dataBreve(isoDi(e.quando)))}</small></span></li>`).join('')}</ul>`);
+  if (A.turno) A.turno.dataset.sintesi = `${ev.length} scadenze`;
+}
+// ogni tanto, con Lode aperto: se nei corsi seguiti ci sono file nuovi, la pillola lo propone (una volta per gruppo di file)
+let moodleNuovi = 0;
+async function controllaMoodle() {
+  if (!BRIDGE || A?.proposta || A?.aperto) return;
+  try {
+    const st = await BRIDGE.invoca('moodle:stato'); if (!st.collegato || !Object.keys(st.corsi || {}).length || !st.ultimo) return;
+    const r = await BRIDGE.invoca('moodle:novita'), nuovi = r.file.filter(f => f.nuovo);
+    if (!nuovi.length || nuovi.length === moodleNuovi) return;
+    moodleNuovi = nuovi.length;
+    const corsi = [...new Set(nuovi.map(f => f.corso))];
+    mostraProposta({ tipo: 'moodle', titolo: `Moodle · ${corsi.slice(0, 2).join(', ')}${corsi.length > 2 ? '…' : ''}`, testo: `${nuovi.length} ${nuovi.length === 1 ? 'file nuovo' : 'file nuovi'}`, bottone: 'Guarda' });
+  } catch { }
+}
+if (BRIDGE) { setTimeout(controllaMoodle, 90e3); setInterval(controllaMoodle, 3 * 3600e3); }
+
 /* ---------- il quiz a crocette (js/crocette.js): allenamento o simulazione d'esame ---------- */
 // il materiale dello studente in testo, per l'AI: carte, definizioni, ★ e domande uscite
 function testoDelCorso(e, mat = PG.materialeDi(e)) {
@@ -1985,6 +2098,16 @@ function programmaVuoto(e) {
     <p class="ld-vuoto">Incolla il programma del corso (dalla pagina del corso o dal PDF), oppure trascina qui il file. Lo divido in argomenti, ti mostro cosa sai già e ti preparo il piano fino all'appello.</p>
     <form class="ld-prog-form"><textarea name="t" rows="6" placeholder="1. Limiti e continuità&#10;2. Derivate: definizione, regole, teoremi di Rolle e Lagrange&#10;…" aria-label="Programma del corso" required></textarea><button class="btn primary" type="submit">Leggi il programma</button></form>`);
   s.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const t = new FormData(ev.target).get('t'); if (String(t).trim()) { nuovoTurno(); detto(A.turno, `Programma di ${e.nome}`); proponiProgramma(e, String(t), { fonte: 'incollato' }); } });
+  // con Moodle collegato e il corso seguito: la descrizione del corso, che spesso è proprio il programma
+  BRIDGE?.invoca('moodle:stato').then(st => {
+    const id = st?.collegato && Object.entries(st.corsi || {}).find(([, n]) => norm(n) === norm(e.nome))?.[0]; if (!id || !s.isConnected) return;
+    const b = h('button', 'btn', 'Prendilo da Moodle'); b.type = 'button'; s.querySelector('form').append(b);
+    b.addEventListener('click', async () => {
+      b.disabled = true; const d = await BRIDGE.invoca('moodle:descrizione', +id).catch(() => null);
+      if (!d?.testo || d.testo.length < 40) { b.textContent = 'Su Moodle la descrizione è vuota'; return; }
+      nuovoTurno(); detto(A.turno, `Programma di ${e.nome} da Moodle`); proponiProgramma(e, d.testo, { fonte: 'Moodle' });
+    });
+  }).catch(() => { });
   if (A.turno) A.turno.dataset.sintesi = `programma di ${e.nome}`;
 }
 // dal testo agli argomenti: prima senza AI; con l'AI se il testo è lungo (un PDF intero) o se senza AI ne escono pochi

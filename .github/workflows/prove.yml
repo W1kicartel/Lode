@@ -66,6 +66,9 @@ jobs:
       # l'icona di Lode per chi la installa dal codice (desktop/collegamento.mjs): su Mac e Linux si crea in una cartella temporanea
       - name: Icona dal codice
         run: node test/collegamento.mjs
+      # Moodle in sola lettura (desktop/moodle.mjs) contro un Moodle finto in locale: accesso, corsi, file, scadenze
+      - name: Moodle
+        run: node test/moodle.mjs
       # sincronizzazione v2 (docs/SINCRONIZZAZIONE.md): le parti pure del motore, il simulatore che prova se stesso, gli scenari
       # dei problemi noti e un giro di fuzz con semi fissi (riproducibile: un errore si rifà in locale con lo stesso seme)
       - name: Sincronizzazione (motore, simulatore, scenari, fuzz)

@@ -213,6 +213,12 @@ export function interpreta(frase) {
     const r = pulisci(m[1] || ''); return { tipo: 'ripasso', esame: r ? trovaEsame(r) : null, nomeDetto: r };
   }
 
+  // Moodle in sola lettura (desktop/moodle.mjs): «collega moodle», «novità da moodle», «scadenze», «scollega moodle»
+  if (/^(?:scollega|disconnetti|esci da|togli)(?: il)? moodle$/.test(t)) return { tipo: 'moodle', cosa: 'scollega' };
+  if (/^(?:novit[aà]|cosa c'?è di nuovo|file nuovi|nuovi file|materiali nuovi|controlla)(?: (?:su|da|di|in|sul))? moodle$|^moodle novit[aà]$/.test(t)) return { tipo: 'moodle', cosa: 'novita' };
+  if (/^(?:le )?(?:mie )?(?:scadenze|consegne)(?: (?:su|da|di|sul) moodle)?$/.test(t)) return { tipo: 'moodle', cosa: 'scadenze' };
+  if (/^(?:i )?corsi (?:di|su|da) moodle$/.test(t)) return { tipo: 'moodle', cosa: 'corsi' };
+  if (/^(?:(?:collega|connetti|aggiungi|apri|configura)(?: il| la)? )?(?:moodle|piattaforma e-?learning|e-?learning dell'ateneo)$/.test(t)) return { tipo: 'moodle', cosa: null };
   // il quiz a crocette: «quiz di analisi 2», «crocette», «simulazione d'esame di diritto privato», «test a crocette»
   if ((m = t.match(/^(?:fammi |fai(?:mi)? |avvia |inizia |facciamo )?(?:un |una |il |lo |la )?(quiz(?: a crocette)?|test a crocette|domande a crocette|crocette|simulazione(?: d'esame| dell'esame| esame| dello scritto)?|simula(?: l')?esame(?: scritto)?|scritto a crocette)\b\s*(.*)$/))) {
     const r = pulisci(m[2] || ''); return { tipo: 'crocette', esame: r ? trovaEsame(r) : null, nomeDetto: r, simulazione: /simul/.test(m[1]) };
@@ -259,6 +265,7 @@ export const ESEMPI = [
   ['te lo spiego io: teorema di Green', 'spieghi un argomento, Lode ti dice cosa hai saltato'],
   ['quiz di analisi 2', 'domande a crocette: allenamento, o simulazione d\'esame a tempo'],
   ['trascrivi la videolezione di diritto privato', 'dall\'audio del computer: per chi studia da casa'],
+  ['collega moodle', 'file nuovi e scadenze dalla piattaforma del tuo ateneo'],
   ['ripassa analisi 2', 'le carte di oggi'],
   ['carta: teorema di Green = …', 'una carta al volo'],
   ['esporta per anki', 'carte e definizioni in un file per Anki, un mazzo per corso'],
