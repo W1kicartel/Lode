@@ -10,7 +10,7 @@ export default {
   'ai.servizio-sconosciuto': 'Unbekannter Dienst: Verbinde deine KI neu.',
   'ai.risposta-vuota': 'der Dienst hat leer geantwortet',
   'ai.claude-declina': 'Claude hat die Anfrage abgelehnt.',
-  'ai.serve-ai': 'Dafür brauchst du das lokale Modell oder deine KI.',
+  'ai.serve-ai': 'Dafür brauchst du das lokale Gehirn oder deine KI.',
   'ai.risposta-completa': 'Vollständige und richtige Antwort.',
   'ai.non-sufficiente': 'Noch nicht bestanden',
   'ai.trenta-e-lode': '30 cum laude',

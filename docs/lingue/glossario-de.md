@@ -71,7 +71,7 @@ Wie Lode auf Deutsch spricht: «du», kurze Sätze, wie eine Lern-App für Studi
 | salva / salvato | speichern / gespeichert | — |
 | annulla | Abbrechen / Rückgängig | «Rückgängig» für «undo», «Abbrechen» für Dialoge. |
 | lingua | Sprache | Befehl: «Sprache Englisch». |
-| voce / dettatura | Sprache / Diktat | «per Sprache», «diktieren». |
+| voce (riconoscimento vocale) / dettatura | Spracheingabe / Diktat | «Spracheingabe» für die Funktion (nicht «Sprache»: das ist die Sprache der App); «Sprachbefehle», «diktieren». |
 | esporta in Anki | nach Anki exportieren | Befehl des Erkenners. |
 | Moodle, Obsidian, Ollama, Parakeet, Whisper, Anki, Claude Code, Codex, Cursor | unverändert | Eigennamen. |
 | Esse3 | Esse3 | Italienisches Uni-System: nur für das italienische Notensystem. |

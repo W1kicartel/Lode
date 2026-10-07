@@ -13,7 +13,7 @@ export default {
   'allenatore.programma-ai': 'Heute ist „{argomento}“ dran: zwei Fragen?',
   'allenatore.programma': 'Heute im Plan: „{argomento}“',
   'allenatore.apri-piano': 'Plan öffnen',
-  'allenatore.focus-testo': 'Dir fehlen heute {h} Std., um im Plan zu bleiben: ein Fokus von {min}?',
+  'allenatore.focus-testo': 'Dir fehlen heute {h} Std., um im Plan zu bleiben: {min} Minuten Fokus?',
   'allenatore.focus': 'Fokus',
   'allenatore.stampa': '{domanda} 1 Minute',
   'allenatore.prova': 'Los',

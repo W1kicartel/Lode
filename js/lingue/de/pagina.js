@@ -93,7 +93,7 @@ export default {
   'pagina.elimina': 'Löschen',
   'pagina.annulla': 'Abbrechen',
   'pagina.salva': 'Speichern',
-  'pagina.conferma-elimina': '{nome} löschen? Die Stunden und Karten bleiben, ohne Prüfung.',
+  'pagina.conferma-elimina': '{nome} löschen? Die Stunden und Karten dazu bleiben, nur ohne Prüfung.',
   'pagina.esame-eliminato': 'Prüfung gelöscht',
   'pagina.salvato': 'Gespeichert',
   'pagina.esame-aggiunto': 'Prüfung hinzugefügt',

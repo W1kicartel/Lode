@@ -206,7 +206,7 @@ export default {
   'desktop.installa-obsidian-installato': 'Obsidian {versione} installiert',
   'desktop.installa-perche-4b': 'schnell auch ohne Grafikkarte: Definitionen, Karten, Spiele und Abfrage',
   'desktop.installa-perche-35b': 'das beste, und so schnell wie ein kleines Modell, für Computer mit viel Arbeitsspeicher',
-  'desktop.installa-perche-9b': 'erklärt gut und schafft die Abfrage',
+  'desktop.installa-perche-9b': 'erklärt gut und kann gut abfragen',
   'desktop.installa-perche-memoria': 'für {gb} GB Arbeitsspeicher: Definitionen, Karten, Spiele und Abfrage',
   'desktop.installa-ollama-non-avviato': 'Ollama ist nicht gestartet',
   'desktop.installa-ollama-linux': 'Unter Linux installier Ollama von ollama.com mit deren Skript und komm dann hierher zurück.',
@@ -265,7 +265,7 @@ export default {
   'desktop.agenti-file-illeggibile': '{file} lässt sich nicht lesen ({motivo}): Ich fasse die Datei nicht an. Reparier sie oder verbinde von Hand.',
   'desktop.agenti-altre-righe': 'und {n} weitere Zeilen',
   'desktop.agenti-test-non-rilanciati': 'Er sagt, die Tests laufen durch, hat sie aber nach seiner letzten Änderung nicht nochmal gestartet.',
-  'desktop.agenti-test-non-lanciati': 'Er sagt, die Tests laufen durch, aber in diesem Zug habe ich ihn sie nicht starten sehen.',
+  'desktop.agenti-test-non-lanciati': 'Er sagt, die Tests laufen durch, aber ich habe in diesem Zug nicht gesehen, dass er sie gestartet hat.',
   'desktop.agenti-test-toccati': 'Er hat die Tests geändert ({file}), während sie fehlschlugen: Prüf, dass er sie nicht leichter gemacht hat.',
   // collegamento.mjs: Lode avviata dal codice (icona, avvio all'accensione, permessi del Mac)
   'desktop.permesso-audio-computer': 'Lode hört den Ton des Computers nur, wenn du eine Video-Vorlesung transkribierst. Der Ton bleibt nie auf dem Computer: In die Notiz kommt nur der Text.',

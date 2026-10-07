@@ -27,7 +27,7 @@ export default {
   'progetto.seguo-domanda': '<b>{nome}</b> verfolgen?',
   'progetto.seguo-aria': '{nome} verfolgen?',
   'progetto.seguo-spiega': 'Ich sehe mir die Dateien an und speichere die Versionen im Ordner von Lode: In deinen Ordner schreibe ich nicht. Die Befehle, die du bestätigst (zum Beispiel make), schon, wie im Terminal. Ich weiß nicht, wer die Zeilen schreibt (du, ein Agent oder Copy-Paste): Ich sage dir, was sich geändert hat und ob du es getestet hast.',
-  'progetto.nota-windows': 'Solange ich ihn verfolge, lässt dich Windows den Ordner nicht umbenennen oder verschieben: Schreib vorher „nicht mehr verfolgen“.',
+  'progetto.nota-windows': 'Solange ich es verfolge, lässt dich Windows den Ordner nicht umbenennen oder verschieben: Schreib vorher „nicht mehr verfolgen“.',
   'progetto.corso': 'Kurs',
   'progetto.nessun-corso': 'Kein Kurs',
   'progetto.valutato': 'Benotetes Projekt (Abgabe)',
