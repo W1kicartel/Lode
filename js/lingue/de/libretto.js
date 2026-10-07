@@ -9,6 +9,7 @@ export default {
   'libretto.simula-esito': 'Schnitt <b>{media}</b> <span class="{classe}">{delta}</span> · {finale} <b>{valore}</b>',
   'libretto.voto-altro-sistema': "{voto} ({sistema}): zählt in diesem System nicht",
   'libretto.totali-opzione': '{n} {crediti}',
+  'libretto.esame-nuovo-crediti': '{nome} (neu, {n} {crediti})',
   'libretto.simula': 'Mit **{voto}** in {nome} geht dein Schnitt von {prima} auf **{dopo}** ({delta}): {finale} **{valore}**.',
   'libretto.simula-primo': 'Mit {voto} in **{nome}** würde dein Schnitt bei **{media}** anfangen: {finale} **{valore}**.',
   'libretto.sintesi-media-finale': 'Schnitt {media}, {finale} {valore}',

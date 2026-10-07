@@ -10,6 +10,7 @@ export default {
   'libretto.simula-esito': 'Media <b>{media}</b> <span class="{classe}">{delta}</span> · {finale} <b>{valore}</b>',
   'libretto.voto-altro-sistema': "{voto} ({sistema}): non conta in questo sistema",
   'libretto.totali-opzione': '{n} {crediti}',
+  'libretto.esame-nuovo-crediti': '{nome} (nuovo, {n} {crediti})',
   'libretto.simula': 'Con **{voto}** in {nome} la media passa da {prima} a **{dopo}** ({delta}): {finale} **{valore}**.',
   'libretto.simula-primo': 'Con {voto} in **{nome}** la tua media partirebbe da **{media}**: {finale} **{valore}**.',
   'libretto.sintesi-media-finale': 'media {media}, {finale} {valore}',

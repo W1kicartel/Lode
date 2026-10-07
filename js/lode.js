@@ -1888,6 +1888,12 @@ async function eseguiStrumento(nome, x) {
   if (nome === 'registra_voto') {
     if (!LB.italiano() && !LB.valido(x.voto)) return { errore: 'voto fuori dal sistema dei voti scelto' };
     const e = trovaEsame(x.esame);
+    // fuori dall'Italia: il voto come si scrive nel sistema («8,5», «A−», «10 MH»), i crediti di un esame tipico del sistema
+    if (!LB.italiano()) {
+      const v = LB.formato(x.voto, { lode: x.lode }), cr = LB.sis().esame;
+      const card = schedaConferma({ titolo: t('barra2.registrare-voto', { voto: v }), righe: [[t('barra2.esame'), e?.nome || t('libretto.esame-nuovo-crediti', { nome: x.esame, n: cr, crediti: LB.crediti() })], [t('barra2.voto'), v]] });
+      return attendiDecisione(card, async () => { const ee = e || aggiungiEsame({ nome: x.esame, cfu: cr }); registraVoto(ee.id, { voto: x.voto, lode: x.lode }); aggiornaTutto(); await mostraFatto({ testo: t('barra2.voto-registrato'), nota: t('barra2.media', { media: LB.formatoMedia(media().ponderata) }) }, card); return { esito: 'registrato', media: media().ponderata }; });
+    }
     const card = schedaConferma({ titolo: x.lode && x.voto === 30 ? t('barra2.registrare-voto-lode', { voto: x.voto }) : t('barra2.registrare-voto', { voto: x.voto }), righe: [[t('barra2.esame'), e?.nome || t('barra2.esame-nuovo-6-cfu', { nome: x.esame })], [t('barra2.voto'), x.lode && x.voto === 30 ? t('barra2.voto-e-lode', { voto: x.voto }) : `${x.voto}`]] });
     return attendiDecisione(card, async () => { const ee = e || aggiungiEsame({ nome: x.esame, cfu: 6 }); registraVoto(ee.id, { voto: x.voto, lode: x.lode }); aggiornaTutto(); await mostraFatto({ testo: t('barra2.voto-registrato'), nota: t('barra2.media', { media: num(media().ponderata, 2) }) }, card); return { esito: 'registrato', media: media().ponderata }; });
   }

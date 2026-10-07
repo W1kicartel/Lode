@@ -9,6 +9,7 @@ export default {
   'libretto.simula-esito': 'Moyenne <b>{media}</b> <span class="{classe}">{delta}</span> · {finale} <b>{valore}</b>',
   'libretto.voto-altro-sistema': "{voto} ({sistema}) : ne compte pas dans ce système",
   'libretto.totali-opzione': '{n} {crediti}',
+  'libretto.esame-nuovo-crediti': '{nome} (nouveau, {n} {crediti})',
   'libretto.simula': 'Avec **{voto}** en {nome}, ta moyenne passe de {prima} à **{dopo}** ({delta}) : {finale} **{valore}**.',
   'libretto.simula-primo': 'Avec {voto} en **{nome}**, ta moyenne partirait de **{media}** : {finale} **{valore}**.',
   'libretto.sintesi-media-finale': 'moyenne {media}, {finale} {valore}',
