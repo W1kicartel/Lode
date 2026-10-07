@@ -664,10 +664,12 @@ app.whenReady().then(async () => {
       primaDiUscire: () => { uscendo = true; scriviTutto(); }, annullaUscita: () => { uscendo = false; if (!barra) creaBarra(); } });
   } catch (x) { console.error('Lode: aggiornamenti non avviati', x); }
   creaBarra(); creaTray(); scorciatoie();
-  if (!conf.benvenuto && !process.env.LODE_PROVA) apriBenvenuto();
+  // nelle prove il benvenuto non si apre (bloccherebbe i passi), tranne con LODE_PROVA_BENVENUTO (test/prova-app-lingue.mjs)
+  if (!conf.benvenuto && (!process.env.LODE_PROVA || process.env.LODE_PROVA_BENVENUTO)) apriBenvenuto();
   screen.on('display-metrics-changed', posiziona); screen.on('display-added', posiziona); screen.on('display-removed', posiziona);
   if (process.env.LODE_QUADRO) apriQuadro();
-  // prove automatiche: esegue uno script nella barra e ne salva una foto (LODE_PROVA=script.js, LODE_FOTO=cartella)
+  // prove automatiche: esegue uno script nella barra e ne salva una foto (LODE_PROVA=script.js, LODE_FOTO=cartella). Un passo
+  // con «finestra: 'benvenuto'» o «'quadro'» gira in quella finestra (aperta e caricata), con la sua foto
   if (process.env.LODE_PROVA) barra.webContents.once('did-finish-load', async () => {
     const { writeFileSync: scrivi } = await import('node:fs');
     const passi = JSON.parse(readFileSync(process.env.LODE_PROVA, 'utf8'));
@@ -676,10 +678,14 @@ app.whenReady().then(async () => {
     const VIA = Symbol('via');
     for (const [i, p] of passi.entries()) {
       await new Promise(r => setTimeout(r, p.attesa ?? 1200));
-      let via; const cambiata = new Promise(ok => { via = () => ok(VIA); barra.webContents.once('did-navigate', via); });
-      try { const r = await Promise.race([barra.webContents.executeJavaScript(p.js || 'null'), cambiata]); if (r === VIA) console.log(`passo ${i} errore: la barra è andata su un'altra pagina (${barra.webContents.getURL().split('/').pop()})`); else if (r != null) console.log(`passo ${i}:`, JSON.stringify(r)); } catch (e) { console.log(`passo ${i} errore:`, e.message); }
-      finally { barra.webContents.off('did-navigate', via); }
-      if (p.foto) { await new Promise(r => setTimeout(r, 900)); scrivi(join(process.env.LODE_FOTO, p.foto), (await barra.webContents.capturePage()).toPNG()); }
+      if (p.finestra === 'quadro') apriQuadro();
+      const w = p.finestra === 'benvenuto' ? benvenuto : p.finestra === 'quadro' ? quadro : barra;
+      if (!w || w.isDestroyed()) { console.log(`passo ${i} errore: la finestra ${p.finestra} non c'è`); continue; }
+      if (w.webContents.isLoading()) await new Promise(ok => { w.webContents.once('did-finish-load', ok); setTimeout(ok, 15000); });
+      let via; const cambiata = new Promise(ok => { via = () => ok(VIA); w.webContents.once('did-navigate', via); });
+      try { const r = await Promise.race([w.webContents.executeJavaScript(p.js || 'null'), cambiata]); if (r === VIA) console.log(`passo ${i} errore: la barra è andata su un'altra pagina (${w.webContents.getURL().split('/').pop()})`); else if (r != null) console.log(`passo ${i}:`, JSON.stringify(r)); } catch (e) { console.log(`passo ${i} errore:`, e.message); }
+      finally { w.webContents.off('did-navigate', via); }
+      if (p.foto && !w.isDestroyed()) { await new Promise(r => setTimeout(r, 900)); scrivi(join(process.env.LODE_FOTO, p.foto), (await w.webContents.capturePage()).toPNG()); }
     }
     if (process.env.LODE_ESCI) app.quit();
   });
