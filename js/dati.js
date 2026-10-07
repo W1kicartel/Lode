@@ -355,6 +355,13 @@ export const PAESI_ESEMPIO = {
 // i nomi di esempio di tutte le lingue: il benvenuto toglie i dati di esempio anche se intanto lo studente ha cambiato lingua
 export const NOMI_ESEMPIO = [...new Set(Object.values(ESEMPI).flatMap(c => c['esempio.esami']))];
 export const STUDENTI_ESEMPIO = [...new Set(Object.values(ESEMPI).map(c => c['esempio.nome']))];
+// i dati sono di esempio? Dal segno che mette esempio(); senza il segno (dati caricati da una Lode di prima, che aveva solo
+// l'italiano) da «Giulia» insieme a un esame di esempio italiano. Un nome di esempio di un'altra lingua (Emily, Lena…) senza
+// il segno può essere quello di uno studente vero, coi suoi esami («Databases», «Physik 1»…): non basta
+const PRIMA = esempioIt['esempio.nome'], ESAMI_PRIMA = esempioIt['esempio.esami'];
+export const eEsempio = (d = D) => d.esempio === true || (d.profilo?.nome === PRIMA && (d.esami || []).some(e => ESAMI_PRIMA.includes(e.nome) && e.id));
+// il nome da proporre nel benvenuto: non quello dello studente di esempio (Emily, Lena… solo se i dati hanno il segno)
+export const nomeVero = (d = D) => { const n = d.profilo?.nome; return n && n !== PRIMA && !(d.esempio === true && STUDENTI_ESEMPIO.includes(n)) ? n : ''; };
 export function esempio(cod = lingua) {
   const T = oggi(), d = VUOTO(), X = ESEMPI[cod] || ESEMPI.it, N = PAESI_ESEMPIO[ESEMPI[cod] ? cod : 'it'];
   const nomi = X['esempio.esami'], aule = X['esempio.aule'];

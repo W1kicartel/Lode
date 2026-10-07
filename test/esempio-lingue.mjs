@@ -119,7 +119,23 @@ for (const cod of LINGUE) {
 }
 // i dati di esempio di una Lode di prima (senza il segno d.esempio): il benvenuto li riconosce dallo studente e dai nomi
 const ben = readFileSync(new URL('../js/benvenuto.js', import.meta.url), 'utf8');
-prova('benvenuto: niente nomi di esempio scritti a mano', !/'Giulia'|'Analisi 1'/.test(ben) && /STUDENTI_ESEMPIO\.includes\(D\.profilo\.nome\)/.test(ben) && /togliEsempio\(D\)/.test(ben));
+prova('benvenuto: niente nomi di esempio scritti a mano', !/'Giulia'|'Analisi 1'/.test(ben) && /S\.esempio = eEsempio\(D\)/.test(ben) && /S\.nome = nomeVero\(D\)/.test(ben) && /togliEsempio\(D\)/.test(ben));
+// eEsempio(): il segno basta in ogni lingua; senza il segno solo «Giulia» con un esame di esempio italiano (una Lode di prima).
+// Emily con «Databases», Lena con «Physik 1»… senza il segno sono studenti veri: la casella non si spunta da sola
+for (const cod of LINGUE) {
+  const d = Dati.esempio(cod);
+  prova(`${cod}: eEsempio col segno`, Dati.eEsempio(d));
+  delete d.esempio;
+  prova(`${cod}: eEsempio senza segno solo per Giulia`, Dati.eEsempio(d) === (cod === 'it'));
+  prova(`${cod}: nomeVero senza segno`, Dati.nomeVero(d) === (cod === 'it' ? '' : CAT[cod]['esempio.nome']));
+  d.esempio = true;
+  prova(`${cod}: nomeVero col segno`, Dati.nomeVero(d) === '');
+}
+const vero = { esami: [{ id: 'abcdefgh12', nome: 'Analisi 1' }], profilo: { nome: 'Marco' } };
+prova('eEsempio: Marco con «Analisi 1» è vero', !Dati.eEsempio(vero) && Dati.nomeVero(vero) === 'Marco');
+prova('eEsempio: Giulia con «Analisi 1» (Lode di prima)', Dati.eEsempio({ ...vero, profilo: { nome: 'Giulia' } }) && Dati.nomeVero({ ...vero, profilo: { nome: 'Giulia' } }) === '');
+prova('eEsempio: Giulia con «Databases» senza segno è vera', !Dati.eEsempio({ esami: [{ id: 'abcdefgh12', nome: 'Databases' }], profilo: { nome: 'Giulia' } }));
+prova('eEsempio: dati vecchi senza profilo né esami', !Dati.eEsempio({}) && Dati.nomeVero({}) === '');
 prova('benvenuto: «vault:pulisciCorsi» con i nomi di tutte le lingue', /vault:pulisciCorsi', \{ nomi: NOMI_ESEMPIO \}/.test(ben));
 
 /* ---------- 4. «Cosa stampa?» nella lingua della barra ---------- */
