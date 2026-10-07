@@ -1,5 +1,5 @@
-// The log in the vault (English): the lines of the project diary, the «Cosa so davvero» table and the
-// «Informatica» section of Lode/Memoria.md. Section titles («## Cosa ho capito», «## Cosa so davvero», «## Informatica»),
+// The log in the vault (English): the lines of the project diary, the “Cosa so davvero” table and the
+// “Informatica” section of Lode/Memoria.md. Section titles (“## Cosa ho capito”, “## Cosa so davvero”, “## Informatica”),
 // properties and the %% lode:… %% markers are NOT here: they are vault names that the code looks for.
 export default {
   'diario.concetto-for': 'for loop',
@@ -24,10 +24,10 @@ export default {
   'diario.concetto-ternario': 'Ternary operator',
   'diario.concetto-printf': 'printf and formats',
   'diario.elenco-e': '{prima} and {ultimo}',
-  'diario.errore-titolo': '«{titolo}»',
+  'diario.errore-titolo': '“{titolo}”',
   'diario.errore-generico': 'error',
-  'diario.passo-dove': '«where to look»',
-  'diario.passo-cosa': '«what it means»',
+  'diario.passo-dove': '“where to look”',
+  'diario.passo-cosa': '“what it means”',
   'diario.passi-visti': { one: 'seen {passi}', other: 'seen {passi}' },
   'diario.funzione-nuova': 'added {nome}',
   'diario.funzione-nuova-in': 'added {nome} in {file}',
@@ -71,11 +71,11 @@ export default {
   'diario.stato-sicuro': 'solid',
   'diario.stato-mai-fatto': 'never done',
   'diario.diari-dei-progetti': 'Project diaries:',
-  'diario.tabella-nota': 'Lode\'s tally of the «What does it print?» exercises, no AI. «Redo» means it\'s time to go over it again.',
+  'diario.tabella-nota': 'Lode\'s tally of the “What does it print?” exercises, no AI. “Redo” means it\'s time to go over it again.',
   'diario.tabella-testa': '| Topic | Exercises | First try | Last time | Status |',
-  'diario.nessun-esercizio': 'No exercises yet. Type «what does it print» in the bar: 5 one-minute questions.',
+  'diario.nessun-esercizio': 'No exercises yet. Type “what does it print” in the bar: 5 one-minute questions.',
   'diario.errori-frequenti': 'Errors you run into most: {errori}.',
   'diario.sbagli-spesso': 'You often get wrong: {sbagli}.',
-  'diario.memoria-stampa': { one: '«What does it print?»: {n} exercise, {giuste}% right first time.', other: '«What does it print?»: {n} exercises, {giuste}% right first time.' },
+  'diario.memoria-stampa': { one: '“What does it print?”: {n} exercise, {giuste}% right first time.', other: '“What does it print?”: {n} exercises, {giuste}% right first time.' },
   'diario.da-rifare': 'Redo: {argomenti}.',
 };

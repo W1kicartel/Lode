@@ -1,4 +1,4 @@
-// «New things», the fixed dictionary of the standard library (English): for each entry, the oral exam question
+// “New things”, the fixed dictionary of the standard library (English): for each entry, the oral exam question
 // and the answer. Function names and the rules that find them in the code stay in js/codice/glossario.js.
 export default {
   'glossario.malloc.domanda': 'What\'s in the memory malloc has just returned?',
@@ -16,7 +16,7 @@ export default {
   'glossario.strncpy.domanda': 'Does strncpy(d, s, n) always add the final \'\\0\'?',
   'glossario.strncpy.risposta': 'No: if s has n characters or more, there\'s no \'\\0\' in d. If s is shorter, it fills the rest with zeros.',
   'glossario.strcmp.domanda': 'What does strcmp return if the two strings are equal?',
-  'glossario.strcmp.risposta': '0. A negative number if the first comes before, positive if it comes after: that\'s why if (strcmp(a, b)) means «they\'re different».',
+  'glossario.strcmp.risposta': '0. A negative number if the first comes before, positive if it comes after: that\'s why if (strcmp(a, b)) means “they\'re different”.',
   'glossario.strlen.domanda': 'Does strlen count the final \'\\0\' too?',
   'glossario.strlen.risposta': 'No: it counts the characters before the \'\\0\'. To copy the string you need strlen(s) + 1 bytes.',
   'glossario.strcat.domanda': 'What do you need for strcat(d, s) to work?',

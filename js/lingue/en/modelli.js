@@ -1,4 +1,4 @@
-// The «What does it print?» questions (js/codice/modelli.js), in English.
+// The “What does it print?” questions (js/codice/modelli.js), in English.
 // Keys: modelli.<model>.cosa / .concetto / .frase-N (the mutant sentences, in order), modelli.<model>.<language>.… for
 // what changes in Python and Java; modelli.concetti.* and modelli.errori.* are the names of topics and mistakes.
 export default {

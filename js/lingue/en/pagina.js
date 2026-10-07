@@ -77,7 +77,7 @@ export default {
   'pagina.importa-backup': 'Import a backup',
   // exam window
   'pagina.esame-correggi': 'Fix the details or add the grade.',
-  'pagina.esame-aiuto': 'You can also type it in the bar: «exam physics 2 on 20 February 6 credits».',
+  'pagina.esame-aiuto': 'You can also type it in the bar: “exam physics 2 on 20 February 6 credits”.',
   'pagina.campo-nome': 'Name',
   'pagina.esempio-esame': 'Calculus 2',
   'pagina.campo-cfu': 'Credits',

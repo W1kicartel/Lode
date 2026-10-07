@@ -1,4 +1,4 @@
-// «Ready for the discussion» (English): function states, the points found in the code and the card.
+// “Ready for the discussion” (English): function states, the points found in the code and the card.
 // The words that recognise the student's explanation (controlla() in js/codice/discussione.js) are NOT here.
 export default {
   'discussione.data-breve': '{g}/{m}',
@@ -21,7 +21,7 @@ export default {
   'discussione.punto-restituisce-valore': 'that it returns a value',
   'discussione.punto-restituisce-tipo': 'that it returns a `{tipo}`',
   'discussione.file-non-arrivato': 'the file didn\'t come through',
-  'discussione.nota': 'Lode doesn\'t know who wrote the lines: «while the agent was working» means the file changed during one of its turns. Lode doesn\'t explain the code to you: it only checks that you can explain it.',
+  'discussione.nota': 'Lode doesn\'t know who wrote the lines: “while the agent was working” means the file changed during one of its turns. Lode doesn\'t explain the code to you: it only checks that you can explain it.',
   'discussione.hai-detto': 'You said: {punti}.',
   'discussione.nessun-punto': 'I can\'t find any of the points I see in the code.',
   'discussione.hai-saltato': 'You skipped: {punti}.',

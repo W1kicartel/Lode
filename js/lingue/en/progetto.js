@@ -1,5 +1,5 @@
-// «Follow the project» in the bar (English): pill, cards «Shall I follow…?», «What's changing»,
-// «Done. In plain words», «Tested?» and «New things».
+// “Follow the project” in the bar (English): pill, cards “Shall I follow…?”, “What's changing”,
+// “Done. In plain words”, “Tested?” and “New things”.
 export default {
   'progetto.solo-app': 'You can only follow a project in the Lode desktop app.',
   'progetto.provo': 'testing…',
@@ -15,8 +15,8 @@ export default {
   'progetto.provato': 'Tested?',
   'progetto.cosa-e-cambiato': 'What changed',
   'progetto.cosa-sta-cambiando': 'What\'s changing',
-  'progetto.serve-seguito': 'You need a project followed in the app: type «follow project».',
-  'progetto.non-seguo-nome': 'I\'m not following any project called «{nome}».',
+  'progetto.serve-seguito': 'You need a project followed in the app: type “follow project”.',
+  'progetto.non-seguo-nome': 'I\'m not following any project called “{nome}”.',
   'progetto.non-seguo-niente': 'I\'m not following any project. Type **follow project** and pick your lab folder.',
   'progetto.capito-testo': 'Lode watches the files and checks whether the code has been tested: it doesn\'t write code for you. If you use an agent or an AI, your course decides what\'s allowed: ask your lecturer. The diary is a log for you, not evidence for your lecturer: it\'s what Lode saw, and it doesn\'t know who wrote the lines. For a graded assignment, mark the project as "graded": Lode will tell you where to look and what an error means, but it won\'t show you the fix.',
   'progetto.prima-di-cominciare': 'Before you start',
@@ -27,7 +27,7 @@ export default {
   'progetto.seguo-domanda': 'Shall I follow <b>{nome}</b>?',
   'progetto.seguo-aria': 'Shall I follow {nome}?',
   'progetto.seguo-spiega': 'I watch the files and keep the versions in Lode\'s folder: I don\'t write in your folder. The commands you confirm (make, for example) do, just like from the terminal. I don\'t know who writes the lines (you, an agent or a copy-paste): I tell you what changed and whether you tested it.',
-  'progetto.nota-windows': 'While I\'m following it, Windows won\'t let you rename or move the folder: type «stop following» first.',
+  'progetto.nota-windows': 'While I\'m following it, Windows won\'t let you rename or move the folder: type “stop following” first.',
   'progetto.corso': 'Course',
   'progetto.nessun-corso': 'No course',
   'progetto.valutato': 'Graded project (assignment)',

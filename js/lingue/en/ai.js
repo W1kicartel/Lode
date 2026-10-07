@@ -3,7 +3,7 @@
 export default {
   'ai.modello-locale': 'the local model',
   'ai.nessuno': 'none',
-  'ai.manca-chiave': 'The key is missing: add it by typing «AI» in the bar.',
+  'ai.manca-chiave': 'The key is missing: add it by typing “AI” in the bar.',
   'ai.claude-muto': "Claude didn't answer: try again.",
   'ai.rifiuto': "I can't help you with this.",
   'ai.errore-stato': 'error {stato}',

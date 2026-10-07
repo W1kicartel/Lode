@@ -1,5 +1,5 @@
 // Files dropped on the pill (js/file.js): what is accepted and why a file can't be read (lode.js puts these reasons
-// after «I can't read the file: »).
+// after “I can't read the file: ”).
 export default {
   'file.accettati': 'PDFs and slides (.pptx), photos of the board, notes (.md, .txt, .docx), audio recordings, Lode lecture write-ups, Anki cards',
   'file.formato-da-salvare': "the .{e} format can't be read: save it as PDF, .docx or .pptx",

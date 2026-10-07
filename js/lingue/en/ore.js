@@ -1,4 +1,4 @@
-// The plan for students who work (js/ore.js): the «about» times, the week lines, what doesn't fit, and the choices.
+// The plan for students who work (js/ore.js): the “about” times, the week lines, what doesn't fit, and the choices.
 export default {
   'ore.circa-min': 'about {m} min',
   'ore.circa-ore': { one: 'about {n} hour', other: 'about {n} hours' },
@@ -25,7 +25,7 @@ export default {
   'ore.mancano': 'You still need {circa} before the {nome} exam.',
   'ore.questo-esame': 'this exam',
   'ore.recuperi': '{testo} · you catch up {circa}',
-  'ore.ripiego': "With the hours you have, it doesn't all fit. You can give me extra study days («I study from 9 to 21») or think about the next exam date: your call.",
+  'ore.ripiego': "With the hours you have, it doesn't all fit. You can give me extra study days (“I study from 9 to 21”) or think about the next exam date: your call.",
   'ore.mancano-ancora': 'You still need {circa}.',
   'ore.ora-ci-sta': 'Now it fits.',
 };

@@ -1,4 +1,4 @@
-// «What does it print?», the exercise card (English).
+// “What does it print?”, the exercise card (English).
 export default {
   'stampa.titolo': 'What does it print?',
   'stampa.anteprima': 'What does {cosa} print?',
