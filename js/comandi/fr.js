@@ -133,8 +133,15 @@ function interpretaProgetto(testo) {
   return null;
 }
 
+// gli apostrofi tipografici, e quello che si dimentica scrivendo di fretta: «jai eu 15», «j ai 16» → «j'ai»
+const apostrofi = s => s.replace(/[’`]/g, "'").replace(/\bj(?:ai| ai)\b/gi, "j'ai");
+
+// quello che segue «révise», «oral», «joue» non è il nome di un corso quando è un commento o un'altra frase: «réviser c'est
+// chiant», «oral demain, stressé», «révise jamais assez», «jouer au foot ce soir»
+const COMMENTO = /^(?:c'est|c est|c'etait|ca|est|me|m'|trop|jamais|pas|plus|quand|comment|pourquoi|demain|aujourd'hui|ce soir|ce matin|cette semaine|(?:au|a la|a l'|aux|avec|chez) )/;
+
 export function interpreta(frase) {
-  const grezzo0 = String(frase || '').trim().replace(/[’`]/g, "'"); if (!grezzo0) return null;
+  const grezzo0 = apostrofi(String(frase || '').trim()); if (!grezzo0) return null;
   // informatica: «explique-moi l'erreur», anche con l'errore incollato dopo. Solo se dopo «erreur» non c'è niente, ci sono i
   // due punti o un a capo, o c'è davvero un errore del compilatore: «explique-moi l'erreur relative» resta all'AI
   let e0;
@@ -152,7 +159,7 @@ export function interpreta(frase) {
   let m;
 
   // la lingua della barra: «langue anglais», «passe en allemand», «change la langue en espagnol», «langue : español»
-  if ((m = cerca(/^(?:(?:change|changer|mets|mettre|met|passe|passer|bascule|basculer)(?: (?:la langue|de langue|l'app|l'appli|l'application|lode|tout|la barre))?(?: (?:en|au|a la|vers le|vers la|vers))?|(?:la )?langue\s*:?(?: en)?|(?:parle|parle-moi|reponds|reponds-moi|ecris|ecris-moi)(?: en)?|en) (?:a l'|vers l'|l')?(\S+)$/, t)) && linguaDetta(m[1], LINGUE_FR)) return { tipo: 'lingua', codice: linguaDetta(m[1], LINGUE_FR) };
+  if ((m = cerca(/^(?:(?:change|changer|mets|mettre|met|passe|passer|bascule|basculer)(?: (?:la langue|de langue|l'app|l'appli|l'application|lode|tout|la barre))?(?: (?:en|au|a la|vers le|vers la|vers))?|(?:la )?langue\s*:?(?: en)?|(?:parle|parle-moi|parle moi|reponds|reponds-moi|reponds moi|ecris|ecris-moi|ecris moi)(?: en)?|en) (?:a l'|vers l'|l')?(\S+)$/, t)) && linguaDetta(m[1], LINGUE_FR)) return { tipo: 'lingua', codice: linguaDetta(m[1], LINGUE_FR) };
   if (/^(?:aide|aide-moi|aidez-moi|\?|a l'aide|qu'est-ce que tu sais faire|qu'est ce que tu sais faire|tu sais faire quoi|tu fais quoi|que sais-tu faire|qu'est-ce que je peux (?:dire|ecrire|demander)|je peux dire quoi|commandes|les commandes|liste des commandes)$/.test(p)) return { tipo: 'aiuto' };
   if (/^(?:stop|stoppe|arrete|arreter|j'arrete|on arrete|termine|terminer|fin|ca suffit)(?: (?:le |la |l'|mon |ma )?(?:focus|timer|minuteur|chrono|pomodoro|session|revision))?$/.test(p)) return { tipo: 'ferma' };
   if (/^(?:pause|mets en pause|met en pause|mettre en pause|pause (?:le )?(?:timer|minuteur|chrono)|mets (?:le )?(?:timer|minuteur|chrono) en pause|attends)$/.test(p)) return { tipo: 'sospendi' };
@@ -176,7 +183,7 @@ export function interpreta(frase) {
   // righe). «programme de la semaine» e «programme du jour» sono il piano
   if ((m = cerca(/^(?:(?:ouvre|montre(?:-moi)?|voici|voila|colle) )?(?:le |mon )?(?:programme|syllabus|plan de cours)(?: (?:de l'examen|du cours|d'examen))?(?:\s+(?:de|du|des|en|pour)\b|\s*d')?\s*([^:\n]*?)\s*(?:[:\n]([\s\S]*))?$/i, grezzo0)) || (m = cerca(/^(?:(?:voici|voila|colle) )?(?:le )?([^:\n]+?) (?:programme|syllabus)\s*[:\n]([\s\S]*)$/i, grezzo0))) {
     const nome = pulisci(numeriDetti(m[1]).toLowerCase());
-    if (!/^(?:jour|aujourd'hui|demain|(?:la |cette )?semaine|c|java|python)$/.test(piano(nome))) return { tipo: 'programma', esame: nome ? trovaEsame(nome) : null, nomeDetto: nome, testo: (m[2] || '').trim() };
+    if (!/^(?:jour|aujourd'hui|demain|(?:la |cette )?semaine|c|java|python)$/.test(piano(nome)) && !/^(?:tele|tv)\b|\bce soir$/.test(piano(nome))) return { tipo: 'programma', esame: nome ? trovaEsame(nome) : null, nomeDetto: nome, testo: (m[2] || '').trim() };
   }
   // «je t'explique : green», «laisse-moi t'expliquer les séries entières»: lo studente spiega, Lode controlla cosa ha detto
   if ((m = cerca(/^(?:je (?:te |vous )?l'explique|je t'explique|je vous explique|laisse-moi (?:t')?expliquer|laisse moi (?:t')?expliquer|je vais (?:te |vous )?(?:l')?expliquer|je vais t'expliquer|j'explique|c'est moi qui explique)\b(?: moi-meme)?\s*:?\s*(.*)$/, t))) return { tipo: 'spiego', q: pulisci(m[1] || '') };
@@ -215,7 +222,7 @@ export function interpreta(frase) {
   if (new RegExp(`^${AFF}$|^(?:exercices?|exos?) (?:en |de )?(?:c|prog|programmation)$|^entraine-moi (?:en|sur(?: le)?) c$`).test(p)) return { tipo: 'stampa' };
   if ((m = p.match(new RegExp(`^(?:${AFF}(?: en)?|(?:exercices?|exos?) (?:en|de)|entraine-moi (?:en|sur)) (c|java|python)$`)))) return { tipo: 'stampa', lingua: m[1] };
   if ((m = cerca(/^(?:joue|jouer|jouons|on joue|jeu|mini-jeu|minijeu|mini jeu|memory|entraine-moi|entraine moi|entrainement|teste-moi sur les definitions)\b\s*(.*)$/, t))) {
-    const r = pulisci(m[1] || ''); return { tipo: 'gioco', corso: r || null };
+    const r = pulisci(m[1] || ''); if (!COMMENTO.test(piano(m[1] || '').trim()) || trovaEsame(r)) return { tipo: 'gioco', corso: r || null };
   }
   // «mes notes» da solo sono i voti (il libretto, più sotto); gli appunti sono «notes», «ouvre mes notes», «notes du jour»
   if (/^(?:ouvre |ouvrir )?(?:mes |les )?(?:notes|obsidian|vault|coffre|notes de cours|note du jour|prise de notes)(?: du jour| d'aujourd'hui| du cours)?$/.test(p) && p !== 'mes notes') return { tipo: 'appunti' };
@@ -279,7 +286,8 @@ export function interpreta(frase) {
     const v = voto(m[2]);
     if (v != null && (m[1] || v >= 10 || /\/|sur 20/.test(p))) return { tipo: 'voto', voto: v, lode: !!m[3] && v === 30, esame: trovaEsame(pulisci(m[4])), nomeDetto: pulisci(m[4]) };
   }
-  if ((m = cerca(/^(?:j'ai |j ai )?(?:(?:valide|reussi|obtenu)(?: (?:l'|le |la |mon |ma ))?|eu l')(?:(?:ue|module|examen|exam|epreuve|certif|certification|test) (?:d'|de |du |en )?)?(.+?)(?: \(?(?:valide|admise?)\)?)?$/, t)) && !/\d/.test(m[1]) && trovaEsame(pulisci(m[1])))
+  // un'idoneità: niente cifre (sarebbe un voto), salvo il livello di una lingua («j'ai validé l'anglais B2»)
+  if ((m = cerca(/^(?:j'ai |j ai )?(?:(?:valide|reussi|obtenu)(?: (?:l'|le |la |mon |ma ))?|eu l')(?:(?:ue|module|examen|exam|epreuve|certif|certification|test) (?:d'|de |du |en )?)?(.+?)(?: \(?(?:valide|admise?)\)?)?$/, t)) && !/\d/.test(piano(m[1]).replace(/\b[abc][12]\b/i, '')) && trovaEsame(pulisci(m[1])))
     return { tipo: 'idoneita', esame: trovaEsame(pulisci(m[1])), nomeDetto: pulisci(m[1]) };
 
   // focus, anche con i minuti prima: «lance un pomodoro de 25 minutes sur analyse 2», «bosse bdd pendant une heure»
@@ -293,7 +301,9 @@ export function interpreta(frase) {
   const QUANDO = `(le \\d.+|le (?:1er|premier) .+|dans \\d.+|demain|apres-demain|apres demain|(?:ce |le )?(?:${GIORNI.join('|')}).*)`;
   if ((m = cerca(/^(?:l'|le |la |mon |ma )?(?:examen final|examen|exam|partiel|intra|mi-session|ds|oral|ecrit|final|controle)(?: (?:de |d'|du |en )|d')?(.+?),? (?:est|sera|tombe|c'est|aura lieu|a lieu)(?: (?:prevu |prevue |fixe |fixee )?(?:le|pour le))? (.+)$/, t)) || (m = cerca(new RegExp(`^j'ai (?:(?:l'|un |une |mon |ma |le |la )(?:examen|exam|partiel|oral|ecrit|ds|controle)(?: (?:de |d'|du |en )|d')?|mon |ma )?(.+?) ${QUANDO}$`), t)) || (m = cerca(/^(?:l'|le |la )?(?:(?:examen|exam|partiel)(?: (?:de |d'|du )|d')?)?(.+?) (?:a ete |est )?(?:reporte|repousse|decale|deplace|avance)e?s? (?:au|a|le|pour le|pour) (.+)$/, t))) {
     const d = leggiData(m[2]), e = trovaEsame(pulisci(m[1]));
-    if (d && (e || (/exam|partiel|intra|mi-session|\bds\b|oral|ecrit|controle/.test(p) && pulisci(m[1]).length >= 3))) return { tipo: 'esame', nome: e?.nome || pulisci(m[1]), cfu: null, data: d.data, esistente: e && !e.fatto ? e : null };
+    // senza il nome dell'esame («j'ai un partiel demain», «j'ai un exam lundi») non c'è niente da segnare: ci pensa l'AI
+    const generico = /^(?:(?:un|une|mon|ma|l'|le|la) ?)?(?:examen|exam|partiel|intra|mi-session|ds|oral|ecrit|final|controle)s?$/.test(piano(pulisci(m[1])));
+    if (d && (e || (/exam|partiel|intra|mi-session|\bds\b|oral|ecrit|controle/.test(p) && pulisci(m[1]).length >= 3 && !generico))) return { tipo: 'esame', nome: e?.nome || pulisci(m[1]), cfu: null, data: d.data, esistente: e && !e.fatto ? e : null };
   }
   // nuovo esame: «examen bases de données le 15 janvier 9 ects», «ajoute l'examen histoire contemporaine»
   if ((m = cerca(/^(?:ajoute|ajouter|nouvel|nouveau|note|mets|il y a)?\s*(?:un |une |l'|le |mon )?(?:examen|exam|partiel)\s*:?\s+(?:de |d'|du |en |pour )?(.+)$|^(?:ajoute|ajouter|nouvel|nouveau|note|mets|il y a)?\s*(?:un |une |l'|le |mon )?(?:examen|exam|partiel) d'(.+)$/, t)) && !/^(?:moi|quoi|quel|quand|prochains?|blanc|dates?|calendrier|session|questions|exercices|sujets?|simulation)\b/.test(piano(m[1] || m[2])) && !/\b(?:quand|quel(?:le)?s?|comment|pourquoi|combien|c'est|est-ce)\b/.test(piano(m[1] || m[2])) && !/\?\s*$/.test(grezzo0)) {
@@ -316,7 +326,7 @@ export function interpreta(frase) {
 
   // ripasso
   if ((m = cerca(/^(?:on |je veux |je vais |fais-moi |fais moi |commence a )?(?:revisions|revision|revisons|reviser|revise|mes cartes|les cartes|cartes|mes flashcards|flashcards)(?=\s|$)\s*(.*)$/, t))) {
-    const r = pulisci(m[1] || ''); return { tipo: 'ripasso', esame: r ? trovaEsame(r) : null, nomeDetto: r };
+    const r = pulisci(m[1] || ''); if (!COMMENTO.test(piano(m[1] || '').trim())) return { tipo: 'ripasso', esame: r ? trovaEsame(r) : null, nomeDetto: r };
   }
 
   // il ponte con gli agenti di programmazione: «agents», «connecte claude code», «déconnecte cursor», «qu'a fait l'agent»
@@ -326,7 +336,7 @@ export function interpreta(frase) {
   if (new RegExp(`^(?:qu'a fait|qu'est-ce qu'a fait|qu'est ce qu'a fait) ${AG}$|^(?:qu'est-ce que|qu'est ce que) ${AG} a fait$|^${AG} a fait quoi$|^(?:le )?dernier tour(?: de l'agent)?$`).test(p)) return { tipo: 'turnoAgente' };
   // l'interrogazione (prima del quiz)
   if ((m = cerca(/^(?:interroge-moi|interroge moi|interrogez-moi|pose-moi des questions|questionne-moi|simule (?:l'|un )?oral|fais-moi passer (?:l'|un )?oral|oral blanc|kholle|oral)\b\s*(.*)$/, t))) {
-    const r = pulisci(m[1] || ''); return { tipo: 'orale', esame: r ? trovaEsame(r) : null, nomeDetto: r };
+    const r = pulisci(m[1] || ''); if (!COMMENTO.test(piano(m[1] || '').trim())) return { tipo: 'orale', esame: r ? trovaEsame(r) : null, nomeDetto: r };
   }
   // il quiz a crocette: «QCM d'analyse 2», «quiz», «simulation d'examen de droit privé»
   if ((m = cerca(/^(?:(?:donne-moi|lance|fais|fais-moi|on fait) )?(?:un |une |le |la |des )?(quiz|qcm|questions a choix multiples?|simulation d'examen|simulation d'exam|simulation de partiel|simule (?:l'|le )?(?:examen|exam|partiel|ecrit)|test d'entrainement)(?=[\s']|$)\s*(.*)$/, t))) {
@@ -380,7 +390,7 @@ function dataDetta(s) {
 const ORA = /\d{1,2}(?::\d{2})?\s*(?:-|–|a|jusqu'a)\s*\d{1,2}(?::\d{2})?/g;
 const BOSSO = '(?:travaille|bosse)';
 export function leggiLavoro(testo) {
-  const t = piano(String(testo || '').toLowerCase().replace(/[’`]/g, "'").replace(/\s+/g, ' ').replace(/[?!.]+$/, '').trim());
+  const t = piano(apostrofi(String(testo || '').toLowerCase()).replace(/\s+/g, ' ').replace(/[?!.]+$/, '').trim());
   let m;
   if (new RegExp(`^(?:je (?:ne )?${BOSSO} plus|j'ai arrete de (?:travailler|bosser)|j'ai quitte mon (?:job|boulot|travail|taf)|plus de (?:boulot|travail|job|taf)|(?:supprime|efface|enleve)(?: mon| mes| le| les)? (?:job|boulot|travail|horaires de travail|horaires de boulot|shifts))$`).test(t)) return { tipo: 'lavoro', azione: 'togli' };
   if (new RegExp(`^(?:quand (?:est-ce que |est ce que )?je ${BOSSO}|je ${BOSSO} quand|mes horaires(?: de (?:travail|boulot))?|mes shifts|mon (?:boulot|travail|job|taf)|mes heures de (?:travail|boulot))$`).test(t)) return { tipo: 'lavoro', azione: 'vedi' };

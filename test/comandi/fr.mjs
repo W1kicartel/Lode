@@ -259,6 +259,15 @@ export const CASI = [
   ['analyse 2', { tipo: 'apriEsame', esame: E('Analyse 2') }],
   ['bases de données', { tipo: 'apriEsame', esame: E('Bases de données') }],
   ['physique', { tipo: 'apriEsame', esame: E('Physique 2') }],
+  // dalla verifica: l'apostrofo dimenticato («jai», «j ai»), «parle moi» senza trattino, un nome vero dopo «joue», «révise»
+  ['jai eu 14 en analyse 2', { tipo: 'voto', voto: 14, lode: false, esame: E('Analyse 2'), nomeDetto: 'analyse 2' }],
+  ['j ai eu 15 en physique 2', { tipo: 'voto', voto: 15, lode: false, esame: E('Physique 2'), nomeDetto: 'physique 2' }],
+  ['et si jai 13 en analyse 2', { tipo: 'simula', voto: 13, lode: false, esame: E('Analyse 2'), nomeDetto: 'analyse 2' }],
+  ['jai le partiel de physique 2 lundi', { tipo: 'esame', nome: 'Physique 2', cfu: null, data: prossimoGiorno(1), esistente: E('Physique 2') }],
+  ['parle moi en espagnol', { tipo: 'lingua', codice: 'es' }],
+  ['joue sur analyse 2', { tipo: 'gioco', corso: 'analyse 2' }],
+  ['revise analyse 2', { tipo: 'ripasso', esame: E('Analyse 2'), nomeDetto: 'analyse 2' }],
+  ["j'ai validé l'anglais B2", { tipo: 'idoneita', esame: E('Anglais B2'), nomeDetto: 'anglais b2' }],
 ];
 
 // frasi che non sono comandi: restano all'AI (né il francese né l'inglese di riserva le prendono)
@@ -293,6 +302,18 @@ export const NON = [
   'open la page de physique',
   'review du code de lab3',
   'play avec moi',
+  // dalla verifica: un esame senza nome, e quello che dopo «révise», «joue», «programme» è un commento, non un corso
+  "j'ai un partiel demain",
+  "J'ai un exam lundi",
+  "j'ai l'examen demain",
+  "réviser c'est chiant",
+  'je révise jamais assez',
+  'jouer au foot ce soir ?',
+  'joue avec moi',
+  'programme télé ce soir',
+  'jai pas compris le cours',
+  "c'est quoi une moyenne pondérée ?",
+  "j'ai validé analyse 2",
 ];
 
 // l'inglese di riserva con la barra in francese: le frasi inglesi restano comandi, anche con il nome francese di un esame del
