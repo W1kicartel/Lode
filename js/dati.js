@@ -41,8 +41,12 @@ const ID = /^[\w-]{1,40}$/, DATA = /^\d{4}-\d{2}-\d{2}$/;
 // Un voto scritto con un altro sistema (e.sistema, messo da cambiaSistema) si tiene com'è anche in Italia: un 8,5 della
 // Spagna non diventa null tornando al sistema italiano
 const votoInForma = (v, sis, da) => v !== null && v !== '' && (S.sistema(sis).cod === 'it' && !(da && da !== 'it') ? Number.isInteger(+v) && +v >= 18 && +v <= 30 : Number.isFinite(+v) && +v >= 0 && +v <= 100) ? +v : null;
-const inForma = (e, sis) => e && typeof e === 'object' ? { ...e, cfu: Number(e.cfu) || 6, voto: votoInForma(e.voto, sis, e.sistema),
-  ...(e.oreObiettivo != null ? { oreObiettivo: Number(e.oreObiettivo) || null } : {}) } : e;
+const inForma = (e, sis) => {
+  if (!(e && typeof e === 'object')) return e;
+  const x = { ...e, cfu: Number(e.cfu) || 6, voto: votoInForma(e.voto, sis, CODICI.includes(e.sistema) ? e.sistema : null), ...(e.oreObiettivo != null ? { oreObiettivo: Number(e.oreObiettivo) || null } : {}) };
+  if ('sistema' in x && !CODICI.includes(x.sistema)) delete x.sistema;   // un sistema che non esiste (dati scritti a mano): via
+  return x;
+};
 // i dati di Lode letti dal disco: .lode/dati.json nel vault (che si sincronizza o si condivide: chi può scriverci può
 // metterci di tutto) o localStorage nel browser. Non passano da backupValido(), che rifiuterebbe tutto per un solo esame
 // storto: qui l'esame con un id strano (virgolette, HTML: finirebbe in un data-e="…") si scarta, gli altri restano
