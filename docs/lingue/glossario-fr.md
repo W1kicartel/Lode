@@ -73,3 +73,26 @@ Ce glossaire fixe les choix pour tous les catalogues `js/lingue/fr/*.js`.
 | gioco | jeu | Identique. |
 | sapevo / non sapevo | je savais / je ne savais pas | Idem ; dans « In tasca.md » les cases restent en italien pour l'instant. |
 | In tasca.md, Lezioni, Sbobine, Appunti sparsi, Esami, Glossario | (laissés en italien entre « ») | Noms du vault : rendus par langue à la phase suivante. |
+
+## Programmation (errori, modelli, glossario, progetto, diario, desktop)
+
+| Italien | Français | Pourquoi |
+|---|---|---|
+| prova (del progetto, .in/.out) | test | Ce que disent les étudiants en info (« les tests passent »). |
+| provato / non provato | testé / pas testé | Idem. |
+| avviso (del compilatore) | avertissement | Le mot des compilateurs en français (« warning » compris aussi). `errori.parola-avviso` = « avertissement » : il doit apparaître dans les textes qui disent déjà « c'est un avertissement ». |
+| array | tableau | Le mot des cours de C en France. |
+| ciclo / giro | boucle / tour | « Le dernier tour de la boucle ». |
+| stampare | afficher | « Qu'est-ce que ça affiche ? » ; « imprimer » sonne imprimante. |
+| restituire | renvoyer | « La fonction renvoie un int ». |
+| assegnamento | affectation | Terme des cours de prog. |
+| dichiarare / definire | déclarer / définir | Identique. |
+| graffa / parentesi quadre | accolade / crochets | Standard. |
+| rientro (Python) | indentation | Standard. |
+| puntatore / indirizzo | pointeur / adresse | Standard. |
+| caso base / ricorsione | cas de base / récursivité (récursion) | Standard. |
+| header | en-tête | Standard ; `#include` reste tel quel. |
+| linker | linker | Mot utilisé tel quel (« éditeur de liens » trop formel). |
+| laboratorio (cartella) | TP | « Le dossier du TP » ; l'exemple « lab3 » devient « tp3 ». |
+| app desktop | appli de bureau | Ton appli grand public. |
+| Lode (genere) | masculin (« Lode est prêt », « rouvre-le ») | Comme dans les autres catalogues fr. |
