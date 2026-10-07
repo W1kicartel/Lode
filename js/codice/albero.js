@@ -10,6 +10,7 @@
 // Quello che in C sarebbe comportamento indefinito non si può scrivere: ogni variabile nasce con un valore,
 // e un int che esce da 32 bit, una divisione per zero o un indice fuori dall'array fanno lanciare ErroreC (il modello si scarta).
 // Puro: niente DOM, si usa anche in Node.
+import { t } from '../lingua.js';
 
 export class ErroreC extends Error {
   constructor(tipo, messaggio) { super(messaggio || tipo); this.name = 'ErroreC'; this.tipo = tipo; }
@@ -341,7 +342,7 @@ export function stampaJava(n) {
     for (const f of prog.funzioni) if (f.nome !== 'main') { TIPI = tipiDi(f); out.push(`${RIENTRO}static ${firmaJ(f)} {`); for (const x of f.corpo.corpo) istr(x, 2, out); out.push(`${RIENTRO}}`, ''); }
     const m = FUNZ.get('main'); TIPI = tipiDi(m);
     out.push(`${RIENTRO}public static void main(String[] args) {`);
-    if (locale) out.push(`${r2}Locale.setDefault(Locale.ROOT);   // il punto nei decimali, anche su un computer italiano`);
+    if (locale) out.push(`${r2}Locale.setDefault(Locale.ROOT);   // ${t('albero.commento-locale')}`);
     for (const x of m.corpo.corpo) istr(x, 2, out);
     out.push(`${RIENTRO}}`, '}');
     return out.join('\n') + '\n';
