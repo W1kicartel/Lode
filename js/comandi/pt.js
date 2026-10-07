@@ -76,7 +76,7 @@ export function leggiData(testo) {
 }
 
 // toglie davanti e in fondo le parole che non fanno parte del nome: «de», «em», «o exame de», «a cadeira de», «para»…
-const PREP = '(?:o exame de|exame de|a cadeira de|cadeira de|a disciplina de|disciplina de|a mat[eé]ria de|mat[eé]ria de|o meu|a minha|os meus|as minhas|meu|minha|meus|minhas|de|da|do|das|dos|em|no|na|nos|nas|para|pra|pro|[aà]|ao|o|os|as|sobre|com|por|durante)';
+const PREP = '(?:o exame de|exame de|a cadeira de|cadeira de|a disciplina de|disciplina de|a mat[eé]ria de|mat[eé]ria de|o meu|a minha|os meus|as minhas|meu|minha|meus|minhas|de|da|do|das|dos|em|no|na|nos|nas|para|pra|pro|[aà]|ao|o|os|as|sobre|com|por|durante|on)';   // «on»: «focus 50 on cálculo», all'inglese
 const PREP_FIM = '(?:de|da|do|das|dos|em|no|na|para|pra|pro|com|por|durante|sobre|[aà]s?)';
 function pulisci(s) {
   let r = String(s || '').replace(/[?.!,;:]+$/, '').trim(), prima;

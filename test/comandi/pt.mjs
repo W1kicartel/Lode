@@ -282,4 +282,21 @@ export const NON = [
   'tenho exame amanhã e estou nervoso',
   'tive 15 a mecânica e estou triste',
   'me ajuda a entender integrais',
+  // frasi portoghesi che cominciano con una parola inglese: l'inglese di riserva non le deve prendere (vanno all'AI)
+  'today está a ser um dia mau',
+  'open a página de física',
+  'my exams são demasiados',
+  'play com os amigos',
+  'cards para economia',
+  'review de um texto meu',
+];
+
+// l'inglese di riserva con la barra in portoghese: le frasi inglesi restano comandi, anche con il nome portoghese di un esame
+// del libretto (il banco le prova solo con LODE_LINGUA=pt)
+export const RISERVA = [
+  ['review cálculo 2', { tipo: 'ripasso', esame: E('Cálculo 2'), nomeDetto: 'cálculo 2' }],
+  ['focus 50 on mecânica', { tipo: 'focus', min: 50, esame: E('Mecânica'), nomeDetto: 'mecânica' }],
+  ['today', { tipo: 'oggi' }],
+  ['study with me', { tipo: 'focus', min: null, esame: null, nomeDetto: '' }],
+  ['language english', { tipo: 'lingua', codice: 'en' }],
 ];
