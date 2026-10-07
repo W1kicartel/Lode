@@ -309,6 +309,14 @@ prova('anteprima in Java: la prima domanda è quella promessa', [1, 2, 3, 4, 5].
   prova('glossario: diff tagliato o grande → si salta il file', !r.length, k(r));
   prova('glossario: static dentro una funzione sì, una funzione static no', k(G.coseNuove([rif('a.c', ['+', '    static int conta = 0;'])])) === 'static locale' && !G.coseNuove([rif('a.c', ['+', 'static int conta(int x) {'])]).length);
   prova('glossario: la riga mostrata è tagliata a 120 caratteri', G.coseNuove([rif('a.c', ['+', '   p = malloc(' + 'x'.repeat(300) + ');'])])[0].testo.length === 120);
+  // il file intero di adesso: il diff ha 3 righe di contesto, un malloc vecchio lontano lo vede solo attuale
+  const lontano = { ...rif('lista.c', [' ', 'void f() {'], ['+', '  p = malloc(n);'], [' ', '}']), attuale: ['#include <stdlib.h>', 'int *v;', 'void g() { v = malloc(4); }', '', '', '', 'void f() {', '  p = malloc(n);', '}'] };
+  prova('glossario: con il file intero, un malloc che c\'era già lontano dal blocco → niente', !G.coseNuove([lontano]).length, k(G.coseNuove([lontano])));
+  prova('glossario: senza il file intero quel malloc esce (vale solo il diff)', k(G.coseNuove([{ ...lontano, attuale: null }])) === 'malloc');
+  r = G.coseNuove([{ ...rif('lista.c', ['+', '  p = malloc(n);'], ['+', '  q = malloc(m);']), attuale: ['int main() {', '  p = malloc(n);', '  q = malloc(m);', '  // malloc(x) in un commento', '  puts("malloc(");', '}'] }]);
+  prova('glossario: con il file intero, se malloc è solo nelle righe + (e in commenti o stringhe) → esce', k(r) === 'malloc', k(r));
+  r = G.coseNuove([{ ...rif('lista.c', ['+', '  p = malloc(n);']), attuale: ['/* una volta', '   v = malloc(4);', '*/', '  p = malloc(n);'] }]);
+  prova('glossario: il file intero si pulisce con i /* */ su più righe', k(r) === 'malloc', k(r));
   prova('glossario: linguaDi', G.linguaDi('lista.h') === 'c' && G.linguaDi('src/main.c') === 'c' && G.linguaDi('Main.java') === 'java' && G.linguaDi('es.py') === 'python' && G.linguaDi('LEGGIMI.md') === null && G.linguaDi('Makefile') === null && G.linguaDi('') === null);
   prova('glossario: niente blocchi o file storti non rompono', G.coseNuove([{ rel: 'a.c' }, null, { rel: 'b.c', blocchi: [{}] }].filter(Boolean)).length === 0 && G.coseNuove().length === 0);
   // la carta e l'esame
@@ -327,13 +335,23 @@ prova('anteprima in Java: la prima domanda è quella promessa', [1, 2, 3, 4, 5].
     'lista.c': rif('lista.c', ['+', 't = strtok(s, " ");']), 'note.txt': rif('note.txt', ['+', 'free(p)']), 'Big.java': rif('Big.java', ['+', 'x.stream()']),
     'tagliato.py': { ...rif('tagliato.py', ['+', 'zip(a, b)']), tagliato: true }, 'rotto.c': { errore: 'non trovato' },
   };
-  const finta = async (canale, a) => { chiamate.push(a); if (!a.rel) return { file: [{ rel: 'lista.c', stato: 'cambiato', piu: 1, meno: 0 }, { rel: 'note.txt', stato: 'cambiato', piu: 1 }, { rel: 'Big.java', stato: 'cambiato', piu: 900, grande: true }, { rel: 'tagliato.py', stato: 'nuovo', piu: 3000 }, { rel: 'rotto.c', stato: 'cambiato', piu: 1 }, { rel: 'via.c', stato: 'tolto', meno: 4 }] }; return diffs[a.rel]; };
+  const finta = async (canale, a) => { if (canale === 'progetto:righe') return null; chiamate.push(a); if (!a.rel) return { file: [{ rel: 'lista.c', stato: 'cambiato', piu: 1, meno: 0 }, { rel: 'note.txt', stato: 'cambiato', piu: 1 }, { rel: 'Big.java', stato: 'cambiato', piu: 900, grande: true }, { rel: 'tagliato.py', stato: 'nuovo', piu: 3000 }, { rel: 'rotto.c', stato: 'cambiato', piu: 1 }, { rel: 'via.c', stato: 'tolto', meno: 4 }] }; return diffs[a.rel]; };
   const l = await coseNuoveDi('p1', { da: 10, a: 20, invoca: finta, dati: { D: { codice: {}, carte: [] } } });
   prova('barra: coseNuoveDi trova strtok con file, riga e progetto', l.length === 1 && l[0].voce.k === 'strtok' && l[0].rel === 'lista.c' && l[0].riga === 1 && l[0].id === 'p1', JSON.stringify(l));
   prova('barra: coseNuoveDi chiede solo i file C/Java/Python non grandi e non tolti, con lo stesso tratto', chiamate.filter(a => a.rel).map(a => a.rel).join(',') === 'lista.c,tagliato.py,rotto.c' && chiamate.every(a => a.id === 'p1' && a.da === 10 && a.a === 20), JSON.stringify(chiamate));
   const tanti = async (c, a) => a.rel ? rif(a.rel, ['+', 'x = 1;']) : { file: Array.from({ length: 15 }, (_, i) => ({ rel: `f${i}.c`, stato: 'cambiato', piu: 1 })) };
-  let n = 0; await coseNuoveDi('p1', { invoca: async (c, a) => { if (a.rel) n++; return tanti(c, a); }, dati: { D: { codice: {} } } });
+  let n = 0; await coseNuoveDi('p1', { invoca: async (c, a) => { if (a.rel && c === 'progetto:diff') n++; return tanti(c, a); }, dati: { D: { codice: {} } } });
   prova('barra: coseNuoveDi guarda al massimo 10 file', n === 10, n);
+  // coseNuoveDi chiede il file intero solo per i file cambiati, a pezzi di 400 righe, e se non arriva tutto vale il diff
+  const pezzi = [], vecchio = Array.from({ length: 850 }, (_, i) => i === 600 ? '  v = malloc(4);' : i === 849 ? '  p = malloc(n);' : 'x++;');
+  const conFile = async (c, a) => {
+    if (c === 'progetto:righe') { pezzi.push([a.rel, a.da, a.a]); return { rel: a.rel, totale: vecchio.length, righe: vecchio.slice(a.da - 1, a.a).map((s, i) => ({ n: a.da + i, s })) }; }
+    return a.rel ? rif(a.rel, ['+', '  p = malloc(n);']) : { file: [{ rel: 'grande.c', stato: 'cambiato', piu: 1 }, { rel: 'nuovo.c', stato: 'nuovo', piu: 1 }] };
+  };
+  const cf = await coseNuoveDi('p1', { invoca: conFile, dati: { D: { codice: {}, carte: [] } } });
+  prova('barra: coseNuoveDi, file cambiato letto intero (3 pezzi) e malloc vecchio a riga 601 → esce dal file nuovo', JSON.stringify(pezzi) === '[["grande.c",1,400],["grande.c",401,800],["grande.c",801,1200]]' && cf.length === 1 && cf[0].rel === 'nuovo.c', JSON.stringify({ pezzi, cf }));
+  const senza = await coseNuoveDi('p1', { invoca: async (c, a) => c === 'progetto:righe' ? { errore: 'Non riesco a leggere il file.' } : conFile(c, a), dati: { D: { codice: {}, carte: [] } } });
+  prova('barra: coseNuoveDi, se progetto:righe non risponde → vale solo il diff', senza.length === 1 && senza[0].rel === 'grande.c', JSON.stringify(senza));
   const avviso = console.warn; console.warn = () => { };
   prova('barra: coseNuoveDi, se il main non risponde o fuori dal desktop → [] in silenzio', (await coseNuoveDi('p1', { invoca: async () => { throw new Error('giù'); }, dati: { D: {} } })).length === 0 && (await coseNuoveDi('p1')).length === 0);
   prova('barra: coseNuoveDi con un diff senza blocchi → []', (await coseNuoveDi('p1', { invoca: async (c, a) => a.rel ? { rel: a.rel } : { file: [{ rel: 'a.c', piu: 1 }] }, dati: { D: {} } })).length === 0);

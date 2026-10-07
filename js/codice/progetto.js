@@ -382,6 +382,19 @@ export function schedaEsito(e, dove) {
 }
 
 /* ---------- «Cose nuove»: le funzioni di libreria comparse nelle righe aggiunte (glossario.js, senza AI) ---------- */
+// Per i file cambiati serve anche il file intero di adesso (progetto:righe, 400 righe a chiamata, fino a 2000): il diff ha solo
+// 3 righe di contesto e un malloc vecchio a riga 10 non lo vede. Se il file non arriva tutto → null, e vale solo il diff
+async function fileIntero(chiedi, id, rel) {
+  const out = [];
+  for (let da = 1; da <= 2000; da += 400) {
+    const x = await chiedi('progetto:righe', { id, rel, da, a: da + 399 }).catch(() => null);
+    if (!x || x.errore || !Array.isArray(x.righe) || !Number.isFinite(x.totale)) return null;
+    out.push(...x.righe.map(r => r?.s ?? ''));
+    if (out.length >= x.totale) return out;
+    if (!x.righe.length) return null;
+  }
+  return null;
+}
 // Il tratto da/a (come schedaCambia), poi il diff dei soli file C/Java/Python: al massimo 10, non quelli grandi o tagliati.
 // Se qualcosa va storto restituisce [] in silenzio: la scheda di base non si rompe mai. opz.invoca e opz.dati per le prove
 export async function coseNuoveDi(id, opz = {}) {
@@ -391,7 +404,10 @@ export async function coseNuoveDi(id, opz = {}) {
     const scelti = (r?.file || []).filter(f => f && linguaDi(f.rel) && !f.grande && f.stato !== 'tolto' && (f.piu || f.stato === 'nuovo')).slice(0, 10);
     if (!scelti.length) return [];
     const file = [];
-    for (const f of scelti) { const d = await chiedi('progetto:diff', { id, rel: f.rel, da: opz.da, a: opz.a }); if (d && !d.errore && !d.grande && !d.tagliato) file.push({ ...d, rel: f.rel }); }
+    for (const f of scelti) {
+      const d = await chiedi('progetto:diff', { id, rel: f.rel, da: opz.da, a: opz.a }); if (!d || d.errore || d.grande || d.tagliato) continue;
+      file.push({ ...d, rel: f.rel, attuale: f.stato === 'cambiato' ? await fileIntero(chiedi, id, f.rel) : null });
+    }
     const { D } = opz.dati || await dati();
     return coseNuove(file, { visti: D.codice?.glossario?.visti || {}, carte: D.carte || [] }).map(x => ({ ...x, id }));
   } catch (e) { console.warn('Lode: cose nuove', e); return []; }

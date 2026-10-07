@@ -1,4 +1,4 @@
-// «Cose nuove»: le funzioni della libreria standard che compaiono per la prima volta nelle righe aggiunte di un turno
+// «Cose nuove»: le funzioni della libreria standard che le righe aggiunte di un turno portano in un file dove prima non c'erano
 // (dell'agente o tue), con la domanda che ti farebbero all'orale. Niente AI: un dizionario fisso scritto a mano, C99/C11,
 // Java 17 e Python 3. La risposta la scrive il dizionario; Lode non sa chi ha scritto le righe e non lo dice.
 // Funzioni pure (si provano in test/codice.mjs senza Electron); segna() è l'unica che scrive, in D.codice.glossario.
@@ -131,19 +131,26 @@ function leggi(blocchi, l) {
   return { nuove, prima, tutte };
 }
 
+// il file intero di adesso (progetto:righe, tutte le righe), pulito come il diff: un solo stato dei commenti dall'inizio
+const pulito = (righe, l) => { const st = {}; return righe.map(s => pulisci(String(s ?? ''), l, st)); };
+const quante = (codice, v) => codice.reduce((n, c) => n + (v.cerca.test(c) ? 1 : 0), 0);
+
 /* ---------- le voci nuove di un diff ---------- */
-// file: [{ rel, blocchi, grande?, tagliato? }] come progetto:diff con rel. Una voce è nuova per un file se compare in una riga
-// '+', in nessuna riga ' ' o '-' dello stesso file, non è in visti, nessuna carta ha la sua domanda come fronte, e nel diff
-// nessuno definisce una funzione o una classe con il suo nome. Una volta per voce (la prima), al massimo 5, nell'ordine del diff.
+// file: [{ rel, blocchi, grande?, tagliato?, attuale? }] come progetto:diff con rel. Una voce è nuova per un file se compare in
+// una riga '+', in nessuna riga ' ' o '-' dello stesso file, non è in visti, nessuna carta ha la sua domanda come fronte, e nel
+// diff nessuno definisce una funzione o una classe con il suo nome. attuale (facoltativo): tutte le righe del file di adesso.
+// Il diff vede solo 3 righe di contesto per blocco: con attuale, se la voce compare in più righe del file che nelle righe '+',
+// c'era già altrove (un malloc nuovo a riga 200 con un malloc vecchio a riga 10) e si salta. Se il file è cambiato ancora dopo
+// il tratto, l'errore va dalla parte del silenzio. Una volta per voce (la prima), al massimo 5, nell'ordine del diff.
 export const MAX = 5;
 export function coseNuove(file, { visti = {}, carte = [] } = {}) {
   const fronti = new Set((carte || []).map(c => String(c?.fronte ?? '').trim()));
-  const letti = (file || []).map(f => { const l = linguaDi(f?.rel); return l && !f.grande && !f.tagliato && Array.isArray(f.blocchi) ? { rel: f.rel, l, ...leggi(f.blocchi, l) } : null; }).filter(Boolean);
+  const letti = (file || []).map(f => { const l = linguaDi(f?.rel); return l && !f.grande && !f.tagliato && Array.isArray(f.blocchi) ? { rel: f.rel, l, ...leggi(f.blocchi, l), ora: Array.isArray(f.attuale) ? pulito(f.attuale, l) : null } : null; }).filter(Boolean);
   const def = {};
   for (const x of letti) for (const n of definiti(x.tutte, x.l)) (def[x.l] ||= new Set()).add(n);
   const out = [], prese = new Set();
   for (const x of letti) {
-    const voci = VOCI.filter(v => v.l === x.l && !prese.has(v.k) && !visti?.[v.k] && !fronti.has(v.d) && !(v.f && def[x.l]?.has(v.f)) && !x.prima.some(c => v.cerca.test(c)));
+    const voci = VOCI.filter(v => v.l === x.l && !prese.has(v.k) && !visti?.[v.k] && !fronti.has(v.d) && !(v.f && def[x.l]?.has(v.f)) && !x.prima.some(c => v.cerca.test(c)) && !(x.ora && quante(x.ora, v) > quante(x.nuove.map(n => n.c), v)));
     for (const { r, c } of x.nuove) for (const v of voci) {
       if (out.length >= MAX) return out;
       if (prese.has(v.k) || !v.cerca.test(c)) continue;
