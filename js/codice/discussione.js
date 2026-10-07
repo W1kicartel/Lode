@@ -270,20 +270,26 @@ function restituisce(firma, nome, lingua, corpo) {
 
 /* ---------- il controllo della spiegazione ---------- */
 // confronto tollerante: minuscole, senza accenti, la punteggiatura diventa spazio. → { presi, saltati } (punti interi)
+// Le parole italiane di sempre per prime; poi quelle delle altre lingue (inglese, spagnolo, francese, tedesco, portoghese),
+// mai parole italiane: in italiano il controllo resta quello di prima
 export function controlla(lista, testo) {
   const grezzo = String(testo ?? '').toLowerCase(), n = ` ${norm(grezzo)} `;
   const parola = w => !!norm(w) && n.includes(` ${norm(w)} `);
   const preso = p => {
     if (!n.trim()) return false;
     if (p.tipo === 'parametri') {
-      if (!p.nomi?.length) return /\b(?:niente|nulla|nessun\w*|void)\b|\bnon (?:riceve|prende)\b|\bsenza (?:parametri|argomenti)\b/.test(n);
-      return p.nomi.filter(parola).length >= Math.ceil(p.nomi.length / 2) || /\b(?:parametr\w*|argoment\w*|riceve|prende)\s+[a-z0-9]/.test(n);
+      if (!p.nomi?.length) return /\b(?:niente|nulla|nessun\w*|void)\b|\bnon (?:riceve|prende)\b|\bsenza (?:parametri|argomenti)\b/.test(n)
+        || /\b(?:nothing|none|no (?:parameters|arguments)|takes no|ningun\w*|nada|sin (?:parametros|argumentos)|aucun\w*|rien|sans (?:parametres|arguments)|kein\w*|nichts|ohne (?:parameter|argumente)|nenhum\w*|sem (?:parametros|argumentos))\b/.test(n);
+      return p.nomi.filter(parola).length >= Math.ceil(p.nomi.length / 2) || /\b(?:parametr\w*|argoment\w*|riceve|prende)\s+[a-z0-9]/.test(n)
+        || /\b(?:parameters?|arguments?|takes|receives|recibe|toma|prend|recoit|nimmt|erhalt|bekommt|recebe)\s+[a-z0-9]/.test(n);
     }
     if (p.tipo === 'restituisce') return /\b(?:restitui\w*|ritorn\w*|torna\w*|return\w*)\b/.test(n) || /(?:^|[^\p{L}])d(?:à|a')(?![\p{L}])/u.test(grezzo)
-      || (p.niente && /\b(?:niente|nulla|void|none)\b/.test(n));
+      || /\b(?:devuelv\w*|devolv\w*|retorna\w*|renvoi\w*|retourn\w*|liefert|zuruck\w*)\b/.test(n)
+      || (p.niente && /\b(?:niente|nulla|void|none)\b/.test(n)) || (p.niente && /\b(?:nothing|nada|rien|nichts)\b/.test(n));
     if (p.tipo === 'chiama') return parola(p.nome);
-    if (p.tipo === 'ciclo') return /\b(?:cicl\w*|scorr\w*|for|while|per ogni|iter\w*|finche|ripet\w*)\b/.test(n);
-    if (p.tipo === 'ricorsione') return /ricors|chiama se stess|richiam/.test(n);
+    if (p.tipo === 'ciclo') return /\b(?:cicl\w*|scorr\w*|for|while|per ogni|iter\w*|finche|ripet\w*)\b/.test(n)
+      || /\b(?:loop\w*|bucle\w*|recorr\w*|boucle\w*|parcour\w*|schleife\w*|durchl\w*|laco\w*)\b/.test(n);
+    if (p.tipo === 'ricorsione') return /ricors|chiama se stess|richiam/.test(n) || /recurs|rekurs|itself|si mism|elle meme|sich selbst|si mesm/.test(n);
     return false;
   };
   const presi = [], saltati = [];

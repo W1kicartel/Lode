@@ -467,19 +467,20 @@ const SCHEMA_LIBRETTO = { type: 'object', additionalProperties: false, required:
 // fuori dall'Italia: il voto come è scritto (testo), letto poi con leggiVoto() nel sistema scelto; crediti anche con i decimali
 const SCHEMA_LIBRETTO_SISTEMA = { type: 'object', additionalProperties: false, required: ['esami'], properties: { esami: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['nome', 'cfu', 'voto', 'idoneita', 'data'], properties: {
   nome: { type: 'string' }, cfu: { type: ['number', 'null'] }, voto: { type: ['string', 'null'] }, idoneita: { type: 'boolean' }, data: { type: ['string', 'null'], description: 'YYYY-MM-DD' } } } } } };
+// il libretto letto dall'AI nel sistema dei voti scelto. Fuori dall'Italia il prompt dice la scala del sistema, il voto arriva
+// come è scritto e lo legge leggiVoto() (solo quelli superati: nel GPA anche la F, che conta)
+const PROMPT_LIBRETTO_SISTEMA = s => `Qui sopra c'è il libretto universitario (transcript) di uno studente, copiato da un portale, con tanto testo inutile. Il sistema dei voti è quello di ${PAESE[s.cod]}: ${scala(s)}. Estrai SOLO gli esami superati: nome dell'insegnamento (senza codici), crediti (${S.nomeCrediti(s)}, null se non ci sono), il voto copiato come è scritto (per esempio «8,5», «16/20», «2,3», «A-», «68», «Matrícula de Honor»), idoneita true se è superato senza voto, data in formato YYYY-MM-DD. Ignora gli esami non ancora sostenuti o senza esito.`;
+const esamiDelSistema = (r, s) => (r.esami || []).flatMap(e => {
+  if (typeof e.nome !== 'string' || !e.nome.trim()) return [];
+  const v = e.idoneita ? { voto: null, lode: false, idoneita: true } : S.leggiVoto(String(e.voto ?? ''), s);
+  if (!v || (!v.idoneita && !s.bocciatiInMedia && !S.superato(v.voto, s))) return [];
+  const cfu = Number(e.cfu);
+  return [{ nome: e.nome.trim(), cfu: Number.isFinite(cfu) && cfu > 0 ? cfu : s.esame, voto: v.idoneita ? null : v.voto, lode: !!v.lode, idoneita: !!v.idoneita, data: /^\d{4}-\d\d-\d\d$/.test(e.data || '') ? e.data : null }];
+});
 export async function leggiLibretto(testo, sistema = sistemaVoti()) {
-  const s = S.sistema(sistema);
-  if (s.cod !== 'it') {
-    const r = await strutturato(`Qui sopra c'è il libretto universitario (transcript) di uno studente, copiato da un portale, con tanto testo inutile. Il sistema dei voti è quello di ${PAESE[s.cod]}: ${scala(s)}. Estrai SOLO gli esami superati: nome dell'insegnamento (senza codici), crediti (${S.nomeCrediti(s)}, null se non ci sono), il voto copiato come è scritto (per esempio «8,5», «16/20», «2,3», «A-», «68», «Matrícula de Honor»), idoneita true se è superato senza voto, data in formato YYYY-MM-DD. Ignora gli esami non ancora sostenuti o senza esito.` + comeScritti(), `Libretto:\n${String(testo).slice(0, 30000)}`, SCHEMA_LIBRETTO_SISTEMA);
-    return (r.esami || []).flatMap(e => {
-      if (typeof e.nome !== 'string' || !e.nome.trim()) return [];
-      const v = e.idoneita ? { voto: null, lode: false, idoneita: true } : S.leggiVoto(String(e.voto ?? ''), s);
-      if (!v || (!v.idoneita && !s.bocciatiInMedia && !S.superato(v.voto, s))) return [];
-      const cfu = Number(e.cfu);
-      return [{ nome: e.nome.trim(), cfu: Number.isFinite(cfu) && cfu > 0 ? cfu : s.esame, voto: v.idoneita ? null : v.voto, lode: !!v.lode, idoneita: !!v.idoneita, data: /^\d{4}-\d\d-\d\d$/.test(e.data || '') ? e.data : null }];
-    });
-  }
-  const r = await strutturato('Qui sopra c\'è il libretto universitario di uno studente italiano, copiato da un portale (Esse3 o simili), con tanto testo inutile. Estrai SOLO gli esami superati: nome dell\'insegnamento (senza codici), CFU, voto da 18 a 30 (lode true se «30 e lode» o «30L»), idoneita true se è un\'idoneità senza voto, data in formato YYYY-MM-DD. Ignora gli esami non ancora sostenuti o senza esito.' + comeScritti(), `Libretto:\n${String(testo).slice(0, 30000)}`, SCHEMA_LIBRETTO);
+  const s = S.sistema(sistema), it = s.cod === 'it';
+  const r = await strutturato((it ? 'Qui sopra c\'è il libretto universitario di uno studente italiano, copiato da un portale (Esse3 o simili), con tanto testo inutile. Estrai SOLO gli esami superati: nome dell\'insegnamento (senza codici), CFU, voto da 18 a 30 (lode true se «30 e lode» o «30L»), idoneita true se è un\'idoneità senza voto, data in formato YYYY-MM-DD. Ignora gli esami non ancora sostenuti o senza esito.' : PROMPT_LIBRETTO_SISTEMA(s)) + comeScritti(), `Libretto:\n${String(testo).slice(0, 30000)}`, it ? SCHEMA_LIBRETTO : SCHEMA_LIBRETTO_SISTEMA);
+  if (!it) return esamiDelSistema(r, s);
   // cfu e voto diventano numeri: il modello può rispondere con una stringa, e i valori finiscono nelle pagine
   return (r.esami || []).filter(e => typeof e.nome === 'string' && e.nome.trim() && (e.idoneita || (+e.voto >= 18 && +e.voto <= 30))).map(e => ({ ...e, nome: e.nome.trim(), cfu: Number(e.cfu) || 6, voto: e.idoneita ? null : Math.round(+e.voto), lode: !!e.lode, idoneita: !!e.idoneita, data: /^\d{4}-\d\d-\d\d$/.test(e.data || '') ? e.data : null }));
 }
