@@ -220,7 +220,7 @@ export default {
   'barra3.prova-compito-fonte': 'Compito «{fonte}»',
   'barra3.prova-compito-incollato': 'Compito incollato',
   'barra3.n-esercizi': { one: '{n} esercizi', other: '{n} esercizi' },
-  'barra3.n-punti': '{punti} punti',
+  'barra3.n-punti': { one: '{punti} punto', other: '{punti} punti' },
   'barra3.prova-titolo': 'Prova generale · {nome}',
   'barra3.prova-quanto-dura': 'Quanto dura?',
   'barra3.prova-minuti-aria': 'Quanti minuti dura la prova',

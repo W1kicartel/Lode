@@ -220,7 +220,7 @@ export default {
   'barra3.prova-compito-fonte': 'Paper “{fonte}”',
   'barra3.prova-compito-incollato': 'Pasted paper',
   'barra3.n-esercizi': { one: '{n} exercise', other: '{n} exercises' },
-  'barra3.n-punti': '{punti} points',
+  'barra3.n-punti': { one: '{punti} point', other: '{punti} points' },
   'barra3.prova-titolo': 'Mock exam · {nome}',
   'barra3.prova-quanto-dura': 'How long is it?',
   'barra3.prova-minuti-aria': 'How many minutes the exam lasts',

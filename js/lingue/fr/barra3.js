@@ -220,7 +220,7 @@ export default {
   'barra3.prova-compito-fonte': 'Sujet « {fonte} »',
   'barra3.prova-compito-incollato': 'Sujet collé',
   'barra3.n-esercizi': { one: '{n} exercice', other: '{n} exercices' },
-  'barra3.n-punti': '{punti} points',
+  'barra3.n-punti': { one: '{punti} point', other: '{punti} points' },
   'barra3.prova-titolo': 'Examen blanc · {nome}',
   'barra3.prova-quanto-dura': 'Ça dure combien ?',
   'barra3.prova-minuti-aria': "Combien de minutes dure l'examen blanc",

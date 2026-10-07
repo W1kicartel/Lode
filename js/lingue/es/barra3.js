@@ -220,7 +220,7 @@ export default {
   'barra3.prova-compito-fonte': 'Examen «{fonte}»',
   'barra3.prova-compito-incollato': 'Examen pegado',
   'barra3.n-esercizi': { one: '{n} ejercicio', other: '{n} ejercicios' },
-  'barra3.n-punti': '{punti} puntos',
+  'barra3.n-punti': { one: '{punti} punto', other: '{punti} puntos' },
   'barra3.prova-titolo': 'Simulacro de examen · {nome}',
   'barra3.prova-quanto-dura': '¿Cuánto dura?',
   'barra3.prova-minuti-aria': 'Cuántos minutos dura el examen',

@@ -220,7 +220,7 @@ export default {
   'barra3.prova-compito-fonte': 'Klausur „{fonte}“',
   'barra3.prova-compito-incollato': 'Eingefügte Klausur',
   'barra3.n-esercizi': { one: '{n} Aufgabe', other: '{n} Aufgaben' },
-  'barra3.n-punti': '{punti} Punkte',
+  'barra3.n-punti': { one: '{punti} Punkt', other: '{punti} Punkte' },
   'barra3.prova-titolo': 'Probeklausur · {nome}',
   'barra3.prova-quanto-dura': 'Wie lange dauert sie?',
   'barra3.prova-minuti-aria': 'Wie viele Minuten die Klausur dauert',
