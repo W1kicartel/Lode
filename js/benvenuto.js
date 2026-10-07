@@ -3,7 +3,7 @@
 // FACOLTATIVO, il «setup veloce»: ateneo e corso, libretto (incollato da Esse3), esami da dare, orario delle lezioni
 // (scritto, incollato o da un file .ics del calendario dell'ateneo), come studi e quanto spesso Lode può proporti cose.
 // Tutto resta nel vault dello studente. Si può rifare quando si vuole dal menu dell'icona.
-import { D, DESKTOP, VUOTO, aggiungiEsame, aggiungiOrario, esc, id, norm, oggi, salva, sostituisci } from './dati.js';
+import { D, DESKTOP, NOMI_ESEMPIO, STUDENTI_ESEMPIO, aggiungiEsame, togliEsempio, aggiungiOrario, esc, id, norm, oggi, salva, sostituisci } from './dati.js';
 import { entra, tween, h } from './motore.js';
 import * as V from './vault.js';
 import * as AI from './ai.js';
@@ -17,7 +17,8 @@ const L = DESKTOP ? window.lodeDesktop : null;
 const TASTI = () => (L ? L.piattaforma === 'darwin' : /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)) ? t('benvenuto.tasti-mac') : t('benvenuto.tasti-altri');
 const GEMMA = '<svg viewBox="-50 -50 100 100" aria-hidden="true"><path d="M0,-44 Q4,-44 7,-41 L41,-7 Q44,-4 44,0 Q44,4 41,7 L7,41 Q4,44 0,44 Q-4,44 -7,41 L-41,7 Q-44,4 -44,0 Q-44,-4 -41,-7 L-7,-41 Q-4,-44 0,-44 Z" fill="#fff"/><path d="M0,-44 L44,0 L0,44 Z" fill="#E9E9E9"/><ellipse class="o" cx="-13" cy="-2" rx="5.2" ry="8.5" fill="#0A0A0A"/><ellipse class="o" cx="13" cy="-2" rx="5.2" ry="8.5" fill="#0A0A0A"/></svg>';
 const ATENEI = ['Politecnico di Milano', 'Politecnico di Torino', 'Politecnico di Bari', 'Alma Mater Studiorum – Università di Bologna', 'Sapienza Università di Roma', 'Università di Roma Tor Vergata', 'Università Roma Tre', 'Università di Padova', 'Università degli Studi di Milano (Statale)', 'Università di Milano-Bicocca', 'Università Cattolica del Sacro Cuore', 'Università Bocconi', 'Università di Torino', 'Università di Pisa', 'Università di Napoli Federico II', 'Università della Campania Vanvitelli', 'Università di Firenze', 'Università di Pavia', 'Università di Genova', 'Università di Trento', 'Università di Bari Aldo Moro', 'Università di Palermo', 'Università di Catania', 'Università di Messina', 'Università di Verona', 'Università Ca\' Foscari Venezia', 'IUAV di Venezia', 'Università di Trieste', 'Università di Udine', 'Università di Parma', 'Università di Modena e Reggio Emilia', 'Università di Ferrara', 'Università di Siena', 'Università di Perugia', 'Università di Cagliari', 'Università di Sassari', 'Università di Salerno', 'Università della Calabria', 'Università di Brescia', 'Università di Bergamo', 'Università Politecnica delle Marche', 'Università dell\'Insubria', 'Università del Piemonte Orientale', 'Università del Salento', 'Università di Chieti-Pescara', 'Università dell\'Aquila', 'LUISS Guido Carli', 'IULM'];
-const NOMI_ESEMPIO = ['Analisi 1', 'Fondamenti di informatica', 'Geometria e algebra lineare', 'Fisica 1', 'Lingua inglese B2', 'Programmazione a oggetti', 'Analisi 2', 'Basi di dati', 'Fisica 2'];
+// NOMI_ESEMPIO e STUDENTI_ESEMPIO (js/dati.js): gli esami e gli studenti di esempio di TUTTE le lingue («Analisi 1», «Databases»,
+// «Giulia», «Emily»…), così i dati di esempio si tolgono anche se intanto lo studente ha cambiato lingua
 
 const S = { passo: 0, installa: {}, esami: [], fatti: [], orario: [] };
 const PASSI = [
@@ -29,12 +30,12 @@ let main;
 export function avvia() {
   document.documentElement.classList.add('benvenuto');
   main = document.querySelector('main'); main.innerHTML = '';
-  S.nome = (D.profilo.nome && D.profilo.nome !== 'Giulia') ? D.profilo.nome : '';
+  S.nome = (D.profilo.nome && !STUDENTI_ESEMPIO.includes(D.profilo.nome)) ? D.profilo.nome : '';
   // i dati di esempio: dal segno che mette esempio() (js/dati.js), o da «Giulia» insieme ai nomi di esempio per quelli caricati da
   // una Lode di prima. Prima bastava un esame con un nome di esempio («Analisi 1», «Fisica 1»…), comunissimo anche fra quelli veri:
   // con la sincronizzazione il benvenuto ripartito su un computer collegato li toglieva a tutti i computer (giro 3). Con la
   // sincronizzazione accesa la casella non è mai spuntata da sola (S.sync)
-  S.esempio = D.esempio === true || (D.profilo.nome === 'Giulia' && D.esami.some(e => NOMI_ESEMPIO.includes(e.nome) && e.id));
+  S.esempio = D.esempio === true || (STUDENTI_ESEMPIO.includes(D.profilo.nome) && D.esami.some(e => NOMI_ESEMPIO.includes(e.nome) && e.id));
   S.sync = false; L?.invoca('sync:stato').then(s => { S.sync = !!s?.acceso; }).catch(() => { });
   if (L) { L.su('installa:progresso', x => { S.installa[x.cosa] = x; aggiornaInstalla(); }); Voce.motoreNelMain().then(m => { S.voceMac = m; }); }
   addEventListener('lode:voce', e => { if (e.detail.fase === 'ripiego') S.voceMac = false;   // Whisper si scarica in questa finestra
@@ -111,15 +112,8 @@ function nome() {
 }
 // i dati di esempio se ne vanno, quello che ha aggiunto lo studente resta
 function pulisciEsempio() {
-  const finti = new Set(D.esami.filter(e => NOMI_ESEMPIO.includes(e.nome)).map(e => e.id));
-  const vuoto = VUOTO();
-  D.esami = D.esami.filter(e => !finti.has(e.id));
-  D.sessioni = D.sessioni.filter(s => !s.esameId || (!finti.has(s.esameId) && D.esami.some(e => e.id === s.esameId)));
-  D.carte = D.carte.filter(c => c.esameId && !finti.has(c.esameId));
-  D.lezioni = []; D.memoria = {};
-  D.orario = D.orario.filter(o => !NOMI_ESEMPIO.includes(o.corso));
-  D.profilo = { ...vuoto.profilo, cfuTotali: D.profilo.cfuTotali };
-  S.esempio = false; delete D.esempio;
+  togliEsempio(D);
+  S.esempio = false;
   L?.invoca('vault:pulisciCorsi', { nomi: NOMI_ESEMPIO }).catch(() => { });
 }
 function installa() {

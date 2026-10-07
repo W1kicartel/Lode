@@ -393,3 +393,18 @@ export function esempio(cod = lingua) {
   ];
   return d;
 }
+// i dati di esempio se ne vanno (il benvenuto, «togli i dati di esempio»), quello che ha aggiunto lo studente resta. Gli esami e
+// i corsi dell'orario si riconoscono dai nomi di esempio di tutte le lingue
+export function togliEsempio(d = D) {
+  const finti = new Set(d.esami.filter(e => NOMI_ESEMPIO.includes(e.nome)).map(e => e.id));
+  const vuoto = VUOTO();
+  d.esami = d.esami.filter(e => !finti.has(e.id));
+  d.sessioni = d.sessioni.filter(s => !s.esameId || (!finti.has(s.esameId) && d.esami.some(e => e.id === s.esameId)));
+  d.carte = d.carte.filter(c => c.esameId && !finti.has(c.esameId));
+  d.lezioni = []; d.memoria = {};
+  d.orario = d.orario.filter(o => !NOMI_ESEMPIO.includes(o.corso));
+  // restano i crediti totali e il sistema dei voti (quelli di esempio sono quelli del paese della lingua)
+  d.profilo = { ...vuoto.profilo, cfuTotali: d.profilo.cfuTotali, ...(d.profilo.sistema ? { sistema: d.profilo.sistema } : {}) };
+  delete d.esempio;
+  return d;
+}
