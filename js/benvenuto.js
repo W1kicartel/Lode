@@ -223,10 +223,13 @@ function libretto() {
   const ta = main.querySelector('#bv-lib'), esito = main.querySelector('.bv-esito');
   main.querySelector('#bv-leggi').addEventListener('click', async e => {
     const testo = ta.value.trim(); if (!testo) return;
-    const ai = AI.attiva() && LB.italiano();   // l'AI legge i libretti italiani (Esse3); per gli altri sistemi il lettore di js/sistemi.js
+    // l'AI legge il libretto nel sistema dei voti scelto (Esse3 in Italia); senza AI, o se fuori dall'Italia non trova
+    // niente, il lettore di js/sistemi.js
+    const ai = AI.attiva();
     e.target.disabled = true; esito.textContent = ai ? t('benvenuto.leggo-libretto') : t('benvenuto.leggo');
     let trovati = [];
     try { trovati = ai ? await AI.leggiLibretto(testo) : librettoIncollato(testo); } catch { trovati = librettoIncollato(testo); }
+    if (ai && !trovati.length && !LB.italiano()) trovati = librettoIncollato(testo);
     S.fatti = trovati; esito.textContent = trovati.length ? t('benvenuto.esami-trovati', { n: trovati.length }) : t('benvenuto.esami-non-trovati');
     main.querySelector('#bv-tab').innerHTML = tabFatti(trovati, true); e.target.disabled = false;
   });
