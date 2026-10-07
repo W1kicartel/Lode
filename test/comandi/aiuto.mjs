@@ -12,6 +12,7 @@ export const ESAMI = [
   ['Calculus 1', 9, 27], ['Calculus 2', 9], ['Databases', 9], ['Physics 2', 6], ['Private law', 9], ['English B2', 3, null, true],
   ['Cálculo 1', 9, 27], ['Cálculo 2', 9], ['Bases de datos', 9], ['Derecho privado', 9], ['Inglés B2', 3, null, true],
   ['Analyse 1', 9, 15], ['Analyse 2', 9], ['Bases de données', 9], ['Physique 2', 6], ['Droit privé', 9], ['Anglais B2', 3, null, true],
+  ['Mathe 1', 9, 27], ['Mathe 2', 9], ['Datenbanken', 9], ['Physik 2', 6], ['Privatrecht', 9], ['Englisch B2', 3, null, true],
 ];
 // l'esame con questo nome, nel risultato atteso: il banco lo sostituisce con l'oggetto vero del libretto
 export const E = nome => '@esame:' + nome;
