@@ -1,0 +1,20 @@
+// Textos do treinador (português do Brasil): as sugestões que a pílula faz em momentos aleatórios do dia.
+export default {
+  'allenatore.titolo': '{esame} · {quando}',
+  'allenatore.ultima-lezione': '{corso} · última aula',
+  'allenatore.gioco': '2 minutos com {n} definições?',
+  'allenatore.gioca': 'Jogar',
+  'allenatore.ripasso': '{n} cartões para revisar, uns {min} minutos',
+  'allenatore.ripassa': 'Revisar',
+  'allenatore.stelle': 'Releia as {n} coisas que o professor disse que «caem na prova»',
+  'allenatore.rileggi': 'Reler',
+  'allenatore.orale': 'Três perguntas rápidas, como na prova oral?',
+  'allenatore.interrogami': 'Me testa',
+  'allenatore.programma-ai': 'Hoje é dia de «{argomento}»: duas perguntas?',
+  'allenatore.programma': 'Hoje no plano: «{argomento}»',
+  'allenatore.apri-piano': 'Abrir o plano',
+  'allenatore.focus-testo': 'Faltam {h} h hoje para você ficar em dia: um foco de {min}?',
+  'allenatore.focus': 'Foco',
+  'allenatore.stampa': '{domanda} 1 minuto',
+  'allenatore.prova': 'Tentar',
+};
