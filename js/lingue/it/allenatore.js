@@ -1,0 +1,20 @@
+// Testi dell'allenatore (italiano, lingua di partenza): le proposte che la pillola fa in momenti a caso della giornata.
+export default {
+  'allenatore.titolo': '{esame} · {quando}',
+  'allenatore.ultima-lezione': '{corso} · ultima lezione',
+  'allenatore.gioco': '2 minuti su {n} definizioni?',
+  'allenatore.gioca': 'Gioca',
+  'allenatore.ripasso': '{n} carte da ripassare, circa {min} minuti',
+  'allenatore.ripassa': 'Ripassa',
+  'allenatore.stelle': 'Rileggi le {n} cose che il prof ha detto «da esame»',
+  'allenatore.rileggi': 'Rileggi',
+  'allenatore.orale': 'Tre domande lampo, come all\'orale?',
+  'allenatore.interrogami': 'Interrogami',
+  'allenatore.programma-ai': 'Oggi tocca a «{argomento}»: due domande?',
+  'allenatore.programma': 'Oggi nel piano: «{argomento}»',
+  'allenatore.apri-piano': 'Apri il piano',
+  'allenatore.focus-testo': 'Oggi ti mancano {h} h per stare in pari: un focus da {min}?',
+  'allenatore.focus': 'Focus',
+  'allenatore.stampa': '{domanda} 1 minuto',
+  'allenatore.prova': 'Prova',
+};

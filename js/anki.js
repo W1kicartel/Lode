@@ -14,6 +14,7 @@
 // le lingue, quindi resta «Basic» e la barra dice di scegliere «Basilare» nella finestra d'importazione (js/lode.js, README).
 import { norm } from './dati.js';
 import { pulito } from './markdown.js';
+import { t, locale } from './lingua.js';
 
 const INTESTAZIONE = ['#separator:tab', '#html:true', '#notetype:Basic', '#tags column:3', '#deck column:4', '#guid column:5'];
 
@@ -47,10 +48,10 @@ export function campo(testo) {
 }
 // il corso come tag di Anki: niente spazi (separano i tag), niente accenti né simboli, tranne + e # che distinguono i corsi
 // di programmazione. «Analisi 2» → analisi_2, «Programmazione in C++» → programmazione_in_c++
-export const tagCorso = corso => String(corso || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9+#]+/g, '_').replace(/^_+|_+$/g, '') || 'varie';
+export const tagCorso = corso => String(corso || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9+#]+/g, '_').replace(/^_+|_+$/g, '') || t('anki.tag-varie');
 // il mazzo: Lode::<Corso>. Niente «::» dentro il nome (farebbe un sotto-mazzo), niente virgolette, tab o a capo, e niente
 // «:» o spazi ai bordi (con «:Fisica» Anki dividerebbe le carte fra «Lode::Fisica» e un «Lode::Fisica+» nuovo)
-export const mazzo = corso => 'Lode::' + (String(corso || '').replace(/[\x00-\x1f\x7f"]/g, ' ').replace(/:{2,}/g, ':').replace(/\s+/g, ' ').replace(/^[\s:]+|[\s:]+$/g, '') || 'Varie');
+export const mazzo = corso => 'Lode::' + (String(corso || '').replace(/[\x00-\x1f\x7f"]/g, ' ').replace(/:{2,}/g, ':').replace(/\s+/g, ' ').replace(/^[\s:]+|[\s:]+$/g, '') || t('anki.varie'));
 // la chiave dei doppioni e dei mazzi: non contano maiuscole, accenti, spazi doppi e la punteggiatura alla fine, i simboli sì.
 // Così «`i++`» e «`++i`», «$a<b$» e «$a>b$», «Programmazione in C» e «Programmazione in C++» restano diversi
 const chiave = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').replace(/[\s.?!:;,]+$/, '').trim();
@@ -71,7 +72,7 @@ export function preparaAnki({ carte = [], definizioni = [], corso = null } = {})
   const vale = !corso ? () => true : typeof corso === 'function' ? corso : n => norm(n) === norm(corso);
   const per = new Map(), visti = new Set(); let doppioni = 0;
   const metti = (nomeCorso, fronte, retro, guid, tipo) => {
-    nomeCorso = String(nomeCorso || '').trim() || 'Varie';
+    nomeCorso = String(nomeCorso || '').trim() || t('anki.varie');
     if (!vale(nomeCorso) || !String(fronte || '').trim() || !String(retro || '').trim()) return;
     const kc = chiave(nomeCorso), k = kc + '|' + (chiave(fronte) || String(fronte).trim());
     if (visti.has(k)) { doppioni++; return; } visti.add(k);
@@ -80,7 +81,7 @@ export function preparaAnki({ carte = [], definizioni = [], corso = null } = {})
   };
   for (const c of carte) metti(c.corso, c.fronte, c.retro, `lode-c-${c.id || impronta(chiave(c.corso) + '|' + chiave(c.fronte))}`, 'carta');
   for (const d of definizioni) metti(d.corso, d.t, d.d, `lode-d-${impronta(chiave(d.corso) + '|' + chiave(d.t))}`, 'definizione');
-  const mazzi = [...per.values()].sort((a, b) => a.corso.localeCompare(b.corso, 'it'));
+  const mazzi = [...per.values()].sort((a, b) => a.corso.localeCompare(b.corso, locale()));
   return { mazzi, totale: mazzi.reduce((t, m) => t + m.voci.length, 0), doppioni };
 }
 
@@ -91,4 +92,4 @@ export function testoAnki(mazzi) {
 }
 
 // il nome del file: «Lode per Anki 2026-10-02.txt» con tutti i corsi, «Analisi 2 per Anki 2026-10-02.txt» con uno solo
-export const nomeFileAnki = (corso, data) => `${corso ? pulito(corso) : 'Lode'} per Anki ${data}.txt`;
+export const nomeFileAnki = (corso, data) => t('anki.nome-file', { corso: corso ? pulito(corso) : 'Lode', data });

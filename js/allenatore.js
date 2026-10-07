@@ -10,6 +10,7 @@ import * as AI from './ai.js';
 import * as PG from './programma.js';
 import * as ORE from './ore.js';
 import { anteprima, scaduti, corsoProgrammazione, linguaDi, RE_PROGRAMMAZIONE } from './codice/stampa.js';
+import { t } from './lingua.js';
 
 const L = typeof window !== 'undefined' ? window.lodeDesktop : null;
 const OGNI = { poco: 180, normale: 90, spesso: 40 }, MASSIMO = { poco: 3, normale: 6, spesso: 12 };
@@ -34,17 +35,17 @@ function gradimento(tipo) {
 export function candidati() {
   const out = [], esami = prossimi().filter(e => giorniTra(oggi(), e.data) <= 60).slice(0, 3);
   for (const e of esami) {
-    const g = giorniTra(oggi(), e.data), u = urgenza(g), quando = g === 0 ? 'oggi' : g === 1 ? 'domani' : `tra ${g} giorni`;
+    const g = giorniTra(oggi(), e.data), u = urgenza(g), quando = g === 0 ? t('comune.oggi') : g === 1 ? t('comune.domani') : t('comune.traGiorni', { n: g }), titolo = t('allenatore.titolo', { esame: e.nome, quando });
     const defs = daGiocare(6, e.nome).scelte, carte = daRipassare(e.id), stelle = lezioni().filter(l => norm(l.corso) === norm(e.nome)).flatMap(l => l.stelle || []);
-    if (defs.length >= 3) out.push({ tipo: 'gioco', esame: e, titolo: `${e.nome} · ${quando}`, testo: `2 minuti su ${defs.length} definizioni?`, bottone: 'Gioca', peso: 1 * u });
-    if (carte.length >= 3) out.push({ tipo: 'ripasso', esame: e, titolo: `${e.nome} · ${quando}`, testo: `${carte.length} carte da ripassare, circa ${Math.max(2, Math.round(carte.length * .4))} minuti`, bottone: 'Ripassa', peso: .9 * u });
-    if (stelle.length >= 2) out.push({ tipo: 'stelle', esame: e, titolo: `${e.nome} · ${quando}`, testo: `Rileggi le ${Math.min(stelle.length, 8)} cose che il prof ha detto «da esame»`, bottone: 'Rileggi', peso: .7 * u, stelle: stelle.slice(-8) });
-    if (AI.attiva() && g <= 21) out.push({ tipo: 'orale', esame: e, titolo: `${e.nome} · ${quando}`, testo: 'Tre domande lampo, come all\'orale?', bottone: 'Interrogami', peso: .8 * u * (g <= 7 ? 1.5 : 1) });
+    if (defs.length >= 3) out.push({ tipo: 'gioco', esame: e, titolo, testo: t('allenatore.gioco', { n: defs.length }), bottone: t('allenatore.gioca'), peso: 1 * u });
+    if (carte.length >= 3) out.push({ tipo: 'ripasso', esame: e, titolo, testo: t('allenatore.ripasso', { n: carte.length, min: Math.max(2, Math.round(carte.length * .4)) }), bottone: t('allenatore.ripassa'), peso: .9 * u });
+    if (stelle.length >= 2) out.push({ tipo: 'stelle', esame: e, titolo, testo: t('allenatore.stelle', { n: Math.min(stelle.length, 8) }), bottone: t('allenatore.rileggi'), peso: .7 * u, stelle: stelle.slice(-8) });
+    if (AI.attiva() && g <= 21) out.push({ tipo: 'orale', esame: e, titolo, testo: t('allenatore.orale'), bottone: t('allenatore.interrogami'), peso: .8 * u * (g <= 7 ? 1.5 : 1) });
     // il programma d'esame: l'argomento di oggi non ancora toccato (prima quelli da studiare)
     const og = PG.oggiDi(e), arg = og && [...og.studia, ...og.ripassa].find(c => !c.oggi);
-    if (arg) { const t = arg.a.t.length > 40 ? arg.a.t.slice(0, 39).replace(/\s+\S*$/, '') + '…' : arg.a.t; out.push({ tipo: 'programma', esame: e, argomento: arg.a.id, titolo: `${e.nome} · ${quando}`, testo: AI.attiva() ? `Oggi tocca a «${t}»: due domande?` : `Oggi nel piano: «${t}»`, bottone: AI.attiva() ? 'Interrogami' : 'Apri il piano', peso: (AI.attiva() ? 1.1 : .6) * u }); }
+    if (arg) { const argomento = arg.a.t.length > 40 ? arg.a.t.slice(0, 39).replace(/\s+\S*$/, '') + '…' : arg.a.t; out.push({ tipo: 'programma', esame: e, argomento: arg.a.id, titolo, testo: AI.attiva() ? t('allenatore.programma-ai', { argomento }) : t('allenatore.programma', { argomento }), bottone: AI.attiva() ? t('allenatore.interrogami') : t('allenatore.apri-piano'), peso: (AI.attiva() ? 1.1 : .6) * u }); }
     const p = piano(e);
-    if (p.oggi >= .75 && fascia() === (D.imp.momento || 'pomeriggio')) out.push({ tipo: 'focus', esame: e, titolo: `${e.nome} · ${quando}`, testo: `Oggi ti mancano ${num(p.oggi)} h per stare in pari: un focus da ${D.imp.focus || 25}?`, bottone: 'Focus', peso: .6 * u });
+    if (p.oggi >= .75 && fascia() === (D.imp.momento || 'pomeriggio')) out.push({ tipo: 'focus', esame: e, titolo, testo: t('allenatore.focus-testo', { h: num(p.oggi), min: D.imp.focus || 25 }), bottone: t('allenatore.focus'), peso: .6 * u });
   }
   // «Cosa stampa?»: 5 domande di C, se c'è un corso di programmazione (esame, orario o lezione). Più spesso se l'esame è
   // vicino o se ci sono argomenti da ripassare. Con lo stesso seme la scheda parte proprio dalla domanda annunciata
@@ -53,11 +54,11 @@ export function candidati() {
     // la lingua dal nome del corso, la stessa che userà la scheda: la domanda annunciata è proprio la prima
     const e = esami.find(x => RE_PROGRAMMAZIONE.test(x.nome)), seme = Date.now() >>> 0, a = anteprima({ memoria: D.codice?.memoria, seme, lingua: linguaDi(e?.nome || corsoInf) });
     const peso = (e ? .8 * urgenza(giorniTra(oggi(), e.data)) : .4) * (scaduti(D.codice?.memoria).length ? 1.5 : 1);
-    if (a) out.push({ tipo: 'stampa', esame: e || null, corso: e?.nome || corsoInf, seme, titolo: e?.nome || corsoInf, testo: `${a.testo} 1 minuto`, bottone: 'Prova', peso });
+    if (a) out.push({ tipo: 'stampa', esame: e || null, corso: e?.nome || corsoInf, seme, titolo: e?.nome || corsoInf, testo: t('allenatore.stampa', { domanda: a.testo }), bottone: t('allenatore.prova'), peso });
   }
   if (!esami.length) {   // nessun esame vicino: si ripassa l'ultima lezione
     const s = daGiocare(6).scelte;
-    if (s.length >= 3) out.push({ tipo: 'gioco', esame: null, corso: s[0].corso, titolo: `${s[0].corso} · ultima lezione`, testo: `2 minuti su ${s.length} definizioni?`, bottone: 'Gioca', peso: .6 });
+    if (s.length >= 3) out.push({ tipo: 'gioco', esame: null, corso: s[0].corso, titolo: t('allenatore.ultima-lezione', { corso: s[0].corso }), testo: t('allenatore.gioco', { n: s.length }), bottone: t('allenatore.gioca'), peso: .6 });
   }
   const ultimoTipo = mem().storia.at(-1)?.tipo;
   for (const c of out) { c.peso *= gradimento(c.tipo); if (c.tipo === ultimoTipo) c.peso *= .5; }

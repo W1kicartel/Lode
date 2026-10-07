@@ -6,6 +6,7 @@ import { D, DESKTOP, definizioni, esame, id, impostaLezioniVault, lezioneOra, le
 import { SEZIONI, GIORNI_BREVI, fileCorso, fileLezione, notaCorso, notaLezione, orarioMd, pulito } from './markdown.js';
 import { aggiornaDiario, sezioneMemoria } from './codice/diario.js';
 import { CONCETTI } from './codice/modelli.js';
+import { t, locale } from './lingua.js';
 
 const L = DESKTOP ? window.lodeDesktop : null;
 export const attivo = DESKTOP;
@@ -52,13 +53,14 @@ export const apriVault = () => L?.invoca('vault:apri', { file: 'Benvenuto.md' })
 export function scriviOrario() { if (L) L.invoca('vault:scrivi', { file: 'Orario.md', testo: orarioMd(D.orario) }); }
 
 // le proposte dell'allenatore che funzionano (quelle accettate più spesso)
-const NOMI_PROP = { gioco: 'giochi', ripasso: 'ripasso delle carte', stelle: 'rileggere le ★', orale: 'domande lampo', focus: 'focus', stampa: 'cosa stampa' };
+const NOMI_PROP = { gioco: t('vault.prop-gioco'), ripasso: t('vault.prop-ripasso'), stelle: t('vault.prop-stelle'), orale: t('vault.prop-orale'), focus: t('vault.prop-focus'), stampa: t('vault.prop-stampa') };
 function proposte() {
   const per = {}; for (const x of D.allenatore?.storia || []) { per[x.tipo] ||= { si: 0, tot: 0 }; per[x.tipo].tot++; if (x.esito === 'accettata') per[x.tipo].si++; }
   const k = Object.entries(per).filter(([, v]) => v.tot >= 2).sort((a, b) => b[1].si / b[1].tot - a[1].si / a[1].tot);
-  return k.length ? `- Delle proposte di Lode accetti soprattutto: ${k.slice(0, 2).map(([t, v]) => `${NOMI_PROP[t] || t} (${v.si} su ${v.tot})`).join(', ')}.\n` : '';
+  return k.length ? `- ${t('vault.memoria-proposte', { elenco: k.slice(0, 2).map(([tipo, v]) => t('vault.prop-voce', { nome: NOMI_PROP[tipo] || tipo, si: v.si, tot: v.tot })).join(', ') })}\n` : '';
 }
 // la memoria di Lode, leggibile dallo studente: cosa sa, cosa sbaglia, come studia
+const FASCE = { mattina: t('vault.fascia-mattina'), pomeriggio: t('vault.fascia-pomeriggio'), sera: t('vault.fascia-sera') };
 export function scriviMemoria() {
   if (!L) return;
   const defs = definizioni({ giorni: 3650 }), fatte = defs.filter(d => d.m);
@@ -72,25 +74,25 @@ export function scriviMemoria() {
 tipo: memoria
 aggiornata: ${oggi()}
 ---
-# Cosa so di te
+# ${t('vault.memoria-titolo')}
 
-%% Questa nota la scrive Lode. Puoi leggerla e anche correggerla: la sezione «Note per Lode» la leggo ogni volta che uso l'AI. %%
+%% ${t('vault.memoria-commento', { sezione: 'Note per Lode' })} %%
 
-## In breve
-- ${lez.length} ${lez.length === 1 ? 'lezione annotata' : 'lezioni annotate'}, ${defs.length} ${defs.length === 1 ? 'definizione' : 'definizioni'}: **${sicure.length} sicure**, ${deboli.length} da rinforzare, ${mai.length} ancora da giocare.
-- Serie di studio: ${serie()} ${serie() === 1 ? 'giorno' : 'giorni'} di fila. Questo mese: ${Math.round(minuti({ da: oggi().slice(0, 8) + '01' }) / 60)} h.
-${fasce[0][1] ? `- Studi soprattutto di **${fasce[0][0]}**.\n` : ''}${proposte()}
-## Da rinforzare
-${deboli.map(d => `- **${d.t}** (${link(d)}): sbagliata ${d.m.sbagliate} ${d.m.sbagliate === 1 ? 'volta' : 'volte'} su ${d.m.giuste + d.m.sbagliate}`).join('\n') || '- Niente, per ora.'}
+## ${t('vault.titolo-in-breve')}
+- ${t('vault.memoria-in-breve', { lezioni: t('vault.memoria-lezioni', { n: lez.length }), definizioni: t('vault.memoria-definizioni', { n: defs.length }), sicure: sicure.length, deboli: deboli.length, mai: mai.length })}
+- ${t('vault.memoria-serie', { n: serie(), h: Math.round(minuti({ da: oggi().slice(0, 8) + '01' }) / 60) })}
+${fasce[0][1] ? `- ${t('vault.memoria-fascia', { fascia: FASCE[fasce[0][0]] })}\n` : ''}${proposte()}
+## ${t('vault.titolo-da-rinforzare')}
+${deboli.map(d => `- **${d.t}** (${link(d)}): ${t('vault.sbagliata', { n: d.m.sbagliate, tot: d.m.giuste + d.m.sbagliate })}`).join('\n') || `- ${t('vault.niente-per-ora')}`}
 
-## Sicure
-${sicure.slice(0, 40).map(d => `- ${d.t} (${d.corso})`).join('\n') || '- Ancora nessuna: gioca qualche partita.'}
+## ${t('vault.titolo-sicure')}
+${sicure.slice(0, 40).map(d => `- ${d.t} (${d.corso})`).join('\n') || `- ${t('vault.sicure-vuoto')}`}
 
 ## ★ Da esame, le ultime
-${lez.flatMap(l => (l.stelle || []).map(s => `- ${s.replace(/^\d\d:\d\d\s*/, '')} (${l.file ? `[[${l.file.replace(/\.md$/, '').split('/').pop()}]]` : l.corso})`)).slice(0, 15).join('\n') || '- Ancora nessuna.'}
+${lez.flatMap(l => (l.stelle || []).map(s => `- ${s.replace(/^\d\d:\d\d\s*/, '')} (${l.file ? `[[${l.file.replace(/\.md$/, '').split('/').pop()}]]` : l.corso})`)).slice(0, 15).join('\n') || `- ${t('vault.ancora-nessuna')}`}
 
 ${sezioneMemoria(D.codice, OPZ_DIARIO)}## Note per Lode
-%% Scrivi qui come vuoi essere aiutato: «spiegami con esempi pratici», «sono dislessico, frasi brevi», «l'orale di Analisi è con Rossi, molto teorico». %%
+%% ${t('vault.note-commento')} %%
 `;
   L.invoca('vault:memoria', { testo });
 }
@@ -103,53 +105,53 @@ const corsiNoti = () => {
   const c = new Map();
   const metti = n => { const k = norm(n); if (n && k !== norm('Appunti sparsi') && !c.has(k)) c.set(k, pulito(n)); };
   D.orario.forEach(o => metti(o.corso)); lezioni().forEach(l => metti(l.corso)); D.esami.forEach(e => metti(e.nome));
-  return [...c.values()].sort((a, b) => a.localeCompare(b, 'it'));
+  return [...c.values()].sort((a, b) => a.localeCompare(b, locale()));
 };
 function home() {
   const T = oggi(), dow = new Date(T + 'T12:00').getDay(), lez = lezioni(), p = prossimi()[0], m = media(), c = daRipassare().length;
   const oggiOrario = D.orario.filter(o => o.giorni.includes(dow)).sort((a, b) => a.inizio.localeCompare(b.inizio));
   const notaDi = o => lez.find(l => norm(l.corso) === norm(o.corso) && l.data === T);
-  return `> ${dataLunga(T).replace(/^./, x => x.toUpperCase())}${p ? ` · **${p.nome}** ${giorniTra(T, p.data) === 0 ? 'oggi' : `tra ${giorniTra(T, p.data)} giorni`}` : ''}${c ? ` · ${c} carte da ripassare` : ''}
+  return `> ${dataLunga(T).replace(/^./, x => x.toUpperCase())}${p ? ` · **${p.nome}** ${giorniTra(T, p.data) === 0 ? t('comune.oggi') : t('comune.traGiorni', { n: giorniTra(T, p.data) })}` : ''}${c ? ` · ${t('vault.home-carte', { n: c })}` : ''}
 
-[[Orario]] · [[Esami]] · [[Glossario]] · [[Memoria|Cosa sa Lode di me]] · [[Benvenuto|Come funziona]]
+[[Orario]] · [[Esami]] · [[Glossario]] · [[Memoria|${t('vault.alias-memoria')}]] · [[Benvenuto|${t('vault.alias-benvenuto')}]]
 
-## Oggi
-${oggiOrario.map(o => `- ${o.inizio}–${o.fine} **[[${pulito(o.corso)}]]**${o.aula ? ` · aula ${o.aula}` : ''}${notaDi(o) ? ` → ${linkLez(notaDi(o))}` : ''}`).join('\n') || '- Niente lezioni oggi.'}
+## ${t('vault.titolo-oggi')}
+${oggiOrario.map(o => `- ${o.inizio}–${o.fine} **[[${pulito(o.corso)}]]**${o.aula ? ` · ${t('vault.aula', { aula: o.aula })}` : ''}${notaDi(o) ? ` → ${linkLez(notaDi(o))}` : ''}`).join('\n') || `- ${t('vault.niente-lezioni-oggi')}`}
 
-## Corsi
-${corsiNoti().map(n => { const e = trovaEsame(n), k = lez.filter(l => norm(l.corso) === norm(n)).length; return `- [[${n}]]${k ? ` · ${k} ${k === 1 ? 'lezione' : 'lezioni'}` : ''}${e?.fatto ? ` · ${e.idoneita ? 'idoneo' : e.voto + (e.lode ? ' e lode' : '')}` : e?.data ? ` · appello ${dataBreve(e.data)}` : ''}`; }).join('\n') || '- Aggiungi l\'orario dalla barra: «lezione analisi 2 lunedì 9-11 aula 7».'}
+## ${t('vault.titolo-corsi')}
+${corsiNoti().map(n => { const e = trovaEsame(n), k = lez.filter(l => norm(l.corso) === norm(n)).length; return `- [[${n}]]${k ? ` · ${t('vault.n-lezioni', { n: k })}` : ''}${e?.fatto ? ` · ${e.idoneita ? t('vault.idoneo') : e.lode ? t('vault.voto-e-lode', { voto: e.voto }) : e.voto}` : e?.data ? ` · ${t('vault.appello', { data: dataBreve(e.data) })}` : ''}`; }).join('\n') || `- ${t('vault.corsi-vuoto')}`}
 
-## Ultime lezioni
-${lez.filter(l => l.file).slice(0, 8).map(l => `- ${linkLez(l)}${l.stelle?.length ? ` · ★${l.stelle.length}` : ''}${l.definizioni?.length ? ` · ${l.definizioni.length} definizioni` : ''}`).join('\n') || '- Ancora nessuna.'}
+## ${t('vault.titolo-ultime-lezioni')}
+${lez.filter(l => l.file).slice(0, 8).map(l => `- ${linkLez(l)}${l.stelle?.length ? ` · ★${l.stelle.length}` : ''}${l.definizioni?.length ? ` · ${t('vault.definizioni-n', { n: l.definizioni.length })}` : ''}`).join('\n') || `- ${t('vault.ancora-nessuna')}`}
 
 ## ★ Da esame, le ultime
-${lez.flatMap(l => (l.stelle || []).map(s => `- ${s.replace(/^\d\d:\d\d\s*/, '')} · ${linkLez(l)}`)).slice(0, 8).join('\n') || '- Ancora nessuna.'}
-${m.ponderata ? `\n## Carriera\nMedia **${num(m.ponderata, 2)}** · base di laurea **${num(m.base, 1)}**/110 · ${cfuFatti()} di ${D.profilo.cfuTotali} CFU → [[Esami]]` : ''}`;
+${lez.flatMap(l => (l.stelle || []).map(s => `- ${s.replace(/^\d\d:\d\d\s*/, '')} · ${linkLez(l)}`)).slice(0, 8).join('\n') || `- ${t('vault.ancora-nessuna')}`}
+${m.ponderata ? `\n## ${t('vault.titolo-carriera')}\n${t('vault.carriera', { media: num(m.ponderata, 2), base: num(m.base, 1), cfu: cfuFatti(), tot: D.profilo.cfuTotali, esami: '[[Esami]]' })}` : ''}`;
 }
 function esami() {
   const p = prossimi(), f = fatti().sort((a, b) => (b.data || '').localeCompare(a.data || '')), m = media(), cella = s => String(s).replace(/\|/g, '\\|');
-  return `## Prossimi appelli
-${p.length ? `| Esame | Data | Tra | CFU | Ore studiate |\n|---|---|---|---|---|\n${p.map(e => { const pi = piano(e); return `| [[${cella(pulito(e.nome))}]] | ${dataBreve(e.data)} | ${giorniTra(oggi(), e.data)} g | ${e.cfu} | ${num(pi.fatte, 0)} di ${pi.tot} h |`; }).join('\n')}` : 'Nessun appello segnato.'}
-${daFare().filter(e => !e.data).length ? `\nSenza data: ${daFare().filter(e => !e.data).map(e => `[[${pulito(e.nome)}]]`).join(', ')}.\n` : ''}
-## Libretto
-${f.length ? `| Esame | CFU | Voto | Data |\n|---|---|---|---|\n${f.map(e => `| [[${cella(pulito(e.nome))}]] | ${e.cfu} | ${e.idoneita ? 'idoneo' : e.voto + (e.lode ? 'L' : '')} | ${e.data ? dataBreve(e.data) : ''} |`).join('\n')}\n\nMedia ponderata **${m.ponderata ? num(m.ponderata, 2) : '—'}** · base di laurea **${m.base ? num(m.base, 1) : '—'}**/110 · ${cfuFatti()} di ${D.profilo.cfuTotali} CFU` : 'Ancora nessun esame dato.'}`;
+  return `## ${t('vault.titolo-prossimi-appelli')}
+${p.length ? `${t('vault.tabella-appelli')}\n|---|---|---|---|---|\n${p.map(e => { const pi = piano(e); return `| [[${cella(pulito(e.nome))}]] | ${dataBreve(e.data)} | ${t('comune.giorniBrevi', { n: giorniTra(oggi(), e.data) })} | ${e.cfu} | ${t('vault.ore-di', { fatte: num(pi.fatte, 0), tot: pi.tot })} |`; }).join('\n')}` : t('vault.nessun-appello')}
+${daFare().filter(e => !e.data).length ? `\n${t('vault.senza-data', { elenco: daFare().filter(e => !e.data).map(e => `[[${pulito(e.nome)}]]`).join(', ') })}\n` : ''}
+## ${t('vault.titolo-libretto')}
+${f.length ? `${t('vault.tabella-libretto')}\n|---|---|---|---|\n${f.map(e => `| [[${cella(pulito(e.nome))}]] | ${e.cfu} | ${e.idoneita ? t('vault.idoneo') : e.lode ? t('vault.voto-l', { voto: e.voto }) : e.voto} | ${e.data ? dataBreve(e.data) : ''} |`).join('\n')}\n\n${t('vault.libretto-piede', { media: m.ponderata ? num(m.ponderata, 2) : '—', base: m.base ? num(m.base, 1) : '—', cfu: cfuFatti(), tot: D.profilo.cfuTotali })}` : t('vault.libretto-vuoto')}`;
 }
 function glossario() {
   const defs = definizioni({ giorni: 3650 }), per = new Map();
   defs.forEach(d => { const k = pulito(d.corso); if (!per.has(k)) per.set(k, []); per.get(k).push(d); });
-  return [...per].sort((a, b) => a[0].localeCompare(b[0], 'it')).map(([c, ds]) => `## ${c}\n[[${c}]] · ${ds.length} ${ds.length === 1 ? 'definizione' : 'definizioni'}\n\n${ds.sort((a, b) => a.t.localeCompare(b.t, 'it')).map(d => `- **${d.t}**: ${d.d}${d.file ? ` · [[${nomeNota(d.file)}]]` : ''}${d.m && d.m.sbagliate > d.m.giuste ? ' · *da rinforzare*' : ''}`).join('\n')}`).join('\n\n') || 'Le definizioni delle lezioni compaiono qui, in ordine alfabetico, divise per corso.';
+  return [...per].sort((a, b) => a[0].localeCompare(b[0], locale())).map(([c, ds]) => `## ${c}\n[[${c}]] · ${t('vault.n-definizioni', { n: ds.length })}\n\n${ds.sort((a, b) => a.t.localeCompare(b.t, locale())).map(d => `- **${d.t}**: ${d.d}${d.file ? ` · [[${nomeNota(d.file)}]]` : ''}${d.m && d.m.sbagliate > d.m.giuste ? ` · ${t('vault.da-rinforzare')}` : ''}`).join('\n')}`).join('\n\n') || t('vault.glossario-vuoto');
 }
 function corso(n) {
   const lez = lezioni().filter(l => norm(l.corso) === norm(n)), e = trovaEsame(n), o = D.orario.filter(x => norm(x.corso) === norm(n));
   return `[[Home]] · [[Esami]] · [[Glossario#${n}|Glossario]]
 
-${e ? `**${e.cfu} CFU**${e.fatto ? ` · ${e.idoneita ? 'idoneo' : 'voto ' + e.voto + (e.lode ? ' e lode' : '')}` : e.data ? ` · appello **${dataLunga(e.data)}** (tra ${giorniTra(oggi(), e.data)} giorni) · ${num(piano(e).fatte, 0)} di ${piano(e).tot} h studiate` : ''}` : ''}${o.length ? `\nLezioni: ${o.map(x => `${x.giorni.map(g => GIORNI_BREVI[g]).join(', ')} ${x.inizio}–${x.fine}${x.aula ? ' aula ' + x.aula : ''}`).join(' · ')}` : ''}
+${e ? `${t('vault.corso-cfu', { cfu: e.cfu })}${e.fatto ? ` · ${e.idoneita ? t('vault.idoneo') : t(e.lode ? 'vault.corso-voto-lode' : 'vault.corso-voto', { voto: e.voto })}` : e.data ? ` · ${t('vault.corso-appello', { data: dataLunga(e.data), n: giorniTra(oggi(), e.data), fatte: num(piano(e).fatte, 0), tot: piano(e).tot })}` : ''}` : ''}${o.length ? `\n${t('vault.corso-lezioni', { elenco: o.map(x => t(x.aula ? 'vault.orario-voce-aula' : 'vault.orario-voce', { giorni: x.giorni.map(g => GIORNI_BREVI[g]).join(', '), inizio: x.inizio, fine: x.fine, aula: x.aula })).join(' · ') })}` : ''}
 
 ## Lezioni
-${lez.map(l => `- ${linkLez(l)}${l.stelle?.length ? ` · ★${l.stelle.length}` : ''}${l.definizioni?.length ? ` · ${l.definizioni.length} definizioni` : ''}`).join('\n') || '- Ancora nessuna: la prima nasce quando segni qualcosa in aula.'}
+${lez.map(l => `- ${linkLez(l)}${l.stelle?.length ? ` · ★${l.stelle.length}` : ''}${l.definizioni?.length ? ` · ${t('vault.definizioni-n', { n: l.definizioni.length })}` : ''}`).join('\n') || `- ${t('vault.lezioni-vuoto')}`}
 
 ## ★ Da esame
-${lez.flatMap(l => (l.stelle || []).map(s => `- ${s.replace(/^\d\d:\d\d\s*/, '')} · ${linkLez(l)}`)).join('\n') || '- Ancora nessuna.'}`;
+${lez.flatMap(l => (l.stelle || []).map(s => `- ${s.replace(/^\d\d:\d\d\s*/, '')} · ${linkLez(l)}`)).join('\n') || `- ${t('vault.ancora-nessuna')}`}`;
 }
 let tPagine = 0;
 export function aggiornaPagine() {
