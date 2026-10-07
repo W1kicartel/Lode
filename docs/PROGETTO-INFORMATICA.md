@@ -328,7 +328,7 @@ Tutto finisce in un registro onesto nel tuo vault, scritto per te. Gratis, offli
 
 ## 3. Dopo l'MVP (in quest'ordine)
 
-1. **Ponte con Claude Code in sola lettura.**
+1. **Ponte con Claude Code in sola lettura.** *Fatto (ottobre 2026), allargato a 10 agenti: `desktop/agenti.mjs` (server, eventi, avvisi) e `desktop/agenti-collegamenti.mjs` (Claude Code, Codex CLI con gli hook nuovi, Gemini CLI, Cursor, Copilot CLI, Windsurf, Qwen Code, OpenCode, Kilo Code, Aider). Differenze rispetto a qui sotto: configurazione dell'utente (~/.claude/settings.json e simili) invece di `.claude/settings.local.json` del progetto, così Lode non scrive nella cartella del laboratorio; gli eventi si legano al progetto dalla `cwd` o dal percorso del file; hook di Claude Code `async`; su Windows `curl.exe` senza operatori (PowerShell 5.1). Lo stesso file `.claude/settings.json` lo leggono anche Copilot e Continue: chi scrive si riconosce dai campi. Prove: `test/agenti.mjs`.* Il piano di partenza:
    - Hook `UserPromptSubmit`, `PostToolUse` (`Edit|Write|MultiEdit|NotebookEdit|Bash`), `Stop` e `Notification`. Il comando è `curl.exe` su Windows e `curl` altrove, con `-s --max-time 3 --data-binary @-`, verso un server su `127.0.0.1` con un token casuale nel percorso. Il server rifiuta le richieste con un header `Origin` e i corpi oltre 2 MB.
    - **Risposta sempre vuota (204):** lo stdout di `UserPromptSubmit` finisce nel contesto dell'agente, e un `decision` su `Stop` cambierebbe il suo comportamento.
    - Le impostazioni si fondono in `.claude/settings.local.json` senza sovrascrivere, con un `.bak`, il JSON esatto mostrato prima della conferma, un controllo con `git check-ignore` e «Scollega».

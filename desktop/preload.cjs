@@ -2,10 +2,12 @@
 const { contextBridge, ipcRenderer } = require('electron');
 const IN = ['dati:cambiati', 'vault:lezioni', 'vault:orario', 'vault:info', 'scorciatoia', 'installa:progresso', 'locale:pezzo', 'voce:progresso', 'ai:pezzo',
   'progetto:cambiato', 'progetto:fatto', 'progetto:uscita', 'progetto:esito', 'aggiorna:cambiato', 'sync:stato', 'sync:progresso',
-  'computer:audio', 'computer:fine'];
+  'computer:audio', 'computer:fine', 'agente:evento', 'agente:turno'];
 const OUT = ['vault:info', 'vault:lezioni', 'vault:annota', 'vault:apri', 'vault:scrivi', 'vault:memoria', 'vault:scegli', 'vault:blocco', 'vault:note', 'finestra:rilascia', 'sistema:inattivo', 'installa:stato', 'installa:obsidian', 'installa:cervello', 'locale:chat', 'locale:stop', 'locale:scalda', 'vault:leggi', 'vault:salvaFile', 'vault:mostra', 'condividi', 'benvenuto:fatto', 'vault:pulisciCorsi', 'voce:stato', 'voce:prepara', 'voce:trascrivi', 'voce:riposa', 'computer:disponibile', 'computer:avvia', 'computer:ferma',
   // Moodle in sola lettura (desktop/moodle.mjs): indirizzi e token restano nel main, la barra chiede i file per indice
-  'moodle:stato', 'moodle:verifica', 'moodle:accedi', 'moodle:accediBrowser', 'moodle:scollega', 'moodle:corsi', 'moodle:segui', 'moodle:novita', 'moodle:segnaVisti', 'moodle:scarica', 'moodle:scadenze', 'moodle:descrizione', 'ai:chat', 'ai:stop', 'ai:modelli', 'scorciatoie:stato',
+  'moodle:stato', 'moodle:verifica', 'moodle:accedi', 'moodle:accediBrowser', 'moodle:scollega', 'moodle:corsi', 'moodle:segui', 'moodle:novita', 'moodle:segnaVisti', 'moodle:scarica', 'moodle:scadenze', 'moodle:descrizione',
+  // il ponte con gli agenti (desktop/agenti.mjs): la barra chiede lo stato e il collegamento, i file li scrive il main dopo il sì
+  'agenti:stato', 'agenti:collega', 'agenti:scollega', 'agenti:turno', 'ai:chat', 'ai:stop', 'ai:modelli', 'scorciatoie:stato',
   // informatica: segui il progetto (la barra manda solo l'id, mai percorsi o comandi) ed «spiegami l'errore» dagli appunti
   'progetto:scegli', 'progetto:segui', 'progetto:smetti', 'progetto:stato', 'progetto:diff', 'progetto:righe', 'progetto:rileva', 'progetto:conferma', 'progetto:prova', 'progetto:visto', 'appunti:errore',
   // le versioni nuove di Lode (desktop/aggiorna.mjs): la barra chiede solo azioni, gli URL li decide il main

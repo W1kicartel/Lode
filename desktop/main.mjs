@@ -4,7 +4,7 @@
 import { app, BrowserWindow, Menu, desktopCapturer, ShareMenu, Tray, clipboard, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, net, powerMonitor, safeStorage, screen, shell, utilityProcess } from 'electron';
 import { existsSync, readFileSync, mkdirSync, writeFileSync, rmSync, renameSync, copyFileSync } from 'node:fs';
 import { execFile } from 'node:child_process';
-import { totalmem } from 'node:os';
+import { homedir, totalmem } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as V from './vault.mjs';
@@ -13,6 +13,8 @@ import * as VOCE from './voce.mjs';
 import * as VOCE_ONNX from './voce-onnx.mjs';
 import * as ASCOLTA from './ascolta.mjs';
 import * as MOODLE from './moodle.mjs';
+import * as AGENTI from './agenti.mjs';
+import * as COLLEGA_AGENTI from './agenti-collegamenti.mjs';
 import * as PROGETTO from './progetto.mjs';
 import * as AGGIORNA from './aggiorna.mjs';
 import { creaSincronizzazione } from './sincronizza.mjs';
@@ -460,10 +462,32 @@ const progressoVoce = x => { for (const w of BrowserWindow.getAllWindows()) w.we
 // «Lezione dal computer» sul Mac: l'audio del sistema da lode-ascolta (desktop/ascolta.mjs), solo alla barra
 const ascolta = ASCOLTA.crea({ binario: [join(process.resourcesPath || '', 'bin', 'lode-ascolta'), join(QUI, 'bin', 'lode-ascolta')].find(existsSync) || join(QUI, 'bin', 'lode-ascolta'), sorgenti: join(QUI, 'ascolta-mac'),
   manda: (canale, x) => { if (barra && !barra.isDestroyed()) barra.webContents.send(canale, x); } });
+// il ponte con gli agenti: lo stato per la barra e il collegamento, sempre dopo il sì in una finestra di sistema che mostra
+// il file e le righe che cambiano (come la conferma dei comandi di «segui progetto»)
+let ponte = null;
+const urlPonte = () => `http://127.0.0.1:${conf.ponte?.porta || ponte?.porta()}/lode/${conf.ponte?.token}`;
+ipcMain.handle('agenti:stato', () => {
+  const c = ponte?.contatori() || { perAgente: {} };
+  return { attivo: !!ponte?.porta(), agenti: COLLEGA_AGENTI.stato(homedir()).map(a => ({ ...a, ultimo: c.perAgente[a.id]?.ultimo || 0, eventi: c.perAgente[a.id]?.n || 0 })) };
+});
+for (const [canale, togli] of [['agenti:collega', false], ['agenti:scollega', true]]) ipcMain.handle(canale, async (_, x) => {
+  const id = String(x?.id || ''); if (!COLLEGA_AGENTI.agente(id)) return { errore: 'agente sconosciuto' };
+  if (!ponte?.porta()) return { errore: 'Il ponte con gli agenti non è partito: riavvia Lode.' };
+  const p = COLLEGA_AGENTI.anteprima(id, { casa: homedir(), url: urlPonte(), togli });
+  if (p.errore) return p;
+  if (p.dopo == null || p.dopo === p.prima) return { ok: true, uguale: true };
+  const r = await dialog.showMessageBox({ type: 'question', title: 'Lode', noLink: true,
+    message: togli ? `Togliere Lode dalla configurazione di ${p.nome}?` : `Collegare ${p.nome} a Lode?`,
+    detail: `${togli ? 'Lode toglie solo le sue righe' : 'Lode aggiunge solo le sue righe, il resto resta com\'è'} in:\n${p.file}\n\n${COLLEGA_AGENTI.differenza(p.prima, p.dopo)}\n\n${togli ? '' : `${p.nome} manderà a Lode, su questo computer, gli eventi delle sessioni (file toccati, comandi, fine del turno). Lode non risponde e non decide niente. `}${p.esiste ? 'Il file com\'era resta in ' + p.file + '.prima-di-lode.' : ''}`,
+    buttons: [togli ? 'Togli' : 'Collega', 'Annulla'], defaultId: 1, cancelId: 1 });
+  if (r.response !== 0) return { annullato: true };
+  try { return COLLEGA_AGENTI.scrivi(p); } catch (e) { return { errore: e.message }; }
+});
+ipcMain.handle('agenti:turno', (_, x) => ponte ? ponte.turno(String(x?.id || '')) : null);
 ipcMain.handle('computer:disponibile', () => ascolta.disponibile());
 ipcMain.handle('computer:avvia', () => ascolta.avvia().catch(e => ({ ok: false, motivo: e.message })));
 ipcMain.handle('computer:ferma', () => ascolta.ferma());
-app.on('will-quit', () => ascolta.ferma());
+app.on('will-quit', () => { ascolta.ferma(); ponte?.chiudi(); });
 const voce = VOCE.crea({ binario: [join(process.resourcesPath || '', 'bin', 'lode-voce'), join(QUI, 'bin', 'lode-voce')].find(existsSync) || join(QUI, 'bin', 'lode-voce'),   // nel pacchetto: Resources/bin
   avanza: progressoVoce });
 // nelle prove (solo in sviluppo): LODE_VOCE sceglie il motore (mac, onnx, whisper), LODE_MODELLO_ONNX la cartella del modello
@@ -595,6 +619,18 @@ app.whenReady().then(async () => {
   // «Segui il progetto»: gli handler progetto:* e i progetti già seguiti. Ogni comando passa dalla finestra di conferma del sistema
   // (progetto.mjs); conf.progetti sta in userData/config.json, mai nel vault. conf come funzione: leggiConf() la riassegna
   try { progetti = PROGETTO.registra({ ipcMain, dialog, app, conf: () => conf, salvaConf, manda }); } catch (x) { console.error('Lode: progetti non avviati', x); }
+  // il ponte con gli agenti di programmazione (agenti.mjs), in sola lettura: un server su 127.0.0.1 con un token; la porta
+  // resta la stessa fra un avvio e l'altro (è scritta negli hook). Se è occupata se ne prende un'altra e gli agenti
+  // collegati si aggiornano da soli (lo studente li aveva già collegati lui)
+  try {
+    conf.ponte ||= { token: AGENTI.nuovoToken(), porta: 0 };
+    ponte = AGENTI.crea({ token: conf.ponte.token, porta: conf.ponte.porta, progetti: () => conf.progetti || {}, manda });
+    ponte.avvia().then(porta => {
+      if (porta === conf.ponte.porta) return;
+      conf.ponte.porta = porta; salvaConf();
+      for (const a of COLLEGA_AGENTI.stato(homedir())) if (a.collegato) COLLEGA_AGENTI.scrivi(COLLEGA_AGENTI.anteprima(a.id, { casa: homedir(), url: urlPonte() }));
+    }).catch(e => console.error('Lode: ponte con gli agenti non avviato', e));
+  } catch (x) { console.error('Lode: ponte con gli agenti non avviato', x); }
   // Moodle in sola lettura (moodle.mjs): il token cifrato in conf.moodle, mai nel vault; net.fetch usa il proxy del sistema
   try { MOODLE.registra({ ipcMain, BrowserWindow, safeStorage, conf: () => conf, salvaConf, fetch: (u, o) => net.fetch(u, o), manda }); } catch (x) { console.error('Lode: Moodle non avviato', x); }
   // le versioni nuove (aggiorna.mjs): solo nell'app impacchettata e mai nelle prove. Prima di «Riavvia ora» i dati in sospeso

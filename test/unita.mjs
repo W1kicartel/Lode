@@ -668,6 +668,8 @@ Bramanti, Pagani, Salsa - Analisi matematica 2`;
   prova('computer: la lezione in aula resta dal microfono', c('trascrivi la lezione')?.tipo === 'trascrivi' && !c('trascrivi la lezione').sorgente);
 }
 
+// il ponte con gli agenti: i comandi
+prova('agenti: comandi', c('agenti')?.tipo === 'agenti' && c('collega claude code')?.agente === 'claude' && c('scollega cursor')?.togli === true && c('collega gemini cli')?.agente === 'gemini' && c('collega gli agenti')?.agente === null && c("cosa ha fatto l'agente")?.tipo === 'turnoAgente');
 // Moodle: i comandi
 prova('moodle: comandi', c('collega moodle')?.tipo === 'moodle' && c('collega moodle').cosa === null && c('novità da moodle')?.cosa === 'novita' && c('scadenze')?.cosa === 'scadenze' && c('scollega moodle')?.cosa === 'scollega' && c('corsi di moodle')?.cosa === 'corsi' && c('moodle')?.tipo === 'moodle');
 console.log(`${ok} prove passate, ${ko} fallite`);

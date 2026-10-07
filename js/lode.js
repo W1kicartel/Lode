@@ -1037,6 +1037,7 @@ async function accettaProposta() {
   if (p.tipo === 'ripasso') return schedaRipasso(p.esame?.id);
   if (p.tipo === 'orale') return avviaOrale(p.esame);
   if (p.tipo === 'moodle') return schedaMoodle('novita');
+  if (p.tipo === 'agente') return schedaTurno(p.turno);
   if (p.tipo === 'programma') { const a = p.esame?.programma?.argomenti?.find(x => x.id === p.argomento); return a && AI.attiva() ? avviaOraleProgramma(p.esame, [a], { max: 2 }) : schedaProgramma({ esame: p.esame }); }
   if (p.tipo === 'focus') return avviaFocus({ esameId: p.esame?.id });
   if (p.tipo === 'stelle') {
@@ -1558,6 +1559,8 @@ async function esegui(c) {
     case 'programma': return schedaProgramma(c);
     case 'crocette': return schedaCrocette(c);
     case 'moodle': return schedaMoodle(c.cosa);
+    case 'agenti': return schedaAgenti(c);
+    case 'turnoAgente': return schedaTurno([...turniAgenti.values()].sort((a, b) => (b.fine || 0) - (a.fine || 0))[0]);
     case 'spiego': {
       // l'argomento detto, cercato nei programmi degli esami da fare; senza argomento, il primo di oggi nel piano
       const conP = daFare().filter(e => PG.programmaDi(e));
@@ -1858,6 +1861,60 @@ async function chiudiOrale() {
   if (A.turno) A.turno.dataset.sintesi = `orale di ${o.nome}: ${v.testo}`;
 }
 function esciOrale() { if (!A.orale) return; A.orale = null; A.storia = []; mostraFatto({ testo: 'Orale chiuso.', nota: 'Ripassa le domande dove hai esitato.' }); }
+
+/* ---------- il ponte con gli agenti di programmazione (desktop/agenti.mjs), in sola lettura ---------- */
+// l'agente manda i suoi eventi a Lode; Lode guarda i progetti seguiti e a fine turno dice cosa ha fatto davvero
+const NOMI_AGENTI = {};
+const turniAgenti = new Map();   // id progetto → ultimo turno arrivato
+async function schedaAgenti(c = {}) {
+  if (!BRIDGE) return rispostaFissa('Il ponte con gli agenti è nell\'**app desktop** di Lode.');
+  let st; try { st = await BRIDGE.invoca('agenti:stato'); } catch (e) { return rispostaFissa('Il ponte non risponde: ' + e.message, { errore: true }); }
+  st.agenti.forEach(a => { NOMI_AGENTI[a.id] = a.nome; });
+  if (c.agente) {
+    const a = st.agenti.find(x => x.id === c.agente || norm(x.nome).replace(/ /g, '').startsWith(c.agente));
+    if (!a) return rispostaFissa(`Non so ancora collegarmi a **${c.agente}**. Scrivi «agenti» per vedere quelli che conosco.`);
+    return collegaAgente(a, c.togli);
+  }
+  const ordinati = [...st.agenti].sort((a, b) => (b.collegato - a.collegato) || (b.installato - a.installato));
+  const s = scheda('ld-agenti', `<span class="ld-lbl">Agenti di programmazione</span>
+    <p>Collega l'agente che usi per i laboratori: a fine turno Lode ti dice cosa ha toccato davvero nei progetti che segui, se ha lanciato i test dopo l'ultima modifica e se ha cambiato i test mentre fallivano.</p>
+    <ul class="ld-agenti-l">${ordinati.map(a => `<li><span class="t"><b>${esc(a.nome)}</b><small>${a.collegato ? `collegato${a.eventi ? ` · ${a.eventi} eventi, l'ultimo alle ${esc(PR.ora(a.ultimo))}` : ' · ancora nessun evento'}` : a.installato ? 'trovato su questo computer' : 'non trovato'}${a.eventi?.length && Array.isArray(a.eventi) ? '' : ''}</small></span><button type="button" class="btn small${a.collegato ? ' ld-piano' : a.installato ? ' primary' : ''}" data-a="${esc(a.id)}">${a.collegato ? 'Scollega' : 'Collega'}</button></li>`).join('')}</ul>
+    <p class="ld-nota">Solo lettura: Lode non risponde agli agenti, non decide niente e non allarga i loro permessi. Prima di scrivere nella loro configurazione ti mostra le righe esatte. Gli eventi contano solo nei progetti che segui («segui progetto»), gli altri si buttano; il testo che scrivi all'agente non si salva.</p>`);
+  s.querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', async () => { const a = st.agenti.find(x => x.id === b.dataset.a); b.disabled = true; const r = await collegaAgente(a, a.collegato, { silenzioso: true }); b.disabled = false; if (r?.ok && !r.uguale) { b.textContent = a.collegato ? 'Collega' : 'Scollega'; a.collegato = !a.collegato; b.classList.toggle('ld-piano', a.collegato); b.classList.toggle('primary', !a.collegato); } }));
+  if (A.turno) A.turno.dataset.sintesi = 'agenti';
+}
+async function collegaAgente(a, togli = false, { silenzioso = false } = {}) {
+  const r = await BRIDGE.invoca(togli ? 'agenti:scollega' : 'agenti:collega', { id: a.id }).catch(e => ({ errore: e.message }));
+  if (r?.annullato) { if (!silenzioso) rispostaFissa('Va bene, non ho toccato niente.'); return r; }
+  if (r?.errore) { rispostaFissa(r.errore, { errore: true }); return r; }
+  segnala('fatto');
+  mostraFatto({ testo: togli ? `${a.nome} scollegato.` : r.uguale ? `${a.nome} era già collegato.` : `${a.nome} collegato.`, nota: togli ? 'Ho tolto solo le mie righe.' : `${a.nota || ''} Poi segui il progetto del laboratorio («segui progetto»).`.trim() });
+  return r;
+}
+// a fine turno: se la barra è chiusa la pillola lo propone; se è aperta resta pronto per «cosa ha fatto l'agente»
+function arrivaTurno(t) {
+  if (!t?.id) return; turniAgenti.set(t.id, t);
+  if (!t.file.length && !t.comandi && !t.avvisi.length) return;   // un turno di sole parole
+  if (A?.aperto || A?.proposta) return;
+  const chi = NOMI_AGENTI[t.agente] || t.agente || 'L\'agente';
+  mostraProposta({ tipo: 'agente', titolo: `${chi} · ${t.nome}`, testo: t.avvisi.length ? t.avvisi[0].testo.replace(/`/g, '') : `ha finito: ${t.file.length} ${t.file.length === 1 ? 'file' : 'file'}${t.test ? t.dopoTest ? ', test lanciati dopo l\'ultima modifica' : ', test non rilanciati' : ', nessun test'}`, bottone: 'Guarda', turno: t });
+}
+function schedaTurno(t) {
+  if (!t) return rispostaFissa('Ancora nessun turno di un agente nei progetti che segui. Scrivi «agenti» per collegarne uno.');
+  const chi = NOMI_AGENTI[t.agente] || t.agente || 'L\'agente';
+  const es = t.ultimoTest ? (t.ultimoTest.codice == null ? 'esito non noto' : t.ultimoTest.codice === 0 ? 'riuscito' : `fallito (codice ${t.ultimoTest.codice})`) : '';
+  const s = scheda('ld-turno-ag', `<span class="ld-lbl">${esc(chi)} · ${esc(t.nome)}${t.fine ? ' · alle ' + esc(PR.ora(t.fine)) : ''}</span>
+    ${t.avvisi.map(a => `<p class="avviso">${PR.md(a.testo)}</p>`).join('')}
+    <p><b>${t.file.length}</b> ${t.file.length === 1 ? 'file toccato' : 'file toccati'}${t.file.length ? ': ' + t.file.slice(0, 8).map(f => `<code>${esc(f)}</code>`).join(', ') + (t.file.length > 8 ? '…' : '') : ''}.</p>
+    <p>${t.comandi} ${t.comandi === 1 ? 'comando' : 'comandi'} · ${t.test ? `test lanciati ${t.test} ${t.test === 1 ? 'volta' : 'volte'}, l'ultima <code>${esc(t.ultimoTest.comando)}</code> ${esc(es)}${t.dopoTest ? ', dopo l\'ultima modifica' : ', <b>prima</b> dell\'ultima modifica'}` : 'nessun test lanciato'}.</p>
+    ${t.messaggio ? `<blockquote>${esc(t.messaggio.slice(0, 300))}${t.messaggio.length > 300 ? '…' : ''}</blockquote>` : ''}
+    <div class="az"><button type="button" class="btn primary" data-c>Cosa è cambiato</button><button type="button" class="btn" data-p>Prova tu</button></div>
+    <p class="ld-nota">Quello che dice l'agente sono parole: le prove le ha lanciate davvero solo se le vedi qui. Le regole sono fisse: se non trovano niente, non è una garanzia.</p>`);
+  s.querySelector('[data-c]').addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Cosa è cambiato'); PR.schedaCambia(t.id); });
+  s.querySelector('[data-p]').addEventListener('click', () => { nuovoTurno(); detto(A.turno, 'Prova il progetto'); PR.prova(t.id); });
+  if (A.turno) A.turno.dataset.sintesi = `${chi}: ${t.file.length} file`;
+}
+if (BRIDGE) { BRIDGE.su('agente:turno', arrivaTurno); BRIDGE.invoca('agenti:stato').then(st => st?.agenti?.forEach(a => { NOMI_AGENTI[a.id] = a.nome; })).catch(() => { }); }
 
 /* ---------- Moodle in sola lettura (desktop/moodle.mjs): corsi, file nuovi, scadenze ---------- */
 const nomeMoodle = st => st?.nome || st?.sito || 'Moodle';

@@ -213,6 +213,11 @@ export function interpreta(frase) {
     const r = pulisci(m[1] || ''); return { tipo: 'ripasso', esame: r ? trovaEsame(r) : null, nomeDetto: r };
   }
 
+  // il ponte con gli agenti di programmazione (desktop/agenti.mjs): «agenti», «collega claude code», «scollega cursor»,
+  // «cosa ha fatto l'agente»
+  if ((m = t.match(/^(collega|scollega|togli)(?: (?:gli )?agenti| (claude(?: code)?|codex|gemini(?: cli)?|cursor|copilot(?: cli)?|cline|windsurf|opencode|open code|aider|kiro|qwen(?: code)?|amp|roo(?: code)?|kilo(?: code)?|continue|zed|junie))$/))) return { tipo: 'agenti', agente: m[2] ? m[2].replace(/ (?:code|cli)$/, '').replace(' ', '') : null, togli: m[1] !== 'collega' };
+  if (/^(?:i miei |gli )?agenti(?: (?:ai|di programmazione|di codice))?$|^ponte(?: con gli agenti)?$/.test(t)) return { tipo: 'agenti', agente: null };
+  if (/^(?:cosa ha fatto|che cosa ha fatto|cos'ha fatto) (?:l'agente|claude(?: code)?|codex|cursor|gemini|l'ai)\b|^ultimo turno(?: dell'agente)?$/.test(t)) return { tipo: 'turnoAgente' };
   // Moodle in sola lettura (desktop/moodle.mjs): «collega moodle», «novità da moodle», «scadenze», «scollega moodle»
   if (/^(?:scollega|disconnetti|esci da|togli)(?: il)? moodle$/.test(t)) return { tipo: 'moodle', cosa: 'scollega' };
   if (/^(?:novit[aà]|cosa c'?è di nuovo|file nuovi|nuovi file|materiali nuovi|controlla)(?: (?:su|da|di|in|sul))? moodle$|^moodle novit[aà]$/.test(t)) return { tipo: 'moodle', cosa: 'novita' };
@@ -266,6 +271,7 @@ export const ESEMPI = [
   ['quiz di analisi 2', 'domande a crocette: allenamento, o simulazione d\'esame a tempo'],
   ['trascrivi la videolezione di diritto privato', 'dall\'audio del computer: per chi studia da casa'],
   ['collega moodle', 'file nuovi e scadenze dalla piattaforma del tuo ateneo'],
+  ['agenti', 'collega Claude Code, Codex, Cursor…: Lode ti dice cosa hanno fatto davvero nei tuoi progetti'],
   ['ripassa analisi 2', 'le carte di oggi'],
   ['carta: teorema di Green = …', 'una carta al volo'],
   ['esporta per anki', 'carte e definizioni in un file per Anki, un mazzo per corso'],

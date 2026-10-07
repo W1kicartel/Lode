@@ -69,6 +69,9 @@ jobs:
       # Moodle in sola lettura (desktop/moodle.mjs) contro un Moodle finto in locale: accesso, corsi, file, scadenze
       - name: Moodle
         run: node test/moodle.mjs
+      # il ponte con gli agenti (desktop/agenti.mjs, agenti-collegamenti.mjs): eventi, avvisi, server, collegamenti a 10 agenti
+      - name: Ponte con gli agenti
+        run: node test/agenti.mjs
       # sincronizzazione v2 (docs/SINCRONIZZAZIONE.md): le parti pure del motore, il simulatore che prova se stesso, gli scenari
       # dei problemi noti e un giro di fuzz con semi fissi (riproducibile: un errore si rifà in locale con lo stesso seme)
       - name: Sincronizzazione (motore, simulatore, scenari, fuzz)
