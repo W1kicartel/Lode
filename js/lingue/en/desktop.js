@@ -226,7 +226,7 @@ export default {
   'desktop.aggiorna-dove-scaricare': 'I don\'t know where to download it from yet: try again in a bit.',
   // voce-onnx.mjs and voce-onnx-motore.mjs: the Parakeet ONNX voice
   'desktop.voce-modello-illeggibile': 'I can\'t read the voice model: try again in a bit.',
-  'desktop.voce-spazio': 'The Parakeet voice needs about {serve} MB free on the disk, there are {liberi}.',
+  'desktop.voce-spazio': 'The Parakeet voice needs about {serve} MB of free disk space; you have {liberi}.',
   'desktop.voce-rete': 'I can\'t download the voice: check your connection and try again. ({dettaglio})',
   'desktop.voce-rete-stato': 'I can\'t download the voice ({stato}): try again later.',
   'desktop.voce-file-troppo-grande': 'The voice file is bigger than expected.',

@@ -48,7 +48,7 @@ export default {
   'benvenuto.installa-tutto': 'Install everything',
   'benvenuto.gia-installato': 'Already installed',
   'benvenuto.modello-pronto': '{modello} is already ready',
-  'benvenuto.gia-pronta': 'Already ready',
+  'benvenuto.gia-pronta': 'Already set up',
   'benvenuto.voce-pronta': '{voce} is ready',
   'benvenuto.scarico-voce-pct': 'Downloading voice · {p}%',
   'benvenuto.tutto-pronto': 'Obsidian, the local brain and voice are ready.',
@@ -77,7 +77,7 @@ export default {
   'benvenuto.tipo-300': 'Single-cycle · 300 credits',
   'benvenuto.tipo-360': 'Single-cycle · 360 credits',
   'benvenuto.anno': 'Year',
-  'benvenuto.anni': ['1st', '2nd', '3rd', '4th', '5th', '6th', 'Beyond standard duration'],
+  'benvenuto.anni': ['1st', '2nd', '3rd', '4th', '5th', '6th', 'Extra years'],
   'benvenuto.lode-vale': 'Cum laude counts as',
   'benvenuto.lode-nota': 'It depends on your regulations: if unsure, 30',
   // grades
