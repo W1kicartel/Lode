@@ -269,6 +269,13 @@ D di (∂Q/∂x − ∂P/∂y).`;
   const main = leggi('desktop/main.mjs'), finestre = [...main.matchAll(/(\w+) = new BrowserWindow\(/g)].map(m => m[1]);
   prova('finestre: tutte con restaLode', finestre.length >= 3 && finestre.every(w => main.includes(`restaLode(${w});`)), finestre.join(', '));
   prova('preload: il ponte solo nelle pagine file://', /if \(location\.protocol === 'file:'\) contextBridge\.exposeInMainWorld/.test(leggi('desktop/preload.cjs')));
+  // la lingua: il main la dà alla barra in modo sincrono (lingua:leggi, prima di js/lingua.js) e la cambia con lingua:imposta
+  const pre = leggi('desktop/preload.cjs');
+  prova('lingua: il preload la legge in modo sincrono e lascia passare solo lingua:imposta', /lingua: ipcRenderer\.sendSync\('lingua:leggi'\)/.test(pre) && (pre.match(/const OUT = \[[\s\S]*?\];/)?.[0] || '').includes("'lingua:imposta'") && !(pre.match(/const IN = \[[\s\S]*?\];/)?.[0] || '').includes('lingua'));
+  prova('lingua: main.mjs risponde a lingua:leggi e lingua:imposta e sceglie la lingua prima delle finestre', /ipcMain\.on\('lingua:leggi'/.test(main) && /ipcMain\.handle\('lingua:imposta'[\s\S]*?conf\.lingua = cod; salvaConf\(\)/.test(main) && main.includes('await usa(linguaScelta())') && main.indexOf('await usa(linguaScelta())') < main.indexOf('creaBarra(); creaTray()'));
+  const LD = await import('../desktop/lingua.mjs');
+  prova('lingua: il main usa i cataloghi della barra; se no la lingua del sistema, se no l\'inglese', LD.t('desktop.menu-esci') === 'Esci da Lode' && LD.lingua() === 'it' && LD.dalSistema('pt-BR') === 'pt' && LD.dalSistema('it') === 'it' && LD.dalSistema('ja-JP') === 'en' && LD.dalSistema('') === 'en');
+  prova('pacchetto: desktop/lingua.mjs negli installer', pkg.build.files.includes('lingua.mjs') && pkg.build.files.includes('web/**'));
   prova('fornitori: il main sceglie la base solo dall\'elenco', FO.baseDi('openai') === 'https://api.openai.com/v1' && FO.baseDi('anthropic') === null && FO.baseDi('__proto__') === null && FO.baseDi('http://127.0.0.1') === null);
   // backup: un file preparato ad arte si rifiuta; quello di Lode passa
   const buono = JSON.parse(JSON.stringify(D.esporta()));

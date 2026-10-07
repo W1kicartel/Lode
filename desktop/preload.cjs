@@ -10,6 +10,8 @@ const OUT = ['vault:info', 'vault:lezioni', 'vault:annota', 'vault:apri', 'vault
   'agenti:stato', 'agenti:collega', 'agenti:scollega', 'agenti:turno', 'ai:chat', 'ai:stop', 'ai:modelli', 'scorciatoie:stato',
   // informatica: segui il progetto (la barra manda solo l'id, mai percorsi o comandi) ed «spiegami l'errore» dagli appunti
   'progetto:scegli', 'progetto:segui', 'progetto:smetti', 'progetto:stato', 'progetto:diff', 'progetto:righe', 'progetto:rileva', 'progetto:conferma', 'progetto:prova', 'progetto:visto', 'appunti:errore',
+  // la lingua scelta (js/lingua.js, imposta): il main la salva e ricarica le finestre
+  'lingua:imposta',
   // le versioni nuove di Lode (desktop/aggiorna.mjs): la barra chiede solo azioni, gli URL li decide il main
   'aggiorna:stato', 'aggiorna:imposta', 'aggiorna:riavvia', 'aggiorna:scarica',
   // la sincronizzazione fra i computer (desktop/sincronizza.mjs): la barra sceglie per indice, i percorsi li conosce solo il main
@@ -19,6 +21,7 @@ const OUT = ['vault:info', 'vault:lezioni', 'vault:annota', 'vault:apri', 'vault
 if (location.protocol === 'file:') contextBridge.exposeInMainWorld('lodeDesktop', {
   piattaforma: process.platform,
   arch: process.arch,
+  lingua: ipcRenderer.sendSync('lingua:leggi'),   // la lingua della barra, letta prima di js/lingua.js (main.mjs: conf.lingua o quella del sistema)
   leggiDati: vuoto => ipcRenderer.sendSync('dati:leggi', vuoto),   // vuoto: i predefiniti della barra (la BASE della sincronizzazione)
   salvaDati: (d, x) => ipcRenderer.send('dati:salva', d, x),   // x: { ver, ops } con la sincronizzazione accesa
   mouse: ignora => ipcRenderer.send('mouse', !!ignora),

@@ -19,6 +19,7 @@ import * as PROGETTO from './progetto.mjs';
 import * as AGGIORNA from './aggiorna.mjs';
 import { creaSincronizzazione } from './sincronizza.mjs';
 import * as ICONA from './collegamento.mjs';
+import { t, usa, dalSistema, LINGUE } from './lingua.mjs';
 
 const QUI = dirname(fileURLToPath(import.meta.url));
 const WEB = existsSync(join(QUI, 'web', 'index.html')) ? join(QUI, 'web') : join(QUI, '..');
@@ -29,7 +30,7 @@ const DAL_CODICE = !app.isPackaged && !process.env.LODE_PROVA && !process.env.LO
 const datiIcona = () => ({ piattaforma: process.platform, home: app.getPath('home'), appData: app.getPath('appData'), scrivania: app.getPath('desktop'),
   eseguibile: process.execPath, cartella: app.getAppPath(), argomenti: app.commandLine.hasSwitch('no-sandbox') ? ['--no-sandbox'] : [], versione: app.getVersion() });
 function provaIcona(f, { zitto = false } = {}) {
-  try { return f(); } catch (e) { console.warn('Lode: icona o avvio all\'accensione non riusciti:', e.message); if (!zitto) dialog.showMessageBox({ type: 'warning', title: 'Lode', message: 'Non ci sono riuscito.', detail: e.message, noLink: true }); return false; }
+  try { return f(); } catch (e) { console.warn('Lode: icona o avvio all\'accensione non riusciti:', e.message); if (!zitto) dialog.showMessageBox({ type: 'warning', title: 'Lode', message: t('desktop.non-ci-sono-riuscito'), detail: e.message, noLink: true }); return false; }
 }
 // Windows: lo stesso id dei collegamenti dell'installer (appId), per notifiche, barra delle applicazioni e avvio automatico
 if (WIN) app.setAppUserModelId(app.isPackaged ? 'it.lode.app' : process.execPath);
@@ -117,7 +118,7 @@ function apriQuadro() {
 let benvenuto = null;
 function apriBenvenuto() {
   if (benvenuto && !benvenuto.isDestroyed()) { benvenuto.show(); benvenuto.focus(); return; }
-  benvenuto = new BrowserWindow({ width: 980, height: 760, minWidth: 420, minHeight: 600, title: 'Benvenuto in Lode', backgroundColor: '#0A0A0A', titleBarStyle: MAC ? 'hiddenInset' : 'default', show: false,
+  benvenuto = new BrowserWindow({ width: 980, height: 760, minWidth: 420, minHeight: 600, title: t('desktop.benvenuto-in-lode'), backgroundColor: '#0A0A0A', titleBarStyle: MAC ? 'hiddenInset' : 'default', show: false,
     webPreferences: { preload: join(QUI, 'preload.cjs'), contextIsolation: true, sandbox: true } });
   benvenuto.loadFile(join(WEB, 'index.html'), { query: { benvenuto: '1' } });
   benvenuto.webContents.setWindowOpenHandler(({ url }) => { if (/^https?:/.test(url)) shell.openExternal(url); return { action: 'deny' }; });   // come il quadro: niente finestre nuove col preload
@@ -159,16 +160,16 @@ async function scegliVault() {
   // dopo «Smetti» (sincronizzazione senza cartella cloud) il diario è legato al vault: le note si copiano nella cartella scelta e lì
   // nasce un gruppo locale (sincronizza.mjs, cambiaVaultLocale). Prima qui si rimandava a «Smetti», che rispondeva «non è accesa»
   if (sync.acceso() && !conf.sync?.cloud) {
-    const r = await dialog.showOpenDialog({ title: 'Dove tenere il vault', buttonLabel: 'Usa questa cartella', properties: ['openDirectory', 'createDirectory'], defaultPath: vault() });
+    const r = await dialog.showOpenDialog({ title: t('desktop.dove-tenere-il-vault'), buttonLabel: t('desktop.usa-questa-cartella'), properties: ['openDirectory', 'createDirectory'], defaultPath: vault() });
     if (r.canceled || !r.filePaths[0]) return null;
     const x = await sync.cambiaVaultLocale(r.filePaths[0]);
-    if (x.esito !== 'ok') { if (!process.env.LODE_PROVA) dialog.showMessageBox({ type: 'warning', title: 'Lode', message: x.errore || 'Non è andata.', noLink: true }); return null; }
+    if (x.esito !== 'ok') { if (!process.env.LODE_PROVA) dialog.showMessageBox({ type: 'warning', title: 'Lode', message: x.errore || t('desktop.non-e-andata'), noLink: true }); return null; }
     tutte().forEach(w => w.webContents.reload());
     return info();
   }
   // con la sincronizzazione nel cloud il vault è legato al diario (il gruppo): si cambia con «Smetti su questo computer» o «Uso già Lode»
-  if (sync.acceso()) { if (!process.env.LODE_PROVA) dialog.showMessageBox({ type: 'info', title: 'Lode', message: 'Con la sincronizzazione il vault si cambia da «Sincronizza fra i tuoi computer»', detail: '«Smetti su questo computer» porta il vault fuori dalla cartella cloud.', noLink: true }); return null; }
-  const r = await dialog.showOpenDialog({ title: 'Scegli il vault Obsidian', buttonLabel: 'Usa questo vault', properties: ['openDirectory', 'createDirectory'], defaultPath: vault() });
+  if (sync.acceso()) { if (!process.env.LODE_PROVA) dialog.showMessageBox({ type: 'info', title: 'Lode', message: t('desktop.vault-con-sincronizzazione'), detail: t('desktop.vault-con-sincronizzazione-dettaglio'), noLink: true }); return null; }
+  const r = await dialog.showOpenDialog({ title: t('desktop.scegli-il-vault'), buttonLabel: t('desktop.usa-questo-vault'), properties: ['openDirectory', 'createDirectory'], defaultPath: vault() });
   if (r.canceled || !r.filePaths[0]) return null;
   scriviTutto();   // i dati in sospeso vanno nel vault di prima
   conf.vault = r.filePaths[0]; salvaConf();
@@ -182,9 +183,9 @@ async function apriVault() {
   catch (x) {
     console.error(x);
     if (process.env.LODE_PROVA) return false;   // prove automatiche: nessuna finestra modale che le blocchi
-    const r = await dialog.showMessageBox({ type: 'warning', title: 'Lode', message: `Lode non riesce a usare la cartella ${vault()}`, noLink: true,
-      detail: WIN && /^(EPERM|EACCES)$/.test(x.code) ? 'Probabilmente Windows la protegge (Sicurezza di Windows › Protezione da ransomware › Accesso alle cartelle controllato) o l\'antivirus blocca Lode. Consenti Lode, oppure scegli un\'altra cartella.' : x.message,
-      buttons: ['Scegli un\'altra cartella', 'Riprova', 'Non ora'], defaultId: 0, cancelId: 2 });
+    const r = await dialog.showMessageBox({ type: 'warning', title: 'Lode', message: t('desktop.cartella-non-usabile', { cartella: vault() }), noLink: true,
+      detail: WIN && /^(EPERM|EACCES)$/.test(x.code) ? t('desktop.cartella-protetta-windows') : x.message,
+      buttons: [t('desktop.scegli-altra-cartella'), t('desktop.riprova'), t('desktop.non-ora')], defaultId: 0, cancelId: 2 });
     return r.response === 1 ? apriVault() : r.response === 0 ? !!(await scegliVault()) : false;
   }
 }
@@ -268,6 +269,18 @@ ipcMain.on('dati:salva', (e, d, x) => {
   }
   scriviDopo(fileDati(), d);
   manda('dati:cambiati', d, e.sender);
+});
+// la lingua: quella scelta dallo studente (conf.lingua), se no quella del sistema se Lode la conosce, se no l'inglese.
+// La barra la legge in modo sincrono all'avvio (preload: window.lodeDesktop.lingua, prima di js/lingua.js); cambiarla
+// la salva qui, la usa per i testi del main (menu dell'icona, finestre di sistema) e ricarica le finestre
+const linguaScelta = () => typeof conf.lingua === 'string' && Object.hasOwn(LINGUE, conf.lingua) ? conf.lingua : dalSistema(app.getLocale());
+ipcMain.on('lingua:leggi', e => { e.returnValue = linguaScelta(); });
+ipcMain.handle('lingua:imposta', async (_, cod) => {
+  if (typeof cod !== 'string' || !Object.hasOwn(LINGUE, cod)) return false;
+  conf.lingua = cod; salvaConf();
+  await usa(cod);
+  tutte().forEach(w => w.webContents.reload());
+  return true;
 });
 ipcMain.on('mouse', (e, ignora) => BrowserWindow.fromWebContents(e.sender)?.setIgnoreMouseEvents(ignora, { forward: true }));
 ipcMain.handle('vault:info', () => info());
@@ -361,7 +374,7 @@ ipcMain.handle('installa:obsidian', async () => {
     else V.registra(vault());
     const l = V.linkObsidian(vault(), 'Home.md');
     try { await I.apriObsidian(l.url); } catch (x) { console.warn('Lode: Obsidian installato ma non si apre da qui', x); }
-    progresso('obsidian', { fase: 'fatto', p: 1, testo: 'Obsidian è pronto sul tuo vault' });
+    progresso('obsidian', { fase: 'fatto', p: 1, testo: t('desktop.obsidian-pronto') });
     manda('vault:info', info());
     return { esito: 'ok' };
   } catch (e) { progresso('obsidian', { fase: 'errore', testo: e.message }); return { esito: 'errore', errore: e.message }; }
@@ -374,7 +387,7 @@ ipcMain.handle('installa:cervello', async () => {
     if (!(await I.statoOllama()).installato) await I.installaOllama({ avanza: x => progresso('cervello', x) });
     await I.scaricaModello(m.nome, x => progresso('cervello', x));
     conf.modello = m.nome; salvaConf();
-    progresso('cervello', { fase: 'fatto', p: 1, testo: `${m.etichetta} è pronto` });
+    progresso('cervello', { fase: 'fatto', p: 1, testo: t('desktop.modello-pronto', { modello: m.etichetta }) });
     return { esito: 'ok', modello: m.nome };
   } catch (e) { progresso('cervello', { fase: 'errore', testo: e.message }); return { esito: 'errore', errore: e.message }; }
   finally { inCorso.cervello = false; }
@@ -472,14 +485,14 @@ ipcMain.handle('agenti:stato', () => {
 });
 for (const [canale, togli] of [['agenti:collega', false], ['agenti:scollega', true]]) ipcMain.handle(canale, async (_, x) => {
   const id = String(x?.id || ''); if (!COLLEGA_AGENTI.agente(id)) return { errore: 'agente sconosciuto' };
-  if (!ponte?.porta()) return { errore: 'Il ponte con gli agenti non è partito: riavvia Lode.' };
+  if (!ponte?.porta()) return { errore: t('desktop.ponte-non-partito') };
   const p = COLLEGA_AGENTI.anteprima(id, { casa: homedir(), url: urlPonte(), togli });
   if (p.errore) return p;
   if (p.dopo == null || p.dopo === p.prima) return { ok: true, uguale: true };
   const r = await dialog.showMessageBox({ type: 'question', title: 'Lode', noLink: true,
-    message: togli ? `Togliere Lode dalla configurazione di ${p.nome}?` : `Collegare ${p.nome} a Lode?`,
-    detail: `${togli ? 'Lode toglie solo le sue righe' : 'Lode aggiunge solo le sue righe, il resto resta com\'è'} in:\n${p.file}\n\n${COLLEGA_AGENTI.differenza(p.prima, p.dopo)}\n\n${togli ? '' : `${p.nome} manderà a Lode, su questo computer, gli eventi delle sessioni (file toccati, comandi, fine del turno). Lode non risponde e non decide niente. `}${p.esiste ? 'Il file com\'era resta in ' + p.file + '.prima-di-lode.' : ''}`,
-    buttons: [togli ? 'Togli' : 'Collega', 'Annulla'], defaultId: 1, cancelId: 1 });
+    message: togli ? t('desktop.agente-togliere', { agente: p.nome }) : t('desktop.agente-collegare', { agente: p.nome }),
+    detail: `${t(togli ? 'desktop.agente-toglie-righe' : 'desktop.agente-aggiunge-righe', { file: p.file })}\n\n${COLLEGA_AGENTI.differenza(p.prima, p.dopo)}\n\n${togli ? '' : t('desktop.agente-manda-eventi', { agente: p.nome })}${p.esiste ? t('desktop.agente-file-com-era', { file: p.file + '.prima-di-lode' }) : ''}`,
+    buttons: [togli ? t('desktop.togli') : t('desktop.collega'), t('desktop.annulla')], defaultId: 1, cancelId: 1 });
   if (r.response !== 0) return { annullato: true };
   try { return COLLEGA_AGENTI.scrivi(p); } catch (e) { return { errore: e.message }; }
 });
@@ -566,31 +579,31 @@ function iconaTray() {
 // nel menu dell'icona: accendere o spegnere gli aggiornamenti e, quando c'è, la versione nuova (come la riga in «Oggi»)
 function voceAggiorna() {
   const s = aggiorna?.stato(); if (!s?.possibile) return [];
-  const v = [{ label: s.modo === 'manuale' ? 'Avvisami delle versioni nuove' : 'Aggiornamenti automatici', type: 'checkbox', checked: s.attivi, click: i => aggiorna.impostaAttivi(i.checked) }];
+  const v = [{ label: s.modo === 'manuale' ? t('desktop.menu-avvisami-versioni') : t('desktop.menu-aggiornamenti-automatici'), type: 'checkbox', checked: s.attivi, click: i => aggiorna.impostaAttivi(i.checked) }];
   if (!s.attivi) return v;
-  if (s.fase === 'pronta') v.unshift({ label: `Riavvia con Lode ${s.nuova.versione}`, click: () => aggiorna.riavvia() });
-  if (s.fase === 'da_scaricare') v.unshift({ label: `Scarica Lode ${s.nuova.versione}…`, click: () => aggiorna.scarica() });
+  if (s.fase === 'pronta') v.unshift({ label: t('desktop.menu-riavvia-con', { versione: s.nuova.versione }), click: () => aggiorna.riavvia() });
+  if (s.fase === 'da_scaricare') v.unshift({ label: t('desktop.menu-scarica', { versione: s.nuova.versione }), click: () => aggiorna.scarica() });
   return v;
 }
 function creaTray() {
   tray = new Tray(iconaTray()); tray.setToolTip('Lode');
   if (WIN) nativeTheme.on('updated', () => tray?.setImage(iconaTray()));   // barra delle applicazioni chiara o scura
   const menu = () => Menu.buildFromTemplate([
-    { label: `Apri Lode (${MAC ? '⌥ Spazio' : 'Ctrl+Shift+Spazio'})`, click: () => { barra.show(); barra.focus(); barra.setIgnoreMouseEvents(false); barra.webContents.send('scorciatoia', 'apri'); } },
-    { label: 'Il quadro: libretto, esami, ripasso', click: apriQuadro },
-    { label: 'Rifai la configurazione…', click: apriBenvenuto },
+    { label: t('desktop.menu-apri', { tasti: MAC ? t('desktop.tasti-apri-mac') : t('desktop.tasti-apri') }), click: () => { barra.show(); barra.focus(); barra.setIgnoreMouseEvents(false); barra.webContents.send('scorciatoia', 'apri'); } },
+    { label: t('desktop.menu-quadro'), click: apriQuadro },
+    { label: t('desktop.menu-rifai-configurazione'), click: apriBenvenuto },
     { type: 'separator' },
-    { label: 'Apri il vault in Obsidian', click: async () => { const l = V.linkObsidian(vault(), 'Home.md'); if (l.url) I.apriObsidian(l.url); else shell.openPath(vault()); } },
-    { label: 'Mostra il vault nella cartella', click: () => shell.openPath(vault()) },
-    { label: 'Usa un altro vault…', click: scegliVault },
+    { label: t('desktop.menu-apri-vault-obsidian'), click: async () => { const l = V.linkObsidian(vault(), 'Home.md'); if (l.url) I.apriObsidian(l.url); else shell.openPath(vault()); } },
+    { label: t('desktop.menu-mostra-vault'), click: () => shell.openPath(vault()) },
+    { label: t('desktop.menu-altro-vault'), click: scegliVault },
     { type: 'separator' },
     DAL_CODICE
-      ? { label: 'Avvia Lode all\'accensione', type: 'checkbox', checked: !!provaIcona(() => ICONA.avvioAttivo(datiIcona(), app), { zitto: true }), click: i => provaIcona(() => ICONA.avvio(datiIcona(), i.checked, app, shell)) }
-      : { label: 'Avvia Lode all\'accensione', type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin, enabled: app.isPackaged, click: i => app.setLoginItemSettings({ openAtLogin: i.checked }) },
-    ...(DAL_CODICE ? [{ label: MAC ? 'Icona di Lode in Applicazioni' : WIN ? 'Icona di Lode nel menu Start e sul desktop' : 'Icona di Lode nel menu delle applicazioni', type: 'checkbox',
+      ? { label: t('desktop.menu-avvio-accensione'), type: 'checkbox', checked: !!provaIcona(() => ICONA.avvioAttivo(datiIcona(), app), { zitto: true }), click: i => provaIcona(() => ICONA.avvio(datiIcona(), i.checked, app, shell)) }
+      : { label: t('desktop.menu-avvio-accensione'), type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin, enabled: app.isPackaged, click: i => app.setLoginItemSettings({ openAtLogin: i.checked }) },
+    ...(DAL_CODICE ? [{ label: MAC ? t('desktop.menu-icona-mac') : WIN ? t('desktop.menu-icona-win') : t('desktop.menu-icona-linux'), type: 'checkbox',
       checked: !!provaIcona(() => ICONA.haIcona(datiIcona(), shell), { zitto: true }), click: i => provaIcona(() => i.checked ? ICONA.creaIcona(datiIcona(), shell) : ICONA.togliIcona(datiIcona(), shell)) }] : []),
     ...voceAggiorna(),
-    { label: 'Esci da Lode', role: 'quit' },
+    { label: t('desktop.menu-esci'), role: 'quit' },
   ]);
   tray.on('click', () => tray.popUpContextMenu(menu())); tray.on('right-click', () => tray.popUpContextMenu(menu()));
 }
@@ -600,6 +613,7 @@ app.whenReady().then(async () => {
   else Menu.setApplicationMenu(null);   // Windows e Linux: niente menu inglese nelle finestre, né Ctrl+R, Ctrl+W, Ctrl+Shift+I
   leggiConf();
   if (process.env.LODE_VAULT) conf.vault = process.env.LODE_VAULT;
+  try { await usa(linguaScelta()); } catch (x) { console.error('Lode: lingua non caricata, resta l\'italiano', x); }
   if (!conf.vault) {
     let documenti; try { documenti = app.getPath('documents'); } catch { documenti = app.getPath('home'); }   // Documenti su OneDrive o in rete non raggiungibile
     conf.vault = join(documenti, 'Lode'); conf.primoAvvio = Date.now(); salvaConf(); if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: true });

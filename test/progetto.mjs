@@ -236,7 +236,7 @@ try {
   // «fatto» dopo l'attesa (LODE_QUIETE_MS accorciata a 1,5 s)
   const f1 = await aspetta(() => dopoIl('progetto:fatto', t), 5000);
   prova('fatto: arriva dopo il silenzio', !!f1 && f1.t - c1.t >= 1400, f1 && f1.t - c1.t);
-  prova('fatto: il riassunto dice cosa e se è provato', f1?.x.punti[0] === '`lista.c`: cambiata `main`.' && f1.x.provatoTesto.startsWith('**Provato?** No') && f1.x.nota === PR.NOTA_CHI, f1?.x.testo);
+  prova('fatto: il riassunto dice cosa e se è provato', f1?.x.punti[0] === '`lista.c`: cambiata `main`.' && f1.x.provatoTesto.startsWith('**Provato?** No') && f1.x.nota === PR.notaChi(), f1?.x.testo);
 
   // modificare e poi annullare riporta la stessa impronta
   // (scansioni esplicite: senza aspettare il watcher, l'annulla arriva prima del silenzio anche su una macchina carica)

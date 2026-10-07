@@ -39,6 +39,7 @@ import { join, basename, resolve, relative, isAbsolute, parse } from 'node:path'
 import { homedir } from 'node:os';
 import { dentro, scriviSicuro } from './vault.mjs';
 import * as E from './esegui.mjs';
+import { t } from './lingua.mjs';
 
 export const LIMITE_FILE = 5000, LIMITE_BYTE = 1024 * 1024, MAX_PROGETTI = 3, MAX_TAPPE = 300, GIORNI_TAPPE = 30, MAX_RIGHE = 400;
 export const QUIETE_MS = 60e3, INTERVALLO_FATTO = 10 * 60e3, ATTESA_MS = 400, SONDAGGIO_MS = 3000, SICUREZZA_MS = 30e3;
@@ -204,58 +205,58 @@ export function nuoviInclude(prima, ops, lingua) {
 const due = n => String(n).padStart(2, '0');
 export const ora = t => { const d = new Date(t); return `${due(d.getHours())}:${due(d.getMinutes())}`; };
 const codice = s => '`' + s + '`';
-const unisci = l => l.length < 2 ? l.join('') : `${l.slice(0, -1).join(', ')} e ${l.at(-1)}`;
-const elenco = (l, altre = 'altre', max = 4) => l.length <= max ? unisci(l.map(codice)) : `${l.slice(0, max).map(codice).join(', ')} e ${altre} ${l.length - max}`;
+const unisci = l => l.length < 2 ? l.join('') : t('desktop.progetto-elenco', { primi: l.slice(0, -1).join(', '), ultimo: l.at(-1) });
+const elenco = (l, altri = false, max = 4) => l.length <= max ? unisci(l.map(codice)) : t(altri ? 'desktop.progetto-elenco-altri' : 'desktop.progetto-elenco-altre', { primi: l.slice(0, max).map(codice).join(', '), n: l.length - max });
 export function righePiuMeno(piu, meno) {
-  const r = n => n === 1 ? '1 riga' : `${n} righe`;
-  if (piu && meno) return `${r(piu)} in più e ${meno} in meno`;
-  if (piu) return `${r(piu)} in più`;
-  if (meno) return `${r(meno)} in meno`;
-  return 'solo spazi o a capo';
+  if (piu && meno) return t('desktop.progetto-righe-piu-meno', { n: piu, meno });
+  if (piu) return t('desktop.progetto-righe-piu', { n: piu });
+  if (meno) return t('desktop.progetto-righe-meno', { n: meno });
+  return t('desktop.progetto-solo-spazi');
 }
 export function fraseFile(f) {
   const pz = [], nuove = f.nuove || [], cambiate = f.cambiate || [], tolte = f.tolte || [], inc = f.include || [];
-  if (f.stato === 'nuovo') pz.push(`file nuovo (${f.piu === 1 ? '1 riga' : f.piu + ' righe'})`);
-  if (f.stato === 'tolto') pz.push('tolto');
+  if (f.stato === 'nuovo') pz.push(t('desktop.progetto-file-nuovo', { n: f.piu }));
+  if (f.stato === 'tolto') pz.push(t('desktop.progetto-file-tolto'));
   if (f.stato !== 'tolto') {
-    if (nuove.length) pz.push(`${nuove.length === 1 ? 'nuova funzione' : 'nuove funzioni'} ${elenco(nuove)}`);
-    if (cambiate.length) pz.push(`${cambiate.length === 1 ? 'cambiata' : 'cambiate'} ${elenco(cambiate)}`);
-    if (tolte.length) pz.push(`${tolte.length === 1 ? 'tolta' : 'tolte'} ${elenco(tolte)}`);
+    if (nuove.length) pz.push(t('desktop.progetto-funzioni-nuove', { n: nuove.length, elenco: elenco(nuove) }));
+    if (cambiate.length) pz.push(t('desktop.progetto-funzioni-cambiate', { n: cambiate.length, elenco: elenco(cambiate) }));
+    if (tolte.length) pz.push(t('desktop.progetto-funzioni-tolte', { n: tolte.length, elenco: elenco(tolte) }));
     if (f.stato === 'cambiato' && !nuove.length && !cambiate.length && !tolte.length) pz.push(righePiuMeno(f.piu, f.meno));
   }
-  let s = `${codice(f.rel)}: ${pz.join(', ')}.`;
-  if (inc.length && f.stato !== 'tolto') s += ` ${inc.length === 1 ? 'Nuovo' : 'Nuovi'} ${elenco(inc, 'altri')}.`;
+  let s = t('desktop.progetto-file', { file: codice(f.rel), cosa: pz.join(', ') });
+  if (inc.length && f.stato !== 'tolto') s += ' ' + t('desktop.progetto-include-nuovi', { n: inc.length, elenco: elenco(inc, true) });
   return s;
 }
-const TIPI = { c: ['compila', 'non compila'], java: ['compila', 'non compila'], python: ['sintassi a posto', 'errore di sintassi'], make: ['make riuscito', 'make non riuscito'] };
+const K = 'desktop.progetto-esito-';   // le chiavi del catalogo: compila, non-compila, sintassi-a-posto…
+const TIPI = { c: [K + 'compila', K + 'non-compila'], java: [K + 'compila', K + 'non-compila'], python: [K + 'sintassi-a-posto', K + 'errore-di-sintassi'], make: [K + 'make-riuscito', K + 'make-non-riuscito'] };
 // l'esito in breve, per la pillola e per «Provato?»: «✓ compila · 6/6», «✗ 2 prove su 6», «✗ non compila · lista.c:42»
 export function esitoBreve(p) {
   if (!p) return '';
-  const [si, no] = TIPI[p.tipo] || TIPI.c;
+  const [si, no] = (TIPI[p.tipo] || TIPI.c).map(k => t(k));
   if (p.esito === 'ok') return `✓ ${si}${p.tot ? ` · ${p.ok}/${p.tot}` : ''}`;
-  if (p.esito === 'prove') { const k = p.tot - p.ok; return `✗ ${k} ${k === 1 ? 'prova' : 'prove'} su ${p.tot}`; }
+  if (p.esito === 'prove') { const k = p.tot - p.ok; return '✗ ' + t('desktop.progetto-prove-su', { n: k, tot: p.tot }); }
   if (p.esito === 'non-compila') return `✗ ${no}${p.primo?.file ? ` · ${p.primo.file.split(/[\\/]/).pop()}${p.primo.riga ? ':' + p.primo.riga : ''}` : ''}`;
-  return '✗ la prova non è partita';
+  return '✗ ' + t('desktop.progetto-prova-non-partita');
 }
 export function fraseInizio({ da, a, n, piu, meno }) {
-  const quando = ora(da) === ora(a) ? `Alle ${ora(a)}` : `Dalle ${ora(da)} alle ${ora(a)}`;
-  return `${quando} ${n === 1 ? 'è cambiato 1 file' : `sono cambiati ${n} file`} (+${piu} −${meno}).`;
+  return ora(da) === ora(a) ? t('desktop.progetto-inizio-alle', { ora: ora(a), n, piu, meno }) : t('desktop.progetto-inizio-dalle', { da: ora(da), a: ora(a), n, piu, meno });
 }
 export function fraseProvato({ impronta: imp, ultimaProva: up, ultima, codiceCambiato = true }) {
-  if (up && up.impronta === imp) return { si: true, testo: `**Provato?** Sì: è il codice provato alle ${ora(up.quando)} (${esitoBreve(up)}).` };
-  if (!codiceCambiato) return { si: false, testo: '**Provato?** No, ma qui sono cambiati solo file che non sono codice.' };
-  return { si: false, testo: `**Provato?** No: dopo l'ultima modifica (${ora(ultima)}) nessuno ha compilato con Lode.` };
+  if (up && up.impronta === imp) return { si: true, testo: t('desktop.progetto-provato-si', { ora: ora(up.quando), esito: esitoBreve(up) }) };
+  if (!codiceCambiato) return { si: false, testo: t('desktop.progetto-provato-no-codice') };
+  return { si: false, testo: t('desktop.progetto-provato-no', { ora: ora(ultima) }) };
 }
-export const NOTA_CHI = 'Non so chi ha scritto queste righe.';
+// una funzione e non una costante: il main sceglie la lingua dopo aver caricato i moduli
+export const notaChi = () => t('desktop.progetto-nota-chi');
 // file: [{ rel, stato, piu, meno, nuove, cambiate, tolte, include }] in ordine di percorso
 export function riassunto({ id = null, nome = '', da, a, file, impronta: imp, improntaBase = null, ultimaProva = null, base = null, fine = null }) {
   const piu = file.reduce((s, f) => s + f.piu, 0), meno = file.reduce((s, f) => s + f.meno, 0);
   const frase = fraseInizio({ da, a, n: file.length, piu, meno });
-  const punti = file.slice(0, 8).map(fraseFile); if (file.length > 8) punti.push(`E altri ${file.length - 8} file.`);
+  const punti = file.slice(0, 8).map(fraseFile); if (file.length > 8) punti.push(t('desktop.progetto-altri-file', { n: file.length - 8 }));
   const codiceCambiato = improntaBase == null || improntaBase !== imp;
   const p = fraseProvato({ impronta: imp, ultimaProva, ultima: a, codiceCambiato });
-  const testo = [frase, ...punti.map(x => '– ' + x), p.testo, NOTA_CHI].join('\n');
-  return { id, nome, da, a, base, fine, file, piu, meno, impronta: imp, frase, punti, provatoTesto: p.testo, provato: p.si, vecchio: !p.si, codiceCambiato, nota: NOTA_CHI, testo };
+  const nota = notaChi(), testo = [frase, ...punti.map(x => '– ' + x), p.testo, nota].join('\n');
+  return { id, nome, da, a, base, fine, file, piu, meno, impronta: imp, frase, punti, provatoTesto: p.testo, provato: p.si, vecchio: !p.si, codiceCambiato, nota, testo };
 }
 
 /* =====================================================================================================================
@@ -300,19 +301,19 @@ export function crea({ dir, conf = {}, salvaConf = () => { }, manda = () => { },
 
   /* ----- seguire ----- */
   async function controlla(percorso) {
-    if (!percorso) return { errore: 'Non ho ricevuto nessuna cartella.' };
+    if (!percorso) return { errore: t('desktop.progetto-nessuna-cartella') };
     const p = vero(String(percorso));
-    let s; try { s = statSync(p); } catch { return { errore: 'Non trovo questa cartella.' }; }
-    if (!s.isDirectory()) return { errore: 'Scegli una cartella, non un file.' };
+    let s; try { s = statSync(p); } catch { return { errore: t('desktop.progetto-non-trovo-cartella') }; }
+    if (!s.isDirectory()) return { errore: t('desktop.progetto-cartella-non-file') };
     const { vault, userData } = vietate() || {};
-    if (parse(p).root === p) return { errore: 'Questa è la radice del disco: scegli la cartella del solo progetto (per esempio lab3).' };
-    if (sotto(vero(homedir()), p)) return { errore: 'Questa cartella contiene tutta la tua home: scegli la cartella del solo progetto.' };
-    if (vault && (sotto(p, vero(vault)) || sotto(vero(vault), p))) return { errore: 'Questo è il vault di Lode (o lo contiene): scegli la cartella del progetto.' };
-    if (userData && (sotto(p, vero(userData)) || sotto(vero(userData), p))) return { errore: 'Questa è la cartella dove Lode tiene i suoi dati: scegli quella del progetto.' };
+    if (parse(p).root === p) return { errore: t('desktop.progetto-radice-disco') };
+    if (sotto(vero(homedir()), p)) return { errore: t('desktop.progetto-tutta-la-home') };
+    if (vault && (sotto(p, vero(vault)) || sotto(vero(vault), p))) return { errore: t('desktop.progetto-e-il-vault') };
+    if (userData && (sotto(p, vero(userData)) || sotto(vero(userData), p))) return { errore: t('desktop.progetto-dati-di-lode') };
     const id = idDi(p), gia = !!progetti()[id];
-    if (!gia && Object.keys(progetti()).length >= MAX_PROGETTI) return { errore: `Seguo già ${MAX_PROGETTI} progetti: smetti di seguirne uno («smetti di seguire …»), poi riprova.` };
-    let el; try { el = await elencaFile(p, LIMITE_FILE); } catch { return { errore: 'Non riesco a leggere questa cartella.' }; }
-    if (el.troppi) return { errore: `Qui ci sono più di ${LIMITE_FILE} file: scegli la cartella del solo progetto (per esempio lab3).` };
+    if (!gia && Object.keys(progetti()).length >= MAX_PROGETTI) return { errore: t('desktop.progetto-troppi-progetti', { n: MAX_PROGETTI }) };
+    let el; try { el = await elencaFile(p, LIMITE_FILE); } catch { return { errore: t('desktop.progetto-cartella-illeggibile') }; }
+    if (el.troppi) return { errore: t('desktop.progetto-troppi-file', { n: LIMITE_FILE }) };
     return { id, percorso: p, nome: basename(p), file: el.file.length, gia };
   }
   async function segui(percorso, { corso, valutato } = {}) {
@@ -526,13 +527,13 @@ export function crea({ dir, conf = {}, salvaConf = () => { }, manda = () => { },
     return { ...pacchetto(S, 'stato'), corso: P.corso || null, valutato: !!P.valutato, comando: P.prova ? { testo: P.prova.testo, manuale: !!P.prova.manuale, tipo: P.prova.tipo } : null, riassunto: S.riassunto };
   }
   const vivo = id => ID.test(String(id)) && progetti()[id] ? vivi.get(id) || null : null;
-  const NON_SEGUO = { errore: 'Non seguo questo progetto.' };
+  const nonSeguo = () => ({ errore: t('desktop.progetto-non-seguo') });
   async function stato(id) {
-    if (id != null) { const S = vivo(id); return S ? { progetti: [statoDi(S)] } : NON_SEGUO; }
+    if (id != null) { const S = vivo(id); return S ? { progetti: [statoDi(S)] } : nonSeguo(); }
     return { progetti: [...vivi.values()].filter(S => progetti()[S.id]).map(statoDi) };
   }
   async function visto(id) {
-    const S = vivo(id); if (!S) return NON_SEGUO;
+    const S = vivo(id); if (!S) return nonSeguo();
     if (S.scansione) await S.scansione;
     nuovaTappa(S, 'vista'); S.inizioModifiche = null; clearTimeout(S.tFatto);
     await aggiornaElenco(S);
@@ -540,14 +541,14 @@ export function crea({ dir, conf = {}, salvaConf = () => { }, manda = () => { },
     return statoDi(S);
   }
   async function diff(id, { rel, da, a } = {}) {
-    const S = vivo(id); if (!S) return NON_SEGUO;
+    const S = vivo(id); if (!S) return nonSeguo();
     if (S.scansione) await S.scansione;
     const tappa = t => S.tappe.find(x => x.t === Number(t))?.file;
     const mA = da != null ? tappa(da) : tappaBase(S, ['inizio', 'vista'])?.file || {}, mB = a != null ? tappa(a) : mappa(S);
-    if (!mA || !mB) return { errore: 'Quella versione non c\'è più: Lode tiene le versioni per 30 giorni.' };
+    if (!mA || !mB) return { errore: t('desktop.progetto-versione-scaduta') };
     if (rel == null) return { file: await confrontaMappe(S, mA, mB) };
     rel = String(rel);
-    if (!(rel in mA) && !(rel in mB)) return { errore: 'Questo file non è tra quelli che seguo.' };
+    if (!(rel in mA) && !(rel in mB)) return { errore: t('desktop.progetto-file-non-seguito') };
     const d = await diffTesti(S, mA[rel], mB[rel]), st = !mA[rel] ? 'nuovo' : !mB[rel] ? 'tolto' : 'cambiato';
     if (d.grande) return { rel, stato: st, piu: d.piu, meno: d.meno, grande: true, blocchi: [] };
     const out = []; let n = 0, tagliato = false;
@@ -556,10 +557,10 @@ export function crea({ dir, conf = {}, salvaConf = () => { }, manda = () => { },
   }
   // le righe vere di un file seguito (per gli errori spiegati di F3): al massimo 400, solo dentro il progetto
   async function leggiRighe(id, rel, da = 1, a) {
-    const S = vivo(id); if (!S) return NON_SEGUO;
+    const S = vivo(id); if (!S) return nonSeguo();
     rel = String(rel || '').split('\\').join('/');
-    if (!S.corrente.has(rel)) return { errore: 'Questo file non è tra quelli che seguo.' };
-    let testo; try { testo = readFileSync(dentro(S.radice, rel), 'utf8'); } catch { return { errore: 'Non riesco a leggere il file.' }; }
+    if (!S.corrente.has(rel)) return { errore: t('desktop.progetto-file-non-seguito') };
+    let testo; try { testo = readFileSync(dentro(S.radice, rel), 'utf8'); } catch { return { errore: t('desktop.progetto-file-illeggibile') }; }
     const tutte = testo.replace(/^\uFEFF/, '').split('\n').map(r => r.replace(/\r$/, '')); if (tutte.at(-1) === '' && tutte.length > 1) tutte.pop();
     const intero = (x, d) => Number.isFinite(+x) ? Math.trunc(+x) : d;
     const inizio = Math.min(Math.max(1, intero(da, 1)), tutte.length), fine = Math.min(tutte.length, Math.max(inizio, intero(a, inizio + MAX_RIGHE - 1)), inizio + MAX_RIGHE - 1);
@@ -570,7 +571,7 @@ export function crea({ dir, conf = {}, salvaConf = () => { }, manda = () => { },
   const leggiTesto = S => rel => { try { return readFileSync(dentro(S.radice, rel), 'utf8'); } catch { return ''; } };
   const piano = S => E.proponi({ nome: S.nome, file: [...S.corrente.keys()].sort(), leggi: leggiTesto(S), bin: join(S.cartella, 'bin'), trova });
   async function rileva(id) {
-    const S = vivo(id); if (!S) return NON_SEGUO;
+    const S = vivo(id); if (!S) return nonSeguo();
     if (S.scansione) await S.scansione;
     const p = await piano(S), P = progetti()[id];
     return { tipo: p.tipo, testo: p.testo, testoCasi: p.testoCasi, casi: p.casi.length, programmi: p.programmi.map(x => x.nome), manca: p.manca, note: p.note,
@@ -582,7 +583,7 @@ export function crea({ dir, conf = {}, salvaConf = () => { }, manda = () => { },
   // la conferma ha due tempi: preparaConferma costruisce l'argv (nel main), il main lo mostra nella finestra di sistema,
   // confermaPiano lo salva solo dopo il sì. Il piano non passa mai dalla barra.
   async function preparaConferma(id, testo) {
-    const S = vivo(id); if (!S) return NON_SEGUO;
+    const S = vivo(id); if (!S) return nonSeguo();
     if (S.scansione) await S.scansione;
     const p = await piano(S), bin = join(S.cartella, 'bin');
     if (testo == null || !String(testo).trim()) {
@@ -594,27 +595,27 @@ export function crea({ dir, conf = {}, salvaConf = () => { }, manda = () => { },
     return { ...q, dettaglio: dettaglio(q) };
   }
   const dettaglio = p => [p.passi.map(x => E.argvEsatto(x.argv)).join('\n'),
-    p.casi.some(k => k.programma) ? `Poi, per ogni prova .in → .out:\n${p.programmi.map(x => E.argvEsatto(x.argv) + ' < prova.in').join('\n')}` : 'Il programma non lo lancio: non ci sono prove .in/.out.'].join('\n\n');
+    p.casi.some(k => k.programma) ? t('desktop.progetto-poi-per-ogni-prova', { comandi: p.programmi.map(x => E.argvEsatto(x.argv) + ' < prova.in').join('\n') }) : t('desktop.progetto-senza-prove')].join('\n\n');
   function confermaPiano(id, p) {
-    const P = progetti()[id]; if (!P || !vivi.has(id)) return NON_SEGUO;
+    const P = progetti()[id]; if (!P || !vivi.has(id)) return nonSeguo();
     P.prova = { tipo: p.tipo, passi: p.passi, programmi: p.programmi, cartelle: p.cartelle, chiave: p.chiave, lancia: E.lanciati(E.assegna(p.casi, p.programmi)), manuale: !!p.manuale, testo: p.testo, confermato: new Date().toISOString() };
     salvaConf();
     return { ok: true, comando: p.testo };
   }
   // l'uscita arriva alla barra a pezzi, ogni 120 ms e al massimo 64 KB per prova
   function flusso(id) {
-    let coda = [], mandati = 0, t = 0;
-    const via = () => { t = 0; for (const x of coda) manda('progetto:uscita', x); coda = []; };
+    let coda = [], mandati = 0, timer = 0;
+    const via = () => { timer = 0; for (const x of coda) manda('progetto:uscita', x); coda = []; };
     return {
       pezzo: x => {
         if (mandati >= 64 * 1024) return;
         const testo = x.testo.slice(0, 64 * 1024 - mandati); mandati += testo.length;
         const u = coda.at(-1);
         if (u && u.fase === x.fase && u.caso === x.caso && u.flusso === x.flusso) u.testo += testo; else coda.push({ id, ...x, testo });
-        if (mandati >= 64 * 1024) coda.push({ id, fase: x.fase, caso: x.caso, flusso: 'stderr', testo: '\n… (il resto non lo mostro)\n' });
-        if (!t) t = setTimeout(via, 120);
+        if (mandati >= 64 * 1024) coda.push({ id, fase: x.fase, caso: x.caso, flusso: 'stderr', testo: '\n… ' + t('desktop.progetto-resto-non-mostro') + '\n' });
+        if (!timer) timer = setTimeout(via, 120);
       },
-      fine: () => { clearTimeout(t); via(); },
+      fine: () => { clearTimeout(timer); via(); },
     };
   }
   // le righe cambiate dopo l'ultima prova riuscita: «guarda prima qui» (per gli errori a run-time di F3)
@@ -630,7 +631,7 @@ export function crea({ dir, conf = {}, salvaConf = () => { }, manda = () => { },
     return out;
   }
   async function prova(id) {
-    const S = vivo(id), P = progetti()[id]; if (!S) return NON_SEGUO;
+    const S = vivo(id), P = progetti()[id]; if (!S) return nonSeguo();
     if (S.provaInCorso) return { inCorso: true };
     if (!P.prova) return { serveConferma: true, proposta: await rileva(id) };
     S.provaInCorso = true;
@@ -647,7 +648,7 @@ export function crea({ dir, conf = {}, salvaConf = () => { }, manda = () => { },
       const r = await E.eseguiProva({ radice: S.radice, passi: P.prova.passi, programmi: P.prova.programmi, casi: E.assegna(p.casi, P.prova.programmi), cartelle: P.prova.cartelle,
         leggi: rel => readFileSync(dentro(S.radice, rel)), pezzo: f.pezzo, tempoCompila, tempoCaso });
       f.fine();
-      if (S.chiuso) return { errore: 'Ho smesso di seguire il progetto durante la prova.' };
+      if (S.chiuso) return { errore: t('desktop.progetto-smesso-durante-prova') };
       await scansiona(S);
       const up = { impronta: imp0, esito: r.esito, quando, ok: r.ok, tot: r.tot, primo: r.primo, tipo: P.prova.tipo };
       up.breve = esitoBreve(up);
@@ -668,7 +669,7 @@ export function crea({ dir, conf = {}, salvaConf = () => { }, manda = () => { },
     if (salva) { S.salvaChiudendo = true; salvaOra(S); S.salvaChiudendo = false; } else clearTimeout(S.tSalva);
   }
   function smetti(id) {
-    if (!ID.test(String(id)) || !progetti()[id]) return NON_SEGUO;
+    if (!ID.test(String(id)) || !progetti()[id]) return nonSeguo();
     const S = vivi.get(id); if (S) chiudiUno(S, false);
     vivi.delete(id);
     const nome = progetti()[id].nome; delete progetti()[id]; salvaConf();
@@ -697,7 +698,7 @@ export function registra({ ipcMain, dialog, app, conf, salvaConf, manda, env = p
   gestisci('progetto:scegli', async () => {
     let percorso = env.LODE_PROGETTO || null;
     if (!percorso) {
-      const r = await dialog.showOpenDialog({ title: 'Scegli la cartella del progetto', buttonLabel: 'Segui questa cartella', properties: ['openDirectory'] });
+      const r = await dialog.showOpenDialog({ title: t('desktop.progetto-scegli-cartella'), buttonLabel: t('desktop.progetto-segui-cartella'), properties: ['openDirectory'] });
       if (r.canceled || !r.filePaths?.[0]) return { annullato: true };
       percorso = r.filePaths[0];
     }
@@ -707,7 +708,7 @@ export function registra({ ipcMain, dialog, app, conf, salvaConf, manda, env = p
     return { token, nome: c.nome, percorso: c.percorso, file: c.file, gia: c.gia };
   });
   gestisci('progetto:segui', ({ token, corso, valutato }) => {
-    const p = scelte.get(String(token)); if (!p) return { errore: 'Scegli di nuovo la cartella («segui progetto»).' };
+    const p = scelte.get(String(token)); if (!p) return { errore: t('desktop.progetto-scegli-di-nuovo') };
     scelte.delete(String(token));
     return M.segui(p, { corso: typeof corso === 'string' ? corso.slice(0, 120) : null, valutato: !!valutato });
   });
@@ -720,16 +721,16 @@ export function registra({ ipcMain, dialog, app, conf, salvaConf, manda, env = p
   // e Invio sceglie «Annulla». Il comando si mostra con i caratteri invisibili resi visibili (esegui.mjs)
   let confermaAperta = false;
   gestisci('progetto:conferma', async ({ id, testo }) => {
-    if (confermaAperta) return { errore: 'C\'è già una finestra di conferma aperta: rispondi prima a quella.' };
+    if (confermaAperta) return { errore: t('desktop.progetto-conferma-aperta') };
     confermaAperta = true;
     try {
       const p = await M.preparaConferma(id, typeof testo === 'string' ? testo.slice(0, 4000) : null);
       if (p.errore) return p;
       if (!automatica) {
         const r = await dialog.showMessageBox({ type: 'question', title: 'Lode', noLink: true,
-          message: `Lode eseguirà questo comando nella cartella ${E.visibile(p.nome)}.`,
-          detail: `${p.dettaglio}\n\nÈ come lanciarlo dal terminale: il programma gira sul tuo computer.`,
-          buttons: ['Esegui sempre per questo progetto', 'Annulla'], defaultId: 1, cancelId: 1 });
+          message: t('desktop.progetto-eseguira', { cartella: E.visibile(p.nome) }),
+          detail: `${p.dettaglio}\n\n${t('desktop.progetto-come-terminale')}`,
+          buttons: [t('desktop.progetto-esegui-sempre'), t('desktop.annulla')], defaultId: 1, cancelId: 1 });
         if (r.response !== 0) return { annullato: true };
       }
       return M.confermaPiano(id, p);
