@@ -166,6 +166,38 @@ uguale('libretto vuoto e righe di testo', lib('\n\nLibretto dello studente\nStam
 uguale('libretto it: «9 CFU» non è un voto', lib('Analisi | 9 CFU', 'it'), '');
 uguale('libretto: voto e crediti in ordine inverso, senza intestazione (it: 9 non è un voto)', lib('Analisi | 28 | 9', 'it'), 'Analisi|9|28');
 
+/* ---------- verifica: casi scritti come li scrive davvero uno studente ---------- */
+for (const [s, x, atteso] of [
+  ['it', '30 lode', '30L'], ['it', '30elode', '30L'], ['it', '30l', '30L'], ['it', '27 / 30', '27'], ['it', '30,0', '30'], ['it', 'Idonea', 'I'], ['it', 'superato', 'I'],
+  ['it', '30 e lod', null], ['it', 'trenta', null], ['it', 'ritirato', null], ['it', '6 cfu', null], ['it', '2026', null],
+  ['es', 'Aprobado (5,0)', '5'], ['es', 'matricula', '10L'], ['es', 'Matricula de Honor 10', '10L'], ['es', 'NP', null], ['es', 'no presentado', null], ['es', '11', null], ['es', 'Notable', null],
+  ['fr', '14.5/20', '14.5'], ['fr', 'Assez bien 12', '12'], ['fr', 'ADM', null], ['fr', 'défaillant', null], ['fr', '12,755', null],
+  ['de', 'sehr gut (1,0)', '1'], ['de', 'BE', 'I'], ['de', 'nicht bestanden', '5'], ['de', 'NB', null], ['de', '1,15', null], ['de', '0,7', null],
+  ['pt', 'Muito Bom 18', '18'], ['pt', '14 valores', '14'], ['br', 'aprovada', 'I'], ['br', 'SS', null],
+  ['uk', '72 %', '72'], ['uk', 'Merit 65', '65'], ['uk', '2:1', null], ['uk', 'First', null], ['uk', '101', null],
+  ['us', 'B +', '3.3'], ['us', 'A–', '3.7'], ['us', 'W', null], ['us', 'I', null], ['us', 'NP', null], ['us', '3.5', null], ['us', 'E', null],
+]) prova(`verifica leggiVoto ${s} «${x}»`, lv(x, s) === atteso, String(lv(x, s)));
+// libretti scritti come li copia uno studente
+uguale('verifica libretto es a spazi con giudizio e MH', lib('Cálculo I 6 8,5\nÁlgebra Lineal 6 Notable 7,8\nFísica 6 Suspenso 3,2\nEstadística 6 Matrícula de Honor', 'es'), 'Cálculo I|6|8.5 / Álgebra Lineal|6|7.8 / Estadística|6|10L');
+uguale('verifica libretto es con codice e convocatoria', lib('Código\tAsignatura\tCréditos\tCalificación\tConvocatoria\n10234\tCálculo\t6\tNotable (7,5)\tFeb 2025\n10235\tFísica I\t6\tAPTO\tJun 2025', 'es'), 'Cálculo|6|7.5 / Física I|6|I');
+uguale('verifica libretto fr: Coef è la colonna dei crediti', lib('Matière;Coef;Note\nMaths;3;15\nPhysique;2;11,5', 'fr'), 'Maths|3|15 / Physique|2|11.5');
+uguale('verifica libretto de con LP e bestanden', lib('Mathematik für Informatiker 1 9 LP 1,7\nTheoretische Informatik 6 LP 2,3\nProgrammierpraktikum 6 LP bestanden', 'de'), 'Mathematik für Informatiker 1|9|1.7 / Theoretische Informatik|6|2.3 / Programmierpraktikum|6|I');
+uguale('verifica libretto uk: «Year 1» non è il nome', lib('Year 1 · Introduction to Programming · 20 credits · 74%\nYear 2 · Econometrics · 20 · 61', 'uk'), 'Introduction to Programming|20|74 / Econometrics|20|61');
+uguale('verifica libretto us: il codice del corso non è nel nome', lib('MATH 221 Calculus I 4 A\nENGL 101 Composition 3 B-\nCHEM 103 General Chemistry 4 C+', 'us'), 'Calculus I|4|4 / Composition|3|2.7 / General Chemistry|4|2.3');
+uguale('verifica libretto us con i semestri in mezzo', lib('Fall 2024\nCalculus I\t4\tA\nSpring 2025\nPhysics\t4\tB\nFall 2024 | Linear Algebra | 3 | B+', 'us'), 'Calculus I|4|4 / Physics|4|3 / Linear Algebra|3|3.3');
+uguale('verifica libretto pt/es/de/fr: anno e semestre non sono il nome', [lib('1º ano | Cálculo I | 6 | 16', 'pt'), lib('Primer curso; Cálculo; 6; 8', 'es'), lib('3. Semester | Analysis II | 9 | 2,0', 'de'), lib('Semestre 1 ; Analyse ; 6 ; 13,5', 'fr')].join(' / '), 'Cálculo I|6|16 / Cálculo|6|8 / Analysis II|9|2 / Analyse|6|13.5');
+uguale('verifica libretto: «Economics 101» resta il nome, il docente non lo diventa', [lib('Economics 101 20 65', 'uk'), lib('Analisi 1 | Prof. Rossi | 9 | 28', 'it')].join(' / '), 'Economics 101|20|65 / Analisi 1|9|28');
+// «che media mi serve»: un esame non superato non dà i crediti (il 5,0 tedesco, la F), ma la F resta nel GPA
+{
+  const de = S.serve(1.5, [{ voto: 5, cfu: 5 }, { voto: 1, cfu: 5 }], { sistema: 'de', totali: 180 });
+  prova('verifica serve de: il 5,0 non dà crediti', de.cfu === 175, String(de.cfu));
+  const us = S.serve(3, [{ voto: 0, cfu: 3 }, { voto: 4, cfu: 3 }], { sistema: 'us', totali: 120 });
+  vicino('verifica serve us: la F conta nel GPA ma non nei crediti', us.voto, (3 * (6 + 117) - 12) / 117);
+  prova('verifica serve us: crediti che mancano', us.cfu === 117, String(us.cfu));
+  const es = S.serve(7, [{ voto: 4, cfu: 6 }, { voto: 8, cfu: 6 }, { voto: null, idoneita: true, cfu: 6 }], { sistema: 'es', totali: 240 });
+  prova('verifica serve es: il suspenso non dà crediti, l\'apto sì', es.cfu === 228, String(es.cfu));
+}
+
 /* ---------- 4. formato ed etichette ---------- */
 prova('formato it come nel libretto', S.formato(30, 'it', { lode: true }) === '30L' && S.formato(28, 'it') === '28');
 prova('formato it idoneo e vuoto', S.formato(null, 'it', { idoneita: true }) === 'idoneo' && S.formato(null, 'it') === '—');

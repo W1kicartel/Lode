@@ -169,7 +169,9 @@ export function formatoFinale(f, s = 'it') {
 export function serve(obiettivo, fatti = [], { sistema: cod = 'it', lode = 30, totali } = {}) {
   const s = sistema(cod);
   const m = media(fatti, { sistema: s, lode });
-  const cfuFatti = fatti.reduce((x, e) => x + crediti(e), 0);
+  // i crediti che hai già: fuori dall'Italia un esame non superato (5,0 tedesco, suspenso, F…) non li dà, anche se nel GPA
+  // la F conta nella media (in Italia un voto sotto 18 non esiste: tutti gli esami fatti, come js/dati.js)
+  const cfuFatti = fatti.filter(e => s.cod === 'it' || e.voto == null || e.idoneita || superato(Number(e.voto), s)).reduce((x, e) => x + crediti(e), 0);
   const mancano = Math.max(0, (totali || s.totali) - cfuFatti - s.provaFinale);
   if (!mancano) return null;
   const mediaObiettivo = s.cod === 'it' ? obiettivo * 30 / 110 : obiettivo;
@@ -197,13 +199,15 @@ export function simula(esame, voto, lode = false, fatti = [], { sistema: cod = '
 // saltano e, se dicono l'ordine delle colonne («Voto | Crediti»), si segue quello. Date e codici si ignorano.
 // Restituisce [{ nome, crediti, voto, lode, idoneita }]: solo gli esami superati (o con un voto che conta, nel GPA).
 // In Italia il lettore di Esse3 (librettoSenzaAI in js/benvenuto.js) resta quello di sempre: questo è per gli altri.
-const COL_CREDITI = /^(?:cfu|ects|ects-?punkte|cr[eé]dit[oi]?s?|credits?|credit hours|hours|ch|cp|lp|leistungspunkte|cr|crediti|ore|horas|hrs|sws)$/;
+const COL_CREDITI = /^(?:cfu|ects|coef|coeff|coefficient|ects-?punkte|cr[eé]dit[oi]?s?|credits?|credit hours|hours|ch|cp|lp|leistungspunkte|cr|crediti|ore|horas|hrs|sws)$/;
 const COL_VOTO = /^(?:voto|esito|valutazione|nota|calificaci[oó]n|note|grade|mark|marks|bewertung|classifica[cç][aã]o|resultado|r[ée]sultat|pontua[cç][aã]o|conceito|score|%)$/;
 const COL_NOME = /^(?:esame|insegnamento|attivit[aà](?: didattica)?|corso|materia|asignatura|mati[eè]re|ue|unit[eé](?: d'enseignement)?|module?|modul|fach|pr[uü]fung|lehrveranstaltung|unidade curricular|uc|disciplina|cadeira|course|subject|class|nome|name|nom|nombre)$/;
 const MARCA_CREDITI = /^(\d{1,3}(?:[.,]\d)?)\s*(?:cfu|ects|cr[eé]dit[oi]?s?|credits?|cr|cp|lp|ch|hrs?|hours|ore|horas)$/i;
 const DATA_CELLA = /^\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}$|^\d{4}-\d{2}-\d{2}$/;
 const CODICE = /^[A-Za-z]{0,6}[-_ ]?\d{2,}[A-Za-z]?$/;
 const NUMERO = /^\d{1,3}(?:[.,]\d{1,2})?$/;
+// l'anno o il semestre accanto al nome («Year 1», «1º ano», «2. Semester», «Fall 2024», «Primer curso»): non è il nome dell'esame
+const PERIODO = /^(?:(?:year|anno|año|ano|année|annee|jahr|curso|semester|semestre|term|trimestre|quadrimestre|cuatrimestre|fall|spring|summer|winter|autumn|ws|ss|a\.?a\.?)\s*\d{1,4}(?:[/-]\d{2,4})?|\d{1,4}(?:[/-]\d{2,4})?\s*(?:[º°ªoa]|st|nd|rd|th|\.)?\s*(?:year|anno|año|ano|année|annee|jahr|semester|semestre|term|trimestre|quadrimestre|cuatrimestre|fachsemester)|(?:primer|primero|segundo|tercer|tercero|cuarto|first|second|third|fourth|premi[eè]re?|deuxi[eè]me|troisi[eè]me|primo|secondo|terzo|erstes|zweites|drittes)\s+(?:curso|year|anno|ann[eé]e|ano|semestre|semester|cuatrimestre))$/i;
 const lettere = c => (c.match(/\p{L}/gu) || []).length;
 
 export function leggiLibretto(testo, s = 'it') {
@@ -242,10 +246,13 @@ export function leggiLibretto(testo, s = 'it') {
         const dopo = celle.slice(iv + 1).find(c => NUMERO.test(c));
         cr = prima ? prima[0] : dopo ?? null;
       }
-      nome = celle.slice(0, iv).find(c => lettere(c) >= 3 && !CODICE.test(c) && !MARCA_CREDITI.test(c));
+      nome = celle.slice(0, iv).find(c => lettere(c) >= 3 && !CODICE.test(c) && !MARCA_CREDITI.test(c) && !PERIODO.test(c));
     }
     if (!v || !nome) continue;
     nome = nome.replace(/^[A-Za-z]{0,6}[-_]?\d{3,}[A-Za-z]?\s*[-–:]\s*/, '').trim();
+    // il codice del corso davanti al nome senza trattino, come nei transcript americani («MATH 221 Calculus I»)
+    const senzaCodice = nome.replace(/^[A-Z]{2,6}[-_ ]?\d{3,}[A-Z]?\s+/, '');
+    if (senzaCodice !== nome && lettere(senzaCodice) >= 3) nome = senzaCodice;
     if (nome.length < 3 || COL_NOME.test(nome.toLowerCase())) continue;
     if (!v.idoneita && !s.bocciatiInMedia && !superato(v.voto, s)) continue;   // non superato: non va nel libretto
     const crediti = cr == null ? null : Number(String(cr).replace(',', '.'));
