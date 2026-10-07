@@ -7,6 +7,7 @@
 // In D.codice solo nomi: mai righe di codice, mai percorsi assoluti. Funzioni pure (test/discussione.mjs) più la scheda.
 import { VOCI, linguaDi, dati } from './glossario.js';
 import { opzioniProgetto, giornoDi } from './diario.js';
+import { t } from '../lingua.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const md = t => esc(t).replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -88,14 +89,14 @@ export function contiDiario(codice, progetto) {
   const c = conti(codice, progetto, { memoria: {} });
   return c.totale ? c : null;
 }
-const dataBreve = g => { const m = /^\d{4}-(\d\d)-(\d\d)$/.exec(g || ''); return m ? `${+m[2]}/${+m[1]}` : ''; };
+const dataBreve = g => { const m = /^\d{4}-(\d\d)-(\d\d)$/.exec(g || ''); return m ? t('discussione.data-breve', { g: +m[2], m: +m[1] }) : ''; };
 // il testo dello stato, così come lo legge lo studente
 export function testoStato(x) {
-  if (x.stato === 'agente') return 'cambiata mentre lavorava l\'agente · mai spiegata';
-  if (x.stato === 'mai') return 'mai spiegata';
-  if (x.stato === 'cambiata') return 'cambiata dopo l\'ultima volta che l\'hai spiegata';
-  if (x.stato === 'rivedere') return `da rivedere · ${x.spiegata.saltati === 1 ? 'hai saltato un punto' : `hai saltato ${x.spiegata.saltati} punti`}`;
-  return `spiegata il ${dataBreve(x.spiegata?.g)}`;
+  if (x.stato === 'agente') return t('discussione.stato-agente');
+  if (x.stato === 'mai') return t('discussione.stato-mai');
+  if (x.stato === 'cambiata') return t('discussione.stato-cambiata');
+  if (x.stato === 'rivedere') return t('discussione.stato-rivedere', { n: x.spiegata.saltati });
+  return t('discussione.stato-spiegata', { data: dataBreve(x.spiegata?.g) });
 }
 
 /* ---------- segnare ---------- */
@@ -237,25 +238,25 @@ export function punti(trovata, righe, lingua) {
   const corpo = c.slice(trovata.riga - 1, trovata.a).join('\n').replace(new RegExp(`(^|[^\\w$])${escRe(nome)}\\s*\\(`), '$1(');
   const out = [];
   const par = parametri(trovata.firma, nome, lingua);
-  out.push(par.length ? { tipo: 'parametri', nomi: par, breve: 'i parametri', testo: `i parametri (${par.map(n => '`' + n + '`').join(', ')})` }
-    : { tipo: 'parametri', nomi: [], breve: 'che non riceve niente', testo: 'che non riceve niente' });
+  out.push(par.length ? { tipo: 'parametri', nomi: par, breve: t('discussione.punto-parametri-breve'), testo: t('discussione.punto-parametri', { nomi: par.map(n => '`' + n + '`').join(', ') }) }
+    : { tipo: 'parametri', nomi: [], breve: t('discussione.punto-niente'), testo: t('discussione.punto-niente') });
   const ret = restituisce(trovata.firma, nome, lingua, corpo); if (ret) out.push(ret);
   const chiamate = LIBRERIA.filter(v => v.l === lingua && v.f !== nome && new RegExp(`(^|[^\\w$])${escRe(v.f)}\\s*\\(`).test(corpo)).map(v => v.f);
-  const ch = [...new Set(chiamate)].slice(0, 2).map(f => ({ tipo: 'chiama', nome: f, breve: `che chiama \`${f}\``, testo: `che chiama \`${f}\`` }));
+  const ch = [...new Set(chiamate)].slice(0, 2).map(f => ({ tipo: 'chiama', nome: f, breve: t('discussione.punto-chiama', { nome: f }), testo: t('discussione.punto-chiama', { nome: f }) }));
   if (ch[0]) out.push(ch[0]);
-  if (/(^|[^\w$])(?:for|while)\b/.test(corpo)) out.push({ tipo: 'ciclo', breve: 'il ciclo', testo: 'che c\'è un ciclo' });
-  if (new RegExp(`(^|[^\\w$])${escRe(nome)}\\s*\\(`).test(corpo)) out.push({ tipo: 'ricorsione', breve: 'che è ricorsiva', testo: 'che è ricorsiva: chiama se stessa' });
+  if (/(^|[^\w$])(?:for|while)\b/.test(corpo)) out.push({ tipo: 'ciclo', breve: t('discussione.punto-ciclo-breve'), testo: t('discussione.punto-ciclo') });
+  if (new RegExp(`(^|[^\\w$])${escRe(nome)}\\s*\\(`).test(corpo)) out.push({ tipo: 'ricorsione', breve: t('discussione.punto-ricorsiva-breve'), testo: t('discussione.punto-ricorsiva') });
   if (ch[1]) out.push(ch[1]);
   return out.slice(0, 5);
 }
 // senza il nome (una trovata scritta a mano): l'ultimo identificatore prima della prima parentesi
 const nomeDa = (firma, lingua) => lingua === 'python' ? /def\s+([A-Za-z_]\w*)\s*\(/.exec(firma)?.[1] : /([A-Za-z_$][\w$]*)\s*\(/.exec(String(firma))?.[1];
 function restituisce(firma, nome, lingua, corpo) {
-  const NIENTE = { tipo: 'restituisce', niente: true, breve: 'cosa restituisce', testo: 'che non restituisce niente' };
+  const NIENTE = { tipo: 'restituisce', niente: true, breve: t('discussione.punto-restituisce-breve'), testo: t('discussione.punto-restituisce-niente') };
   if (lingua === 'python') {
     const ann = /\)\s*->\s*(.+)$/.exec(firma)?.[1]?.trim();
     if (ann === 'None') return NIENTE;
-    if (ann || /(^|[^\w])(?:return\s+[^\s;]|yield\b)/.test(corpo)) return { tipo: 'restituisce', breve: 'cosa restituisce', testo: 'che restituisce un valore' };
+    if (ann || /(^|[^\w])(?:return\s+[^\s;]|yield\b)/.test(corpo)) return { tipo: 'restituisce', breve: t('discussione.punto-restituisce-breve'), testo: t('discussione.punto-restituisce-valore') };
     return NIENTE;
   }
   const i = firma.search(new RegExp(`(^|[^\\w$])${escRe(nome)}\\s*\\(`));
@@ -264,7 +265,7 @@ function restituisce(firma, nome, lingua, corpo) {
   tipo = tipo.replace(/\s+/g, ' ').replace(/\s*\*\s*/g, ' *').replace(/^\s+|\s+$/g, '');
   if (!tipo) return null;   // un costruttore di Java: niente da restituire, niente punto
   if (tipo === 'void') return NIENTE;
-  return { tipo: 'restituisce', tipoRitorno: tipo, breve: 'cosa restituisce', testo: `che restituisce un \`${tipo}\`` };
+  return { tipo: 'restituisce', tipoRitorno: tipo, breve: t('discussione.punto-restituisce-breve'), testo: t('discussione.punto-restituisce-tipo', { tipo }) };
 }
 
 /* ---------- il controllo della spiegazione ---------- */
@@ -296,7 +297,7 @@ export async function leggiFile(invoca, id, rel) {
   const out = [];
   for (let da = 1; da <= MAX_RIGHE; da += 400) {
     const x = await Promise.resolve(invoca('progetto:righe', { id, rel, da, a: da + 399 })).catch(e => ({ errore: e?.message || String(e) }));
-    if (!x || x.errore || !Array.isArray(x.righe)) return { errore: x?.errore || 'il file non è arrivato' };
+    if (!x || x.errore || !Array.isArray(x.righe)) return { errore: x?.errore || t('discussione.file-non-arrivato') };
     if (Number(x.totale) > MAX_RIGHE) return { lungo: Number(x.totale) };
     out.push(...x.righe.map(r => String(r?.s ?? '')));
     if (!Number.isFinite(x.totale) || out.length >= x.totale || !x.righe.length) return { righe: out };
@@ -305,11 +306,11 @@ export async function leggiFile(invoca, id, rel) {
 }
 
 /* ---------- la scheda ---------- */
-const NOTA = 'Lode non sa chi ha scritto le righe: «mentre lavorava l\'agente» vuol dire che il file è cambiato durante un suo turno. Lode non ti spiega il codice: controlla solo che tu lo sappia spiegare.';
+const NOTA = t('discussione.nota');
 // il giudizio dopo [Ho finito] (puro: si prova in Node)
 export function htmlEsito({ presi, saltati }) {
-  const detto = presi.length ? `Hai detto: ${presi.map(p => md(p.breve)).join(', ')}.` : 'Non trovo nessuno dei punti che vedo nel codice.';
-  return `<p class="ld-ptesto">${saltati.length ? `${detto} Hai saltato: ${saltati.map(p => md(p.testo)).join(', ')}.` : 'Hai toccato tutti i punti che trovo nel codice.'}</p>`;
+  const detto = presi.length ? t('discussione.hai-detto', { punti: presi.map(p => md(p.breve)).join(', ') }) : t('discussione.nessun-punto');
+  return `<p class="ld-ptesto">${saltati.length ? `${detto} ${t('discussione.hai-saltato', { punti: saltati.map(p => md(p.testo)).join(', ') })}` : t('discussione.tutti-i-punti')}</p>`;
 }
 // il codice della funzione, solo dopo [Ho finito]: al massimo 60 righe, con i numeri
 export function htmlCodice(righe, t) {
@@ -319,23 +320,23 @@ export function htmlCodice(righe, t) {
   return `<pre class="codice">${r.join('')}${t.a > fine ? '<span class="r"><i></i>…</span>' : ''}</pre>`;
 }
 const htmlVoce = (x, i) => `<div class="voce" data-i="${i}"><div class="t"><span><code>${esc(x.nome)}</code> · ${esc(x.rel)}</span><span class="stato${x.stato === 'agente' ? ' forte' : ''}">${esc(testoStato(x))}</span></div>
-  <div class="az"><button type="button" class="btn small" data-so>La so spiegare</button><button type="button" class="btn small${x.stato === 'agente' || x.stato === 'rivedere' ? ' primary' : ''}" data-prova>Proviamo</button></div><div class="prova" hidden></div></div>`;
+  <div class="az"><button type="button" class="btn small" data-so>${t('discussione.la-so-spiegare')}</button><button type="button" class="btn small${x.stato === 'agente' || x.stato === 'rivedere' ? ' primary' : ''}" data-prova>${t('discussione.proviamo')}</button></div><div class="prova" hidden></div></div>`;
 // p: il progetto di progetto.js ({ id, nome }); T: gli strumenti di lode.js (scheda, mostraFatto, premi, entra); invoca: verso il
 // main. opz.dati ({ D, salva }) e opz.memoria per le prove
 export async function scheda(p, T, invoca, opz = {}) {
   const { D, salva } = opz.dati || await dati();
   const codice = D.codice ||= {}, nome = p.nome, memoria = opz.memoria || SESSIONE;
   const spento = opzioniProgetto(codice, nome).diario === false;
-  const s = T.scheda('ld-progetto ld-discussione', `<div class="capo"><span class="ld-lbl">Pronto per la discussione · ${esc(nome)}</span><span class="ld-tenue conto"></span></div>
-    <p class="ld-ptesto">Le funzioni cambiate da quando segui il progetto. Prima quelle cambiate mentre lavorava un agente e che non hai mai spiegato.</p>
-    <div class="lista"></div>${spento ? '<p class="ld-nota">Diario spento: non mi segno niente.</p>' : ''}<p class="ld-nota">${esc(NOTA)}</p>`);
-  s.setAttribute?.('aria-label', `Pronto per la discussione · ${nome}`);
+  const s = T.scheda('ld-progetto ld-discussione', `<div class="capo"><span class="ld-lbl">${t('discussione.titolo')} · ${esc(nome)}</span><span class="ld-tenue conto"></span></div>
+    <p class="ld-ptesto">${t('discussione.intro')}</p>
+    <div class="lista"></div>${spento ? `<p class="ld-nota">${t('discussione.diario-spento')}</p>` : ''}<p class="ld-nota">${esc(NOTA)}</p>`);
+  s.setAttribute?.('aria-label', `${t('discussione.titolo')} · ${nome}`);
   const premi = async b => { try { await T.premi?.(b); } catch { } };
   const salvaSe = scritto => { if (scritto) salva?.(); };
   const disegna = () => {
     const l = elenco(codice, nome, { memoria }), c = conti(codice, nome, { memoria }), box = s.querySelector('.lista');
-    s.querySelector('.conto').textContent = c.totale ? `Spiegate: ${c.spiegate} su ${c.totale}` : '';
-    box.innerHTML = l.length ? l.map(htmlVoce).join('') : `<p class="ld-ptesto">Non vedo funzioni cambiate in ${esc(nome)} da quando lo segui. Quando cambiano, le trovi qui.</p>`;
+    s.querySelector('.conto').textContent = c.totale ? t('discussione.spiegate', { spiegate: c.spiegate, totale: c.totale }) : '';
+    box.innerHTML = l.length ? l.map(htmlVoce).join('') : `<p class="ld-ptesto">${t('discussione.nessuna-funzione', { nome: esc(nome) })}</p>`;
     box.querySelectorAll('.voce').forEach(el => {
       const x = l[+el.dataset.i];
       el.querySelector('[data-so]').addEventListener('click', async e => { const b = e.currentTarget; if (b.disabled) return; b.disabled = true; await premi(b); salvaSe(segna(codice, nome, x.chiave, 'so', 0, Date.now(), memoria)); disegna(); });
@@ -348,33 +349,33 @@ export async function scheda(p, T, invoca, opz = {}) {
     box.hidden = false; az.hidden = true;
     const dici = h => { box.innerHTML = h; T.entra?.(box, { dy: 4, blur: 4, ms: 320 }); };
     const lingua = linguaDi(x.rel);
-    if (!lingua) return dici('<p class="ld-ptesto">Per questa lingua non so controllare: segnala tu se la sai spiegare.</p><div class="az"><button type="button" class="btn small" data-so>La so spiegare</button></div>'), box.querySelector('[data-so]').addEventListener('click', () => { salvaSe(segna(codice, nome, x.chiave, 'so', 0, Date.now(), memoria)); disegna(); });
-    dici('<p class="ld-nota">Leggo il file…</p>');
+    if (!lingua) return dici(`<p class="ld-ptesto">${t('discussione.lingua-sconosciuta')}</p><div class="az"><button type="button" class="btn small" data-so>${t('discussione.la-so-spiegare')}</button></div>`), box.querySelector('[data-so]').addEventListener('click', () => { salvaSe(segna(codice, nome, x.chiave, 'so', 0, Date.now(), memoria)); disegna(); });
+    dici(`<p class="ld-nota">${t('discussione.leggo-il-file')}</p>`);
     const f = await leggiFile(invoca, p.id, x.rel);
-    if (f.lungo) return dici(`<p class="ld-ptesto">${esc(x.rel)} ha ${f.lungo} righe: oltre 2000 non lo leggo. Segnala tu se la sai spiegare.</p>`), az.hidden = false;
-    if (f.errore) return dici(`<p class="ld-ptesto">Non riesco a leggere ${esc(x.rel)}: ${esc(f.errore)}</p>`), az.hidden = false;
-    const t = trova(f.righe, x.nome, lingua);
-    if (!t) {
-      dici(`<p class="ld-ptesto">Non trovo più <code>${esc(x.nome)}</code> in ${esc(x.rel)}: forse l'hai rinominata o tolta.</p><div class="az"><button type="button" class="btn small" data-togli>Togli dall'elenco</button></div>`);
+    if (f.lungo) return dici(`<p class="ld-ptesto">${t('discussione.file-lungo', { file: esc(x.rel), n: f.lungo })}</p>`), az.hidden = false;
+    if (f.errore) return dici(`<p class="ld-ptesto">${t('discussione.non-riesco-leggere', { file: esc(x.rel), errore: esc(f.errore) })}</p>`), az.hidden = false;
+    const tr = trova(f.righe, x.nome, lingua);
+    if (!tr) {
+      dici(`<p class="ld-ptesto">${t('discussione.non-trovo-piu', { nome: esc(x.nome), file: esc(x.rel) })}</p><div class="az"><button type="button" class="btn small" data-togli>${t('discussione.togli')}</button></div>`);
       box.querySelector('[data-togli]').addEventListener('click', () => { salvaSe(segna(codice, nome, x.chiave, 'tolta', 0, Date.now(), memoria)); disegna(); });
       return;
     }
-    dici(`<p class="ld-ptesto"><code>${esc(t.firma)}</code> · ${esc(x.rel)}, riga ${t.riga}. Spiegala come alla discussione: cosa riceve, cosa restituisce, come funziona. Il codice te lo mostro dopo.</p>
-      <textarea rows="5" aria-label="La tua spiegazione di ${esc(x.nome)}" spellcheck="true"></textarea><div class="az"><button type="button" class="btn small primary" data-finito>Ho finito</button></div>`);
+    dici(`<p class="ld-ptesto">${t('discussione.spiegala', { firma: esc(tr.firma), file: esc(x.rel), riga: tr.riga })}</p>
+      <textarea rows="5" aria-label="${t('discussione.aria-spiegazione', { nome: esc(x.nome) })}" spellcheck="true"></textarea><div class="az"><button type="button" class="btn small primary" data-finito>${t('discussione.ho-finito')}</button></div>`);
     const area = box.querySelector('textarea'); area.focus?.({ preventScroll: true });
     area.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !e.isComposing) { e.preventDefault(); box.querySelector('[data-finito]')?.click(); } });   // ⌘↩ o Ctrl+↩
     box.querySelector('[data-finito]').addEventListener('click', async e => {
       const b = e.currentTarget; if (b.disabled) return;
       if (!area.value.trim()) { area.focus?.(); return; }
       b.disabled = true; await premi(b);
-      const lista = punti(t, f.righe, lingua), esito = controlla(lista, area.value);
+      const lista = punti(tr, f.righe, lingua), esito = controlla(lista, area.value);
       area.readOnly = true; b.parentElement.remove();
       const dopo = document.createElement('div'); dopo.className = 'dopo';
-      dopo.innerHTML = `${htmlEsito(esito)}${htmlCodice(f.righe, t)}<p class="ld-nota">I punti li trova il codice, alla buona: non dice se la spiegazione è giusta.</p>`;
+      dopo.innerHTML = `${htmlEsito(esito)}${htmlCodice(f.righe, tr)}<p class="ld-nota">${t('discussione.alla-buona')}</p>`;
       box.append(dopo); T.entra?.(dopo, { dy: 4, blur: 4, ms: 360 });
       salvaSe(segna(codice, nome, x.chiave, 'provata', esito.saltati.length, Date.now(), memoria));
-      if (stato) stato.textContent = esito.saltati.length ? `da rivedere · ${esito.saltati.length === 1 ? 'hai saltato un punto' : `hai saltato ${esito.saltati.length} punti`}` : 'spiegata adesso';
-      const c = conti(codice, nome, { memoria }); s.querySelector('.conto').textContent = c.totale ? `Spiegate: ${c.spiegate} su ${c.totale}` : '';
+      if (stato) stato.textContent = esito.saltati.length ? t('discussione.stato-rivedere', { n: esito.saltati.length }) : t('discussione.spiegata-adesso');
+      const c = conti(codice, nome, { memoria }); s.querySelector('.conto').textContent = c.totale ? t('discussione.spiegate', { spiegate: c.spiegate, totale: c.totale }) : '';
     });
   };
   disegna();
