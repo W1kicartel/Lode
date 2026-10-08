@@ -13,7 +13,7 @@
 // I numeri detti a voce («vingt-huit», «quatre-vingt-dix», «septante») diventano cifre solo qui dentro: numeri non si
 // esporta, perché le formule dettate (js/formule.js) valgono solo in italiano e in inglese (docs/LINGUE.md).
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta, conVoglio } from './comune.js';
 
 const GIORNI = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 const MESI = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout', 'septembre', 'octobre', 'novembre', 'decembre'];
@@ -140,7 +140,13 @@ const apostrofi = s => s.replace(/[’`]/g, "'").replace(/\bj(?:ai| ai)\b/gi, "j
 // chiant», «oral demain, stressé», «révise jamais assez», «jouer au foot ce soir»
 const COMMENTO = /^(?:c'est|c est|c'etait|ca|est|me|m'|trop|jamais|pas|plus|quand|comment|pourquoi|demain|aujourd'hui|ce soir|ce matin|cette semaine|(?:au|a la|a l'|aux|avec|chez) )/;
 
-export function interpreta(frase) {
+// «voglio fare…» e la guida passo passo (conVoglio in js/comandi/comune.js): « je veux faire un site », « comment faire pour monter une vidéo », « aide-moi à écrire mon mémoire » ; « reprendre le guide ».
+// I comandi di sempre vincono; la frase che non è un altro comando diventa { tipo: 'voglio', q }
+const VOGLIO = /^(?:je veux|je voudrais|j'aimerais|je dois|comment (?:je fais|faire|on fait) pour|comment (?:puis-je|je peux|faire)|aide-moi (?:a|à)|aide moi (?:a|à))\s+(?:faire\s+)?(?<q>.+)$/i;
+const GUIDA = /^(?:(?:reprendre|reprends|continuer|continue|rouvrir|rouvre|retour au)(?: le| mon)? guide(?: pas à pas| pas a pas)?|(?:mon )?guide pas (?:à|a) pas|o[uù] j'en (?:étais|etais))$/;
+export function interpreta(frase) { return conVoglio(frase, interpretaBase, { VOGLIO, GUIDA }); }
+
+function interpretaBase(frase) {
   const grezzo0 = apostrofi(String(frase || '').trim()); if (!grezzo0) return null;
   // informatica: «explique-moi l'erreur», anche con l'errore incollato dopo. Solo se dopo «erreur» non c'è niente, ci sono i
   // due punti o un a capo, o c'è davvero un errore del compilatore: «explique-moi l'erreur relative» resta all'AI

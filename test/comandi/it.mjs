@@ -5,6 +5,21 @@ import { E, prossimo, giornoDetto } from './aiuto.mjs';
 
 const ERR = "lista.c:42:5: error: 'nodo' undeclared";
 export const CASI = [
+  // «voglio fare…» e la guida passo passo (conVoglio in js/comandi/comune.js): i comandi di sempre restano loro
+  ['voglio fare un sito', { tipo: 'voglio', q: 'un sito' }],
+  ['Voglio fare una presentazione.', { tipo: 'voglio', q: 'una presentazione' }],
+  ['come faccio a montare un video?', { tipo: 'voglio', q: 'montare un video' }],
+  ['aiutami a scrivere la tesi', { tipo: 'voglio', q: 'scrivere la tesi' }],
+  ["devo fare un'analisi dei dati", { tipo: 'voglio', q: "un'analisi dei dati" }],
+  ['vorrei imparare python', { tipo: 'voglio', q: 'imparare python' }],
+  ['voglio fare un grafico della media', { tipo: 'voglio', q: 'un grafico della media' }],
+  ['riprendi la guida', { tipo: 'guida' }],
+  ['continua la guida', { tipo: 'guida' }],
+  ['a che passo ero?', { tipo: 'guida' }],
+  ['voglio fare la prova generale', { tipo: 'prova', esame: null, nomeDetto: '' }],
+  ['voglio ripassare', { tipo: 'ripasso', esame: null, nomeDetto: '' }],
+  ['voglio spiegare', { tipo: 'spiego', q: '' }],
+  ['voglio fare un quiz', { tipo: 'crocette', esame: null, nomeDetto: '', simulazione: false }],
   // informatica: l'errore incollato e «Segui il progetto» (js/codice/progetto.js)
   ["spiegami l'errore", { tipo: 'errore', testo: null }],
   ['Spiegami questo errore.', { tipo: 'errore', testo: null }],

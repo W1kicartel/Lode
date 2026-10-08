@@ -10,7 +10,7 @@
 // I numeri a parole («vinte e oito») diventano cifre solo qui dentro: numeri() non si esporta, perché le formule dettate
 // in portoghese restano come sono (docs/LINGUE.md, «La voce e le formule»).
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta, VOTO_CIFRE, VOTO_SOLO, numeroVoto, obiettivoDetto } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta, VOTO_CIFRE, VOTO_SOLO, numeroVoto, obiettivoDetto, conVoglio } from './comune.js';
 
 const DIAS = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
 const MESES = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -127,7 +127,13 @@ function interpretaProgetto(testo) {
   return null;
 }
 
-export function interpreta(frase) {
+// «voglio fare…» e la guida passo passo (conVoglio in js/comandi/comune.js): «quero fazer um site», «como faço para editar um vídeo», «me ajuda a escrever o TCC»; «retomar o guia».
+// I comandi di sempre vincono; la frase che non è un altro comando diventa { tipo: 'voglio', q }
+const VOGLIO = /^(?:(?:eu )?quero|queria|preciso|tenho que|como (?:eu )?(?:fa[cç]o|posso)(?: para)?|como se faz(?: para)?|me ajuda a|ajuda-me a|me ajude a)\s+(?:fazer\s+)?(?<q>.+)$/i;
+const GUIDA = /^(?:(?:retomar|retoma|continuar|continua|reabrir|reabre|voltar ao|volta ao)(?: o| meu)? guia(?: passo a passo)?|(?:meu )?guia passo a passo|onde (?:eu )?parei)$/;
+export function interpreta(frase) { return conVoglio(frase, interpretaBase, { VOGLIO, GUIDA }); }
+
+function interpretaBase(frase) {
   const grezzo0 = String(frase || '').normalize('NFC').trim(); if (!grezzo0) return null;
   // informatica: «explica o erro», anche con l'errore incollato dopo. Solo se dopo «erro» non c'è niente, ci sono i due punti
   // o un a capo, o c'è davvero un errore del compilatore: «o que significa erro padrão» resta all'AI

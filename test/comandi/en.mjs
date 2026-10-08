@@ -5,6 +5,15 @@ import { E, prossimo, giornoDetto } from './aiuto.mjs';
 
 const ERR = "list.c:42:5: error: 'node' undeclared";
 export const CASI = [
+  // «voglio fare…» e la guida passo passo (conVoglio in js/comandi/comune.js): i comandi di sempre restano loro
+  ['I want to make a website', { tipo: 'voglio', q: 'a website' }],
+  ['how do I edit a video?', { tipo: 'voglio', q: 'edit a video' }],
+  ['help me write my thesis', { tipo: 'voglio', q: 'write my thesis' }],
+  ['I need to do a data analysis', { tipo: 'voglio', q: 'a data analysis' }],
+  ['resume the guide', { tipo: 'guida' }],
+  ['continue my guide', { tipo: 'guida' }],
+  ['where was I?', { tipo: 'guida' }],
+  ['I want to review', { tipo: 'ripasso', esame: null, nomeDetto: '' }],
   ['explain the error', { tipo: 'errore', testo: null }],
   ['Explain this error.', { tipo: 'errore', testo: null }],
   ['what does this error mean?', { tipo: 'errore', testo: null }],

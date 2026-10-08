@@ -7,7 +7,7 @@
 // barra è in un'altra lingua: le frasi italiane si capiscono sempre.
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
 import { interpreta as interpretaProgetto } from '../codice/progetto.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, linguaDetta, linguaIgnota, linguaIgnotaDetta } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, linguaDetta, linguaIgnota, linguaIgnotaDetta, conVoglio } from './comune.js';
 import COMUNE from '../lingue/it/comune.js';
 
 const GIORNI = COMUNE['comune.giorni'], MESI = COMUNE['comune.mesi'];
@@ -62,7 +62,13 @@ for (const [w, v] of Object.entries({ ...PAROLE_NUM })) if (v < 100) PAROLE_NUM[
 const SENTITO = { guale: 'uguale', priso: 'preso', presso: 'preso', fucus: 'focus', focos: 'focus', ripasa: 'ripassa' };
 export const numeri = t => t.replace(/\b[a-zà]+\b/g, w => SENTITO[w.toLowerCase()] || ((w in PAROLE_NUM && !/^(un|una)$/.test(w)) ? String(PAROLE_NUM[w]) : w));
 
-export function interpreta(frase) {
+// «voglio fare…» e la guida passo passo (conVoglio in js/comandi/comune.js): «voglio fare un sito», «come faccio a montare un video», «aiutami a scrivere la tesi»; «riprendi la guida».
+// I comandi di sempre vincono; la frase che non è un altro comando diventa { tipo: 'voglio', q }
+const VOGLIO = /^(?:(?:io )?voglio|vorrei|devo|come (?:faccio|si fa) (?:a|ad)|come (?:posso|potrei)|aiutami (?:a|ad)|mi aiuti (?:a|ad))\s+(?:fare\s+)?(?<q>.+)$/i;
+const GUIDA = /^(?:(?:riprendi|continua|riapri|torna a|torna alla)(?: la)? (?:mia )?guida(?: passo passo)?|(?:la )?(?:mia )?guida passo passo|a che passo ero)$/;
+export function interpreta(frase) { return conVoglio(frase, interpretaBase, { VOGLIO, GUIDA }); }
+
+function interpretaBase(frase) {
   const grezzo0 = String(frase || '').trim(); if (!grezzo0) return null;
   // informatica. «spiegami l'errore», anche con l'errore incollato dopo (su più righe: qui le righe restano com'erano).
   // Solo se dopo «errore» non c'è niente, ci sono i due punti o un a capo, o c'è davvero un errore del compilatore:
