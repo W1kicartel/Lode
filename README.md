@@ -47,6 +47,7 @@ Drag a file onto the pill, even when it's closed: it opens up and asks *what sho
 - **Spaced repetition** (SM-2): hard cards come back tomorrow, easy ones in weeks.
 - **Your cards in Anki too.** Write “export to anki” (or “export my calculus 2 cards to anki”) and Lode prepares a file with your review cards and the definitions from your lectures, without duplicates: one deck per course (`Lode::Calculus 2`), with formulas, code and bold text. In the app the file goes into the `Anki` folder of your vault; in the browser it downloads. In Anki: **File › Import**, choose the file and **Basic** as the note type, once for all courses. If you import it again, Anki updates the cards it already has instead of doubling them.
 - **Review in your pocket.** Write “pocket review” and Lode puts tomorrow's cards (20 at most, overdue ones first) in a note in your vault. On your phone you open it in Obsidian: tap “Answer” to see it and tick “knew it” or “didn't know”. When the note comes back to the computer, Lode records the review and rewrites it with the new cards. With “pocket review every evening” it rewrites it by itself after 7 pm. Lode doesn't use the network: the note travels with the service you already use (iCloud, Obsidian Sync, Syncthing). If an old copy of the note arrives, Lode records nothing: never the same card twice. Desktop app only.
+- **“I want to…”, step by step.** Write “I want to make a website”, “how do I edit a video” or “help me write my thesis”. Lode looks for the apps you need on your computer and shows them to you: they open only when you choose them. Then it guides you one step at a time (“Done, next”, “I can’t do it”, “Back”, “Stop”) until the end. Your AI writes the plan, if you have one; otherwise Lode has its own recipes for theses, websites, programs, presentations, videos, data and exams. The list of steps stays in the vault and “resume the guide” picks up where you left off. In coding steps, if you have Claude Code, “Do it with Claude Code” opens a real terminal in the folder you choose, with the text you confirmed: it uses your subscription, no key.
 - **Oral quiz:** an oral-exam professor who asks one question at a time, corrects you and at the end gives you an honest grade.
 - **Grades and maths:** weighted average, “what do I need for 110”, “what if I get 30 in calculus”, hours to study today to be ready for the exam. In the Italian system also the *base di laurea*, the starting point of the final degree mark. Lode supports the grading systems of Italy, Spain, France, Germany, Portugal, Brazil, the United Kingdom and the United States: see [Languages](#languages).
 - **Lecture transcripts to pass to classmates:** an `.md` for Obsidian and an `.html` page that opens on any phone, with the formulas rendered.
@@ -391,6 +392,8 @@ Lode has no server and doesn't train models: **its memory is your vault**.
 ```bash
 node --experimental-vm-modules test/unita.mjs
 node test/codice.mjs
+node test/guida.mjs
+node test/app-utili.mjs
 node test/verifica-c.mjs
 node --experimental-vm-modules test/progetto.mjs
 node test/errori.mjs
@@ -467,6 +470,7 @@ node test/sync-sim/fuzz.mjs --motore test/sync-sim/motore-v2.mjs --giri 1000 --s
 | `desktop/voce.mjs`, `desktop/voce-mac/` | `lode-voce`: Parakeet v3 via FluidAudio |
 | `desktop/ascolta.mjs`, `desktop/ascolta-mac/` | `lode-ascolta`: the Mac's audio for “Lecture from the computer” (CoreAudio process tap, macOS 14.2+) |
 | `desktop/agenti.mjs`, `desktop/agenti-collegamenti.mjs` | the bridge with coding agents: local server, events, warnings, connections to 10 agents |
+| `js/guida.js`, `desktop/app-utili.mjs` | “I want to…”: recipes, the AI plan checked, the apps on the computer and the terminal with Claude Code |
 | `desktop/moodle.mjs` | Read-only Moodle: login like the official app (SSO or password), courses, files, deadlines |
 | `js/programma.js`, `js/crocette.js`, `js/computer.js` | the exam syllabus (map and plan), the multiple-choice quiz, the computer's audio |
 | `js/temi.js` | past papers: the paper split into exercises, today's exercise on the plan's topics, the intervals after the result |

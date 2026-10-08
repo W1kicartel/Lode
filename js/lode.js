@@ -3,7 +3,7 @@
 // «Chiedi o scrivi un comando…». Si parla tenendo premuto ⌥ Spazio. I file trascinati diventano carte del ripasso.
 // Senza AI capisce i comandi in italiano (comandi.js); con il cervello locale (gratis) o la tua AI preferita spiega, crea carte e interroga come all'orale.
 import { inverti, datiIllegibili, piuGiorni, norm, D, DESKTOP, lezioneOra, prossimaLezione, daGiocare, ricorda, aggiungiOrario, lezioni, RISPOSTE, aggiungiCarta, aggiungiEsame, cfuFatti, dataBreve, dataLunga, daFare, daRipassare, esame, esc, fatti, media, minuti, num, oggi, ore, piano, prossimi, prossimoIntervallo, registraVoto, rispondi, salva, serie, serve, simula, sostituisci, traQuanto, trovaEsame, intervalloTesto, giorniTra, definizioni } from './dati.js';
-import { t, elenco, numero, LINGUE, lingua as linguaOra, usa, imposta } from './lingua.js';
+import { t, tIn, elenco, numero, LINGUE, lingua as linguaOra, usa, imposta } from './lingua.js';
 import { t as tn } from './lingua.js';   // t() dove una variabile locale si chiama già t (arrivaTurno, schedaTurno, piedeSync, schedaNote)
 import { numeroCorto, oraBreve } from './parole.js';   // numeri e ore nella forma della lingua
 import { RIDOTTO, attendi, comprimi, conta, dopo, entra, h, lineare, morbido, ogni, premi, tween } from './motore.js';
@@ -40,6 +40,7 @@ import { ERRORI } from './codice/modelli.js';
 import * as ER from './errori.js';
 import * as TS from './sync-testi.js';
 import * as LB from './libretto.js';
+import * as GU from './guida.js';
 const BRIDGE = DESKTOP ? window.lodeDesktop : null;
 
 const segnala = (evento, x = {}) => dispatchEvent(new CustomEvent('lode', { detail: { evento, ...x } }));
@@ -1146,6 +1147,7 @@ async function accettaProposta() {
   if (p.tipo === 'orale') return avviaOrale(p.esame);
   if (p.tipo === 'moodle') return schedaMoodle('novita');
   if (p.tipo === 'agente') return schedaTurno(p.turno);
+  if (p.tipo === 'guida') return riprendiGuida();
   if (p.tipo === 'programma') { const a = p.esame?.programma?.argomenti?.find(x => x.id === p.argomento); return a && AI.attiva() ? avviaOraleProgramma(p.esame, [a], { max: 2 }) : schedaProgramma({ esame: p.esame }); }
   if (p.tipo === 'focus') return avviaFocus({ esameId: p.esame?.id });
   if (p.tipo === 'stelle') {
@@ -1747,6 +1749,8 @@ async function esegui(c) {
     case 'diario': return apriDiario(c.progetto);
     case 'diarioOpz': return opzioneDiario(c);
     case 'lingua': return cambiaLingua(c.codice);
+    case 'voglio': return avviaGuida(c.q);
+    case 'guida': return riprendiGuida();
   }
 }
 
@@ -2050,6 +2054,7 @@ async function collegaAgente(a, togli = false, { silenzioso = false } = {}) {
 function arrivaTurno(t) {
   if (!t?.id) return; turniAgenti.set(t.id, t);
   DC.registraTurno(D.codice, t); salva();   // per «Pronto per la discussione»: solo id, nome, agente, orari e file relativi
+  if (turnoGuida(t)) return;   // l'agente lanciato dalla guida passo passo ha finito: lo dice la guida
   if (!t.file.length && !t.comandi && !t.avvisi.length) return;   // un turno di sole parole
   if (A?.aperto || A?.proposta) return;
   const chi = NOMI_AGENTI[t.agente] || t.agente || tn('barra2.l-agente');
@@ -2073,6 +2078,146 @@ function schedaTurno(t) {
   if (A.turno) A.turno.dataset.sintesi = tn('barra2.sintesi-turno', { chi, n: t.file.length });
 }
 if (BRIDGE) { BRIDGE.su('agente:turno', arrivaTurno); BRIDGE.invoca('agenti:stato').then(st => st?.agenti?.forEach(a => { NOMI_AGENTI[a.id] = a.nome; })).catch(() => { }); }
+
+/* ---------- «Voglio fare…»: la guida passo passo (js/guida.js) ---------- */
+// «voglio fare un sito» → le app utili trovate sul computer (desktop/app-utili.mjs: nomi e indici, mai percorsi), aperte solo
+// dopo il clic, poi un passo alla volta fino alla fine. Il piano lo scrive l'AI se c'è, se no la ricetta di Lode.
+// L'avanzamento sta in D.guida e in una nota del vault con la checklist; «riprendi la guida» (o la pillola) riprende.
+// Nei passi di codice, se nel PATH c'è claude (o codex, gemini), «Fallo con Claude Code» apre un terminale vero nella cartella
+// scelta, dopo la conferma del testo. Se la cartella è seguita («segui progetto»), la fine del turno dell'agente arriva qui
+const NOMI_CLI = { claude: 'Claude Code', codex: 'Codex', gemini: 'Gemini CLI' };
+let APP_GUIDA = null;
+const G = { cartella: null, attesa: null };   // la cartella scelta per l'agente (token del main) e l'agente che sta lavorando
+async function appGuida() {
+  if (!BRIDGE) return { app: [], agenti: [] };
+  try { const r = await BRIDGE.invoca('guida:app'); if (Array.isArray(r?.app)) APP_GUIDA = r; } catch (e) { console.warn('Lode: app della guida', e); }
+  return APP_GUIDA || { app: [], agenti: [] };
+}
+const notaGuida = g => `${NV().cartelle.progetti}/${GU.nomeCartella(g.titolo)}/${tIn(NV().lingua, 'guida.nota-file')}.md`;
+// la checklist nel vault (Progetti/<titolo>/Passo passo.md, dentro i segni %% lode:guida %%)
+async function scriviGuida(g = D.guida) {
+  if (!V.attivo || !g) return;
+  try { await V.nomiPronti(); await BRIDGE.invoca('vault:blocco', { file: notaGuida(g), id: 'guida', testo: GU.testoNota(g, NV().lingua), nuovo: GU.notaNuova(g) }); }
+  catch (e) { console.warn('Lode: la nota della guida', e.message); }
+}
+async function avviaGuida(q) {
+  modo('pensa', t('guida.preparo')); segnala('pensa');
+  const el = await appGuida(), nomiApp = el.app.map(a => a.nome);
+  const ricetta = GU.pianoDaRicetta(q, el.app);
+  let piano = ricetta, nota = ricetta.fonte === 'generico' ? t('guida.piano-generico') : t('guida.piano-ricetta');
+  if (AI.attiva()) {
+    try {
+      const x = GU.validaPiano(await AI.pianoGuida({ obiettivo: q, app: nomiApp, schema: GU.SCHEMA_PIANO }), nomiApp);
+      if (x) { piano = { ...x, titolo: x.titolo || ricetta.titolo, fonte: 'ai', ricetta: ricetta.ricetta, linguaggio: ricetta.linguaggio }; nota = t('guida.piano-ai', { motore: AI.nomeMotore() }); }
+      else nota = t('guida.piano-ripiego');
+    } catch (e) { console.warn('Lode: il piano della guida', e); nota = t('guida.piano-ripiego'); }
+  }
+  modo('riposo');
+  D.guida = GU.nuova(q, piano); salva(); scriviGuida();
+  return schedaAppGuida(nota);
+}
+// la prima scheda: «Per X ti servono: …», con «Apri» per ognuna e «Apri tutte»
+function schedaAppGuida(nota) {
+  const g = D.guida, el = APP_GUIDA?.app || [];
+  const trovate = g.app.map(n => el.find(a => a.nome === n)).filter(Boolean), apribili = trovate.filter(a => a.apribile);
+  const s = scheda('ld-guida', `<span class="ld-lbl">${esc(g.titolo)}</span>
+    <p>${trovate.length ? t('guida.serve-per', { cosa: esc(g.q) }) : t('guida.nessuna-app')}</p>
+    ${trovate.length ? `<ul class="ld-guida-app">${trovate.map(a => `<li><b>${esc(a.nome)}</b>${a.apribile ? `<button type="button" class="btn small" data-a="${a.i}">${t('guida.apri')}</button>` : ''}</li>`).join('')}</ul>` : ''}
+    <div class="az"><button type="button" class="btn primary" data-via>${t('guida.cominciamo')}</button>${apribili.length > 1 ? `<button type="button" class="btn" data-tutte>${t('guida.apri-tutte')}</button>` : ''}</div>
+    <p class="ld-nota">${esc(nota)}${V.attivo ? ' ' + t('guida.nel-vault', { nota: esc(notaGuida(g)) }) : ''}</p>`);
+  const apriUna = async b => {
+    const a = el.find(x => x.i === +b.dataset.a); if (!a || b.disabled) return; b.disabled = true;
+    let r; try { r = await BRIDGE.invoca('guida:apri', { i: a.i }); } catch (e) { r = { errore: e.message }; }
+    b.replaceWith(h('small', '', esc(r?.ok ? t('guida.aperta', { app: a.nome }) : t('guida.non-aperta', { app: a.nome }))));
+  };
+  s.querySelectorAll('[data-a]').forEach(b => b.addEventListener('click', () => apriUna(b)));
+  s.querySelector('[data-tutte]')?.addEventListener('click', async e => { e.currentTarget.disabled = true; for (const b of s.querySelectorAll('[data-a]')) await apriUna(b); });
+  s.querySelector('[data-via]').addEventListener('click', () => { nuovoTurno(); detto(A.turno, t('guida.cominciamo')); schedaPasso(); }, { once: true });
+  if (A.turno) A.turno.dataset.sintesi = g.titolo;
+  return s;
+}
+// un passo: «Passo n di N», titolo e spiegazione, «Fatto, avanti», «Non ci riesco», «Indietro», «Basta»
+function schedaPasso() {
+  const g = D.guida; if (!GU.aMeta(g)) return GU.finita(g) ? fineGuida() : rispostaFissa(t('guida.nessuna'));
+  const p = g.passi[g.i], tot = g.passi.length, agenti = p.codice && BRIDGE ? APP_GUIDA?.agenti || [] : [];
+  const s = scheda('ld-guida ld-passo', `<span class="ld-lbl">${t('guida.passo-di', { i: g.i + 1, tot })} · ${esc(g.titolo)}</span>
+    <div class="ld-guida-tacche" aria-hidden="true">${g.passi.map((_, k) => `<i class="${(g.fatti || []).includes(k) ? 'pieno' : ''}${k === g.i ? ' ora' : ''}"></i>`).join('')}</div>
+    <h3>${esc(p.titolo)}</h3><p>${esc(p.cosa)}</p>
+    ${p.app ? `<p class="ld-nota">${t('guida.ti-serve', { app: esc(p.app) })}</p>` : ''}
+    ${p.fattoQuando ? `<p class="ld-nota">${t('guida.fatto-quando', { quando: esc(p.fattoQuando) })}</p>` : ''}
+    <div class="ld-guida-aiuto"></div>
+    ${agenti.length ? `<div class="az">${agenti.map(a => `<button type="button" class="btn" data-ag="${esc(a)}">${t('guida.fallo-con', { agente: esc(NOMI_CLI[a] || a) })}</button>`).join('')}</div>` : ''}
+    <div class="az"><button type="button" class="btn primary" data-si>${t('guida.fatto-avanti')}</button><button type="button" class="btn" data-no>${t('guida.non-ci-riesco')}</button>${g.i ? `<button type="button" class="btn" data-in>${t('guida.indietro')}</button>` : ''}<button type="button" class="btn ld-piano" data-basta>${t('guida.basta')}</button></div>`);
+  s.setAttribute('aria-label', t('guida.passo-di', { i: g.i + 1, tot }));
+  const passa = (testo, f) => { if (D.guida?.id !== g.id) return; D.guida = f(D.guida); salva(); scriviGuida(); nuovoTurno(); detto(A.turno, testo); schedaPasso(); };
+  s.querySelector('[data-si]').addEventListener('click', () => passa(t('guida.fatto-avanti'), GU.avanti), { once: true });
+  s.querySelector('[data-in]')?.addEventListener('click', () => passa(t('guida.indietro'), GU.indietro), { once: true });
+  s.querySelector('[data-no]').addEventListener('click', e => { e.currentTarget.disabled = true; nonCiRiesco(s, g, p); });
+  s.querySelector('[data-basta]').addEventListener('click', () => { nuovoTurno(); detto(A.turno, t('guida.basta')); mostraFatto({ testo: t('guida.chiusa'), nota: t('guida.chiusa-nota'), sintesi: t('guida.chiusa') }); }, { once: true });
+  s.querySelectorAll('[data-ag]').forEach(b => b.addEventListener('click', () => falloConAgente(b.dataset.ag, p)));
+  if (A.turno) A.turno.dataset.sintesi = `${t('guida.passo-di', { i: g.i + 1, tot })} · ${p.titolo}`;
+  return s;
+}
+// «Non ci riesco»: con l'AI il passo spiegato meglio e diviso in sotto-passi; senza, l'aiuto della ricetta
+async function nonCiRiesco(s, g, p) {
+  const box = s.querySelector('.ld-guida-aiuto');
+  const ricetta = () => { box.innerHTML = `<span class="ld-lbl">${t('guida.un-aiuto')}</span><p>${esc(p.aiuto || elenco('guida.r-generico-4')[3])}</p>`; entra(box, { dy: 4, blur: 4, ms: 380 }); };
+  if (!AI.attiva()) return ricetta();
+  box.innerHTML = `<p class="ld-nota">${t('guida.ci-penso')}…</p>`;
+  try {
+    const x = GU.validaAiuto(await AI.aiutoPasso({ obiettivo: g.titolo, passo: p, schema: GU.SCHEMA_AIUTO }));
+    if (!x) return ricetta();
+    box.innerHTML = `${x.spiegazione ? `<p>${esc(x.spiegazione)}</p>` : ''}${x.sottopassi.length ? `<span class="ld-lbl">${t('guida.piu-piccolo')}</span><ol>${x.sottopassi.map(y => `<li>${esc(y)}</li>`).join('')}</ol>` : ''}`;
+    entra(box, { dy: 4, blur: 4, ms: 380 });
+  } catch (e) { console.warn('Lode: aiuto della guida', e); ricetta(); }
+}
+// «Fallo con Claude Code»: la cartella (una volta), poi il testo esatto, modificabile, con Conferma / Annulla
+async function falloConAgente(a, p) {
+  const nome = NOMI_CLI[a] || a;
+  nuovoTurno(); detto(A.turno, t('guida.fallo-con', { agente: nome }));
+  if (!G.cartella) {
+    const s = scheda('ld-guida', `<p>${t('guida.scegli-cartella')}</p><div class="az"><button type="button" class="btn primary" data-c>${t('guida.cartella')}</button></div>`);
+    await new Promise(fine => s.querySelector('[data-c]').addEventListener('click', fine, { once: true }));
+    let r; try { r = await BRIDGE.invoca('guida:cartella'); } catch (e) { r = { errore: e.message }; }
+    if (r?.annullato) return mostraFatto({ testo: t('barra1.annullato'), nota: t('barra1.niente-cambiato'), no: true });
+    if (!r?.token) return rispostaFissa(r?.errore || t('barra1.annullato'), { errore: true });
+    G.cartella = r;
+  }
+  const g = D.guida, testo = GU.testoAgente(g, p);
+  const card = schedaConferma({ titolo: t('guida.fallo-con', { agente: nome }), fuoco: false, nota: t('guida.nota-agente', { agente: nome }),
+    extra: `<p>${t('guida.testo-agente', { agente: esc(nome), cartella: esc(G.cartella.nome) })}</p><textarea class="ld-guida-testo" rows="6" aria-label="${t('guida.testo-agente', { agente: esc(nome), cartella: esc(G.cartella.nome) })}">${esc(testo)}</textarea>` });
+  return attendiDecisione(card, async c => {
+    let r; try { r = await BRIDGE.invoca('guida:terminale', { token: G.cartella.token, agente: a, testo: c.querySelector('textarea').value }); } catch (e) { r = { errore: e.message }; }
+    if (!r?.ok) { await mostraFatto({ testo: t('guida.agente-errore', { errore: r?.errore || '' }), no: true }, c); return { esito: 'errore' }; }
+    G.attesa = { agente: a, nome, progetto: G.cartella.seguita || null, guida: g.id };
+    await mostraFatto({ testo: t('guida.agente-aperto', { agente: nome }), nota: G.cartella.seguita ? t('guida.agente-segue', { agente: nome }) : '' }, c);
+    return { ok: true };
+  });
+}
+// la fine del turno dell'agente nella cartella seguita (agente:turno di desktop/agenti.mjs): «Claude ha finito: …»
+function turnoGuida(x) {
+  const w = G.attesa; if (!w?.progetto || x?.id !== w.progetto || D.guida?.id !== w.guida) return false;
+  G.attesa = null;
+  const testo = t('guida.agente-finito', { agente: w.nome });
+  if (A.aperto) { nuovoTurno(); rispostaFissa(testo); schedaPasso(); }
+  else mostraProposta({ tipo: 'guida', titolo: D.guida.titolo, testo, bottone: t('guida.proposta-bottone'), corso: D.guida.titolo });
+  return true;
+}
+async function riprendiGuida() {
+  if (!GU.aMeta(D.guida)) return rispostaFissa(t('guida.nessuna'));
+  await appGuida(); rispostaFissa(t('guida.ripresa')); return schedaPasso();
+}
+// la chiusura: la nota spuntata tutta, il segno di spunta della barra e la mascotte che festeggia (mostraFatto → «fatto»)
+async function fineGuida() {
+  const g = D.guida, n = g.passi.length;
+  D.guida = null; salva(); await scriviGuida(g);
+  return mostraFatto({ testo: t('guida.fine-titolo'), nota: t('guida.fine-testo', { titolo: g.titolo, n }), sintesi: t('guida.fine-titolo') });
+}
+// la pillola propone di riprendere una guida a metà (una volta per avvio, se non c'è altro da fare)
+function propostaGuida() {
+  const g = D.guida; if (!GU.aMeta(g)) return;
+  mostraProposta({ tipo: 'guida', titolo: t('guida.proposta-titolo', { titolo: g.titolo }), testo: t('guida.proposta-testo', { i: g.i + 1, tot: g.passi.length }), bottone: t('guida.proposta-bottone'), corso: g.titolo });
+}
 
 /* ---------- Ripasso in tasca (js/tasca.js) ---------- */
 // le carte di domani in In tasca.md, da fare sul telefono con Obsidian: quando la nota torna, le spunte diventano ripasso.
@@ -2969,6 +3114,7 @@ function collegaDesktop() {
 
 export function avvia() {
   A = nuovoStato(); costruisci(); collega();
+  setTimeout(propostaGuida, 25e3);   // una guida passo passo a metà: la pillola propone di riprenderla
   // «Cosa stampa?» e «Segui il progetto» usano gli attrezzi di questo file (scheda, molle, conferme)
   ST.collega({ scheda, segnala, entra, tween, dopo, rispostaFissa, errori: ERRORI,
     ricorda: (k, ok, q) => ricorda(k, ok, q, D.codice.memoria),   // SM-2 a parte: D.memoria è delle definizioni

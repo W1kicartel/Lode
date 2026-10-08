@@ -519,6 +519,20 @@ export async function leggiProgramma({ nome, testo }) {
 Da 4 a 30 argomenti. Solo quello che c'è scritto nel programma: niente testi consigliati, modalità d'esame, obiettivi, orari, prerequisiti.` + comeScritti(), String(testo).slice(0, 40000), SCHEMA_PROGRAMMA);
   return (r.argomenti || []).map(a => ({ t: String(a.titolo || '').trim(), sotto: (a.voci || []).map(x => String(x).trim()).filter(Boolean).slice(0, 12) })).filter(a => a.t).slice(0, 40);
 }
+// «Voglio fare…» (js/guida.js): il piano passo passo. Le app sono SOLO quelle dell'elenco passato (le trovate sul computer):
+// il codice controlla lo stesso (validaPiano), e se il JSON non va bene la barra usa la ricetta di Lode
+export async function pianoGuida({ obiettivo, app = [], schema }) {
+  return strutturato(`Sei l'assistente di ${chi()}. Vuole fare questo: «${obiettivo}». Dividi il lavoro in passi piccoli, da fare uno alla volta fino alla fine:
+- titolo: il nome del lavoro, da 2 a 8 parole;
+- app: le app utili per farlo, prese SOLO da questo elenco di app che ha sul computer (scrivi i nomi identici; nessuna, se non serve): ${app.length ? app.map(a => `«${a}»`).join(', ') : '(elenco vuoto)'};
+- passi: da 3 a 10. Per ognuno: titolo (da 2 a 6 parole), cosa (2-4 frasi semplici: cosa fare, concreto, dai del tu), app (facoltativa, una sola, dall'elenco), fattoQuando (quando il passo è finito, una frase corta che si può controllare), codice (true solo se nel passo si scrive o si cambia codice in una cartella).
+Niente gergo; se una cosa va installata, dillo nel passo. Nessun passo inutile.` + inLinguaJSON(), `Obiettivo: ${String(obiettivo).slice(0, 400)}`, schema, 'chat');
+}
+// «Non ci riesco»: lo stesso passo spiegato meglio, e diviso in sotto-passi se è grande
+export async function aiutoPasso({ obiettivo, passo, schema }) {
+  return strutturato(`Sei l'assistente di ${chi()}. Sta facendo «${obiettivo}» e si è bloccato al passo «${passo.titolo}»: ${passo.cosa}
+Spiegalo in modo più semplice (spiegazione: al massimo 5 frasi brevi, dai del tu, un esempio concreto se aiuta) e, se il passo è grande, dividilo in sotto-passi (sottopassi: da 2 a 6 azioni corte, nell'ordine; nessuno se non serve).` + inLinguaJSON(), `Passo: ${passo.titolo}`, schema, 'chat');
+}
 // il quiz a crocette (js/crocette.js): il modello scrive le domande, il codice tiene solo quelle che il materiale dimostra
 const SCHEMA_CROCETTE = { type: 'object', additionalProperties: false, required: ['domande'], properties: {
   domande: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['domanda', 'opzioni', 'giusta', 'citazione', 'spiegazione'], properties: {

@@ -80,6 +80,7 @@ const COMPOSTE = {
   'sistemi.mention.': 'js/sistemi.js e js/libretto.js, la mention francese',
   'sistemi.classe.': 'js/sistemi.js e js/libretto.js, la classe inglese',
   'desktop.progetto-esito-': 'desktop/progetto.mjs, K + tipo',
+  'guida.r-': 'js/guida.js, pianoDaRicetta: i passi delle ricette (guida.r-<ricetta>-<n>)',
   'vaultnomi.': "js/nomi.js, v('cartella-lezioni')…: il resto della chiave fra virgolette in nomi.js",
 };
 const codice = [...file('js/'), ...file('desktop/').filter(f => !f.includes('node_modules') && !f.startsWith('desktop/web/'))]

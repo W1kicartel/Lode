@@ -96,8 +96,8 @@ for (const [k, cattivo] of CATTIVI.filter(c => !/\n/.test(c)).entries()) {
   prova(`sh: il file del testo e lo script si cancellano («${cattivo}»)`, !existsSync(fileTesto) && !existsSync(script));
 }
 // Windows: solo il testo dello script (qui non c'è cmd.exe)
-const w = U.scriptTerminale({ piattaforma: 'win32', cartella: 'C:\\Users\\x\\lab 1 %USERNAME% & echo', fileTesto: "C:\\Temp\\l'x\\testo.txt", agente: 'claude' });
-prova('windows: .cmd con cd /d fra virgolette e % raddoppiato', w.estensione === '.cmd' && w.contenuto.includes('cd /d "C:\\Users\\x\\lab 1 %%USERNAME%% & echo" || exit /b 1'), w.contenuto);
+const w = U.scriptTerminale({ piattaforma: 'win32', cartella: 'D:\\Corsi\\lab 1 %USERNAME% & echo', fileTesto: "C:\\Temp\\l'x\\testo.txt", agente: 'claude' });
+prova('windows: .cmd con cd /d fra virgolette e % raddoppiato', w.estensione === '.cmd' && w.contenuto.includes('cd /d "D:\\Corsi\\lab 1 %%USERNAME%% & echo" || exit /b 1'), w.contenuto);
 prova('windows: il testo lo legge PowerShell da un file, con l\'apice raddoppiato', w.contenuto.includes("-LiteralPath 'C:\\Temp\\l''x\\testo.txt'") && w.contenuto.includes('& claude $t'));
 prova('windows: righe con a capo di Windows', w.contenuto.split('\r\n').length >= 4);
 prova('linux: .sh', U.scriptTerminale({ piattaforma: 'linux', cartella: '/a', fileTesto: '/b', agente: 'gemini' }).estensione === '.sh');

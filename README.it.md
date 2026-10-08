@@ -47,6 +47,7 @@ Trascina un file sulla pillola, anche chiusa: si allarga e ti chiede *cosa ne fa
 - **Ripasso a intervalli** (SM-2): le carte difficili tornano domani, le facili tra settimane.
 - **Le carte anche in Anki.** Scrivi «esporta per anki» (o «esporta le carte di analisi 2 per anki») e Lode prepara un file con le carte del ripasso e le definizioni delle lezioni, senza doppioni: un mazzo per corso (`Lode::Analisi 2`), con le formule, il codice e il grassetto. Nell'app il file va nella cartella `Anki` del vault, nel browser si scarica. In Anki: **File › Importa**, scegli il file e come tipo di nota **Basilare** (in inglese *Basic*), una volta sola per tutti i corsi. Se lo importi di nuovo, Anki aggiorna le carte che ha già invece di raddoppiarle.
 - **Il ripasso in tasca.** Scrivi «ripasso in tasca» e Lode mette le carte di domani (al massimo 20, prima quelle in ritardo) nella nota `In tasca.md` del vault. Sul telefono la apri in Obsidian: tocchi «Risposta» per vederla e spunti «sapevo» o «non sapevo». Quando la nota torna sul computer, Lode segna il ripasso e la riscrive con le carte nuove. Con «ripasso in tasca ogni sera» la riscrive da sola dopo le 19. Lode non usa la rete: la nota la porta il servizio che usi già (iCloud, Obsidian Sync, Syncthing). Se arriva una copia vecchia della nota, Lode non segna niente: mai due volte la stessa carta. Solo nell'app.
+- **«Voglio fare…», passo passo.** Scrivi «voglio fare un sito», «come faccio a montare un video» o «aiutami a scrivere la tesi». Lode cerca sul computer le app che servono e te le mostra: si aprono solo quando le scegli tu. Poi ti guida un passo alla volta («Fatto, avanti», «Non ci riesco», «Indietro», «Basta») fino alla fine. Il piano lo scrive la tua AI, se c'è; se no Lode ha le sue ricette per tesi, siti, programmi, presentazioni, video, dati ed esami. La lista dei passi resta nel vault e «riprendi la guida» riparte da dove eri. Nei passi di codice, se hai Claude Code, «Fallo con Claude Code» apre un terminale vero nella cartella che scegli, con il testo che hai confermato: usa il tuo abbonamento, nessuna chiave.
 - **Interrogazione:** un prof d'orale che fa una domanda alla volta, ti corregge e alla fine ti dà un voto onesto.
 - **Libretto e conti:** media ponderata, base di laurea, «quanto mi serve per 110», «se prendo 30 in analisi», ore da fare oggi per arrivare all'appello. Lode conosce anche i sistemi dei voti di Spagna, Francia, Germania, Portogallo, Brasile, Regno Unito e Stati Uniti: vedi [Lingue](#lingue).
 - **Sbobine da passare ai compagni:** un `.md` per Obsidian e una pagina `.html` che si apre su qualsiasi telefono, con le formule disegnate.
@@ -376,6 +377,8 @@ Lode non ha un server e non addestra modelli: **la sua memoria è il tuo vault**
 ```bash
 node --experimental-vm-modules test/unita.mjs
 node test/codice.mjs
+node test/guida.mjs
+node test/app-utili.mjs
 node test/verifica-c.mjs
 node --experimental-vm-modules test/progetto.mjs
 node test/errori.mjs
@@ -452,6 +455,7 @@ node test/sync-sim/fuzz.mjs --motore test/sync-sim/motore-v2.mjs --giri 1000 --s
 | `desktop/voce.mjs`, `desktop/voce-mac/` | `lode-voce`: Parakeet v3 via FluidAudio |
 | `desktop/ascolta.mjs`, `desktop/ascolta-mac/` | `lode-ascolta`: l'audio del Mac per la «Lezione dal computer» (process tap di CoreAudio, macOS 14.2+) |
 | `desktop/agenti.mjs`, `desktop/agenti-collegamenti.mjs` | il ponte con gli agenti di programmazione: server locale, eventi, avvisi, collegamenti a 10 agenti |
+| `js/guida.js`, `desktop/app-utili.mjs` | «Voglio fare…»: ricette, piano dell'AI controllato, le app del computer e il terminale con Claude Code |
 | `desktop/moodle.mjs` | Moodle in sola lettura: accesso come l'app ufficiale (SSO o password), corsi, file, scadenze |
 | `js/programma.js`, `js/crocette.js`, `js/computer.js` | il programma d'esame (mappa e piano), il quiz a crocette, l'audio del computer |
 | `js/temi.js` | i temi d'esame: il compito diviso in esercizi, l'esercizio di oggi sugli argomenti del piano, gli intervalli dopo l'esito |
