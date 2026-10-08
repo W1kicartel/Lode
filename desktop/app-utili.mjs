@@ -156,19 +156,20 @@ export function quotaCmd(s) {
 }
 
 // lo script che apre l'agente nella cartella. testo: il file con il testo (letto dallo script, mai scritto nello script)
-export function scriptTerminale({ piattaforma = process.platform, cartella, fileTesto, agente, script }) {
+// eseguibile: il percorso assoluto trovato nel PATH di Lode (il Terminale potrebbe avere un PATH diverso); senza, il nome
+export function scriptTerminale({ piattaforma = process.platform, cartella, fileTesto, agente, script, eseguibile = null }) {
   if (!(agente in AGENTI)) throw new Error('agente sconosciuto');
-  if (/[\0\r\n]/.test(cartella) || /[\0\r\n]/.test(fileTesto) || (script && /[\0\r\n]/.test(script))) throw new Error('percorso non valido');
+  if (/[\0\r\n]/.test(cartella) || /[\0\r\n]/.test(fileTesto) || (script && /[\0\r\n]/.test(script)) || (eseguibile && /[\0\r\n]/.test(eseguibile))) throw new Error('percorso non valido');
   if (piattaforma === 'win32') {
     // PowerShell legge il file e passa il testo come un argomento solo; cd /d cambia anche il disco
-    const ps = `$t = Get-Content -Raw -Encoding UTF8 -LiteralPath ${quotaPs(fileTesto)}; Remove-Item -LiteralPath ${quotaPs(fileTesto)} -ErrorAction SilentlyContinue; & ${agente} $t`;
+    const ps = `$t = Get-Content -Raw -Encoding UTF8 -LiteralPath ${quotaPs(fileTesto)}; Remove-Item -LiteralPath ${quotaPs(fileTesto)} -ErrorAction SilentlyContinue; & ${eseguibile ? quotaPs(eseguibile) : agente} $t`;
     if (/"/.test(ps)) throw new Error('percorso non valido');
     return { estensione: '.cmd', contenuto: ['@echo off', 'chcp 65001 >nul', `cd /d ${quotaCmd(cartella)} || exit /b 1`, `powershell -NoProfile -ExecutionPolicy Bypass -Command "${ps.replace(/%/g, '%%')}"`, ''].join('\r\n') };
   }
   // Mac (.command, aperto da Terminale) e Linux (.sh, aperto dal terminale che c'è): sh, con tutto fra apici singoli
   const righe = ['#!/bin/sh', `cd -- ${quotaSh(cartella)} || exit 1`, `T="$(cat -- ${quotaSh(fileTesto)})"`, `rm -f -- ${quotaSh(fileTesto)}`];
   if (script) righe.push(`rm -f -- ${quotaSh(script)}`);
-  righe.push(`${agente} "$T"`, '');
+  righe.push(`${eseguibile ? quotaSh(eseguibile) : agente} "$T"`, '');
   return { estensione: piattaforma === 'darwin' ? '.command' : '.sh', contenuto: righe.join('\n') };
 }
 // il comando che apre lo script in un terminale: { cmd, args } (Linux: il primo terminale che c'è)
@@ -236,7 +237,8 @@ export function registra({ ipcMain, dialog, shell, app, conf, t, env = process.e
     const qui = mkdtempSync(join(dir, 'g-')), fileTesto = join(qui, 'testo.txt');
     writeFileSync(fileTesto, testo, { mode: 0o600 });
     const piattaforma = process.platform, nome = join(qui, 'avvia' + (piattaforma === 'darwin' ? '.command' : piattaforma === 'win32' ? '.cmd' : '.sh'));
-    const s = scriptTerminale({ piattaforma, cartella, fileTesto, agente, script: piattaforma === 'win32' ? null : nome });
+    const eseguibile = lista().find(a => a.tipo === 'cli' && a.id === agente)?.percorso || null;
+    const s = scriptTerminale({ piattaforma, cartella, fileTesto, agente, eseguibile, script: piattaforma === 'win32' ? null : nome });
     writeFileSync(nome, s.contenuto, { mode: 0o700 }); chmodSync(nome, 0o700);
     const c = comandoTerminale({ piattaforma, script: nome }); if (!c) return { errore: t('desktop.guida-nessun-terminale') };
     if (finta) return segna({ azione: 'terminale', agente, cartella, script: nome, comando: c });

@@ -100,6 +100,10 @@ const w = U.scriptTerminale({ piattaforma: 'win32', cartella: 'D:\\Corsi\\lab 1 
 prova('windows: .cmd con cd /d fra virgolette e % raddoppiato', w.estensione === '.cmd' && w.contenuto.includes('cd /d "D:\\Corsi\\lab 1 %%USERNAME%% & echo" || exit /b 1'), w.contenuto);
 prova('windows: il testo lo legge PowerShell da un file, con l\'apice raddoppiato', w.contenuto.includes("-LiteralPath 'C:\\Temp\\l''x\\testo.txt'") && w.contenuto.includes('& claude $t'));
 prova('windows: righe con a capo di Windows', w.contenuto.split('\r\n').length >= 4);
+{ const e = U.scriptTerminale({ piattaforma: 'darwin', cartella: '/a', fileTesto: '/b', agente: 'claude', eseguibile: "/Users/x/my apps/cl'aude" });
+  prova('il percorso assoluto dell\'agente, fra apici', e.contenuto.includes(`'/Users/x/my apps/cl'\\''aude' "$T"`)); }
+{ const e = U.scriptTerminale({ piattaforma: 'win32', cartella: 'C:\\a', fileTesto: 'C:\\b', agente: 'claude', eseguibile: 'C:\\npm\\claude.cmd' });
+  prova('windows: il percorso assoluto dell\'agente', e.contenuto.includes("& 'C:\\npm\\claude.cmd' $t")); }
 prova('linux: .sh', U.scriptTerminale({ piattaforma: 'linux', cartella: '/a', fileTesto: '/b', agente: 'gemini' }).estensione === '.sh');
 prova('terminale: Mac = open -a Terminal', JSON.stringify(U.comandoTerminale({ piattaforma: 'darwin', script: '/s.command' })) === JSON.stringify({ cmd: 'open', args: ['-a', 'Terminal', '/s.command'] }));
 prova('terminale: Linux senza terminali = null', U.comandoTerminale({ piattaforma: 'linux', script: '/s.sh', PATH: join(T, 'vuoto') }) === null);
