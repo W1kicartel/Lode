@@ -15,6 +15,8 @@ const OUT = ['vault:info', 'vault:lezioni', 'vault:annota', 'vault:apri', 'vault
   // le versioni nuove di Lode (desktop/aggiorna.mjs): la barra chiede solo azioni, gli URL li decide il main
   'aggiorna:stato', 'aggiorna:imposta', 'aggiorna:riavvia', 'aggiorna:scarica',
   // la sincronizzazione fra i computer (desktop/sincronizza.mjs): la barra sceglie per indice, i percorsi li conosce solo il main
+  // «Voglio fare…» (desktop/app-utili.mjs): la barra sceglie le app per indice e la cartella per token, mai percorsi o comandi
+  'guida:app', 'guida:apri', 'guida:cartella', 'guida:terminale',
   'sync:stato', 'sync:cartelle', 'sync:attiva', 'sync:collega', 'sync:sblocca', 'sync:cifra', 'sync:dimentica', 'sync:toglila', 'sync:giro', 'sync:smetti', 'sync:importaAggiunte'];
 // il ponte solo nelle pagine di Lode, che arrivano da file:// (la cartella dell'app). Se una finestra finisse su un'altra
 // pagina (main.mjs lo impedisce già, restaLode), quella pagina riceverebbe lo stesso preload: così non trova il ponte
