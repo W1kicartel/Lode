@@ -11,6 +11,14 @@ export const ESAMI = [
 
 const ERR = "lista.c:42:5: error: 'no' undeclared";
 export const CASI = [
+  // «voglio fare…» e la guida passo passo (conVoglio in js/comandi/comune.js): i comandi di sempre restano loro
+  ['quero fazer um site', { tipo: 'voglio', q: 'um site' }],
+  ['como faço para editar um vídeo?', { tipo: 'voglio', q: 'editar um vídeo' }],
+  ['me ajuda a escrever o TCC', { tipo: 'voglio', q: 'escrever o TCC' }],
+  ['preciso fazer uma apresentação', { tipo: 'voglio', q: 'uma apresentação' }],
+  ['retomar o guia', { tipo: 'guida' }],
+  ['continua o guia', { tipo: 'guida' }],
+  ['onde parei?', { tipo: 'guida' }],
   // informatica: l'errore incollato e «Segui il progetto»
   ['explica o erro', { tipo: 'errore', testo: null }],
   ['Explica-me este erro.', { tipo: 'errore', testo: null }],

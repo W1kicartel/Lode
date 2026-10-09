@@ -6,7 +6,7 @@
 // riconoscitore della lingua scelta non capisce. Se la frase non è un comando ritorna null e (se c'è la chiave) ci pensa l'AI.
 // I voti restano quelli detti (28, 30 cum laude): come leggerli lo decide il sistema dei voti (js/sistemi.js), non qui.
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, hh, linguaDetta, linguaIgnota, linguaIgnotaDetta, VOTO_CIFRE, VOTO_SOLO, VOTO_LETTERA, numeroVoto, obiettivoDetto, accessorioDetto } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, hh, linguaDetta, linguaIgnota, linguaIgnotaDetta, VOTO_CIFRE, VOTO_SOLO, VOTO_LETTERA, numeroVoto, obiettivoDetto, accessorioDetto, conVoglio } from './comune.js';
 
 const GIORNI = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const MESI = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
@@ -125,7 +125,13 @@ export const GUARDAROBA = {
   generico: 'hat|hats|accessory|accessories',
   apri: '(?:(?:open|show|show me) )?(?:the |my )?wardrobe|change (?:the |my )?(?:hat|accessory)|hats|accessories',
 };
-export function interpreta(frase) {
+// «voglio fare…» e la guida passo passo (conVoglio in js/comandi/comune.js): “I want to make a website”, “how do I edit a video”, “help me write my thesis”; “resume the guide”.
+// I comandi di sempre vincono; la frase che non è un altro comando diventa { tipo: 'voglio', q }
+const VOGLIO = /^(?:i (?:really )?(?:want|wanna|need|would like|'d like|have) to|i want|i wanna|how (?:do|can|should) i|how to|help me(?: to)?|i've got to|i must)\s+(?:do\s+|make\s+)?(?<q>.+)$/i;
+const GUIDA = /^(?:(?:resume|continue|reopen|back to|go back to)(?: the| my)? guide|(?:my )?step-by-step guide|where was i)$/;
+export function interpreta(frase) { return conVoglio(frase, interpretaBase, { VOGLIO, GUIDA }); }
+
+function interpretaBase(frase) {
   const grezzo0 = String(frase || '').trim(); if (!grezzo0) return null;
   { const a = accessorioDetto(grezzo0, GUARDAROBA); if (a) return a; }
   // informatica: «explain the error», anche con l'errore incollato dopo. Solo se dopo «error» non c'è niente, ci sono i due

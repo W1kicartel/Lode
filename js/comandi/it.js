@@ -7,7 +7,7 @@
 // barra è in un'altra lingua: le frasi italiane si capiscono sempre.
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
 import { interpreta as interpretaProgetto } from '../codice/progetto.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, linguaDetta, linguaIgnota, linguaIgnotaDetta, accessorioDetto } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, linguaDetta, linguaIgnota, linguaIgnotaDetta, accessorioDetto, conVoglio } from './comune.js';
 import COMUNE from '../lingue/it/comune.js';
 
 const GIORNI = COMUNE['comune.giorni'], MESI = COMUNE['comune.mesi'];
@@ -74,7 +74,13 @@ export const GUARDAROBA = {
   generico: 'cappello|cappelli|accessorio|accessori',
   apri: '(?:(?:apri|mostrami|vedi|apri il|il) )?(?:il )?guardaroba|cambia (?:il )?(?:cappello|accessorio)|(?:i )?cappelli|(?:gli )?accessori',
 };
-export function interpreta(frase) {
+// «voglio fare…» e la guida passo passo (conVoglio in js/comandi/comune.js): «voglio fare un sito», «come faccio a montare un video», «aiutami a scrivere la tesi»; «riprendi la guida».
+// I comandi di sempre vincono; la frase che non è un altro comando diventa { tipo: 'voglio', q }
+const VOGLIO = /^(?:(?:io )?voglio|vorrei|devo|come (?:faccio|si fa) (?:a|ad)|come (?:posso|potrei)|aiutami (?:a|ad)|mi aiuti (?:a|ad))\s+(?:fare\s+)?(?<q>.+)$/i;
+const GUIDA = /^(?:(?:riprendi|continua|riapri|torna a|torna alla)(?: la)? (?:mia )?guida(?: passo passo)?|(?:la )?(?:mia )?guida passo passo|a che passo ero)$/;
+export function interpreta(frase) { return conVoglio(frase, interpretaBase, { VOGLIO, GUIDA }); }
+
+function interpretaBase(frase) {
   const grezzo0 = String(frase || '').trim(); if (!grezzo0) return null;
   { const a = accessorioDetto(grezzo0, GUARDAROBA); if (a) return a; }
   // informatica. «spiegami l'errore», anche con l'errore incollato dopo (su più righe: qui le righe restano com'erano).

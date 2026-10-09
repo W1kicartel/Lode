@@ -6,6 +6,15 @@ import { E, prossimo, giornoDetto } from './aiuto.mjs';
 
 const ERR = "lista.c:42:5: error: 'nodo' undeclared";
 export const CASI = [
+  // «voglio fare…» e la guida passo passo (conVoglio in js/comandi/comune.js): i comandi di sempre restano loro
+  ['quiero hacer una web', { tipo: 'voglio', q: 'una web' }],
+  ['¿cómo hago para editar un vídeo?', { tipo: 'voglio', q: 'editar un vídeo' }],
+  ['ayúdame a escribir la tesis', { tipo: 'voglio', q: 'escribir la tesis' }],
+  ['tengo que hacer una presentación', { tipo: 'voglio', q: 'una presentación' }],
+  ['retomar la guía', { tipo: 'guida' }],
+  ['continúa la guía', { tipo: 'guida' }],
+  ['¿dónde me quedé?', { tipo: 'guida' }],
+  ['quiero repasar', { tipo: 'ripasso', esame: null, nomeDetto: '' }],
   // informática: el error pegado y «sigue el proyecto»
   ['explícame el error', { tipo: 'errore', testo: null }],
   ['Explícame este error.', { tipo: 'errore', testo: null }],

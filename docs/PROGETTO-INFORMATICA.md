@@ -360,6 +360,11 @@ Tutto finisce in un registro onesto nel tuo vault, scritto per te. Gratis, offli
 11. **«Simula lo scritto» e «giorno dell'appello».** AI e proposte spente nelle ore dell'esame, usando `F.stato()`.
 12. **Frammenti di codice dagli appunti in «Cosa stampa».** Si leggono nel mini-AST e si eseguono solo con il valutatore JS, mai in modo nativo in background.
 13. Java (`javac`, `java Main.java`), più progetti e più agenti insieme.
+14. **«Fallo con Claude Code» dalla guida passo passo.** *Fatto (ottobre 2026): `desktop/app-utili.mjs`, `js/guida.js`.* Nei passi di codice di «voglio fare…», se nel PATH c'è `claude` (o `codex`, `gemini`), Lode apre un terminale vero nella cartella scelta con il testo del passo, dopo la conferma del testo esatto.
+   - Usa l'abbonamento dello studente: nessuna chiave API.
+   - Il testo non passa mai per la shell: va in un file a parte che lo script legge (`.command` aperto con `open -a Terminal` sul Mac, niente AppleScript; `.cmd` con PowerShell su Windows; `.sh` con il terminale che c'è su Linux). Cartella e file fra apici (`quotaSh`, `quotaCmd`, `quotaPs`), provati con apici, `$`, backtick, spazi e a capo in `test/app-utili.mjs`.
+   - Se la cartella è seguita, la fine del turno dell'agente (`agente:turno`) arriva nella scheda del passo: «Claude Code ha finito: controlla e premi Fatto».
+   - Nelle prove `LODE_GUIDA_FINTA` scrive su un file cosa si aprirebbe, senza aprire app, terminali né `claude`.
 
 ---
 

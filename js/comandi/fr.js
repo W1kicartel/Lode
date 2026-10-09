@@ -13,7 +13,7 @@
 // I numeri detti a voce («vingt-huit», «quatre-vingt-dix», «septante») diventano cifre solo qui dentro: numeri non si
 // esporta, perché le formule dettate (js/formule.js) valgono solo in italiano e in inglese (docs/LINGUE.md).
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta, accessorioDetto } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta, accessorioDetto, conVoglio } from './comune.js';
 
 const GIORNI = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 const MESI = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout', 'septembre', 'octobre', 'novembre', 'decembre'];
@@ -152,7 +152,13 @@ export const GUARDAROBA = {
   generico: 'chapeau|chapeaux|accessoire|accessoires',
   apri: '(?:(?:ouvre|ouvrir|montre moi|voir) )?(?:la |ma )?(?:garde robe|penderie|vestiaire)|change(?:r)? (?:de |le )?(?:chapeau|accessoire)|chapeaux|accessoires',
 };
-export function interpreta(frase) {
+// «voglio fare…» e la guida passo passo (conVoglio in js/comandi/comune.js): « je veux faire un site », « comment faire pour monter une vidéo », « aide-moi à écrire mon mémoire » ; « reprendre le guide ».
+// I comandi di sempre vincono; la frase che non è un altro comando diventa { tipo: 'voglio', q }
+const VOGLIO = /^(?:je veux|je voudrais|j'aimerais|je dois|comment (?:je fais|faire|on fait) pour|comment (?:puis-je|je peux|faire)|aide-moi (?:a|à)|aide moi (?:a|à))\s+(?:faire\s+)?(?<q>.+)$/i;
+const GUIDA = /^(?:(?:reprendre|reprends|continuer|continue|rouvrir|rouvre|retour au)(?: le| mon)? guide(?: pas à pas| pas a pas)?|(?:mon )?guide pas (?:à|a) pas|o[uù] j'en (?:étais|etais))$/;
+export function interpreta(frase) { return conVoglio(frase, interpretaBase, { VOGLIO, GUIDA }); }
+
+function interpretaBase(frase) {
   const grezzo0 = apostrofi(String(frase || '').trim()); if (!grezzo0) return null;
   { const a = accessorioDetto(grezzo0, GUARDAROBA); if (a) return a; }
   // informatica: «explique-moi l'erreur», anche con l'errore incollato dopo. Solo se dopo «erreur» non c'è niente, ci sono i

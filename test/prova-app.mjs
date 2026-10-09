@@ -92,6 +92,12 @@ console.log('Laboratorio di prova:', LAB, '· compilatore C:', CC ? CC.versione 
 const GCC_ERRORE = "lista.c: In function 'main':\nlista.c:42:5: error: 'nodo' undeclared (first use in this function)\n   42 |     nodo->valore = 3;\n      |     ^~~~\n";
 // un errore meccanico copiato dal terminale (clang): con un progetto «valutato» seguito, niente correzione
 const CLANG_PUNTO = "pv.c:3:14: error: expected ';' at end of declaration\n    3 |     int x = 5\n      |              ^\n      |              ;\n1 error generated.\n";
+// «Voglio fare…» (desktop/app-utili.mjs) in finto: un Keynote finto da aprire e un claude finto nel PATH; LODE_GUIDA_FINTA fa
+// scrivere al main su un file le app e i terminali che aprirebbe, senza aprire niente (né app né terminali né claude)
+const APP_FINTE = join(DIR, 'app-finte'), BIN_FINTO = join(DIR, 'bin-finto'), GUIDA_FINTA = join(DIR, 'guida-finta.jsonl');
+mkdirSync(join(APP_FINTE, 'Keynote.app', 'Contents'), { recursive: true }); mkdirSync(BIN_FINTO, { recursive: true });
+writeFileSync(join(APP_FINTE, 'Keynote.app', 'Contents', 'Info.plist'), '<plist><dict><key>CFBundleIdentifier</key><string>com.apple.iWork.Keynote</string></dict></plist>');
+writeFileSync(join(BIN_FINTO, process.platform === 'win32' ? 'claude.cmd' : 'claude'), process.platform === 'win32' ? '@exit /b 1\r\n' : '#!/bin/sh\nexit 1\n', { mode: 0o755 });
 const due = n => String(n).padStart(2, '0'), oggiLocale = (x => `${x.getFullYear()}-${due(x.getMonth() + 1)}-${due(x.getDate())}`)(new Date());
 
 const d = new Date(), hh = d.getHours();
@@ -238,6 +244,21 @@ const passi = [
   // restaLode (main.mjs): un link senza target verso un altro file (qui README.md accanto alla pagina; nel vault sarebbe
   // lo stesso) non porta via la barra, che resta sulla pagina di Lode col suo ponte. Un link https andrebbe nel browser:
   // non si prova qui per non aprire finestre. La stessa pagina con un'altra query passa (il passo dopo, ?benvenuto=1)
+  // «Voglio fare…»: la guida passo passo, senza AI (la ricetta) e con le app e il terminale in finto
+  { nome: 'guida: «voglio fare una presentazione» trova le app', js: `(async()=>{ __lode.AI.impostaLocale(null); return T.di('voglio fare una presentazione') })()`, atteso: 'Keynote' },
+  { nome: 'guida: l\'app si apre solo dopo il clic', js: `(async()=>{ const s = [...document.querySelectorAll('.ld-guida')].pop(); s.querySelector('[data-a]').click(); await T.aspetta(() => /Aperta|aprire/.test(s.innerText), 10); return s.innerText })()`, atteso: 'Aperta: Keynote' },
+  { nome: 'guida: «Cominciamo», passo 1 di 5', js: `(async()=>{ [...document.querySelectorAll('.ld-guida')].pop().querySelector('[data-via]').click(); await new Promise(r => setTimeout(r, 1500)); return [...document.querySelectorAll('.ld-passo')].pop().innerText })()`, atteso: 'Passo 1 di 5' },
+  { nome: 'guida: «Fatto, avanti», passo 2 di 5', js: `(async()=>{ [...document.querySelectorAll('.ld-passo')].pop().querySelector('[data-si]').click(); await new Promise(r => setTimeout(r, 1500)); return __lode.D().guida.i + ' | ' + [...document.querySelectorAll('.ld-passo')].pop().innerText })()`, atteso: 'Passo 2 di 5' },
+  { nome: 'guida: «Non ci riesco» senza AI, l\'aiuto della ricetta', js: `(async()=>{ const s = [...document.querySelectorAll('.ld-passo')].pop(); s.querySelector('[data-no]').click(); await new Promise(r => setTimeout(r, 900)); return s.querySelector('.ld-guida-aiuto').innerText })()`, atteso: 'Un aiuto' },
+  { nome: 'guida: «Basta» e «riprendi la guida»', js: `(async()=>{ [...document.querySelectorAll('.ld-passo')].pop().querySelector('[data-basta]').click(); await new Promise(r => setTimeout(r, 900)); return T.di('riprendi la guida') })()`, atteso: 'Passo 2 di 5' },
+  { nome: 'guida: «Fallo con Claude Code» in finto, dopo la cartella e la conferma', js: `(async()=>{ const w = ms => new Promise(r => setTimeout(r, ms));
+    await T.di('voglio fare un programma in python'); [...document.querySelectorAll('.ld-guida')].pop().querySelector('[data-via]').click(); await w(1200);
+    [...document.querySelectorAll('.ld-passo')].pop().querySelector('[data-si]').click(); await w(1200);
+    const b = [...document.querySelectorAll('.ld-passo')].pop().querySelector('[data-ag=claude]'); if (!b) return 'niente bottone di Claude Code';
+    b.click(); const c = await T.aspetta(() => [...document.querySelectorAll('.ld-guida [data-c]')].pop(), 10); if (!c) return 'niente cartella'; c.click();
+    const conf = await T.aspetta(() => [...document.querySelectorAll('.ld-conf')].pop()?.querySelector('textarea') && [...document.querySelectorAll('.ld-conf')].pop(), 10); if (!conf) return 'niente conferma';
+    const testo = conf.querySelector('textarea').value; conf.querySelector('[data-ld=si]').click(); await w(2500);
+    return (testo.includes('Prepara l') ? 'testo del passo | ' : '') + document.querySelector('.ld-filo').innerText.slice(-300) })()`, atteso: 'testo del passo | ' },
   { nome: 'difese: un link non porta la barra su un\'altra pagina', js: `(async()=>{ const prima = location.href, a = document.createElement('a'); a.href = new URL('README.md', location.href).href; document.body.append(a); a.click(); a.remove();
     await new Promise(r => setTimeout(r, 1500)); return (location.href === prima && !!window.lodeDesktop ? 'resta Lode' : 'NO') + ' | ' + location.pathname.split('/').pop() })()`, atteso: 'resta Lode' },
   { nome: 'configurazione: si apre', js: `(()=>{ location.href = location.href.split('?')[0] + '?benvenuto=1'; return 1 })()`, attesa: 500, atteso: '1' },
@@ -258,7 +279,7 @@ const LIMITE = +process.env.LODE_LIMITE_MIN || 100;
 
 const out = await new Promise(ok => {
   const p = spawn(ELECTRON, ['.'], { cwd: DESKTOP, env: { ...process.env, LODE_DATI: join(DIR, 'dati'), LODE_VAULT: VAULT, LODE_LINGUA: 'it', LODE_OBSIDIAN_DIR: join(DIR, 'obsidian'), LODE_NON_APRIRE: '1', LODE_PROVA: join(DIR, 'passi.json'), LODE_ESCI: '1', ...(FOTO ? { LODE_FOTO: FOTO } : {}),
-    LODE_PROGETTO: LAB, LODE_CONFERMA_AUTO: '1', LODE_QUIETE_MS: '1500', LODE_FATTO_MS: '2000',
+    LODE_PROGETTO: LAB, LODE_CONFERMA_AUTO: '1', LODE_GUIDA_FINTA: GUIDA_FINTA, LODE_APP_CARTELLE: APP_FINTE, LODE_GUIDA_CARTELLA: LAB, PATH: BIN_FINTO + (process.platform === 'win32' ? ';' : ':') + (process.env.PATH || process.env.Path || ''), LODE_QUIETE_MS: '1500', LODE_FATTO_MS: '2000',
     // «la tua AI» in formato OpenAI: la base la sceglie il main (js/fornitori.js); nelle prove è il server di Ollama
     LODE_AI_BASE: 'http://127.0.0.1:11434/v1' } });
   let s = '', fatto = false;
@@ -325,6 +346,13 @@ verifica.push(
     const datiVault = leggi(join(VAULT, '.lode', 'dati.json')), vero = (() => { try { return realpathSync.native(LAB); } catch { return LAB; } })();
     return !!datiVault && ![LAB, vero].flatMap(x => [x, x.replaceAll('\\', '\\\\'), x.replaceAll('\\', '/')]).some(x => datiVault.includes(x)) && !datiVault.includes(basename(DIR));
   })()],
+);
+// «Voglio fare…»: la checklist nel vault e, in finto, l'app aperta e il terminale con claude (nella cartella del laboratorio)
+const azioniGuida = leggi(GUIDA_FINTA).trim().split('\n').filter(Boolean).map(x => JSON.parse(x)), notaGuida = leggi(join(VAULT, 'Progetti', 'Una presentazione', 'Passo passo.md'));
+verifica.push(
+  ['guida: la checklist nel vault, con il primo passo spuntato', /%% lode:guida %%[\s\S]*- \[x\] \*\*/.test(notaGuida) && (notaGuida.match(/^- \[ \]/gm) || []).length === 4],
+  ['guida: Keynote aperto (in finto) solo dopo il clic', azioniGuida.filter(a => a.azione === 'apri').length === 1 && azioniGuida.find(a => a.azione === 'apri')?.nome === 'Keynote'],
+  ['guida: il terminale con claude nella cartella scelta (in finto)', azioniGuida.some(a => a.azione === 'terminale' && a.agente === 'claude' && a.cartella === LAB)],
 );
 // «Esporta per Anki»: il testo d'importazione di Anki, una riga per carta (fronte, retro, tag, mazzo, guid), niente doppioni
 const anki = f => leggi(join(VAULT, 'Anki', f)), righeAnki = t => t.trimEnd().split('\n').filter(r => r && !r.startsWith('#')).map(r => r.split('\t'));

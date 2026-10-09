@@ -6,6 +6,14 @@ import { E, prossimo, giornoDetto, giorno, prossimoGiorno } from './aiuto.mjs';
 
 const ERR = "liste.c:42:5: error: 'knoten' undeclared";
 export const CASI = [
+  // «voglio fare…» e la guida passo passo (conVoglio in js/comandi/comune.js): i comandi di sempre restano loro
+  ['ich will eine Website machen', { tipo: 'voglio', q: 'eine Website' }],
+  ['wie mache ich ein Video?', { tipo: 'voglio', q: 'ein Video' }],
+  ['hilf mir beim Schreiben der Bachelorarbeit', { tipo: 'voglio', q: 'Schreiben der Bachelorarbeit' }],
+  ['ich möchte eine Präsentation erstellen', { tipo: 'voglio', q: 'eine Präsentation' }],
+  ['Anleitung fortsetzen', { tipo: 'guida' }],
+  ['mach die Anleitung weiter', { tipo: 'guida' }],
+  ['wo war ich?', { tipo: 'guida' }],
   // informatica: l'errore incollato e «Projekt verfolgen»
   ['erklär den Fehler', { tipo: 'errore', testo: null }],
   ['Erkläre mir diesen Fehler.', { tipo: 'errore', testo: null }],

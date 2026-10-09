@@ -27,6 +27,8 @@ export const VUOTO = () => ({
   // informatica (js/codice/): esercizi «Cosa stampa?» (SM-2 a parte), errori contati, eventi per il diario, opzioni dei progetti.
   // Una chiave a sé: pulisciEsempio() in benvenuto.js azzera D.memoria, non questa. I percorsi dei progetti qui non ci sono mai.
   codice: { memoria: {}, errori: {}, eventi: [], diari: {}, opzioni: {}, turni: [], spiegate: {} },
+  // «Voglio fare…» (js/guida.js): la guida passo passo a metà, null quando non c'è. I dati di prima non ce l'hanno: valgono null
+  guida: null,
   imp: { focus: 25, pausa: 5, voceAlta: false, chiave: '', aspetto: 'scuro', suoni: true, suggerimenti: true, ultimoSuggerimento: 0, accessorio: null },   // accessorio: il guardaroba (js/guardaroba.js), null = nessuno
   benvenuto: false,
 });

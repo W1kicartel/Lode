@@ -199,3 +199,31 @@ export function accessorioDetto(frase, { nomi, metti, togli, generico, apri }) {
   for (const re of metti) if ((m = t.match(new RegExp(`^${re.replace('NOME', `(${tutti})`)}$`)))) return { tipo: 'accessorio', id: nomi[m[1]] };
   return null;
 }
+
+// «Voglio fare…» (la guida passo passo, js/guida.js): «voglio fare un sito», «I want to make a presentation», «wie mache ich
+// ein Video»… diventano { tipo: 'voglio', q }; «riprendi la guida» diventa { tipo: 'guida' }. Ogni riconoscitore dà le sue
+// due regex (VOGLIO con il gruppo «q», GUIDA già in minuscolo) e la sua funzione di sempre (base). I comandi che ci sono già
+// vincono: «voglio fare la prova generale», «voglio ripassare», «voglio spiegare» restano quelli di adesso. Se quello che si
+// vuole fare è a sua volta un comando («voglio studiare analisi 2» → «studiare analisi 2», il focus), vale quel comando.
+// Le regole generiche che prendono una parola in mezzo alla frase (il libretto con «media», «crediti»; un esame trovato per
+// nome) non rubano la frase alla guida: «voglio fare un grafico della media» è un obiettivo, non il libretto.
+const GENERICI = new Set(['libretto', 'serve', 'apriEsame']);
+const DELEGA = new Set(['ripasso', 'focus', 'temi', 'prova', 'crocette', 'orale', 'spiego', 'stampa', 'gioco', 'trascrivi', 'programma', 'anki', 'tasca', 'domande',
+  'riordina', 'chiudiLezione', 'ore', 'esami', 'vediOrario', 'agenti', 'moodle', 'sincronizza', 'prepara', 'ai', 'progetto', 'errore', 'diario', 'condividi', 'lingua']);
+const ripulita = f => String(f || '').replace(/[’`]/g, "'").replace(/\s+/g, ' ').replace(/^[¿¡\s]+/, '').replace(/[?!.\s]+$/, '').trim();
+// restano all'AI: capire o studiare qualcosa («voglio capire gli integrali», «quero estudar mais») e le domande su Lode e i
+// suoi compagni («how do I import my cards into anki»)
+const ALL_AI = /^(?:capire|comprendere|studiare|imparare a memoria|understand|study|entender|comprender|estudiar|estudar|comprendre|[ée]tudier|verstehen|lernen)\b|\b(?:anki|lode|obsidian|moodle)\b/i;
+export function conVoglio(frase, base, { VOGLIO, GUIDA, CODA = null }) {
+  const g = ripulita(frase);
+  if (g && GUIDA.test(g.toLowerCase())) return { tipo: 'guida' };
+  const m = g.match(VOGLIO), r = base(frase);
+  if (!m) return r;
+  if (r && !GENERICI.has(r.tipo)) return r;
+  let q = m.groups.q.trim();
+  if (CODA) q = q.replace(CODA, '').trim();   // il tedesco: «eine Präsentation machen» → «eine Präsentation»
+  if (q.replace(/[^\p{L}\p{N}]/gu, '').length < 2 || ALL_AI.test(q)) return r;
+  const x = base(q);
+  if (x && DELEGA.has(x.tipo)) return x;
+  return { tipo: 'voglio', q };
+}

@@ -899,3 +899,19 @@ button.ld-ripeti-riga:hover{background:rgba(255,255,255,.06)}
 @keyframes gr-pompon{0%{transform:rotate(0)}25%{transform:rotate(14deg)}50%{transform:rotate(-10deg)}72%{transform:rotate(5deg)}100%{transform:rotate(0)}}
 .gr-sezione h3{margin:0 0 2px;font-size:15px;font-weight:600;letter-spacing:-.01em}
 .gr-sezione>p{margin:0 0 12px;color:var(--muted);font-size:13px}
+/* «Voglio fare…»: la guida passo passo (js/guida.js) */
+.ld-guida p{margin:6px 0 8px;font-size:13.5px;line-height:1.5}
+.ld-guida h3{margin:8px 0 2px;font-size:16px;font-weight:600;letter-spacing:-.02em}
+.ld-guida .az{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.ld-guida-app{list-style:none;margin:6px 0;padding:0}
+.ld-guida-app li{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:40px;border-top:1px solid var(--ld-riga)}
+.ld-guida-app b{font-size:13.5px;font-weight:500}
+.ld-guida-app small{font-size:11.5px;color:var(--ld-tenue)}
+.ld-guida-tacche{display:flex;gap:5px;margin:8px 0 2px}
+.ld-guida-tacche i{width:8px;height:8px;border-radius:50%;box-shadow:inset 0 0 0 1px var(--muted)}
+.ld-guida-tacche i.pieno{background:var(--ink);box-shadow:none}
+.ld-guida-tacche i.ora{box-shadow:inset 0 0 0 2px var(--ink)}
+.ld-guida-aiuto:empty{display:none}
+.ld-guida-aiuto{padding:8px 11px;border-radius:9px;background:rgba(255,255,255,.07);box-shadow:inset 2px 0 0 var(--ink)}
+.ld-guida-aiuto ol{margin:4px 0;padding-left:18px;font-size:13px;line-height:1.5}
+.ld-guida-testo{width:100%;box-sizing:border-box;font:13px/1.45 var(--mono);color:var(--ink);background:rgba(255,255,255,.05);border:1px solid var(--ld-riga);border-radius:8px;padding:8px 10px;resize:vertical}

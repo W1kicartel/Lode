@@ -10,7 +10,7 @@
 // I numeri a parole («achtundzwanzig») diventano cifre solo dentro i comandi: non c'è un export «numeri», così le formule
 // dettate in tedesco restano come sono (docs/LINGUE.md, «La voce e le formule»).
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta, VOTO_CIFRE, VOTO_SOLO, numeroVoto, obiettivoDetto, accessorioDetto } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta, VOTO_CIFRE, VOTO_SOLO, numeroVoto, obiettivoDetto, accessorioDetto, conVoglio } from './comune.js';
 
 // le espressioni si scrivono con le dieresi; chi scrive di fretta le salta o le scioglie: «ü» vale anche «ue» e «u», «ß»
 // anche «ss». \b diventa un confine di parola che conosce le lettere tedesche (quello di JavaScript taglia «über» prima
@@ -162,7 +162,13 @@ export const GUARDAROBA = {
   generico: 'hut|hute|accessoire|accessoires|zubehor',
   apri: '(?:(?:offne|zeig mir|zeig) )?(?:den |meinen )?(?:kleiderschrank|garderobe|schrank)(?: offnen| auf)?|(?:hut|accessoire) wechseln|hute|accessoires',
 };
-export function interpreta(frase) {
+// «voglio fare…» e la guida passo passo (conVoglio in js/comandi/comune.js): „ich will eine Website machen“, „wie mache ich ein Video“, „hilf mir beim Schreiben der Bachelorarbeit“; „Anleitung fortsetzen“.
+// I comandi di sempre vincono; la frase che non è un altro comando diventa { tipo: 'voglio', q }
+const VOGLIO = /^(?:ich (?:will|möchte|moechte|würde gern|wuerde gern|würde gerne|wuerde gerne)|wie (?:kann|soll) ich|wie mache ich|wie macht man|hilf mir(?:,)? (?:beim|bei|dabei))\s+(?<q>.+)$/i;
+const GUIDA = /^(?:(?:die |meine )?anleitung (?:fortsetzen|weitermachen|wieder öffnen|wieder oeffnen)|(?:setz|setze|mach|mache) (?:die |meine )?anleitung (?:fort|weiter)|weiter mit (?:der|meiner) anleitung|wo war ich)$/;
+export function interpreta(frase) { return conVoglio(frase, interpretaBase, { VOGLIO, GUIDA, CODA: /\s+(?:machen|erstellen|tun)$/i }); }
+
+function interpretaBase(frase) {
   const grezzo0 = String(frase || '').trim(); if (!grezzo0) return null;
   { const a = accessorioDetto(grezzo0, GUARDAROBA); if (a) return a; }
   // informatica: «erklär den Fehler», anche con l'errore incollato dopo. Solo se dopo «Fehler» non c'è niente, ci sono i due
@@ -299,7 +305,7 @@ export function interpreta(frase) {
   // le pagine del vault: «öffne Glossar», «geh zu Home». Se dopo «zeig mir» c'è un comando, vale il comando
   if ((m = t.match(r`^(?:öffne|öffnen|geh zu|gehe zu|geh auf|bring mich zu|zeig mir|zeig|seite)\s+(.+)$`)) || (m = t.match(r`^(.+?) öffnen$`))) {
     if (!r`^(?:den |die |das )?(?:fokus|timer)|^(?:wie|was|warum|wieso|weshalb|wo|wann|welche[rsmn]?|ob|dass|ein|eine|einen|einem|einer)\b|erklär|berechn|lösen`.test(m[1])) {
-      const dentro = interpreta(m[1]); if (dentro && !DENTRO.has(dentro.tipo)) return dentro;
+      const dentro = interpretaBase(m[1]); if (dentro && !DENTRO.has(dentro.tipo)) return dentro;
       return { tipo: 'naviga', q: r`^(?:die )?startseite$`.test(m[1]) ? 'home' : pulisci(m[1]) };
     }
   }

@@ -65,6 +65,7 @@
       "agenti.mjs",
       "agenti-collegamenti.mjs",
       "progetto.mjs",
+      "app-utili.mjs",
       "esegui.mjs",
       "aggiorna.mjs",
       "sincronizza.mjs",

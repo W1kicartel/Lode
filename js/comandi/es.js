@@ -10,7 +10,7 @@
 // spagnola 0-10, con i decimali). Come leggerli lo decide il sistema dei voti (js/sistemi.js), non qui.
 // «Notas» in spagnolo sono i voti (il libretto), non gli appunti: gli appunti sono «apuntes».
 import { norm, oggi, piuGiorni, trovaEsame } from '../dati.js';
-import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta, accessorioDetto } from './comune.js';
+import { sembraErrore, dataInCifre, conAnno, orarioOk, oreInCifre, linguaDetta, linguaIgnota, linguaIgnotaDetta, accessorioDetto, conVoglio } from './comune.js';
 
 const GIORNI = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
 const MESI = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -148,7 +148,13 @@ export const GUARDAROBA = {
   generico: 'sombrero|sombreros|accesorio|accesorios',
   apri: '(?:(?:abre|abrir|muestrame|ver) )?(?:el |mi )?(?:armario|guardarropa|vestidor|ropero)|cambia(?:r)? (?:el |de )?(?:sombrero|accesorio)|sombreros|accesorios',
 };
-export function interpreta(frase) {
+// «voglio fare…» e la guida passo passo (conVoglio in js/comandi/comune.js): «quiero hacer una web», «cómo hago para editar un vídeo», «ayúdame a escribir la tesis»; «retomar la guía».
+// I comandi di sempre vincono; la frase che non è un altro comando diventa { tipo: 'voglio', q }
+const VOGLIO = /^(?:(?:yo )?quiero|quisiera|necesito|tengo que|c[oó]mo (?:hago|se hace) para|c[oó]mo (?:puedo|hago)|ay[uú]dame a)\s+(?:hacer\s+)?(?<q>.+)$/i;
+const GUIDA = /^(?:(?:retomar|retoma|continuar|contin[uú]a|reabrir|reabre|volver a|vuelve a)(?: la| mi)? gu[ií]a(?: paso a paso)?|(?:mi )?gu[ií]a paso a paso|d[oó]nde me qued[eé])$/;
+export function interpreta(frase) { return conVoglio(frase, interpretaBase, { VOGLIO, GUIDA }); }
+
+function interpretaBase(frase) {
   const grezzo0 = String(frase || '').trim(); if (!grezzo0) return null;
   { const a = accessorioDetto(grezzo0, GUARDAROBA); if (a) return a; }
   // informatica: «explícame el error», anche con l'errore incollato dopo. Solo se dopo «error» non c'è niente, ci sono i due

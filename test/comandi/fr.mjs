@@ -6,6 +6,14 @@ import { E, prossimo, giornoDetto, prossimoGiorno, giorno } from './aiuto.mjs';
 
 const ERR = "liste.c:42:5: error: 'noeud' undeclared";
 export const CASI = [
+  // «voglio fare…» e la guida passo passo (conVoglio in js/comandi/comune.js): i comandi di sempre restano loro
+  ['je veux faire un site', { tipo: 'voglio', q: 'un site' }],
+  ['comment faire pour monter une vidéo ?', { tipo: 'voglio', q: 'monter une vidéo' }],
+  ['aide-moi à écrire mon mémoire', { tipo: 'voglio', q: 'écrire mon mémoire' }],
+  ['je dois faire une présentation', { tipo: 'voglio', q: 'une présentation' }],
+  ['reprendre le guide', { tipo: 'guida' }],
+  ['continue mon guide', { tipo: 'guida' }],
+  ["où j'en étais ?", { tipo: 'guida' }],
   // informatica: l'errore incollato e «Segui il progetto»
   ["explique-moi l'erreur", { tipo: 'errore', testo: null }],
   ['Explique-moi cette erreur.', { tipo: 'errore', testo: null }],

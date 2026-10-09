@@ -16,6 +16,7 @@ import * as MOODLE from './moodle.mjs';
 import * as AGENTI from './agenti.mjs';
 import * as COLLEGA_AGENTI from './agenti-collegamenti.mjs';
 import * as PROGETTO from './progetto.mjs';
+import * as APP_UTILI from './app-utili.mjs';
 import * as AGGIORNA from './aggiorna.mjs';
 import { creaSincronizzazione } from './sincronizza.mjs';
 import * as ICONA from './collegamento.mjs';
@@ -641,6 +642,9 @@ app.whenReady().then(async () => {
   // «Segui il progetto»: gli handler progetto:* e i progetti già seguiti. Ogni comando passa dalla finestra di conferma del sistema
   // (progetto.mjs); conf.progetti sta in userData/config.json, mai nel vault. conf come funzione: leggiConf() la riassegna
   try { progetti = PROGETTO.registra({ ipcMain, dialog, app, conf: () => conf, salvaConf, manda }); } catch (x) { console.error('Lode: progetti non avviati', x); }
+  // «Voglio fare…» (app-utili.mjs): le app del computer, aperte solo dopo il clic, e il terminale con Claude Code nella cartella
+  // scelta. La barra manda indici e token, i percorsi restano qui
+  try { APP_UTILI.registra({ ipcMain, dialog, shell, app, conf: () => conf, t, casa: homedir() }); } catch (x) { console.error('Lode: guida non avviata', x); }
   // il ponte con gli agenti di programmazione (agenti.mjs), in sola lettura: un server su 127.0.0.1 con un token; la porta
   // resta la stessa fra un avvio e l'altro (è scritta negli hook). Se è occupata se ne prende un'altra e gli agenti
   // collegati si aggiornano da soli (lo studente li aveva già collegati lui)
